@@ -1,32 +1,37 @@
-name: Publish packages
+name: CI / Publish
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'packages/*/package.json'
-      - 'packages/*/src/**'
-  workflow_dispatch:
+    push:
+        branches: [main]
+    pull_request:
+    workflow_dispatch:
+        inputs:
+            version:
+                description: 'Stable version (e.g. 1.2.0)'
+                required: false
+                default: ''
+            breaking:
+                description: 'Breaking change? (true/false)'
+                required: false
+                default: 'false'
 
 jobs:
-  publish:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+    publish-dsl-renderer:
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+        uses: wadeck-app/ci-templates/.github/workflows/publish-npm.yml@main
+        secrets: inherit
         with:
-          node-version: '20'
-          registry-url: 'https://npm.pkg.github.com'
-          scope: '@wadeck-app'
-      - run: npm ci
-      - run: npm run build --workspace=packages/dsl-renderer
-      - run: npm run build --workspace=packages/dsl-ui
-      - run: npm publish --workspace=packages/dsl-renderer --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - run: npm publish --workspace=packages/dsl-ui --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            workspace: packages/dsl-renderer
+            bundle-script: ''
+            version-input: ${{ inputs.version || '' }}
+            breaking-input: ${{ inputs.breaking || 'false' }}
+
+    publish-dsl-ui:
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+        uses: wadeck-app/ci-templates/.github/workflows/publish-npm.yml@main
+        secrets: inherit
+        with:
+            workspace: packages/dsl-ui
+            bundle-script: ''
+            version-input: ${{ inputs.version || '' }}
+            breaking-input: ${{ inputs.breaking || 'false' }}
