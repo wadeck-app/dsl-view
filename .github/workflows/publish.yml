@@ -23,8 +23,8 @@ jobs:
         with:
             workspace: packages/dsl-renderer
             bundle-script: ''
-            version-input: ${{ inputs.version || '' }}
-            breaking-input: ${{ inputs.breaking || 'false' }}
+            version-input: ${{ github.event.inputs.version || '' }}
+            breaking-input: ${{ github.event.inputs.breaking || 'false' }}
 
     publish-dsl-ui:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
@@ -33,5 +33,5 @@ jobs:
         with:
             workspace: packages/dsl-ui
             bundle-script: ''
-            version-input: ${{ inputs.version || '' }}
-            breaking-input: ${{ inputs.breaking || 'false' }}
+            version-input: ${{ github.event.inputs.version || '' }}
+            breaking-input: ${{ github.event.inputs.breaking || 'false' }}
