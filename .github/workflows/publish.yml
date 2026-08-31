@@ -15,23 +15,82 @@ on:
                 required: false
                 default: 'false'
 
-jobs:
-    publish-dsl-renderer:
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
-        uses: wadeck-app/ci-templates/.github/workflows/publish-npm.yml@main
-        secrets: inherit
-        with:
-            workspace: packages/dsl-renderer
-            bundle-script: ''
-            version-input: ${{ github.event.inputs.version || '' }}
-            breaking-input: ${{ github.event.inputs.breaking || 'false' }}
+permissions:
+    contents: read
+    packages: write
 
-    publish-dsl-ui:
+jobs:
+    build-and-test:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v5
+              with:
+                  fetch-depth: 0
+
+            - uses: actions/setup-node@v5
+              with:
+                  node-version: '24'
+                  registry-url: 'https://npm.pkg.github.com'
+                  scope: '@wadeck-app'
+
+            - name: Install dependencies
+              run: npm ci
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Build dsl-renderer
+              run: npm run build --workspace=packages/dsl-renderer
+
+            - name: Build dsl-ui
+              run: npm run build --workspace=packages/dsl-ui
+
+            - name: Run tests
+              run: npm test --workspaces --if-present
+
+    publish:
+        needs: build-and-test
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
-        uses: wadeck-app/ci-templates/.github/workflows/publish-npm.yml@main
-        secrets: inherit
-        with:
-            workspace: packages/dsl-ui
-            bundle-script: ''
-            version-input: ${{ github.event.inputs.version || '' }}
-            breaking-input: ${{ github.event.inputs.breaking || 'false' }}
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v5
+              with:
+                  fetch-depth: 0
+
+            - uses: actions/setup-node@v5
+              with:
+                  node-version: '24'
+                  registry-url: 'https://npm.pkg.github.com'
+                  scope: '@wadeck-app'
+
+            - name: Install dependencies
+              run: npm ci
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Build dsl-renderer
+              run: npm run build --workspace=packages/dsl-renderer
+
+            - name: Build dsl-ui
+              run: npm run build --workspace=packages/dsl-ui
+
+            - name: Compute version
+              id: version
+              uses: wadeck-app/ci-templates/.github/actions/compute-version@main
+              with:
+                  version-input: ${{ github.event.inputs.version || '' }}
+                  breaking-input: ${{ github.event.inputs.breaking || 'false' }}
+
+            - name: Set version in packages
+              run: |
+                  npm pkg set version="${{ steps.version.outputs.version }}" --workspace=packages/dsl-renderer
+                  npm pkg set version="${{ steps.version.outputs.version }}" --workspace=packages/dsl-ui
+
+            - name: Publish dsl-renderer
+              run: npm publish --workspace=packages/dsl-renderer --tag ${{ steps.version.outputs.dist_tag }}
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Publish dsl-ui
+              run: npm publish --workspace=packages/dsl-ui --tag ${{ steps.version.outputs.dist_tag }}
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
