@@ -38,11 +38,12 @@ function readDslConfig(appRoot: string): DslConfig {
 	return { packages: raw?.packages ?? {} };
 }
 
-function findNearestNodeModules(startDir: string): string | null {
+/** Find the node_modules directory that actually contains the given package. */
+function findNodeModulesForPackage(startDir: string, pkgName: string): string | null {
 	let dir = startDir;
-	for (let i = 0; i < 6; i++) {
-		const candidate = path.join(dir, 'node_modules');
-		if (fs.existsSync(candidate)) return candidate;
+	for (let i = 0; i < 8; i++) {
+		const candidate = path.join(dir, 'node_modules', pkgName);
+		if (fs.existsSync(candidate)) return path.join(dir, 'node_modules');
 		const parent = path.dirname(dir);
 		if (parent === dir) break;
 		dir = parent;
@@ -59,6 +60,8 @@ function resolvePackageComponentsDir(
 ): string {
 	// Short name: e.g. "dsl-ui" from "@wadeck-app/dsl-ui", or bare "orch-ui"
 	const shortName = npmPkgName.includes('/') ? npmPkgName.split('/').pop()! : npmPkgName;
+	// Full npm name: ensure scoped format "@wadeck-app/..."
+	const fullNpmName = npmPkgName.includes('/') ? npmPkgName : `@wadeck-app/${npmPkgName}`;
 
 	// 1. Try dsl-view monorepo packages/ (used when running from source)
 	const monorepoPath = path.resolve(monorepoRoot, `packages/${shortName}/src/components`);
@@ -69,12 +72,11 @@ function resolvePackageComponentsDir(
 	const workspacePath = path.resolve(workspaceRoot, `packages/${shortName}/src/components`);
 	if (fs.existsSync(workspacePath)) return workspacePath;
 
-	// 3. Try node_modules (installed npm package)
-	const nodeModules = findNearestNodeModules(appRoot);
+	// 3. Try node_modules (installed npm package) — search up from appRoot
+	//    to find the node_modules that actually contains the hoisted package.
+	const nodeModules = findNodeModulesForPackage(appRoot, fullNpmName);
 	if (nodeModules) {
-		// npmPkgName may be "dsl-ui" (bare) or "@wadeck-app/dsl-ui" (scoped)
-		const npmName = npmPkgName.includes('/') ? npmPkgName : `@wadeck-app/${npmPkgName}`;
-		const npmPath = path.join(nodeModules, npmName, 'src', 'components');
+		const npmPath = path.join(nodeModules, fullNpmName, 'src', 'components');
 		if (fs.existsSync(npmPath)) return npmPath;
 	}
 
