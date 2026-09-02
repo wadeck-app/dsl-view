@@ -50,33 +50,48 @@ function findNearestNodeModules(startDir: string): string | null {
 	return null;
 }
 
+/** Resolve the src/components directory for an npm package name.
+ *  Tries in order: monorepo packages/, workspace packages/, node_modules. */
+function resolvePackageComponentsDir(
+	npmPkgName: string,
+	monorepoRoot: string,
+	appRoot: string
+): string {
+	// Short name: e.g. "dsl-ui" from "@wadeck-app/dsl-ui", or bare "orch-ui"
+	const shortName = npmPkgName.includes('/') ? npmPkgName.split('/').pop()! : npmPkgName;
+
+	// 1. Try dsl-view monorepo packages/ (used when running from source)
+	const monorepoPath = path.resolve(monorepoRoot, `packages/${shortName}/src/components`);
+	if (fs.existsSync(monorepoPath)) return monorepoPath;
+
+	// 2. Try the consuming project's workspace packages/
+	const workspaceRoot = path.resolve(appRoot, '../..');
+	const workspacePath = path.resolve(workspaceRoot, `packages/${shortName}/src/components`);
+	if (fs.existsSync(workspacePath)) return workspacePath;
+
+	// 3. Try node_modules (installed npm package)
+	const nodeModules = findNearestNodeModules(appRoot);
+	if (nodeModules) {
+		// npmPkgName may be "dsl-ui" (bare) or "@wadeck-app/dsl-ui" (scoped)
+		const npmName = npmPkgName.includes('/') ? npmPkgName : `@wadeck-app/${npmPkgName}`;
+		const npmPath = path.join(nodeModules, npmName, 'src', 'components');
+		if (fs.existsSync(npmPath)) return npmPath;
+	}
+
+	// Return the workspace path even if missing — will be skipped during scan
+	return workspacePath;
+}
+
 function resolveWatchDirs(
 	config: DslConfig,
 	monorepoRoot: string,
 	appRoot: string
 ): Array<{ pkg: string; absDir: string }> {
-	const resolveDir = (subpath: string): string => {
-		const monorepoPath = path.resolve(monorepoRoot, subpath);
-		if (fs.existsSync(monorepoPath)) return monorepoPath;
-		// Fallback: find the package in node_modules of the consuming project
-		const nodeModules = findNearestNodeModules(appRoot);
-		if (nodeModules) {
-			// subpath is like "packages/dsl-ui/src/components" — extract pkg name after "packages/"
-			const parts = subpath.split('/');
-			if (parts[0] === 'packages') {
-				const pkgName = parts[1]; // e.g. "dsl-ui"
-				const npmPath = path.join(nodeModules, `@wadeck-app/${pkgName}`, ...parts.slice(2));
-				if (fs.existsSync(npmPath)) return npmPath;
-			}
-		}
-		return monorepoPath; // return as-is even if missing (will be skipped during scan)
-	};
-
 	const dirs: Array<{ pkg: string; absDir: string }> = [
-		{ pkg: 'dsl-ui', absDir: resolveDir('packages/dsl-ui/src/components') },
+		{ pkg: 'dsl-ui', absDir: resolvePackageComponentsDir('dsl-ui', monorepoRoot, appRoot) },
 	];
 	for (const pkg of Object.values(config.packages)) {
-		dirs.push({ pkg, absDir: resolveDir(`packages/${pkg}/src/components`) });
+		dirs.push({ pkg, absDir: resolvePackageComponentsDir(pkg, monorepoRoot, appRoot) });
 	}
 	return dirs;
 }
