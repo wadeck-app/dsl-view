@@ -1,5 +1,10 @@
 import React from 'react';
 
+// process is defined by Node.js, Webpack, Vite, and similar bundlers.
+// The runtime usage below is always guarded by `typeof process !== 'undefined'`.
+// This declaration prevents TS errors in browser-targeted consuming projects.
+declare const process: { env: Record<string, string | undefined> } | undefined;
+
 import type { ComponentRegistry } from '../ComponentRegistry.js';
 
 export interface RenderContext {
@@ -174,11 +179,12 @@ export function resolveExpressionValue(expr: unknown, ctx: RenderContext): unkno
 }
 
 export function renderChildren(
-	nodes: unknown[],
+	nodes: unknown,
 	registry: ComponentRegistry,
 	ctx: RenderContext
 ): React.ReactElement[] {
-	return nodes
+	if (!Array.isArray(nodes)) return [];
+	return (nodes as unknown[])
 		.map((node, i) => {
 			if (!node || typeof node !== 'object' || Array.isArray(node)) {
 				return null;

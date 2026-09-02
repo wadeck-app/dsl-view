@@ -6,3 +6,4 @@ export { createRegistry } from './ComponentRegistry.js';
 export type { ComponentRegistry, ComponentRegistryEntry, RegistryRenderProps } from './ComponentRegistry.js';
 export { GenericPageRunner } from './GenericPageRunner.js';
 export type { GenericPageRunnerProps } from './GenericPageRunner.js';
+export type { Fetcher } from './pageRunner/pageRunnerUtils.js';
