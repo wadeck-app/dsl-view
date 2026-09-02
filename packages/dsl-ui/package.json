@@ -10,7 +10,7 @@
 			"types": "./dist/index.d.ts"
 		}
 	},
-	"files": ["dist"],
+	"files": ["dist", "src"],
 	"publishConfig": {
 		"registry": "https://npm.pkg.github.com",
 		"access": "public"
