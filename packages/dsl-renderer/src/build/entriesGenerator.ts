@@ -413,9 +413,19 @@ ${declText}
 
 // ─── Import path derivation ────────────────────────────────────────────────────
 
-// Derives a component's relative import path (from the generated entries.tsx location,
-// src/generated/) from its discovered absolute source file path.
+// Derives a component's import specifier from its discovered absolute source path.
+// When the source is inside node_modules/@wadeck-app/<pkg>/src/..., use the package
+// name import rather than a long relative ../../../../node_modules/... path.
 function relativeImportPath(sourcePath: string, outputDir: string): string {
+	// Normalize separators for cross-platform matching
+	const normalised = sourcePath.split(path.sep).join('/');
+	const nmMatch = normalised.match(/\/node_modules\/(@[^/]+\/[^/]+|[^/]+)\/(.+)$/);
+	if (nmMatch) {
+		const pkgName = nmMatch[1]!;        // e.g. "@wadeck-app/dsl-ui"
+		const inPkg   = nmMatch[2]!;        // e.g. "src/components/layout/PageContent.tsx"
+		const withoutExt = inPkg.slice(0, -path.extname(inPkg).length);
+		return `${pkgName}/${withoutExt}.js`;
+	}
 	const withoutExt = sourcePath.slice(0, -path.extname(sourcePath).length);
 	const rel = path.relative(outputDir, withoutExt).split(path.sep).join('/');
 	return (rel.startsWith('.') ? rel : './' + rel) + '.js';
