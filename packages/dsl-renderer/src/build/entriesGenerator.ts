@@ -38,13 +38,45 @@ function readDslConfig(appRoot: string): DslConfig {
 	return { packages: raw?.packages ?? {} };
 }
 
-function resolveWatchDirs(config: DslConfig, monorepoRoot: string): Array<{ pkg: string; absDir: string }> {
-	// Always include dsl-ui (generic components shared by every app)
+function findNearestNodeModules(startDir: string): string | null {
+	let dir = startDir;
+	for (let i = 0; i < 6; i++) {
+		const candidate = path.join(dir, 'node_modules');
+		if (fs.existsSync(candidate)) return candidate;
+		const parent = path.dirname(dir);
+		if (parent === dir) break;
+		dir = parent;
+	}
+	return null;
+}
+
+function resolveWatchDirs(
+	config: DslConfig,
+	monorepoRoot: string,
+	appRoot: string
+): Array<{ pkg: string; absDir: string }> {
+	const resolveDir = (subpath: string): string => {
+		const monorepoPath = path.resolve(monorepoRoot, subpath);
+		if (fs.existsSync(monorepoPath)) return monorepoPath;
+		// Fallback: find the package in node_modules of the consuming project
+		const nodeModules = findNearestNodeModules(appRoot);
+		if (nodeModules) {
+			// subpath is like "packages/dsl-ui/src/components" — extract pkg name after "packages/"
+			const parts = subpath.split('/');
+			if (parts[0] === 'packages') {
+				const pkgName = parts[1]; // e.g. "dsl-ui"
+				const npmPath = path.join(nodeModules, `@wadeck-app/${pkgName}`, ...parts.slice(2));
+				if (fs.existsSync(npmPath)) return npmPath;
+			}
+		}
+		return monorepoPath; // return as-is even if missing (will be skipped during scan)
+	};
+
 	const dirs: Array<{ pkg: string; absDir: string }> = [
-		{ pkg: 'dsl-ui', absDir: path.resolve(monorepoRoot, 'packages/dsl-ui/src/components') },
+		{ pkg: 'dsl-ui', absDir: resolveDir('packages/dsl-ui/src/components') },
 	];
 	for (const pkg of Object.values(config.packages)) {
-		dirs.push({ pkg, absDir: path.resolve(monorepoRoot, `packages/${pkg}/src/components`) });
+		dirs.push({ pkg, absDir: resolveDir(`packages/${pkg}/src/components`) });
 	}
 	return dirs;
 }
@@ -390,30 +422,39 @@ function collectYamlTypeReferences(pagesDir: string): Set<string> {
 
 // ─── Main build function ───────────────────────────────────────────────────────
 
+export interface BuildEntriesOptions {
+	/** When true, generated imports use package names (e.g. '@wadeck-app/dsl-renderer')
+	 *  instead of monorepo-relative paths. Use when the generator runs as an installed npm package. */
+	usePackageImports?: boolean;
+}
+
 // Overload for test usage: pass only the override discovered array.
 export function buildEntriesFile(overrideDiscovered: DiscoveredComponent[]): string;
 // Full signature for production usage.
 export function buildEntriesFile(
 	appRoot: string,
 	watchDirs: Array<{ pkg: string; absDir: string }>,
-	overrideDiscovered?: DiscoveredComponent[]
+	overrideDiscovered?: DiscoveredComponent[],
+	options?: BuildEntriesOptions
 ): string;
 export function buildEntriesFile(
 	appRootOrOverride: string | DiscoveredComponent[],
 	watchDirs?: Array<{ pkg: string; absDir: string }>,
-	overrideDiscovered?: DiscoveredComponent[]
+	overrideDiscovered?: DiscoveredComponent[],
+	options?: BuildEntriesOptions
 ): string {
 	// Handle test-only single-arg form: buildEntriesFile(discoveredArray)
 	if (Array.isArray(appRootOrOverride)) {
 		return buildEntriesFileImpl('/tmp/test-app', [], appRootOrOverride);
 	}
-	return buildEntriesFileImpl(appRootOrOverride, watchDirs ?? [], overrideDiscovered);
+	return buildEntriesFileImpl(appRootOrOverride, watchDirs ?? [], overrideDiscovered, options);
 }
 
 function buildEntriesFileImpl(
 	appRoot: string,
 	watchDirs: Array<{ pkg: string; absDir: string }>,
-	overrideDiscovered?: DiscoveredComponent[]
+	overrideDiscovered?: DiscoveredComponent[],
+	options?: BuildEntriesOptions
 ): string {
 	const outputDir = path.resolve(appRoot, 'src/generated');
 	const allDiscovered = overrideDiscovered ?? (() => {
@@ -439,8 +480,11 @@ function buildEntriesFileImpl(
 	const importLines: string[] = [];
 	// Always import useFormContext for bind-pattern components
 	const hasBindPattern = allDiscovered.some(c => c.bindPattern?.[0] === 'formData');
+	const dslUiFormImport = options?.usePackageImports
+		? `@wadeck-app/dsl-ui`
+		: `../../../dsl-ui/src/components/form/Form.js`;
 	if (hasBindPattern) {
-		importLines.push(`import { useFormContext } from '../../../dsl-ui/src/components/form/Form.js'`);
+		importLines.push(`import { useFormContext } from '${dslUiFormImport}'`);
 	}
 
 	for (const component of allDiscovered) {
@@ -448,11 +492,18 @@ function buildEntriesFileImpl(
 		importLines.push(`import { ${component.name} } from '${importPath}'`);
 	}
 
+	const dslRendererImport = options?.usePackageImports
+		? `@wadeck-app/dsl-renderer`
+		: `../../../dsl-renderer/src/engine/DslRenderer.js`;
+	const dslRendererTypesImport = options?.usePackageImports
+		? `@wadeck-app/dsl-renderer`
+		: `../../../dsl-renderer/src/ComponentRegistry.js`;
+
 	const header = `// src/generated/entries.tsx - AUTO-GENERATED by entriesGenerator.ts at build/dev-server start. DO NOT EDIT MANUALLY.
 // All changes must be made in: packages/dsl-renderer/src/build/entriesGenerator.ts
 import React from 'react'
-import { renderChildren, resolveExpressionValue } from '../../../dsl-renderer/src/engine/DslRenderer.js'
-import type { ComponentRegistryEntry, RegistryRenderProps } from '../../../dsl-renderer/src/ComponentRegistry.js'
+import { renderChildren, resolveExpressionValue } from '${dslRendererImport}'
+import type { ComponentRegistryEntry, RegistryRenderProps } from '${dslRendererTypesImport}'
 ${importLines.join('\n')}
 `;
 
@@ -512,13 +563,17 @@ export function entriesGenerator(): Plugin {
 	let appRoot = '';
 	let outputPath = '';
 	let watchDirs: Array<{ pkg: string; absDir: string }> = [];
+	let buildOptions: BuildEntriesOptions = {};
 
-	// Walk up from this file (packages/dsl-renderer/src/build/) to find the monorepo root
-	// (the directory containing packages/). We go 4 levels up: build/ → src/ → dsl-renderer/ → packages/ → root.
+	// Walk up from this file to find the monorepo root.
+	// In the dsl-view source: build/ → src/ → dsl-renderer/ → packages/ → root (4 levels up).
+	// When installed as npm package: dist/build/ → dist/ → @wadeck-app/dsl-renderer/ → @wadeck-app/ → node_modules/ → ... (not a monorepo root).
 	const monorepoRoot = path.resolve(__dirname, '../../../..');
+	// Detect whether we are running inside the dsl-view source tree or as an installed npm package.
+	const isInMonorepo = fs.existsSync(path.resolve(monorepoRoot, 'packages/dsl-renderer'));
 
 	function generate() {
-		const content = buildEntriesFile(appRoot, watchDirs);
+		const content = buildEntriesFile(appRoot, watchDirs, undefined, buildOptions);
 		fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 		fs.writeFileSync(outputPath, content, 'utf-8');
 	}
@@ -529,7 +584,8 @@ export function entriesGenerator(): Plugin {
 			appRoot = config.root;
 			outputPath = path.resolve(appRoot, 'src/generated/entries.tsx');
 			const dslConfig = readDslConfig(appRoot);
-			watchDirs = resolveWatchDirs(dslConfig, monorepoRoot);
+			buildOptions = { usePackageImports: !isInMonorepo };
+			watchDirs = resolveWatchDirs(dslConfig, monorepoRoot, appRoot);
 		},
 		buildStart() {
 			generate();
