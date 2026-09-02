@@ -3,6 +3,7 @@
 	"compilerOptions": {
 		"rootDir": "src",
 		"outDir": "dist",
+		"emitDeclarationOnly": false,
 		"tsBuildInfoFile": "dist/.tsbuildinfo",
 		"jsx": "react-jsx",
 		"lib": ["ES2022", "DOM"],
