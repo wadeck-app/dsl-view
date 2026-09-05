@@ -98,8 +98,13 @@ async function executeFrameworkOrRegistryBrain(
 	}
 
 	if (brainRef === '$brains.$ctx.navigate') {
-		const route = params['route'] as string;
-		window.location.href = route;
+		const to = (params['to'] ?? params['route']) as string | undefined;
+		if (!to) return undefined;
+		const allParams: Record<string, string> = { ...(routeParams ?? {}) };
+		for (const [k, v] of Object.entries(params)) {
+			if (k !== 'to' && k !== 'route' && k !== '_event' && v != null) allParams[k] = String(v);
+		}
+		window.location.href = substituteUrlParams(to, allParams);
 		return undefined;
 	}
 
@@ -280,32 +285,25 @@ export function useBrains(params: {
 			const prevReactive = snapshots.current[brainId];
 			const isFirstRender = prevReactive === undefined;
 
-			// On first render, skip brains whose ALL reactive params come from $outputs.*
-			// AND those output values are still undefined (not yet published by user interaction).
-			// If any $outputs.* value is already set, fire normally (e.g. programmatic init).
-			// Brains watching $sources.* or $vars.* always fire on first render.
-			const allOutputsUndefined =
+			// On first render, skip brains whose ALL reactive params are still undefined.
+			// This covers $outputs.* (waiting for user interaction) and $brains.* (waiting
+			// for upstream brain result). Brains with $vars.* or $sources.* fire at mount
+			// whenever their resolved value is non-undefined.
+			const allReactiveUndefined =
 				isFirstRender &&
 				Object.keys(currentReactive).length > 0 &&
-				Object.keys(currentReactive).every(key => {
-					const specVal = rawSpec[key];
-					return (
-						typeof specVal === 'string' &&
-						specVal.startsWith('$outputs.') &&
-						currentReactive[key] === undefined
-					);
-				});
+				Object.values(currentReactive).every(v => v === undefined);
 
 			const hasChanged =
 				!isFirstRender &&
 				(Object.keys(currentReactive).some(key => currentReactive[key] !== prevReactive[key]) ||
 				Object.keys(prevReactive).some(key => !(key in currentReactive)));
 
-			const shouldFire = allOutputsUndefined
+			const shouldFire = allReactiveUndefined
 				? false
-				: (prevReactive === null || isFirstRender || hasChanged);
+				: (isFirstRender || hasChanged);
 
-			// Always record snapshot (even when not firing) so next render can detect changes.
+			// Record snapshot so next render can detect changes.
 			if (isFirstRender || hasChanged) {
 				snapshots.current[brainId] = { ...currentReactive };
 			}
