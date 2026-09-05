@@ -260,10 +260,10 @@ sections:
     varName: clicked
 `);
 
-		// Initial state: brain fires on mount with $outputs.myBtn.onClick = undefined,
-		// so setVar('clicked', undefined) → display shows 'null'
+		// Initial state: brain does NOT fire at mount when $outputs.myBtn.onClick is
+		// undefined (output not yet published) — clicked stays at its initial value 'false'.
 		await waitFor(() => {
-			expect(screen.getByTestId('var-display')).toHaveTextContent('null');
+			expect(screen.getByTestId('var-display')).toHaveTextContent('false');
 		});
 
 		// Click — publishOutput fires, brain updates var with {$tick: N} object

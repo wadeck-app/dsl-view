@@ -280,16 +280,36 @@ export function useBrains(params: {
 			const prevReactive = snapshots.current[brainId];
 			const isFirstRender = prevReactive === undefined;
 
-			// Never fire on first render: brains respond to changes, not initial state.
-			// This prevents $outputs.*-triggered brains from firing at mount when
-			// outputs are not yet published (still undefined).
+			// On first render, skip brains whose ALL reactive params come from $outputs.*
+			// AND those output values are still undefined (not yet published by user interaction).
+			// If any $outputs.* value is already set, fire normally (e.g. programmatic init).
+			// Brains watching $sources.* or $vars.* always fire on first render.
+			const allOutputsUndefined =
+				isFirstRender &&
+				Object.keys(currentReactive).length > 0 &&
+				Object.keys(currentReactive).every(key => {
+					const specVal = rawSpec[key];
+					return (
+						typeof specVal === 'string' &&
+						specVal.startsWith('$outputs.') &&
+						currentReactive[key] === undefined
+					);
+				});
+
 			const hasChanged =
 				!isFirstRender &&
 				(Object.keys(currentReactive).some(key => currentReactive[key] !== prevReactive[key]) ||
 				Object.keys(prevReactive).some(key => !(key in currentReactive)));
 
-			if (hasChanged) {
+			const shouldFire = allOutputsUndefined
+				? false
+				: (prevReactive === null || isFirstRender || hasChanged);
+
+			// Always record snapshot (even when not firing) so next render can detect changes.
+			if (isFirstRender || hasChanged) {
 				snapshots.current[brainId] = { ...currentReactive };
+			}
+			if (shouldFire) {
 				const resolvedParams = resolveAllParams(rawSpec, ctx);
 				void runBrain(brainId, spec, resolvedParams, ctx).catch(err => {
 					console.error(`[useBrains] brain "${brainId}" failed:`, getErrorMessage(err));
