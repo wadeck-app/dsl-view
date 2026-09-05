@@ -277,11 +277,16 @@ export function useBrains(params: {
 		for (const [brainId, spec] of Object.entries($brains)) {
 			const rawSpec = spec as Record<string, unknown>;
 			const currentReactive = collectReactiveParams(rawSpec, ctx);
-			const prevReactive = snapshots.current[brainId] ?? null;
+			const prevReactive = snapshots.current[brainId];
+			const isFirstRender = prevReactive === undefined;
+
+			// Never fire on first render: brains respond to changes, not initial state.
+			// This prevents $outputs.*-triggered brains from firing at mount when
+			// outputs are not yet published (still undefined).
 			const hasChanged =
-				prevReactive === null ||
-				Object.keys(currentReactive).some(key => currentReactive[key] !== prevReactive[key]) ||
-				Object.keys(prevReactive).some(key => !(key in currentReactive));
+				!isFirstRender &&
+				(Object.keys(currentReactive).some(key => currentReactive[key] !== prevReactive[key]) ||
+				Object.keys(prevReactive).some(key => !(key in currentReactive)));
 
 			if (hasChanged) {
 				snapshots.current[brainId] = { ...currentReactive };
