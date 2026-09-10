@@ -113,7 +113,7 @@ describe('topoSortSources', () => {
 		expect(result).toContain('b');
 	});
 
-	it('b depends on $source.a.id → a comes before b', () => {
+	it('b depends on $source.a.id -> a comes before b', () => {
 		const result = topoSortSources({
 			b: { url: 'GET /api/b', params: { id: '$source.a.id' } },
 			a: { url: 'GET /api/a' },
@@ -121,7 +121,7 @@ describe('topoSortSources', () => {
 		expect(result.indexOf('a')).toBeLessThan(result.indexOf('b'));
 	});
 
-	it('three-level chain c→b→a is sorted [a, b, c]', () => {
+	it('three-level chain c->b->a is sorted [a, b, c]', () => {
 		const result = topoSortSources({
 			c: { url: 'GET /c', params: { x: '$source.b.id' } },
 			b: { url: 'GET /b', params: { x: '$source.a.id' } },
@@ -149,12 +149,12 @@ describe('topoLevels', () => {
 		expect(result[0]).toContain('b');
 	});
 
-	it('b depends on a → two levels: [["a"], ["b"]]', () => {
+	it('b depends on a -> two levels: [["a"], ["b"]]', () => {
 		const result = topoLevels(['a', 'b'], { a: [], b: ['a'] });
 		expect(result).toEqual([['a'], ['b']]);
 	});
 
-	it('three-chain a→b→c produces three levels', () => {
+	it('three-chain a->b->c produces three levels', () => {
 		const result = topoLevels(['a', 'b', 'c'], { a: [], b: ['a'], c: ['b'] });
 		expect(result).toEqual([['a'], ['b'], ['c']]);
 	});

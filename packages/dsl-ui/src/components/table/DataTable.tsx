@@ -9,7 +9,7 @@
  *   - Expansion rows
  *
  * OUT OF SCOPE - do NOT add these here:
- *   - App-specific column formats (e.g. "expiry countdown", "revoked badge") → put in the
+ *   - App-specific column formats (e.g. "expiry countdown", "revoked badge") -> put in the
  *     app's own ColumnHelpers (e.g. WdriveColumnHelpers in dsl-ui-wdrive)
  *   - Business logic or domain knowledge (HTTP status conventions are an accepted exception
  *     because they are a universal web standard, not app-specific)
@@ -22,9 +22,9 @@ import { Button } from '../controls/_Button.js';
 import { Checkbox } from '../controls/Checkbox.js';
 import { HttpMethodBadge } from '../display/HttpMethodBadge.js';
 import { HttpStatusBadge } from '../display/HttpStatusBadge.js';
-import { formatBytes } from '../../utils/formatBytes.js';
-import { RouterContext } from '../../RouterContext.js';
-import { buildTemplatedPath } from '../../utils/templatedPath.js';
+import { formatBytes } from '@dsl-ui/utils/formatBytes.js';
+import { RouterContext } from '@dsl-ui/RouterContext.js';
+import { buildTemplatedPath } from '@dsl-ui/utils/templatedPath.js';
 
 // Local alias matching dsl-engine's DslRawNode = Record<string, unknown>
 type DslRawNode = Record<string, unknown>;
@@ -35,7 +35,7 @@ export type SortDir = 'asc' | 'desc';
 export type ColumnValueFormat = 'datetime' | 'date' | 'time' | 'bytes' | 'ms';
 export type ColumnFormat = ColumnValueFormat | 'httpMethod' | 'httpStatus';
 
-// ─── Filter context ───────────────────────────────────────────────────────────
+// --- Filter context -----------------------------------------------------------
 
 // A custom filter predicate, registered by a filter component that needs row-shape-specific
 // logic (e.g. HideMetaToggle's `path.startsWith('/admin/logs')` check) that DataTable itself
@@ -57,7 +57,7 @@ export function useDataTableFilter() {
 	return useContext(DataTableFilterCtx);
 }
 
-// ─── Selection context ────────────────────────────────────────────────────────
+// --- Selection context --------------------------------------------------------
 
 interface DataTableSelectionState {
 	selectedIds: string[];
@@ -72,7 +72,7 @@ export function useDataTableSelection(): DataTableSelectionState | null {
 	return useContext(DataTableSelectionCtx);
 }
 
-// ─── Formatting helpers ───────────────────────────────────────────────────────
+// --- Formatting helpers -------------------------------------------------------
 
 
 function formatValue(val: unknown, format: ColumnValueFormat | undefined): string {
@@ -90,6 +90,7 @@ function formatValue(val: unknown, format: ColumnValueFormat | undefined): strin
 			return formatBytes(Number(val));
 		case 'ms':
 			return `${val}ms`;
+		// violations-suppress: ts/no-switch-default-break explicit fallback stringify - not a silent no-op
 		default:
 			return String(val);
 	}
@@ -131,7 +132,7 @@ function applyFilters<T extends Record<string, unknown>>(
 	return true;
 }
 
-// ─── YAML column normalization ────────────────────────────────────────────────
+// --- YAML column normalization ------------------------------------------------
 // Converts raw YAML column defs (from DSL entries) to proper TableColumn objects.
 // A raw YAML column may look like: { field: 'title', label: 'Title' }
 // or an actions column: { type: 'actions', items: [{ label: 'Edit', action: 'openEdit' }] }
@@ -169,7 +170,7 @@ function normalizeColumn<T extends Record<string, unknown>>(col: RawYamlColumn):
 	};
 }
 
-// ─── TableColumn<T> and ColumnHelpers<T> ──────────────────────────────────────
+// --- TableColumn<T> and ColumnHelpers<T> --------------------------------------
 
 export interface ActionDef<T extends Record<string, unknown>> {
 	label: string;
@@ -293,7 +294,7 @@ export class ColumnHelpers {
 	}
 }
 
-// ─── DataTable<T> ─────────────────────────────────────────────────────────────
+// --- DataTable<T> -------------------------------------------------------------
 
 export interface DataTableProps<T extends Record<string, unknown>> {
 	rows: T[];
@@ -449,7 +450,7 @@ export function DataTable<T extends Record<string, unknown>>({
 	// Track expanded row by stable identity (id > key > fallback index)
 	const [expandedRow, setExpandedRow] = useState<unknown>(null);
 
-	// ─── Selection state ──────────────────────────────────────────────────────────
+	// --- Selection state ----------------------------------------------------------
 	const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
 	const toggleRow = useCallback((id: string) => {

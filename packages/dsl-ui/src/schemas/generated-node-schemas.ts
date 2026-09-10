@@ -1,4 +1,4 @@
-// src/schemas/generated-node-schemas.ts — GENERATED from XxxProps interfaces by scripts/generate-node-schemas.ts, do not edit
+// src/schemas/generated-node-schemas.ts - GENERATED from XxxProps interfaces by scripts/generate-node-schemas.ts, do not edit
 import { z } from 'zod';
 
 const baseNode = z.object({ type: z.string() });

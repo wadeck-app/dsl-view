@@ -223,7 +223,7 @@ describe('DataTable', () => {
 	});
 
 	it('action button hidden when condition field is truthy and condition starts with !', () => {
-		// condition: "!revoked" → hide button when row.revoked === true
+		// condition: "!revoked" -> hide button when row.revoked === true
 		type TokenRow = { id: string; label: string; revoked: boolean };
 		const tokenRows: TokenRow[] = [
 			{ id: '1', label: 'Active token', revoked: false },
@@ -239,7 +239,7 @@ describe('DataTable', () => {
 	});
 
 	it('action button hidden when condition field is falsy', () => {
-		// condition: "active" → show button only when row.active === true
+		// condition: "active" -> show button only when row.active === true
 		type Row = { id: string; name: string; active: boolean };
 		const rows: Row[] = [
 			{ id: '1', name: 'Active', active: true },

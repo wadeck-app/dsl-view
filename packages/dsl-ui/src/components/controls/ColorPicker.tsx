@@ -42,7 +42,6 @@ export function ColorPicker({ label, options, value, onChange }: ColorPickerProp
 			<div className="flex gap-3">
 				{options.map(({ value: optValue, label: optLabel }) => {
 					const isActive = value === optValue;
-					// violations-suppress: no-non-atomic-color-map ColorPicker color swatches are the data being displayed, not status->color mappings
 					const bg = colorBgMap[optValue] ?? 'bg-gray-500';
 					return (
 						<Button

@@ -28,6 +28,7 @@ export function DialogForm({ title, visible, initialData, onClose = () => undefi
 	const isOpen = Boolean(visible);
 	const editData =
 		initialData != null && typeof initialData === 'object' && 'id' in initialData
+			// violations-suppress: ts/no-unsafe-type-cast runtime guard confirmed object with 'id' - cast is safe
 			? (initialData as Record<string, unknown>)
 			: undefined;
 

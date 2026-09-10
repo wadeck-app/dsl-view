@@ -18,7 +18,7 @@ const LabelEntry: ComponentRegistryEntry = {
 	tags: [],
 	render: ({ node, ctx }) => {
 		// Support expression resolution for `value` via ctx lookup
-		// (DslRenderer doesn't auto-resolve node props — the component does it)
+		// (DslRenderer doesn't auto-resolve node props - the component does it)
 		const resolveExpr = (expr: unknown): unknown => {
 			if (typeof expr !== 'string' || !expr.startsWith('$')) return expr;
 			const path = expr.slice(1).split('.');
@@ -229,7 +229,7 @@ $type: VarDisplay
 varName: count
 `);
 
-		// The brain runs on mount (first effect pass — no reactive deps = fires once)
+		// The brain runs on mount (first effect pass - no reactive deps = fires once)
 		await waitFor(() => {
 			expect(screen.getByTestId('var-display')).toHaveTextContent('42');
 		});
@@ -239,7 +239,7 @@ varName: count
 	// Test 3: $publishOutput is in ctx and observable via a reactive brain
 	// -------------------------------------------------------------------------
 	// This test explicitly verifies that ctx['$publishOutput'] is wired up and
-	// actually stores output — not just that no error was thrown.
+	// actually stores output - not just that no error was thrown.
 	// A VarDisplay driven by $outputs.myBtn.onClick confirms the full reactive path.
 
 	it('Test 3: $publishOutput is in ctx and can be called via button click', async () => {
@@ -261,16 +261,16 @@ sections:
 `);
 
 		// Initial state: brain does NOT fire at mount when $outputs.myBtn.onClick is
-		// undefined (output not yet published) — clicked stays at its initial value 'false'.
+		// undefined (output not yet published) - clicked stays at its initial value 'false'.
 		await waitFor(() => {
 			expect(screen.getByTestId('var-display')).toHaveTextContent('false');
 		});
 
-		// Click — publishOutput fires, brain updates var with {$tick: N} object
+		// Click - publishOutput fires, brain updates var with {$tick: N} object
 		const btn = screen.getByTestId('btn-myBtn');
 		fireEvent.click(btn);
 
-		// After click: VarDisplay must show a non-null value — the $tick object
+		// After click: VarDisplay must show a non-null value - the $tick object
 		// serialised as "[object Object]", proving $publishOutput is wired and the brain reacted
 		await waitFor(() => {
 			const display = screen.getByTestId('var-display');
@@ -327,10 +327,10 @@ value: $route.itemId
 	});
 
 	// -------------------------------------------------------------------------
-	// Test 5: Full reactive loop — button click → publishOutput → brain → setVar → re-render
+	// Test 5: Full reactive loop - button click -> publishOutput -> brain -> setVar -> re-render
 	// -------------------------------------------------------------------------
 
-	it('Test 5: reactive loop — click triggers brain which updates var display', async () => {
+	it('Test 5: reactive loop - click triggers brain which updates var display', async () => {
 		renderRunner(`
 $vars:
   selectedItem: null
@@ -348,16 +348,16 @@ sections:
     varName: selectedItem
 `);
 
-		// Step 1: initial render — VarDisplay shows "null"
+		// Step 1: initial render - VarDisplay shows "null"
 		await waitFor(() => {
 			expect(screen.getByTestId('var-display')).toHaveTextContent('null');
 		});
 
-		// Step 2: click the button — publishOutput fires
+		// Step 2: click the button - publishOutput fires
 		const btn = screen.getByTestId('btn-selectBtn');
 		fireEvent.click(btn);
 
-		// Step 3: brain detects $outputs.selectBtn.onClick changed → setVar → re-render.
+		// Step 3: brain detects $outputs.selectBtn.onClick changed -> setVar -> re-render.
 		// VarDisplay JSON.stringifies objects, so the $tick value appears as {"$tick":N}.
 		// This rules out both "null" and "[object Object]" string corruption.
 		await waitFor(() => {

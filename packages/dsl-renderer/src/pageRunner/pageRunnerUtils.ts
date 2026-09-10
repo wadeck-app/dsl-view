@@ -189,7 +189,7 @@ export async function resolveAuthHeaders(
 
 // Sources with $source.x.y params must load after x; loading out of order yields empty params.
 export function topoSortSources(specs: Record<string, SourceSpec>): string[] {
-	// Build adjacency: key → set of keys it depends on
+	// Build adjacency: key -> set of keys it depends on
 	const deps: Record<string, Set<string>> = {};
 	for (const [key, spec] of Object.entries(specs)) {
 		deps[key] = new Set<string>();
@@ -210,7 +210,7 @@ export function topoSortSources(specs: Record<string, SourceSpec>): string[] {
 			return;
 		}
 		if (visiting.has(key)) {
-			throw new Error(`Circular $sources dependency: ${[...chain, key].join(' → ')}`);
+			throw new Error(`Circular $sources dependency: ${[...chain, key].join(' -> ')}`);
 		}
 		visiting.add(key);
 		for (const dep of deps[key]) {

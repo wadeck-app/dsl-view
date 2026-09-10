@@ -8,8 +8,8 @@
  * Compared to the old wdrive-specific generator, this version is intentionally simpler:
  * - No AUTO_GENERATED_COMPONENTS / per-component wiring hints
  * - No ctxSourceProp / urlBackedPairs / ctxFixedKeyProps etc. — YAML now declares wiring
- * - Props classified as: ReactNode slot → renderChildren, @registryBind → FormContext,
- *   everything else → node['propName'] as PropType (direct cast)
+ * - Props classified as: ReactNode slot -> renderChildren, @registryBind -> FormContext,
+ *   everything else -> node['propName'] as PropType (direct cast)
  */
 
 import fs from 'fs';
@@ -270,10 +270,10 @@ function discoverComponents(srcDir: string, hookWrappers: Map<string, string[]>)
 // ─── Simple render block generation ───────────────────────────────────────────
 //
 // The new generic model: every prop is one of:
-//   - React.ReactNode (slot) → renderChildren(node['propName'], registry, ctx)
-//   - Everything else → node['propName'] as import('...').ComponentNameProps['propName']
+//   - React.ReactNode (slot) -> renderChildren(node['propName'], registry, ctx)
+//   - Everything else -> node['propName'] as import('...').ComponentNameProps['propName']
 //
-// Special case: @registryBind formData onChange → wrap with FormContext.
+// Special case: @registryBind formData onChange -> wrap with FormContext.
 // No urlBackedPairs, no ctxSourceProp, no ctxFixedKeyProps. YAML declares all wiring.
 
 function generateSimpleEntry(
@@ -593,8 +593,8 @@ export function entriesGenerator(): Plugin {
 	let buildOptions: BuildEntriesOptions = {};
 
 	// Walk up from this file to find the monorepo root.
-	// In the dsl-view source: build/ → src/ → dsl-renderer/ → packages/ → root (4 levels up).
-	// When installed as npm package: dist/build/ → dist/ → @wadeck-app/dsl-renderer/ → @wadeck-app/ → node_modules/ → ... (not a monorepo root).
+	// In the dsl-view source: build/ -> src/ -> dsl-renderer/ -> packages/ -> root (4 levels up).
+	// When installed as npm package: dist/build/ -> dist/ -> @wadeck-app/dsl-renderer/ -> @wadeck-app/ -> node_modules/ -> ... (not a monorepo root).
 	const monorepoRoot = path.resolve(__dirname, '../../../..');
 	// Detect whether we are running inside the dsl-view source tree or as an installed npm package.
 	const isInMonorepo = fs.existsSync(path.resolve(monorepoRoot, 'packages/dsl-renderer'));

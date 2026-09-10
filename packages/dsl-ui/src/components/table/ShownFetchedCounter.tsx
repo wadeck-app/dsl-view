@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { computeShownTotal } from '../../utils/computeShownTotal.js';
+import { computeShownTotal } from '@dsl-ui/utils/computeShownTotal.js';
 
 export interface ShownFetchedCounterProps {
 	raw: Record<string, unknown> | unknown[] | null | undefined;

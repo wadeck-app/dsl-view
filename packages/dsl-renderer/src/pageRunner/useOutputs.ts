@@ -1,6 +1,6 @@
 import { useCallback, useReducer } from 'react';
 
-// Monotone counter — guarantees distinct ticks even when two publishes happen within
+// Monotone counter - guarantees distinct ticks even when two publishes happen within
 // the same millisecond (common in tests and fast user interactions).
 let outputTick = 0;
 
@@ -23,7 +23,7 @@ export function useOutputs(): {
 	);
 	const publishOutput = useCallback((componentId: string, outputName: string, value: unknown) => {
 		// When value is undefined (arg discarded via [_] in YAML $outputs), store a monotone
-		// tick instead so each call produces a new reference — brains watching this output
+		// tick instead so each call produces a new reference - brains watching this output
 		// re-trigger on every event, not just the first one.
 		const stored = value === undefined ? { $tick: ++outputTick } : value;
 		dispatch({ id: componentId, name: outputName, value: stored });

@@ -72,7 +72,7 @@ export function DslRenderer({ node, registry, ctx = {} }: RendererProps): React.
 			for (const [key, sourceKey] of Object.entries(contextDirective.expose)) {
 				const ctxKey = sourceKey ?? key;
 				if (!(ctxKey in ctx)) {
-					missing.push(`${key} ← ${ctxKey}`);
+					missing.push(`${key} <- ${ctxKey}`);
 				}
 			}
 			if (missing.length > 0) {
@@ -155,7 +155,7 @@ export function resolveExpressionValue(expr: unknown, ctx: RenderContext): unkno
 	} else if (root === 'brains') {
 		current = ctx['$brains'];
 	} else if (root === 'sources') {
-		// $sources.books → ctx['books'], $sources.books.items → ctx['books'].items
+		// $sources.books -> ctx['books'], $sources.books.items -> ctx['books'].items
 		if (rest.length === 0) return undefined;
 		current = ctx[rest[0]!];
 		for (const key of rest.slice(1)) {

@@ -2,7 +2,7 @@ import { Moon, Sun } from 'lucide-react';
 import React from 'react';
 
 import { Button } from './_Button.js';
-import { ThemeContext, type ThemeMode } from '../../context/ThemeContext.js';
+import { ThemeContext, type ThemeMode } from '@dsl-ui/context/ThemeContext.js';
 
 export interface ThemeOption {
 	value: string;

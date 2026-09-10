@@ -9,5 +9,6 @@ import * as LucideIcons from 'lucide-react';
  */
 export function resolveIcon(name: string | undefined): React.ComponentType<{ className?: string }> | undefined {
 	if (!name) return undefined;
+	// violations-suppress: ts/no-unsafe-type-cast LucideIcons has a wide union type; string-indexing requires intermediate Record cast
 	return (LucideIcons as Record<string, unknown>)[name] as React.ComponentType<{ className?: string }> | undefined;
 }

@@ -34,7 +34,7 @@ type ColumnHelperFn<T extends Record<string, unknown>> = (key: keyof T & string,
  * Resolves one YAML column definition into a real `TableColumn`, dispatching by `format` to the
  * matching `ColumnHelpers` static method (same name as the format value) when present, falling
  * back to `ColumnHelpers.text` for a plain/unrecognized format. `extraFormats` lets a caller
- * (e.g. a domain-specific package) merge additional format→helper mappings without this module
+ * (e.g. a domain-specific package) merge additional format->helper mappings without this module
  * needing to know about domain-specific column types.
  */
 export function resolveColumn<T extends Record<string, unknown>>(

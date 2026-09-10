@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-import { RouterContext } from '../../RouterContext.js';
-import { UrlParamContext } from '../../context/UrlParamContext.js';
-import type { UrlParamService } from '../../context/UrlParamContext.js';
+import { RouterContext } from '@dsl-ui/RouterContext.js';
+import { UrlParamContext } from '@dsl-ui/context/UrlParamContext.js';
+import type { UrlParamService } from '@dsl-ui/context/UrlParamContext.js';
 
 /**
  * @registryCategory disposition

@@ -208,7 +208,7 @@ export function useSourceLoader(params: {
 		[$sources, getToken, fetcher]
 	);
 
-	// Initial load — catch errors so the rejection is handled and loading resets to false
+	// Initial load - catch errors so the rejection is handled and loading resets to false
 	useEffect(() => {
 		void loadSources(false, {}).catch(err => {
 			console.error('[useSourceLoader] initial load failed:', getErrorMessage(err));

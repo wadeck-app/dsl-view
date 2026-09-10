@@ -6,9 +6,9 @@
  * the YAML page and the contract key are irrelevant.
  *
  * Examples:
- *   /api/books/{id}        → /api/books/:__p0
- *   /api/books/:id         → /api/books/:__p0
- *   /api/tasks/:id/logs    → /api/tasks/:__p0/logs
+ *   /api/books/{id}        -> /api/books/:__p0
+ *   /api/books/:id         -> /api/books/:__p0
+ *   /api/tasks/:id/logs    -> /api/tasks/:__p0/logs
  */
 export function normalizeUrlStructure(url: string): string {
 	// Strip leading HTTP method (e.g. "GET ", "POST ")
@@ -36,7 +36,7 @@ export function normalizeUrlStructure(url: string): string {
  * Converts a YAML-style URL to a route-style URL (:param form).
  * Does NOT normalize to positional form — preserves the original param names.
  *
- * /api/books/{bookId} → /api/books/:bookId
+ * /api/books/{bookId} -> /api/books/:bookId
  */
 export function yamlUrlToRouteStyle(url: string): string {
 	const withoutMethod = url.replace(/^[A-Z]+\s+/, '');
@@ -44,7 +44,7 @@ export function yamlUrlToRouteStyle(url: string): string {
 }
 
 /**
- * Extracts the HTTP method from a YAML URL string (e.g. "GET /api/books/" → "GET").
+ * Extracts the HTTP method from a YAML URL string (e.g. "GET /api/books/" -> "GET").
  * Returns undefined if no method prefix is present.
  */
 export function extractMethod(url: string): string | undefined {

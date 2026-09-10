@@ -15,7 +15,7 @@ export interface ComponentRegistryEntry {
 	ctxSchema?: z.ZodSchema;
 	render: (props: RegistryRenderProps) => React.ReactElement | null;
 	// Constraint metadata - populated by entriesGenerator from JSDoc @slot tags and createContext/useContext calls
-	allowedChildren?: Record<string, string[]>; // slotName → allowed tags (e.g. { fields: ['field'], actions: ['action-bar'] })
+	allowedChildren?: Record<string, string[]>; // slotName -> allowed tags (e.g. { fields: ['field'], actions: ['action-bar'] })
 	providesContext?: string[]; // context variable names provided (from createContext() calls)
 	requiresContext?: string[]; // context variable names required (from useContext() calls)
 }

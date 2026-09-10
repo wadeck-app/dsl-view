@@ -313,7 +313,7 @@ describe('useSourceLoader', () => {
 			await waitFor(() => expect(result.current.loading).toBe(false));
 			expect(fetcher).toHaveBeenCalledTimes(1);
 
-			// Invalidate the cache entry — the next non-bypass call must go to the fetcher
+			// Invalidate the cache entry - the next non-bypass call must go to the fetcher
 			act(() => {
 				result.current.invalidateSourceCache('books');
 			});
@@ -380,7 +380,7 @@ describe('useSourceLoader', () => {
 
 		it('polls when pollWhen urlParam is truthy', async () => {
 			const fetcher = vi.fn().mockResolvedValue([]);
-			// 'live=1' is truthy — polling should be enabled
+			// 'live=1' is truthy - polling should be enabled
 			const searchParams = new URLSearchParams('live=1');
 
 			const { result } = renderHook(() =>

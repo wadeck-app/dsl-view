@@ -52,7 +52,6 @@ export function FieldNumber({
 				/>
 				{suffix && <span className="text-sm text-muted">{suffix}</span>}
 				{unlimited && (
-					// violations-suppress: no-raw-html-in-component FieldNumber IS an HTML form primitive
 					<label className="flex items-center gap-1 text-sm text-muted">
 						<input
 							type="checkbox"

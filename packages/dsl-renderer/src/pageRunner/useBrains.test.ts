@@ -92,7 +92,7 @@ describe('useBrains', () => {
 				expect(setVar).toHaveBeenCalledTimes(1);
 			});
 
-			// Re-render with the same ctx — snapshot unchanged, brain must NOT fire again
+			// Re-render with the same ctx - snapshot unchanged, brain must NOT fire again
 			rerender();
 			// Small wait to ensure no additional calls happen
 			await act(async () => {});
@@ -174,7 +174,7 @@ describe('useBrains', () => {
 
 		it('does NOT re-run when a non-reactive ctx key changes', async () => {
 			const setVar = vi.fn();
-			// Brain uses a static value — no reactive params
+			// Brain uses a static value - no reactive params
 			let ctx = makeCtx({ loading: false });
 
 			const { rerender } = renderHook(
@@ -202,7 +202,7 @@ describe('useBrains', () => {
 			rerender({ currentCtx: ctx });
 
 			await act(async () => {});
-			// Should still be 1 — no reactive param changed
+			// Should still be 1 - no reactive param changed
 			expect(setVar).toHaveBeenCalledTimes(1);
 		});
 	});
@@ -233,7 +233,7 @@ describe('useBrains', () => {
 			await waitFor(() => {
 				expect(fetcher).toHaveBeenCalledTimes(1);
 			});
-			// getToken not provided → authHeaders = undefined
+			// getToken not provided -> authHeaders = undefined
 			expect(fetcher).toHaveBeenCalledWith(
 				'POST /api/books/',
 				undefined,
@@ -582,7 +582,7 @@ describe('useBrains', () => {
 			expect(fetcher).toHaveBeenCalledTimes(2);
 		});
 
-		it('chain aborts on step failure — subsequent steps and $reload are NOT triggered', async () => {
+		it('chain aborts on step failure - subsequent steps and $reload are NOT triggered', async () => {
 			const step2Fetcher = vi.fn().mockResolvedValue({});
 			const fetcher = vi.fn().mockImplementation(async (url: string) => {
 				if (url.includes('/api/step1/')) throw new Error('step1 failed');

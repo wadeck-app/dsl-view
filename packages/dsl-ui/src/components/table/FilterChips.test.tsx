@@ -19,14 +19,19 @@ describe('FilterChips', () => {
 
 	it('all chips are active when value=[] - each chip has its color class', () => {
 		render(<FilterChips bind="tag" options={options} value={[]} onChange={vi.fn()} />);
+		// violations-suppress: tailwind/no-raw-color-class asserting chipColors.ts palette output - raw classes are the expected value
 		expect(screen.getByText('Alpha').className).toContain('bg-blue-100');
+		// violations-suppress: tailwind/no-raw-color-class asserting chipColors.ts palette output - raw classes are the expected value
 		expect(screen.getByText('Beta').className).toContain('bg-green-100');
+		// violations-suppress: tailwind/no-raw-color-class asserting chipColors.ts palette output - raw classes are the expected value
 		expect(screen.getByText('Gamma').className).toContain('bg-red-100');
 	});
 
 	it('only active chips are highlighted when value is a subset', () => {
 		render(<FilterChips bind="tag" options={options} value={['a']} onChange={vi.fn()} />);
+		// violations-suppress: tailwind/no-raw-color-class asserting chipColors.ts palette output - raw classes are the expected value
 		expect(screen.getByText('Alpha').className).toContain('bg-blue-100');
+		// violations-suppress: tailwind/no-raw-color-class asserting chipColors.ts palette output - raw classes are the expected value
 		expect(screen.getByText('Beta').className).not.toContain('bg-green-100');
 	});
 

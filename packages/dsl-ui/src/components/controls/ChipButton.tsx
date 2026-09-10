@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { type ChipColor, CHIP_COLOR_CLASSES, DEFAULT_CHIP_COLORS } from '../../utils/chipColors.js';
+import { type ChipColor, CHIP_COLOR_CLASSES, DEFAULT_CHIP_COLORS } from '@dsl-ui/utils/chipColors.js';
 import { Button } from './_Button.js';
 
 export interface ChipButtonProps {

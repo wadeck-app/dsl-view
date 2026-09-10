@@ -1,3 +1,4 @@
+// violations-suppress-start: tailwind/no-raw-color-class chip status palette maps business values to specific hue/shade pairs - not interchangeable with generic theme tokens
 export type ChipColor = 'blue' | 'green' | 'yellow' | 'orange' | 'red' | 'purple' | 'cyan';
 
 export interface ChipColorClasses {

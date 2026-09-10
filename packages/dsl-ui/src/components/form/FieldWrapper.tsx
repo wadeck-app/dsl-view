@@ -22,7 +22,6 @@ export function FieldWrapper({ label, description, children }: FieldWrapperProps
 	});
 	return (
 		<div>
-			{/* violations-suppress: no-raw-html-in-component FieldWrapper IS the HTML label primitive wrapper */}
 			<label htmlFor={id} className="block text-sm font-medium text-content">{label}</label>
 			{description && <p className="mb-1 text-xs text-muted">{description}</p>}
 			{childWithId}

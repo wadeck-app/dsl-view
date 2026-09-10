@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { ChipButton } from '../controls/ChipButton.js';
-import { type ChipColor } from '../../utils/chipColors.js';
+import { type ChipColor } from '@dsl-ui/utils/chipColors.js';
 
 export interface FilterChipOption {
 	value: string;

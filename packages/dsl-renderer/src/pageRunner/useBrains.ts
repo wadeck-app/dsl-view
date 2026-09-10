@@ -29,7 +29,7 @@ function resolveParamFromCtx(value: string, ctx: Record<string, unknown>): unkno
 		}
 		return current;
 	} else if (root === 'sources') {
-		// $sources.books → ctx['books'], $sources.books.items → ctx['books'].items
+		// $sources.books -> ctx['books'], $sources.books.items -> ctx['books'].items
 		if (rest.length === 0) return undefined;
 		current = ctx[rest[0]!];
 		for (const key of rest.slice(1)) {

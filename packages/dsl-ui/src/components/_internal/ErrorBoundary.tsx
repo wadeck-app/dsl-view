@@ -31,6 +31,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 				<div role="alert" className="m-4 rounded border-2 border-danger bg-danger-bg p-4 text-danger-text">
 					<strong className="mb-2 block">Something went wrong</strong>
 					<pre className="mb-3 whitespace-pre-wrap break-words text-sm">{this.state.error?.message ?? 'Unknown error'}</pre>
+					{/* violations-suppress: react/no-raw-button error boundary must be dependency-free - importing Button risks masking the original crash */}
 					<button
 						type="button"
 						onClick={() => window.location.reload()}
