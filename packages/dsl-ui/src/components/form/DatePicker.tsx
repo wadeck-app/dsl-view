@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { buildCalendarGrid } from './calendarUtils.js';
 import * as Popover from '@radix-ui/react-popover';
-import { addMonths, eachDayOfInterval, endOfMonth, format, isAfter, isBefore, isEqual, isSameMonth, isSameYear, isToday, parse, startOfMonth, subMonths } from 'date-fns';
+import { addMonths, format, isAfter, isBefore, isEqual, isSameMonth, isSameYear, isToday, parse, startOfMonth, subMonths } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const inputClass =
@@ -155,29 +156,7 @@ export function DatePicker({
 		}
 	}
 
-	const calendarDays = eachDayOfInterval({
-		start: startOfMonth(displayMonth),
-		end: endOfMonth(displayMonth),
-	});
-
-	// Get previous month days to fill first week
-	const firstDayOfMonth = startOfMonth(displayMonth);
-	const dayOfWeek = firstDayOfMonth.getDay();
-	const prevMonthDays = Array.from({ length: dayOfWeek }, (_, i) => {
-		return new Date(displayMonth.getFullYear(), displayMonth.getMonth(), -(dayOfWeek - i - 1));
-	});
-
-	// Get next month days to fill last week
-	const lastDayOfMonth = endOfMonth(displayMonth);
-	const lastDayOfWeek = lastDayOfMonth.getDay();
-	const nextMonthDays = Array.from({ length: 6 - lastDayOfWeek }, (_, i) => {
-		return new Date(displayMonth.getFullYear(), displayMonth.getMonth() + 1, i + 1);
-	});
-
-	const allDays = [...prevMonthDays, ...calendarDays, ...nextMonthDays];
-	const weeks = Array.from({ length: Math.ceil(allDays.length / 7) }, (_, i) =>
-		allDays.slice(i * 7, (i + 1) * 7),
-	);
+	const weeks = buildCalendarGrid(displayMonth);
 
 	return (
 		<Popover.Root open={open} onOpenChange={setOpen}>
@@ -238,7 +217,7 @@ export function DatePicker({
 
 						{/* Calendar grid */}
 						<div className="grid grid-cols-7 gap-1">
-							{allDays.map((date, idx) => {
+							{weeks.flat().map((date, idx) => {
 								const isCurrentMonth = isSameMonth(date, displayMonth);
 								const isSelected = value && isEqual(date, value);
 								const isFocused = focusedDate && isEqual(date, focusedDate);
