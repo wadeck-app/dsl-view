@@ -2,6 +2,7 @@
 // violations-suppress-start: ts/no-export-star published package barrel uses export* intentionally
 export * from './ConfirmDialog.js';
 export * from './Dialog.js';
+export * from './Drawer.js';
 export * from './DialogForm.js';
 export * from './Toast.js';
 export * from './Tooltip.js';
