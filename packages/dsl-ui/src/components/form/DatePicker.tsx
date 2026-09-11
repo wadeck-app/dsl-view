@@ -45,14 +45,14 @@ export function DatePicker({
 	const [inputValue, setInputValue] = useState(() => {
 		return value ? format(value, dateFormat) : '';
 	});
-	const focusedDateRef = useRef<Date | null>(value);
+	const [focusedDate, setFocusedDate] = useState<Date | null>(value);
 	const calendarRef = useRef<HTMLDivElement>(null);
 
 	// Update input display when value changes externally
 	useEffect(() => {
 		setInputValue(value ? format(value, dateFormat) : '');
 		if (value) {
-			focusedDateRef.current = value;
+			setFocusedDate(value);
 		}
 	}, [value, dateFormat]);
 
@@ -65,8 +65,8 @@ export function DatePicker({
 
 	function isDisabledDate(date: Date): boolean {
 		if (isDateDisabled?.(date)) return true;
-		if (minDate && isBefore(date, startOfMonth(minDate))) return true;
-		if (maxDate && isAfter(date, endOfMonth(maxDate))) return true;
+		if (minDate && isBefore(date, minDate)) return true;
+		if (maxDate && isAfter(date, maxDate)) return true;
 		return false;
 	}
 
@@ -101,9 +101,9 @@ export function DatePicker({
 	}
 
 	function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
-		if (!focusedDateRef.current) return;
+		if (!focusedDate) return;
 
-		const current = focusedDateRef.current;
+		const current = focusedDate;
 		let nextDate: Date | null = null;
 
 		switch (e.key) {
@@ -138,12 +138,10 @@ export function DatePicker({
 		}
 
 		if (nextDate && !isDisabledDate(nextDate)) {
-			focusedDateRef.current = nextDate;
+			setFocusedDate(nextDate);
 			if (!isSameMonth(displayMonth, nextDate)) {
 				setDisplayMonth(nextDate);
 			}
-			// Force re-render to show focus change
-			setDisplayMonth(m => new Date(m));
 		}
 	}
 
@@ -151,7 +149,7 @@ export function DatePicker({
 		if (e.key === 'ArrowDown' || e.key === 'Enter') {
 			e.preventDefault();
 			setOpen(true);
-			focusedDateRef.current = value ?? new Date();
+			setFocusedDate(value ?? new Date());
 		} else if (e.key === 'Escape') {
 			setOpen(false);
 		}
@@ -243,7 +241,7 @@ export function DatePicker({
 							{allDays.map((date, idx) => {
 								const isCurrentMonth = isSameMonth(date, displayMonth);
 								const isSelected = value && isEqual(date, value);
-								const isFocused = focusedDateRef.current && isEqual(date, focusedDateRef.current);
+								const isFocused = focusedDate && isEqual(date, focusedDate);
 								const isDateDisabledState = isDisabledDate(date);
 								const isTodayDate = isToday(date);
 

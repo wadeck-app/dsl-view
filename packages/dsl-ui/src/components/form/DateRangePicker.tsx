@@ -234,7 +234,7 @@ export function DateRangePicker({
 							tabIndex={0}
 							aria-label="Clear date range"
 							onClick={handleClear}
-							onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && handleClear(e as unknown as React.MouseEvent)}
+							onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClear(e as unknown as React.MouseEvent); } }}
 							className="p-0.5 hover:bg-muted-bg rounded transition-colors"
 						>
 							<X className="w-3.5 h-3.5 text-muted" />
@@ -286,7 +286,6 @@ export function DateRangePicker({
 							onDateHover={date => phase === 'to' && setHoveredDate(date)}
 							onDateLeave={() => setHoveredDate(null)}
 							isDateOutOfBounds={isDateOutOfBounds}
-							phase={phase}
 						/>
 						<CalendarPanel
 							month={rightMonth}
@@ -299,7 +298,6 @@ export function DateRangePicker({
 							onDateHover={date => phase === 'to' && setHoveredDate(date)}
 							onDateLeave={() => setHoveredDate(null)}
 							isDateOutOfBounds={isDateOutOfBounds}
-							phase={phase}
 						/>
 					</div>
 				</Popover.Content>
@@ -323,7 +321,6 @@ interface CalendarPanelProps {
 	onDateHover: (date: Date) => void;
 	onDateLeave: () => void;
 	isDateOutOfBounds: (date: Date) => boolean;
-	phase: SelectionPhase;
 }
 
 function CalendarPanel({
@@ -364,7 +361,8 @@ function CalendarPanel({
 					type="button"
 					onClick={onPrev}
 					aria-label="Previous month"
-					className={`p-1 hover:bg-muted-bg rounded transition-colors ${!showPrev ? 'invisible' : ''}`}
+					disabled={!showPrev}
+					className={`p-1 hover:bg-muted-bg rounded transition-colors ${!showPrev ? 'invisible pointer-events-none' : ''}`}
 				>
 					<ChevronLeft className="w-4 h-4" />
 				</button>
@@ -375,7 +373,8 @@ function CalendarPanel({
 					type="button"
 					onClick={onNext}
 					aria-label="Next month"
-					className={`p-1 hover:bg-muted-bg rounded transition-colors ${!showNext ? 'invisible' : ''}`}
+					disabled={!showNext}
+					className={`p-1 hover:bg-muted-bg rounded transition-colors ${!showNext ? 'invisible pointer-events-none' : ''}`}
 				>
 					<ChevronRight className="w-4 h-4" />
 				</button>

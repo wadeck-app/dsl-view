@@ -158,7 +158,8 @@ export function Drawer({
 				ref={drawerRef}
 				role="dialog"
 				aria-modal="true"
-				aria-labelledby={titleId}
+				aria-labelledby={title ? titleId : undefined}
+				aria-label={!title ? 'Drawer' : undefined}
 				className={[
 					'fixed z-50 flex flex-col bg-surface shadow-2xl',
 					'transition-transform duration-300 ease-in-out',

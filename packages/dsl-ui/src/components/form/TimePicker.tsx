@@ -71,8 +71,10 @@ export function TimePicker({
 
 	function incrementHours() {
 		if (is12Hour) {
+			// In 12h mode: 1→2→...→11→12→1, preserving AM/PM
 			const h12 = hours % 12 === 0 ? 12 : hours % 12;
-			const nextH12 = (h12 % 12) + 1;
+			const nextH12 = h12 === 12 ? 1 : h12 + 1;
+			// PM block: hours 12–23; AM block: hours 0–11
 			const newHours = hours >= 12
 				? (nextH12 === 12 ? 12 : nextH12 + 12)
 				: (nextH12 === 12 ? 0 : nextH12);
@@ -84,6 +86,7 @@ export function TimePicker({
 
 	function decrementHours() {
 		if (is12Hour) {
+			// In 12h mode: 1→12→11→...→2→1, preserving AM/PM
 			const h12 = hours % 12 === 0 ? 12 : hours % 12;
 			const prevH12 = h12 === 1 ? 12 : h12 - 1;
 			const newHours = hours >= 12
@@ -123,10 +126,14 @@ export function TimePicker({
 
 	function handleNow() {
 		const now = new Date();
-		const h = now.getHours();
+		let h = now.getHours();
 		const rawM = now.getMinutes();
-		const m = minuteStep > 1 ? Math.round(rawM / minuteStep) * minuteStep : rawM;
-		emit(h, m >= 60 ? 0 : m);
+		let m = minuteStep > 1 ? Math.round(rawM / minuteStep) * minuteStep : rawM;
+		if (m >= 60) {
+			m = 0;
+			h = (h + 1) % 24;
+		}
+		emit(h, m);
 	}
 
 	const displayValue = formatDisplayTime(value, is12Hour);
