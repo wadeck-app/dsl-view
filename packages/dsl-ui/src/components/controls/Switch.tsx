@@ -13,8 +13,11 @@ const TRACK_BASE = 'relative inline-flex items-center rounded-full transition-co
 const TRACK_SIZE: Record<'sm' | 'md', string> = { sm: 'w-9 h-5', md: 'w-11 h-6' };
 
 const THUMB_BASE = 'block rounded-full bg-white shadow-sm transition-transform';
-const THUMB_SIZE: Record<'sm' | 'md', string> = { sm: 'w-4 h-4 translate-x-0.5', md: 'w-5 h-5 translate-x-0.5' };
-const THUMB_TRANSLATE: Record<'sm' | 'md', string> = { sm: 'data-[state=checked]:translate-x-4', md: 'data-[state=checked]:translate-x-5' };
+// OFF: 2px gap from left edge. ON: track_width - thumb_width - 2px (symmetric gap)
+// sm: 36 - 16 - 2 = 18px. md: 44 - 20 - 2 = 22px
+const THUMB_TRANSLATE_OFF = 'translate-x-0.5';
+const THUMB_TRANSLATE_ON: Record<'sm' | 'md', string> = { sm: 'translate-x-[18px]', md: 'translate-x-[22px]' };
+const THUMB_SIZE: Record<'sm' | 'md', string> = { sm: 'w-4 h-4', md: 'w-5 h-5' };
 
 /**
  * @registryCategory atomic
@@ -30,7 +33,7 @@ export function Switch({ label, checked, onChange, disabled, size = 'md' }: Swit
                 disabled={disabled}
                 className={`${TRACK_BASE} ${TRACK_SIZE[size]}`}
             >
-                <RadixSwitch.Thumb className={`${THUMB_BASE} ${THUMB_SIZE[size]} ${THUMB_TRANSLATE[size]}`} />
+                <RadixSwitch.Thumb className={`${THUMB_BASE} ${THUMB_SIZE[size]} ${checked ? THUMB_TRANSLATE_ON[size] : THUMB_TRANSLATE_OFF}`} />
             </RadixSwitch.Root>
             {label && <span className="text-sm text-content">{label}</span>}
         </label>

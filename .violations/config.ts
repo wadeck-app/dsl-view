@@ -5,6 +5,7 @@ export default {
   globalExclude: [
     '**/node_modules/**',
     '**/dist/**',
+    '**/storybook-static/**',
     '**/*.tsbuildinfo',
   ],
   rules: {

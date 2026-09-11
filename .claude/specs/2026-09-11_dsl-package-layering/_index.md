@@ -2,8 +2,8 @@
 
 **Created:** 2026-09-11
 **Version:** v0.1
-**Status:** In Progress
-**Iteration:** 1
+**Status:** Complete - Ready for Implementation
+**Iteration:** 1 (Spec), Iteration 2 (Implementation in progress)
 
 ## Summary
 
@@ -14,12 +14,11 @@ Decided to keep dsl-ui as a unified design system (atomic components + styling).
 | # | Decision | Status | Date | Rationale |
 |---|---|---|---|---|
 | 1 | No package layering. dsl-ui is the complete design system (atomic + styled). Applications fork if design needs diverge. | Resolved | 2026-09-11 | Complexity cost of layering outweighs benefit until 2+ apps have divergent design requirements. Single cohesive design system is simpler to maintain, test, and evolve. |
+| 2 | Phase 1 Full Scope: Deliver DatePickers + Drawer + Advanced DataTable patterns together (weeks 1-3). | Resolved | 2026-09-11 | Workspace analysis shows 2500-3000 LOC duplicate code across 8 apps. All three components are prerequisites for admin dashboards (agent-fleet, wdrive). Splitting reduces impact. Better to deliver complete solution upfront. |
 
 ## Open Questions
 
-| # | Question | Priority | Status |
-|---|---|---|---|
-| 1 | Should Phase 1 (DatePickers + Drawer + DataTable docs) be delivered all together, or split across phases? | P0 | Open |
+*(All open questions resolved. Implementation begins.)*
 
 ## Modules / Sub-files
 

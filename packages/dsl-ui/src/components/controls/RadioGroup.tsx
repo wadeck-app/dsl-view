@@ -18,7 +18,7 @@ export interface RadioGroupProps {
 const ITEM_BASE_CLASS =
 	'appearance-none h-4 w-4 rounded-full border-2 bg-surface focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-solid)] focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center flex-shrink-0 cursor-pointer';
 
-const INDICATOR_DOT_CLASS = 'h-2 w-2 rounded-full bg-[var(--color-primary-solid)]';
+const INDICATOR_DOT_CLASS = 'h-2.5 w-2.5 rounded-full bg-[var(--color-primary-solid)]';
 
 const LEGEND_CLASS = 'text-sm font-medium text-content mb-2';
 

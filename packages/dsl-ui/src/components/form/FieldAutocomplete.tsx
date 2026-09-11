@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 
 import { FieldWrapper } from './FieldWrapper.js';
@@ -42,6 +42,7 @@ export function FieldAutocomplete({
 		return match ? match.label : value;
 	});
 	const [open, setOpen] = useState(false);
+	const isSelectingRef = useRef(false);
 
 	useEffect(() => {
 		const match = options.find(o => o.value === value);
@@ -59,13 +60,15 @@ export function FieldAutocomplete({
 	}
 
 	function handleFocus() {
-		if (filteredOptions.length > 0) setOpen(true);
+		if (!isSelectingRef.current && filteredOptions.length > 0) setOpen(true);
 	}
 
 	function handleSelect(opt: FieldAutocompleteOption) {
+		isSelectingRef.current = true;
 		setInputValue(opt.label);
 		onChange(opt.value);
 		setOpen(false);
+		setTimeout(() => { isSelectingRef.current = false; }, 100);
 	}
 
 	return (
