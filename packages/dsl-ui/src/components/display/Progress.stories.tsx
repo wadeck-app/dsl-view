@@ -1,3 +1,4 @@
+import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import { Progress } from './Progress.js';
 
@@ -14,11 +15,13 @@ const meta: Meta<typeof Progress> = {
 export default meta;
 type Story = StoryObj<typeof Progress>;
 
-export const Default: Story = { args: { value: 60 } };
-export const WithLabel: Story = { args: { value: 45, label: 'Upload progress', showValue: true } };
-export const Success: Story = { args: { value: 100, variant: 'success', label: 'Complete', showValue: true } };
-export const Danger: Story = { args: { value: 80, variant: 'danger', label: 'Disk usage', showValue: true } };
-export const SmSize: Story = { args: { value: 60, size: 'sm' } };
+const wrap = (story: React.ReactNode) => <div className="w-80">{story}</div>;
+
+export const Default: Story = { render: (args) => wrap(<Progress {...args} />), args: { value: 60 } };
+export const WithLabel: Story = { render: (args) => wrap(<Progress {...args} />), args: { value: 45, label: 'Upload progress', showValue: true } };
+export const Success: Story = { render: (args) => wrap(<Progress {...args} />), args: { value: 100, variant: 'success', label: 'Complete', showValue: true } };
+export const Danger: Story = { render: (args) => wrap(<Progress {...args} />), args: { value: 80, variant: 'danger', label: 'Disk usage', showValue: true } };
+export const SmSize: Story = { render: (args) => wrap(<Progress {...args} />), args: { value: 60, size: 'sm' } };
 
 export const AllVariants: Story = {
     render: () => (

@@ -10,7 +10,7 @@ describe('Badge', () => {
 
     it('applies default variant classes', () => {
         const { container } = render(<Badge label="x" variant="default" />);
-        expect(container.firstChild).toHaveClass('bg-muted-bg', 'text-muted');
+        expect(container.firstChild).toHaveClass('bg-surface', 'border', 'border-border', 'text-content');
     });
 
     it('applies primary variant classes', () => {

@@ -7,10 +7,10 @@ export interface BadgeProps {
 }
 
 const VARIANT_CLASSES: Record<NonNullable<BadgeProps['variant']>, string> = {
-    default:  'bg-muted-bg text-muted',
+    default:  'bg-surface border border-border text-content',
     primary:  'bg-primary text-white',
     success:  'bg-success text-white',
-    warning:  'bg-warning-bg text-warning-text',
+    warning:  'bg-warning-bg text-warning-text border border-warning-text/20',
     danger:   'bg-danger text-white',
     info:     'bg-info-bg text-info-text',
 };

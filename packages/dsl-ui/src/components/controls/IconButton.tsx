@@ -16,9 +16,14 @@ export interface IconButtonProps {
 	loading?: boolean;
 }
 
-const SIZE_PADDING: Record<IconButtonSize, string> = {
-	sm: 'p-1.5',
-	md: 'p-2',
+const SIZE_CLASS: Record<IconButtonSize, string> = {
+	sm: '!w-6 !h-6 !p-0 flex items-center justify-center',
+	md: '!w-8 !h-8 !p-0 flex items-center justify-center',
+};
+
+const ICON_SIZE: Record<IconButtonSize, string> = {
+	sm: 'h-3.5 w-3.5',
+	md: 'h-4 w-4',
 };
 
 /**
@@ -44,9 +49,11 @@ export function IconButton({
 			disabledReason={disabledReason}
 			loading={false}
 			aria-label={label}
-			className={SIZE_PADDING[size]}
+			className={SIZE_CLASS[size]}
 		>
-			{loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : icon}
+			{loading
+				? <Loader2 className={`${ICON_SIZE[size]} animate-spin`} aria-hidden="true" />
+				: icon}
 		</Button>
 	);
 }

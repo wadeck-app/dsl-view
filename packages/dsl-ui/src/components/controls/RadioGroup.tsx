@@ -15,8 +15,8 @@ export interface RadioGroupProps {
 	orientation?: 'vertical' | 'horizontal';
 }
 
-const ITEM_CLASS =
-	'relative h-4 w-4 rounded-full border border-border bg-surface focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-solid)] focus:ring-offset-1 data-[state=checked]:border-[var(--color-primary-solid)] disabled:opacity-50 disabled:cursor-not-allowed';
+const ITEM_BASE_CLASS =
+	'appearance-none h-4 w-4 rounded-full border-2 bg-surface focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-solid)] focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center flex-shrink-0 cursor-pointer';
 
 const INDICATOR_DOT_CLASS = 'h-2 w-2 rounded-full bg-[var(--color-primary-solid)]';
 
@@ -55,9 +55,9 @@ export function RadioGroup({
 							<RadixRadioGroup.Item
 								value={opt.value}
 								disabled={opt.disabled}
-								className={ITEM_CLASS}
+								className={`${ITEM_BASE_CLASS} ${value === opt.value ? 'border-[var(--color-primary-solid)]' : 'border-border'}`}
 							>
-								<RadixRadioGroup.Indicator className="absolute inset-0 flex items-center justify-center">
+								<RadixRadioGroup.Indicator>
 									<span className={INDICATOR_DOT_CLASS} />
 								</RadixRadioGroup.Indicator>
 							</RadixRadioGroup.Item>

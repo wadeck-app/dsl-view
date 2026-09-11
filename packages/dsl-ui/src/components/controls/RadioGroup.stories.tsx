@@ -18,8 +18,8 @@ const options = [
 
 export const Default: Story = {
 	render: (args) => {
-		const [value, setValue] = useState('');
-		return <RadioGroup {...args} value={value} onChange={setValue} />;
+		const [value, setValue] = useState('small');
+		return <div className="w-48"><RadioGroup {...args} value={value} onChange={setValue} /></div>;
 	},
 	args: { options },
 };
@@ -27,7 +27,7 @@ export const Default: Story = {
 export const Horizontal: Story = {
 	render: (args) => {
 		const [value, setValue] = useState('');
-		return <RadioGroup {...args} value={value} onChange={setValue} />;
+		return <div className="w-72"><RadioGroup {...args} value={value} onChange={setValue} /></div>;
 	},
 	args: { options, orientation: 'horizontal' },
 };
@@ -35,7 +35,7 @@ export const Horizontal: Story = {
 export const WithLabel: Story = {
 	render: (args) => {
 		const [value, setValue] = useState('medium');
-		return <RadioGroup {...args} value={value} onChange={setValue} />;
+		return <div className="w-48"><RadioGroup {...args} value={value} onChange={setValue} /></div>;
 	},
 	args: { options, label: 'Size' },
 };

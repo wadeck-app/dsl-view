@@ -19,7 +19,7 @@ const options = [
 export const Default: Story = {
 	render: (args) => {
 		const [value, setValue] = useState<string[]>([]);
-		return <CheckboxGroup {...args} value={value} onChange={setValue} />;
+		return <div className="w-48"><CheckboxGroup {...args} value={value} onChange={setValue} /></div>;
 	},
 	args: { options, orientation: 'vertical' },
 };
@@ -27,7 +27,7 @@ export const Default: Story = {
 export const Horizontal: Story = {
 	render: (args) => {
 		const [value, setValue] = useState<string[]>([]);
-		return <CheckboxGroup {...args} value={value} onChange={setValue} />;
+		return <div className="w-48"><CheckboxGroup {...args} value={value} onChange={setValue} /></div>;
 	},
 	args: { options, orientation: 'horizontal' },
 };
@@ -35,7 +35,7 @@ export const Horizontal: Story = {
 export const WithGroupLabel: Story = {
 	render: (args) => {
 		const [value, setValue] = useState<string[]>([]);
-		return <CheckboxGroup {...args} value={value} onChange={setValue} />;
+		return <div className="w-48"><CheckboxGroup {...args} value={value} onChange={setValue} /></div>;
 	},
 	args: { options, label: 'Permissions', orientation: 'vertical' },
 };
@@ -43,7 +43,7 @@ export const WithGroupLabel: Story = {
 export const PartiallyChecked: Story = {
 	render: (args) => {
 		const [value, setValue] = useState<string[]>(['read']);
-		return <CheckboxGroup {...args} value={value} onChange={setValue} />;
+		return <div className="w-48"><CheckboxGroup {...args} value={value} onChange={setValue} /></div>;
 	},
 	args: { options, label: 'Permissions' },
 };

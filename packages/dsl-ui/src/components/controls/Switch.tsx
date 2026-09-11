@@ -9,7 +9,7 @@ export interface SwitchProps {
     size?: 'sm' | 'md';
 }
 
-const TRACK_BASE = 'relative inline-flex items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-solid)] focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed bg-muted-bg data-[state=checked]:bg-[var(--color-primary-solid)]';
+const TRACK_BASE = 'relative inline-flex items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-solid)] focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed bg-gray-300 data-[state=checked]:bg-[var(--color-primary-solid)]';
 const TRACK_SIZE: Record<'sm' | 'md', string> = { sm: 'w-9 h-5', md: 'w-11 h-6' };
 
 const THUMB_BASE = 'block rounded-full bg-white shadow-sm transition-transform';

@@ -58,6 +58,7 @@ export function CheckboxGroup({
 							checked={value.includes(opt.value)}
 							onChange={() => !opt.disabled && toggle(opt.value)}
 							disabled={opt.disabled}
+							className="!h-4 !w-4"
 						/>
 						{opt.label}
 					</label>

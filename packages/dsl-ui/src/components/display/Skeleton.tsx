@@ -17,7 +17,7 @@ export function Skeleton({ width = '100%', height = '1rem', variant = 'line', co
 
     const item = (
         <div
-            className={`animate-pulse bg-muted-bg ${isCircle ? 'rounded-full' : 'rounded'}`}
+            className={`animate-pulse bg-gray-200 dark:bg-gray-700 ${isCircle ? 'rounded-full' : 'rounded'}`}
             style={{ width, height: resolvedHeight }}
         />
     );
@@ -31,7 +31,7 @@ export function Skeleton({ width = '100%', height = '1rem', variant = 'line', co
             {Array.from({ length: count }).map((_, i) => (
                 <div
                     key={i}
-                    className={`animate-pulse bg-muted-bg ${isCircle ? 'rounded-full' : 'rounded'}`}
+                    className={`animate-pulse bg-gray-200 dark:bg-gray-700 ${isCircle ? 'rounded-full' : 'rounded'}`}
                     style={{ width, height: resolvedHeight }}
                 />
             ))}
