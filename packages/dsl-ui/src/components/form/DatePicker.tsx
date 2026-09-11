@@ -1,237 +1,286 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
-import {
-	startOfMonth,
-	endOfMonth,
-	eachDayOfInterval,
-	isSameMonth,
-	isSameDay,
-	format,
-	addMonths,
-	subMonths,
-	getDay,
-	isAfter,
-	isBefore,
-} from 'date-fns';
+import { addMonths, eachDayOfInterval, endOfMonth, format, isAfter, isBefore, isEqual, isSameMonth, isSameYear, isToday, parse, startOfMonth, subMonths } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const inputClass =
 	'block w-full rounded border border-border bg-surface text-content px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed';
 
-const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const CALENDAR_CLASS = 'z-50 bg-surface border border-border rounded shadow-md p-4 w-80';
 
 export interface DatePickerProps {
-	/** The selected date value */
 	value: Date | null;
-	/** Called when date is selected */
-	onChange: (date: Date | null) => void;
-	/** Optional: predicate to determine if a date is disabled */
-	isDisabled?: (date: Date) => boolean;
-	/** Optional: minimum selectable date */
+	onChange?: (date: Date | null) => void;
+	onSelect?: (date: Date) => void;
+	/** Function to determine if a date is disabled. Return true to disable. */
+	isDateDisabled?: (date: Date) => boolean;
 	minDate?: Date;
-	/** Optional: maximum selectable date */
 	maxDate?: Date;
-	/** Optional: custom placeholder text */
 	placeholder?: string;
-	/** Optional: prevent date picker from opening */
 	disabled?: boolean;
+	dateFormat?: string;
 }
 
 /**
- * Calendar component for date selection.
- * @internal Used by FieldDate; render this directly only for custom form wrappers.
+ * @registryCategory atomic
+ * @registryTags field date calendar
+ * @registryBind formData onChange
  */
 export function DatePicker({
 	value,
 	onChange,
-	isDisabled,
+	onSelect,
+	isDateDisabled,
 	minDate,
 	maxDate,
 	placeholder = 'Select a date...',
-	disabled = false,
+	disabled,
+	dateFormat = 'MMM d, yyyy',
 }: DatePickerProps) {
 	const [open, setOpen] = useState(false);
-	const [displayMonth, setDisplayMonth] = useState<Date>(() => value ?? new Date());
+	const [displayMonth, setDisplayMonth] = useState<Date>(() => {
+		if (value) return value;
+		return new Date();
+	});
+	const [inputValue, setInputValue] = useState(() => {
+		return value ? format(value, dateFormat) : '';
+	});
+	const focusedDateRef = useRef<Date | null>(value);
+	const calendarRef = useRef<HTMLDivElement>(null);
 
-	// Compute whether a date should be disabled based on all constraints
-	const isDateDisabled = useCallback(
-		(date: Date): boolean => {
-			if (isDisabled?.(date)) return true;
-			if (minDate && isBefore(date, minDate)) return true;
-			if (maxDate && isAfter(date, maxDate)) return true;
-			return false;
-		},
-		[isDisabled, minDate, maxDate],
-	);
-
-	// Update display month when value changes externally
+	// Update input display when value changes externally
 	useEffect(() => {
+		setInputValue(value ? format(value, dateFormat) : '');
 		if (value) {
+			focusedDateRef.current = value;
+		}
+	}, [value, dateFormat]);
+
+	// Update display month when value changes
+	useEffect(() => {
+		if (value && !isSameMonth(displayMonth, value)) {
 			setDisplayMonth(value);
 		}
-	}, [value]);
+	}, [value, displayMonth]);
 
-	const handlePrevMonth = () => {
-		setDisplayMonth(prev => subMonths(prev, 1));
-	};
+	function isDisabledDate(date: Date): boolean {
+		if (isDateDisabled?.(date)) return true;
+		if (minDate && isBefore(date, startOfMonth(minDate))) return true;
+		if (maxDate && isAfter(date, endOfMonth(maxDate))) return true;
+		return false;
+	}
 
-	const handleNextMonth = () => {
-		setDisplayMonth(prev => addMonths(prev, 1));
-	};
+	function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+		const text = e.target.value;
+		setInputValue(text);
 
-	const handleSelectDate = (date: Date) => {
-		if (!isDateDisabled(date)) {
-			onChange(date);
+		// Try to parse input as date
+		if (text.trim() === '') {
+			onChange?.(null);
+		} else {
+			try {
+				const parsed = parse(text, dateFormat, new Date());
+				// Check if parsed date is valid
+				if (!Number.isNaN(parsed.getTime())) {
+					if (!isDisabledDate(parsed)) {
+						onChange?.(parsed);
+						setDisplayMonth(parsed);
+					}
+				}
+			} catch {
+				// Invalid format, keep as-is
+			}
+		}
+	}
+
+	function handleDateClick(date: Date) {
+		if (isDisabledDate(date)) return;
+		onChange?.(date);
+		onSelect?.(date);
+		setOpen(false);
+	}
+
+	function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+		if (!focusedDateRef.current) return;
+
+		const current = focusedDateRef.current;
+		let nextDate: Date | null = null;
+
+		switch (e.key) {
+			case 'ArrowUp':
+				e.preventDefault();
+				nextDate = new Date(current.getFullYear(), current.getMonth(), current.getDate() - 7);
+				break;
+			case 'ArrowDown':
+				e.preventDefault();
+				nextDate = new Date(current.getFullYear(), current.getMonth(), current.getDate() + 7);
+				break;
+			case 'ArrowLeft':
+				e.preventDefault();
+				nextDate = new Date(current.getFullYear(), current.getMonth(), current.getDate() - 1);
+				break;
+			case 'ArrowRight':
+				e.preventDefault();
+				nextDate = new Date(current.getFullYear(), current.getMonth(), current.getDate() + 1);
+				break;
+			case 'Enter':
+				e.preventDefault();
+				if (!isDisabledDate(current)) {
+					handleDateClick(current);
+				}
+				break;
+			case 'Escape':
+				e.preventDefault();
+				setOpen(false);
+				break;
+			default:
+				break;
+		}
+
+		if (nextDate && !isDisabledDate(nextDate)) {
+			focusedDateRef.current = nextDate;
+			if (!isSameMonth(displayMonth, nextDate)) {
+				setDisplayMonth(nextDate);
+			}
+			// Force re-render to show focus change
+			setDisplayMonth(m => new Date(m));
+		}
+	}
+
+	function handleInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+		if (e.key === 'ArrowDown' || e.key === 'Enter') {
+			e.preventDefault();
+			setOpen(true);
+			focusedDateRef.current = value ?? new Date();
+		} else if (e.key === 'Escape') {
 			setOpen(false);
 		}
-	};
+	}
 
-	const handleClear = (e: React.MouseEvent) => {
-		e.stopPropagation();
-		onChange(null);
-		setOpen(false);
-	};
+	const calendarDays = eachDayOfInterval({
+		start: startOfMonth(displayMonth),
+		end: endOfMonth(displayMonth),
+	});
 
-	// Generate calendar days for the displayed month
-	const monthStart = startOfMonth(displayMonth);
-	const monthEnd = endOfMonth(displayMonth);
-	const calendarDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+	// Get previous month days to fill first week
+	const firstDayOfMonth = startOfMonth(displayMonth);
+	const dayOfWeek = firstDayOfMonth.getDay();
+	const prevMonthDays = Array.from({ length: dayOfWeek }, (_, i) => {
+		return new Date(displayMonth.getFullYear(), displayMonth.getMonth(), -(dayOfWeek - i - 1));
+	});
 
-	// Compute leading empty cells (for days before month starts)
-	const firstDayOfWeek = getDay(monthStart);
-	const leadingEmptyCells = Array(firstDayOfWeek).fill(null);
+	// Get next month days to fill last week
+	const lastDayOfMonth = endOfMonth(displayMonth);
+	const lastDayOfWeek = lastDayOfMonth.getDay();
+	const nextMonthDays = Array.from({ length: 6 - lastDayOfWeek }, (_, i) => {
+		return new Date(displayMonth.getFullYear(), displayMonth.getMonth() + 1, i + 1);
+	});
 
-	const formattedValue = value ? format(value, 'MMM d, yyyy') : placeholder;
+	const allDays = [...prevMonthDays, ...calendarDays, ...nextMonthDays];
+	const weeks = Array.from({ length: Math.ceil(allDays.length / 7) }, (_, i) =>
+		allDays.slice(i * 7, (i + 1) * 7),
+	);
 
 	return (
 		<Popover.Root open={open} onOpenChange={setOpen}>
 			<Popover.Anchor asChild>
-				<div className="relative w-full">
-					<input
-						type="text"
-						readOnly
-						value={formattedValue}
-						placeholder={placeholder}
-						disabled={disabled}
-						className={`mt-1 ${inputClass} cursor-pointer`}
-						onClick={() => !disabled && setOpen(true)}
-						onKeyDown={e => {
-							if (e.key === 'Enter') {
-								!disabled && setOpen(true);
-							} else if (e.key === 'Escape') {
-								setOpen(false);
-							}
-						}}
-						role="combobox"
-						aria-expanded={open}
-						aria-haspopup="dialog"
-					/>
-					{value && !disabled && (
-						<button
-							type="button"
-							onClick={handleClear}
-							className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted hover:text-content text-lg leading-none"
-							aria-label="Clear date"
-							tabIndex={-1}
-						>
-							×
-						</button>
-					)}
-				</div>
+				<input
+					type="text"
+					value={inputValue}
+					onChange={handleInputChange}
+					onKeyDown={handleInputKeyDown}
+					onFocus={() => !disabled && setOpen(true)}
+					placeholder={placeholder}
+					disabled={disabled}
+					className={inputClass}
+				/>
 			</Popover.Anchor>
-
 			<Popover.Portal>
 				<Popover.Content
 					align="start"
-					sideOffset={4}
+					sideOffset={8}
 					onOpenAutoFocus={e => e.preventDefault()}
-					className="z-50 bg-surface border border-border rounded-lg shadow-lg p-4 w-80"
+					className={CALENDAR_CLASS}
+					onKeyDown={handleKeyDown}
+					ref={calendarRef}
+					tabIndex={-1}
 				>
-					{/* Month/Year Header with Navigation */}
-					<div className="flex items-center justify-between mb-4">
+					<div className="space-y-4">
+						{/* Header with month/year and navigation */}
+						<div className="flex items-center justify-between">
+							<button
+								type="button"
+								onClick={() => setDisplayMonth(subMonths(displayMonth, 1))}
+								className="p-1 hover:bg-muted-bg rounded transition-colors"
+								aria-label="Previous month"
+							>
+								<ChevronLeft className="w-4 h-4" />
+							</button>
+							<h2 className="font-semibold text-sm text-content">
+								{format(displayMonth, 'MMMM yyyy')}
+							</h2>
+							<button
+								type="button"
+								onClick={() => setDisplayMonth(addMonths(displayMonth, 1))}
+								className="p-1 hover:bg-muted-bg rounded transition-colors"
+								aria-label="Next month"
+							>
+								<ChevronRight className="w-4 h-4" />
+							</button>
+						</div>
+
+						{/* Weekday headers */}
+						<div className="grid grid-cols-7 gap-1 text-center">
+							{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+								<div key={day} className="text-xs font-medium text-muted h-8 flex items-center justify-center">
+									{day}
+								</div>
+							))}
+						</div>
+
+						{/* Calendar grid */}
+						<div className="grid grid-cols-7 gap-1">
+							{allDays.map((date, idx) => {
+								const isCurrentMonth = isSameMonth(date, displayMonth);
+								const isSelected = value && isEqual(date, value);
+								const isFocused = focusedDateRef.current && isEqual(date, focusedDateRef.current);
+								const isDateDisabledState = isDisabledDate(date);
+								const isTodayDate = isToday(date);
+
+								return (
+									<button
+										key={idx}
+										type="button"
+										onClick={() => handleDateClick(date)}
+										disabled={isDateDisabledState}
+										className={`
+											h-8 rounded text-sm font-medium transition-colors
+											${!isCurrentMonth ? 'text-muted' : 'text-content'}
+											${isSelected ? 'bg-primary text-primary-text' : ''}
+											${isFocused && !isSelected ? 'ring-2 ring-primary' : ''}
+											${isDateDisabledState ? 'opacity-50 cursor-not-allowed' : ''}
+											${!isSelected && !isDateDisabledState && isCurrentMonth ? 'hover:bg-muted-bg cursor-pointer' : ''}
+											${isTodayDate && !isSelected ? 'border-2 border-primary' : ''}
+										`}
+									>
+										{format(date, 'd')}
+									</button>
+								);
+							})}
+						</div>
+
+						{/* Optional: Today button */}
 						<button
 							type="button"
-							onClick={handlePrevMonth}
-							className="p-1 hover:bg-muted-bg rounded text-muted hover:text-content transition"
-							aria-label="Previous month"
-						>
-							<ChevronLeft size={20} />
-						</button>
-						<h2 className="text-sm font-semibold text-content">
-							{format(displayMonth, 'MMMM yyyy')}
-						</h2>
-						<button
-							type="button"
-							onClick={handleNextMonth}
-							className="p-1 hover:bg-muted-bg rounded text-muted hover:text-content transition"
-							aria-label="Next month"
-						>
-							<ChevronRight size={20} />
-						</button>
-					</div>
-
-					{/* Weekday Labels */}
-					<div className="grid grid-cols-7 gap-1 mb-2">
-						{WEEKDAY_LABELS.map(label => (
-							<div key={label} className="text-center text-xs font-medium text-muted h-8 flex items-center justify-center">
-								{label}
-							</div>
-						))}
-					</div>
-
-					{/* Calendar Grid */}
-					<div className="grid grid-cols-7 gap-1">
-						{/* Leading empty cells */}
-						{leadingEmptyCells.map((_, i) => (
-							<div key={`empty-${i}`} className="h-8" />
-						))}
-
-						{/* Calendar days */}
-						{calendarDays.map(date => {
-							const isCurrentMonth = isSameMonth(date, displayMonth);
-							const isSelected = value && isSameDay(date, value);
-							const isDayDisabled = isDateDisabled(date);
-							const isToday = isSameDay(date, new Date());
-
-							return (
-								<button
-									key={format(date, 'yyyy-MM-dd')}
-									type="button"
-									onClick={() => handleSelectDate(date)}
-									disabled={isDayDisabled}
-									className={`
-										h-8 rounded text-sm transition
-										${!isCurrentMonth ? 'text-muted' : 'text-content'}
-										${isDayDisabled ? 'cursor-not-allowed opacity-40 text-muted' : 'cursor-pointer hover:bg-muted-bg'}
-										${isSelected ? 'bg-primary text-white font-semibold' : ''}
-										${isToday && !isSelected ? 'border border-primary' : ''}
-										${isCurrentMonth && !isDayDisabled && !isSelected ? 'hover:bg-muted-bg' : ''}
-									`}
-									aria-label={format(date, 'MMMM d, yyyy')}
-									aria-selected={isSelected ?? false}
-									aria-disabled={isDayDisabled}
-								>
-									{format(date, 'd')}
-								</button>
-							);
-						})}
-					</div>
-
-					{/* Footer: Today button */}
-					<div className="mt-4 pt-4 border-t border-border flex gap-2">
-						<button
-							type="button"
-							onClick={() => handleSelectDate(new Date())}
-							className="flex-1 px-3 py-2 text-sm font-medium text-primary hover:bg-muted-bg rounded transition"
+							onClick={() => {
+								const today = new Date();
+								if (!isDisabledDate(today)) {
+									handleDateClick(today);
+								}
+							}}
+							className="w-full py-2 text-sm text-primary hover:bg-muted-bg rounded transition-colors font-medium"
 						>
 							Today
-						</button>
-						<button
-							type="button"
-							onClick={() => setOpen(false)}
-							className="flex-1 px-3 py-2 text-sm text-muted hover:text-content hover:bg-muted-bg rounded transition"
-						>
-							Close
 						</button>
 					</div>
 				</Popover.Content>

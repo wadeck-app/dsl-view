@@ -2,7 +2,9 @@
 // violations-suppress-start: ts/no-export-star published package barrel uses export* intentionally
 export * from './ButtonCancel.js';
 export * from './ButtonSave.js';
+export * from './DatePicker.js';
 export * from './FieldAutocomplete.js';
+export * from './FieldDate.js';
 export * from './FieldNumber.js';
 export * from './FieldReadOnly.js';
 export * from './FieldSelect.js';
