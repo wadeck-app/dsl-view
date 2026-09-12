@@ -383,13 +383,14 @@ function generateSimpleEntry(
 		const isNumberValue   = valueProp?.getType().isNumber() ?? false;
 		const valueTypeText   = valueProp?.getTypeNode()?.getText() ?? '';
 		const isDateValue     = valueTypeText === 'Date' || valueTypeText === 'Date | null' || valueTypeText === 'null | Date';
-		const isDateRangeValue = valueTypeText === 'DateRange';
+		// DateRange = { from: Date | null; to: Date | null } — match any variant of the type name
+		const isDateRangeValue = valueTypeText === 'DateRange' || valueTypeText === 'DateRange | null' || valueTypeText === 'null | DateRange';
 		// Use 'checked' (boolean) for toggle components (e.g. Switch), 'value' otherwise.
 		const boundAttr = isToggle ? 'checked' : 'value';
 		const valueExpr = isToggle
 			? `Boolean(formData?.[bind])`
 			: isDateRangeValue
-				? `(formData?.[bind] as import('${importPath}').DateRange | undefined) ?? { from: new Date() }`
+				? `(formData?.[bind] as { from: Date | null; to: Date | null } | undefined) ?? { from: new Date(), to: null }`
 				: isDateValue
 					? `formData?.[bind] ? new Date(String(formData?.[bind])) : null`
 					: isNumberValue
