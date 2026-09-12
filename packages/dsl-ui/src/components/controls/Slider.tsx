@@ -33,7 +33,7 @@ export function Slider({ value, onChange, min = 0, max = 100, step = 1, disabled
             )}
             <RadixSlider.Root
                 value={[value]}
-                onValueChange={([v]) => onChange(v)}
+                onValueChange={([v]: [number]) => onChange(v)}
                 min={min}
                 max={max}
                 step={step}

@@ -5,7 +5,8 @@ import { vi } from 'vitest';
 
 import { ToastContext } from './components/overlay/Toast.js';
 
-export const mockToast = {
+type ToastContextValue = NonNullable<React.ContextType<typeof ToastContext>>;
+export const mockToast: ToastContextValue = {
 	success: vi.fn(),
 	error: vi.fn(),
 	info: vi.fn(),
