@@ -47,9 +47,14 @@ describe('FilterBar', () => {
 		expect(btn).toHaveAttribute('aria-pressed', 'false');
 	});
 
-	it('shows "Clear all" button when a filter is active', () => {
-		render(<FilterBar filters={filters} search="" onSearchChange={vi.fn()} />);
+	it('shows "Clear all" button when a filter is active and onClearAll is provided', () => {
+		render(<FilterBar filters={filters} search="" onSearchChange={vi.fn()} onClearAll={vi.fn()} />);
 		expect(screen.getByText('Clear all')).toBeInTheDocument();
+	});
+
+	it('does NOT show "Clear all" button when onClearAll is absent (even with active filters)', () => {
+		render(<FilterBar filters={filters} search="" onSearchChange={vi.fn()} />);
+		expect(screen.queryByText('Clear all')).toBeNull();
 	});
 
 	it('"Clear all" button is NOT shown when no filters are active and search is empty', () => {
