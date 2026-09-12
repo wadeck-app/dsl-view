@@ -30,7 +30,8 @@ export function ChipButton({
 	className = '',
 	...rest
 }: ChipButtonProps) {
-	const colors = color ? CHIP_COLOR_CLASSES[color] : DEFAULT_CHIP_COLORS;
+	// Guard: unknown color keys (e.g. 'gray') fall back to default palette
+	const colors = (color && CHIP_COLOR_CLASSES[color]) ? CHIP_COLOR_CLASSES[color] : DEFAULT_CHIP_COLORS;
 	const shapeClass = shape === 'pill' ? 'rounded-full' : 'rounded';
 	const stateClasses = active ? colors.active : colors.inactive;
 	return (

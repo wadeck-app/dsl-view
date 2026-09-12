@@ -16,7 +16,7 @@ type Story = StoryObj<typeof FilterBar>;
 const statusFilters: FilterBarFilter[] = [
 	{ key: 'active', label: 'Active', value: 'active', active: false, color: 'green' },
 	{ key: 'pending', label: 'Pending', value: 'pending', active: false, color: 'yellow' },
-	{ key: 'archived', label: 'Archived', value: 'archived', active: false, color: 'gray' },
+	{ key: 'archived', label: 'Archived', value: 'archived', active: false },
 ];
 
 export const Default: Story = {

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import React from 'react';
+import { DollarSign, TrendingDown, ShoppingCart, Users } from 'lucide-react';
 import { StatTile } from './StatTile.js';
 
 const meta: Meta<typeof StatTile> = {
@@ -50,25 +51,25 @@ export const DashboardRow: Story = {
                     label="Total Revenue"
                     value="$48,295"
                     trend={{ value: 14, direction: 'up', label: 'vs last month' }}
-                    icon={<span>💰</span>}
+                    icon={<DollarSign className="w-5 h-5 text-muted" />}
                 />
                 <StatTile
                     label="Active Users"
                     value="3,842"
                     trend={{ value: 6, direction: 'up', label: 'vs last week' }}
-                    icon={<span>👥</span>}
+                    icon={<Users className="w-5 h-5 text-muted" />}
                 />
                 <StatTile
                     label="Refund Rate"
                     value="3.2%"
                     trend={{ value: 2, direction: 'down', label: 'vs last month' }}
-                    icon={<span>↩</span>}
+                    icon={<TrendingDown className="w-5 h-5 text-muted" />}
                 />
                 <StatTile
                     label="Avg. Order Value"
                     value="$128"
                     trend={{ value: 0, direction: 'neutral', label: 'no change' }}
-                    icon={<span>🛒</span>}
+                    icon={<ShoppingCart className="w-5 h-5 text-muted" />}
                 />
             </div>
         ),
