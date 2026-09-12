@@ -26,6 +26,7 @@ export function getRelativeLabel(date: Date): string {
 	const diffMonth = Math.floor(diffDay / 30);
 	const diffYear = Math.floor(diffDay / 365);
 
+	if (diffSec < 0) return 'in the future';
 	if (diffSec < 60) return 'just now';
 	if (diffMin < 60) return `${diffMin} ${diffMin === 1 ? 'minute' : 'minutes'} ago`;
 	if (diffHour < 24) return `${diffHour} ${diffHour === 1 ? 'hour' : 'hours'} ago`;

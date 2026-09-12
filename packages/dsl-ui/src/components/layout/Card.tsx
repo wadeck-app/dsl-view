@@ -46,7 +46,13 @@ export function Card({
         .join(' ');
 
     return (
-        <div className={base} onClick={onClick} role={isClickable ? 'button' : undefined} tabIndex={isClickable ? 0 : undefined}>
+        <div
+            className={base}
+            onClick={onClick}
+            role={isClickable ? 'button' : undefined}
+            tabIndex={isClickable ? 0 : undefined}
+            onKeyDown={isClickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.(); } } : undefined}
+        >
             {header && (
                 <div className={`border-b border-border ${PADDING_CLASSES[padding]}`}>
                     {header}

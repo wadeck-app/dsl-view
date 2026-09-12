@@ -35,6 +35,14 @@ function getVisibleNodes(nodes: TreeNode[], expandedSet: Set<string>): TreeNode[
     return result;
 }
 
+function buildParentMap(nodes: TreeNode[], map: Map<string, string> = new Map(), parentId: string | null = null): Map<string, string> {
+    for (const node of nodes) {
+        if (parentId !== null) map.set(node.id, parentId);
+        if (node.children?.length) buildParentMap(node.children, map, node.id);
+    }
+    return map;
+}
+
 /**
  * @registryCategory navigation
  * @registryTags tree treeview hierarchy expandable
@@ -59,6 +67,8 @@ export function TreeView({
         () => (isControlled ? new Set(expandedIds) : internalExpanded),
         [isControlled, expandedIds, internalExpanded]
     );
+
+    const parentMap = useMemo(() => buildParentMap(nodes), [nodes]);
 
     const toggleExpand = useCallback(
         (node: TreeNode) => {
@@ -123,7 +133,12 @@ export function TreeView({
                 case 'ArrowLeft': {
                     e.preventDefault();
                     if (current && current.children?.length && expandedSet.has(current.id)) {
+                        // Collapse open parent node
                         toggleExpand(current);
+                    } else if (current) {
+                        // Leaf or already-collapsed: move focus to parent (WAI-ARIA 1.1)
+                        const parentId = parentMap.get(current.id);
+                        if (parentId) focusNode(parentId);
                     }
                     break;
                 }
@@ -136,7 +151,7 @@ export function TreeView({
                 }
             }
         },
-        [nodes, expandedSet, focusedId, focusNode, toggleExpand, onSelect]
+        [nodes, expandedSet, focusedId, focusNode, toggleExpand, onSelect, parentMap]
     );
 
     return (

@@ -41,7 +41,7 @@ export function FilterBar({
 	const showSearch = onSearchChange !== undefined;
 	const hasActiveFilter = filters?.some(f => f.active) ?? false;
 	const hasActiveSearch = search !== undefined && search.length > 0;
-	const showClearAll = hasActiveFilter || hasActiveSearch;
+	const showClearAll = (hasActiveFilter || hasActiveSearch) && onClearAll !== undefined;
 
 	return (
 		<div className={['flex flex-row items-center gap-2 flex-wrap', className].filter(Boolean).join(' ')}>

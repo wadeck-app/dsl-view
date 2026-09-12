@@ -102,8 +102,10 @@ export function InlineEdit({
     const handleBlur = useCallback(() => {
         const committed = tryCommit(draft);
         if (!committed) {
-            // Validation failed — cancel instead of leaving in edit mode with error
-            cancel();
+            // React 18 batches synchronous state updates: calling cancel() here would
+            // immediately clear the error set by tryCommit before it ever renders.
+            // Defer cancel so the error message is visible briefly before reverting.
+            setTimeout(() => cancel(), 0);
         }
     }, [draft, tryCommit, cancel]);
 

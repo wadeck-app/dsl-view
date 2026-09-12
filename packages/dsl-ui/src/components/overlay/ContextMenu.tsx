@@ -63,9 +63,11 @@ export function ContextMenu({ trigger, items, side = 'bottom', align = 'start' }
 			itemRefs.current[next]?.focus();
 		} else if (e.key === 'ArrowUp') {
 			e.preventDefault();
+			// When posInFocusable is -1 (nothing focused), wrap to last item
+			const effectivePos = posInFocusable === -1 ? 0 : posInFocusable;
 			const prev =
 				focusableIndices[
-					(posInFocusable - 1 + focusableIndices.length) % focusableIndices.length
+					(effectivePos - 1 + focusableIndices.length) % focusableIndices.length
 				];
 			itemRefs.current[prev]?.focus();
 		} else if (e.key === 'Home') {

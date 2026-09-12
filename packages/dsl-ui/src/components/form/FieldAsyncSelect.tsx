@@ -66,7 +66,17 @@ export function FieldAsyncSelect({
 	const [hasSearched, setHasSearched] = useState(false);
 
 	const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const requestIdRef = useRef(0);
 	const inputRef = useRef<HTMLInputElement>(null);
+
+	// Cancel pending timers on unmount to avoid setState on unmounted component
+	useEffect(() => {
+		return () => {
+			if (debounceRef.current) clearTimeout(debounceRef.current);
+			if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+		};
+	}, []);
 
 	// When value is cleared externally, reset display state
 	useEffect(() => {
@@ -93,14 +103,21 @@ export function FieldAsyncSelect({
 		(query: string) => {
 			if (debounceRef.current) clearTimeout(debounceRef.current);
 			debounceRef.current = setTimeout(async () => {
+				// Sequence guard: ignore responses from superseded requests
+				const requestId = ++requestIdRef.current;
 				setIsLoading(true);
 				try {
 					const result = await loadOptions(query);
+					if (requestId !== requestIdRef.current) return;
 					setOptions(result);
 					setHasSearched(true);
 					setActiveIndex(-1);
+				} catch {
+					if (requestId !== requestIdRef.current) return;
+					setOptions([]);
+					setHasSearched(true);
 				} finally {
-					setIsLoading(false);
+					if (requestId === requestIdRef.current) setIsLoading(false);
 				}
 			}, debounceMs);
 		},
@@ -181,7 +198,8 @@ export function FieldAsyncSelect({
 		// Delay to allow option onMouseDown/onClick to fire first.
 		// onMouseDown={e.preventDefault()} on options keeps focus on input,
 		// so blur only fires on tab-away or external focus loss.
-		setTimeout(() => {
+		if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+		blurTimerRef.current = setTimeout(() => {
 			setIsOpen(false);
 		}, 150);
 	}
