@@ -8,3 +8,4 @@ export * from './SearchBar.js';
 export * from './ShownFetchedCounter.js';
 export * from './SortableColumn.js';
 export * from './StatusFilter.js';
+export * from './FilterBar.js';
