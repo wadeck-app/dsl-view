@@ -29,7 +29,7 @@ const TREND_ICON: Record<StatTileTrend['direction'], string> = {
 };
 
 /**
- * @registryCategory layout
+ * @registryCategory disposition
  * @registryTags stat kpi metric dashboard
  */
 export function StatTile({ label, value, trend, icon, loading = false, className = '' }: StatTileProps) {

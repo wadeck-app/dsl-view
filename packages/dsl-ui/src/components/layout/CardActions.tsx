@@ -8,7 +8,7 @@ export interface CardActionsProps {
 }
 
 /**
- * @registryCategory layout
+ * @registryCategory disposition
  * @registryTags card-actions card actions
  */
 export function CardActions({ children, className = '' }: CardActionsProps) {

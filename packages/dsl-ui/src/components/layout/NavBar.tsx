@@ -8,7 +8,7 @@ export interface NavBarProps {
 }
 
 /**
- * @registryCategory layout
+ * @registryCategory disposition
  * @registryTags nav-bar navigation
  */
 export function NavBar({ children, className = '' }: NavBarProps) {

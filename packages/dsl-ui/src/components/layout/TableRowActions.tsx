@@ -8,7 +8,7 @@ export interface TableRowActionsProps {
 }
 
 /**
- * @registryCategory layout
+ * @registryCategory disposition
  * @registryTags table-row-actions row actions
  */
 export function TableRowActions({ children, className = '' }: TableRowActionsProps) {

@@ -9,7 +9,7 @@ export interface TabButtonProps extends ButtonProps {
 /**
  * Tab-style button. Adds an active underline indicator when active=true.
  * Always renders as ghost by default -- container defaultVariant context is intentionally shadowed.
- * @registryCategory controls
+ * @registryCategory atomic
  */
 export function TabButton({
 	active = false,

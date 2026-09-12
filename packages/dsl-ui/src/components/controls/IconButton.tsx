@@ -11,7 +11,7 @@ export interface IconButtonProps extends Omit<ButtonProps, 'children' | 'size'> 
 /**
  * Icon-only button wrapper. Requires aria-label for accessibility.
  * Always renders as ghost by default -- container defaultVariant context is intentionally shadowed.
- * @registryCategory controls
+ * @registryCategory atomic
  */
 export function IconButton({
 	icon,

@@ -8,7 +8,7 @@ export interface DialogFooterProps {
 }
 
 /**
- * @registryCategory layout
+ * @registryCategory disposition
  * @registryTags dialog-footer dialog footer
  */
 export function DialogFooter({ children, className = '' }: DialogFooterProps) {

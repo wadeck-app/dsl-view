@@ -8,7 +8,7 @@ export interface PageSectionProps {
 }
 
 /**
- * @registryCategory layout
+ * @registryCategory disposition
  * @registryTags page-section page header title
  */
 export function PageSection({ title, actions, children, className = '' }: PageSectionProps) {

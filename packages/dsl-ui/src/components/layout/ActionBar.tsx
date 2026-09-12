@@ -9,7 +9,7 @@ export interface ActionBarProps {
 }
 
 /**
- * @registryCategory layout
+ * @registryCategory disposition
  * @registryTags action-bar
  */
 export function ActionBar({ children, className = '' }: ActionBarProps) {

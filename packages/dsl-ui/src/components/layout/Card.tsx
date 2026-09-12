@@ -20,7 +20,7 @@ const PADDING_CLASSES: Record<NonNullable<CardProps['padding']>, string> = {
 };
 
 /**
- * @registryCategory layout
+ * @registryCategory disposition
  * @registryTags card container surface
  */
 export function Card({
