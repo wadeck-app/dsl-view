@@ -4,9 +4,10 @@ import { Button } from './_Button.js';
 
 export interface ButtonActionProps {
 	label: string;
-	variant?: 'primary' | 'danger' | 'danger-outline' | 'success';
+	variant?: 'primary' | 'secondary' | 'danger' | 'danger-outline' | 'success';
 	onClick?: () => void;
 	disabled?: boolean;
+	disabledReason?: string;
 	loading?: boolean;
 	type?: 'button' | 'submit';
 }
@@ -15,9 +16,9 @@ export interface ButtonActionProps {
  * @registryCategory atomic
  * @registryTags button action
  */
-export function ButtonAction({ label, variant = 'primary', onClick, disabled, loading, type = 'button' }: ButtonActionProps) {
+export function ButtonAction({ label, variant = 'primary', onClick, disabled, disabledReason, loading, type = 'button' }: ButtonActionProps) {
 	return (
-		<Button variant={variant} onClick={onClick} disabled={disabled} loading={loading} type={type}>
+		<Button variant={variant} onClick={onClick} disabled={disabled} disabledReason={disabledReason} loading={loading} type={type}>
 			{label}
 		</Button>
 	);
