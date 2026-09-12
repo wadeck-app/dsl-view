@@ -315,8 +315,9 @@ function generateSimpleEntry(
 	for (const prop of allProperties) {
 		const name = prop.getName();
 		if (bindConsumedProps.has(name)) continue;
-		// Skip props that aren't valid camelCase JS identifiers (e.g. aria-pressed, data-*)
-		if (!/^[a-zA-Z][a-zA-Z0-9]*$/.test(name)) continue;
+		// Skip data-* props -- never authored in DSL YAML. Allow aria-* (valid JSX attrs).
+		if (name.startsWith('data-')) continue;
+		if (!/^[a-zA-Z][a-zA-Z0-9]*$/.test(name) && !name.startsWith('aria-')) continue;
 		// Skip internal React/HTML props never authored in DSL YAML
 		if (SKIP_PROPS.has(name)) continue;
 
@@ -351,11 +352,16 @@ function generateSimpleEntry(
 		// Generate FormContext wrapper for bind-pattern components
 		const componentDeclaresBindProp = allProperties.some(p => p.getName() === 'bind');
 		const bindAttr = componentDeclaresBindProp ? ' bind={bind}' : '';
-		const valueProp = allProperties.find(p => p.getName() === 'value');
+		const valueProp    = allProperties.find(p => p.getName() === 'value');
+		const checkedProp  = allProperties.find(p => p.getName() === 'checked');
 		const isArrayValue = valueProp?.getType().isArray() ?? false;
-		const valueExpr = isArrayValue
-			? `(formData?.[bind] as string[] | undefined) ?? []`
-			: `String(formData?.[bind] ?? '')`;
+		// Use 'checked' (boolean) for toggle components (e.g. Switch), 'value' otherwise.
+		const boundAttr = checkedProp && !valueProp ? 'checked' : 'value';
+		const valueExpr = checkedProp && !valueProp
+			? `Boolean(formData?.[bind])`
+			: isArrayValue
+				? `(formData?.[bind] as string[] | undefined) ?? []`
+				: `String(formData?.[bind] ?? '')`;
 
 		const outerDecl = `\t\tconst bind = node['bind'] as string`;
 		const fullOuterDecl = declText ? `${outerDecl}\n${declText}` : outerDecl;
@@ -367,7 +373,7 @@ ${fullOuterDecl}
 			const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
 			const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
 			return (
-				<${component.name}${bindAttr}${attrsText} value={${valueExpr}} onChange={(v) => onChange?.(bind, v)} />
+				<${component.name}${bindAttr}${attrsText} ${boundAttr}={${valueExpr}} onChange={(v) => onChange?.(bind, v)} />
 			)
 		}
 		return <${component.name}WithContext />

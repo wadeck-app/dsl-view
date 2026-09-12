@@ -44,7 +44,7 @@ function buildParentMap(nodes: TreeNode[], map: Map<string, string> = new Map(),
 }
 
 /**
- * @registryCategory navigation
+ * @registryCategory composite
  * @registryTags tree treeview hierarchy expandable
  */
 export function TreeView({
