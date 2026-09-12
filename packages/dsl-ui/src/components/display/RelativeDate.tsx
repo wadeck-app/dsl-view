@@ -66,8 +66,9 @@ export function RelativeDate({
 		return () => clearInterval(id);
 	}, [dateObj.getTime(), live]);
 
+	// text-content ensures no ambient color (e.g. CSS variable leakage via inline-flex context) bleeds onto the number
 	const timeEl = (
-		<time dateTime={dateObj.toISOString()} className={className}>
+		<time dateTime={dateObj.toISOString()} className={['text-content text-sm', className].filter(Boolean).join(' ')}>
 			{label}
 		</time>
 	);
