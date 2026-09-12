@@ -24,8 +24,9 @@ describe('Divider', () => {
         expect(screen.getByText('Section')).toBeInTheDocument();
     });
 
-    it('renders two separators when label is provided', () => {
+    it('renders one separator wrapping the label layout when label is provided', () => {
         render(<Divider label="OR" />);
-        expect(screen.getAllByRole('separator')).toHaveLength(2);
+        expect(screen.getAllByRole('separator')).toHaveLength(1);
+        expect(screen.getByText('OR')).toBeInTheDocument();
     });
 });
