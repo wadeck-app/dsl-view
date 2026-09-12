@@ -3,64 +3,65 @@ import { describe, expect, it } from 'vitest';
 
 import { Button } from '../controls/_Button.js';
 import { ButtonContext, useButtonContext } from '../controls/buttonContext.js';
-import { ActionBar } from './ActionBar.js';
-import { DialogFooter } from './DialogFooter.js';
+import { CardActions } from './CardActions.js';
+import { NavBar } from './NavBar.js';
 
-describe('ActionBar', () => {
+describe('CardActions', () => {
 	it('renders children', () => {
 		render(
-			<ActionBar>
-				<button>Save</button>
+			<CardActions>
+				<button>Confirm</button>
 				<button>Cancel</button>
-			</ActionBar>
+			</CardActions>
 		);
-		expect(screen.getByText('Save')).toBeInTheDocument();
+		expect(screen.getByText('Confirm')).toBeInTheDocument();
 		expect(screen.getByText('Cancel')).toBeInTheDocument();
 	});
 
 	it('provides size:sm via context', () => {
 		const { result } = renderHook(() => useButtonContext(), {
-			wrapper: ({ children }) => <ActionBar>{children}</ActionBar>,
+			wrapper: ({ children }) => <CardActions>{children}</CardActions>,
 		});
 		expect(result.current).toEqual({ size: 'sm' });
 	});
 
 	it('explicit size prop on child Button wins over context', () => {
 		render(
-			<ActionBar>
+			<CardActions>
 				<Button size="md">Test</Button>
-			</ActionBar>
+			</CardActions>
 		);
 		const btn = screen.getByRole('button', { name: 'Test' });
 		expect(btn).toHaveClass('px-4', 'py-2');
 		expect(btn).not.toHaveClass('py-1');
 	});
 
-	it('inner container context wins over ActionBar context', () => {
+	it('inner container context wins over CardActions context', () => {
 		const { result } = renderHook(() => useButtonContext(), {
 			wrapper: ({ children }) => (
-				<ActionBar>
-					<DialogFooter>{children}</DialogFooter>
-				</ActionBar>
+				<CardActions>
+					<NavBar>{children}</NavBar>
+				</CardActions>
 			),
 		});
-		// DialogFooter publishes size:'md', which wins over ActionBar's size:'sm'
-		expect(result.current.size).toBe('md');
+		// NavBar publishes defaultVariant:'ghost', which merges; both agree on size:'sm'
+		expect(result.current.defaultVariant).toBe('ghost');
+		expect(result.current.size).toBe('sm');
 	});
 
 	it('merges with outer parent context', () => {
 		const { result } = renderHook(() => useButtonContext(), {
 			wrapper: ({ children }) => (
-				<ButtonContext.Provider value={{ defaultVariant: 'ghost' }}>
-					<ActionBar>{children}</ActionBar>
+				<ButtonContext.Provider value={{ defaultVariant: 'danger' }}>
+					<CardActions>{children}</CardActions>
 				</ButtonContext.Provider>
 			),
 		});
-		expect(result.current).toEqual({ size: 'sm', defaultVariant: 'ghost' });
+		expect(result.current).toEqual({ size: 'sm', defaultVariant: 'danger' });
 	});
 
 	it('applies custom className', () => {
-		const { container } = render(<ActionBar className="custom-class"><span>x</span></ActionBar>);
+		const { container } = render(<CardActions className="custom-class"><span>x</span></CardActions>);
 		expect(container.firstChild).toHaveClass('custom-class');
 	});
 });

@@ -1,59 +1,28 @@
 import React from 'react';
-import { Loader2 } from 'lucide-react';
 import { Button } from './_Button.js';
+import type { ButtonProps } from './_Button.js';
 
-type IconButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
-type IconButtonSize = 'sm' | 'md';
-
-export interface IconButtonProps {
+export interface IconButtonProps extends Omit<ButtonProps, 'children' | 'size'> {
 	icon: React.ReactNode;
-	label: string;
-	variant?: IconButtonVariant;
-	size?: IconButtonSize;
-	onClick?: () => void;
-	disabled?: boolean;
-	disabledReason?: string;
-	loading?: boolean;
+	'aria-label': string;
+	size?: 'icon' | 'icon-sm' | 'icon-xs';
 }
 
-const SIZE_CLASS: Record<IconButtonSize, string> = {
-	sm: '!w-6 !h-6 !p-0 flex items-center justify-center',
-	md: '!w-8 !h-8 !p-0 flex items-center justify-center',
-};
-
-const ICON_SIZE: Record<IconButtonSize, string> = {
-	sm: 'h-3.5 w-3.5',
-	md: 'h-4 w-4',
-};
-
 /**
- * @registryCategory atomic
- * @registryTags button icon action
+ * Icon-only button wrapper. Requires aria-label for accessibility.
+ * Always renders as ghost by default -- container defaultVariant context is intentionally shadowed.
+ * @registryCategory controls
  */
 export function IconButton({
 	icon,
-	label,
-	variant = 'secondary',
-	size = 'md',
-	onClick,
-	disabled,
-	disabledReason,
-	loading = false,
+	'aria-label': ariaLabel,
+	size = 'icon',
+	variant = 'ghost',
+	...rest
 }: IconButtonProps) {
 	return (
-		<Button
-			variant={variant}
-			size={size}
-			onClick={onClick}
-			disabled={disabled}
-			disabledReason={disabledReason}
-			loading={false}
-			aria-label={label}
-			className={SIZE_CLASS[size]}
-		>
-			{loading
-				? <Loader2 className={`${ICON_SIZE[size]} animate-spin`} aria-hidden="true" />
-				: icon}
+		<Button size={size} variant={variant} aria-label={ariaLabel} title={ariaLabel} {...rest}>
+			{icon}
 		</Button>
 	);
 }

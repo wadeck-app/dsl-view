@@ -2,21 +2,20 @@ import React from 'react';
 
 import { ButtonContext, useProvideButtonContext } from '../controls/buttonContext.js';
 
-export interface ActionBarProps {
-	/** @slot tag:btn */
+export interface NavBarProps {
 	children: React.ReactNode;
 	className?: string;
 }
 
 /**
  * @registryCategory layout
- * @registryTags action-bar
+ * @registryTags nav-bar navigation
  */
-export function ActionBar({ children, className = '' }: ActionBarProps) {
-	const ctx = useProvideButtonContext({ size: 'sm' });
+export function NavBar({ children, className = '' }: NavBarProps) {
+	const ctx = useProvideButtonContext({ size: 'sm', defaultVariant: 'ghost' });
 	return (
 		<ButtonContext.Provider value={ctx}>
-			<div className={['flex items-center gap-4 mt-8', className].filter(Boolean).join(' ')}>
+			<div className={['flex items-center gap-2', className].filter(Boolean).join(' ')}>
 				{children}
 			</div>
 		</ButtonContext.Provider>

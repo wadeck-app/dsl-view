@@ -4,9 +4,10 @@ import type { ButtonHTMLAttributes } from 'react';
 import { Loader2 } from 'lucide-react';
 
 import { Tooltip } from '../overlay/Tooltip.js';
+import { useButtonContext } from './buttonContext.js';
 
 type Variant = 'primary' | 'secondary' | 'danger' | 'danger-outline' | 'neutral' | 'success' | 'ghost' | 'link';
-type Size = 'sm' | 'md';
+type Size = 'sm' | 'md' | 'icon' | 'icon-sm' | 'icon-xs';
 type Shape = 'default' | 'stack';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -41,6 +42,9 @@ const VARIANT_CLASSES: Record<Variant, string> = {
 const SIZE_CLASSES: Record<Size, string> = {
 	sm: 'px-3 py-1 text-xs gap-1.5',
 	md: 'px-4 py-2 text-sm gap-2',
+	icon: 'h-9 w-9 p-0',
+	'icon-sm': 'h-7 w-7 p-0',
+	'icon-xs': 'h-5 w-5 p-0',
 };
 
 const SHAPE_CLASSES: Record<Shape, string> = {
@@ -54,8 +58,8 @@ const SHAPE_CLASSES: Record<Shape, string> = {
 // by ButtonAction/ButtonSave/ButtonCancel/CreateTokenDialog and others. No @registryCategory
 // needed - the _Button.tsx filename itself exempts it from no-missing-registry-jsdoc.
 export function Button({
-	variant = 'primary',
-	size = 'md',
+	variant,
+	size,
 	shape = 'default',
 	className = '',
 	disabled,
@@ -64,6 +68,10 @@ export function Button({
 	children,
 	...props
 }: ButtonProps) {
+	const { size: ctxSize, defaultVariant: ctxVariant } = useButtonContext();
+	// Explicit prop wins → context default → hardcoded fallback.
+	const resolvedVariant = variant ?? ctxVariant ?? 'primary';
+	const resolvedSize = size ?? ctxSize ?? 'md';
 	const isDisabled = disabled || loading;
 	// 'stack' shape callers (option-picker style buttons) own their full color and sizing via className -
 	// SIZE_CLASSES/VARIANT_CLASSES would fight with their custom padding and active/inactive color classes.
@@ -73,7 +81,7 @@ export function Button({
 		<button
 			{...props}
 			disabled={isDisabled}
-			className={[BASE, !isStack && VARIANT_CLASSES[variant], !isStack && SIZE_CLASSES[size], SHAPE_CLASSES[shape], className]
+			className={[BASE, !isStack && VARIANT_CLASSES[resolvedVariant], !isStack && SIZE_CLASSES[resolvedSize], SHAPE_CLASSES[shape], className]
 				.filter(Boolean)
 				.join(' ')}
 		>
