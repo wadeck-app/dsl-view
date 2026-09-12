@@ -18,9 +18,10 @@ const SIZE_PX: Record<NonNullable<SpinnerProps['size']>, number> = {
 export function Spinner({ size = 'md', label }: SpinnerProps) {
     const px = SIZE_PX[size];
     return (
-        <span className="inline-flex items-center gap-2" role="status">
+        <span className="inline-flex items-center gap-2">
             <svg
-                aria-hidden="true"
+                role="status"
+                aria-label={label ?? 'Loading...'}
                 className="animate-spin text-primary"
                 width={px}
                 height={px}
@@ -35,7 +36,7 @@ export function Spinner({ size = 'md', label }: SpinnerProps) {
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                 />
             </svg>
-            {label && <span className="text-sm text-muted">{label}</span>}
+            {label && <span className="text-sm text-muted" aria-hidden="true">{label}</span>}
         </span>
     );
 }
