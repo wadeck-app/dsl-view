@@ -299,10 +299,11 @@ function generateSimpleEntry(
 	// Only support the formData/onChange bind pattern (the one special case worth keeping)
 	const isFormDataBind = bindPattern?.[0] === 'formData' && bindPattern?.[1] === 'onChange';
 
-	// Detect type parameters on the Props interface (e.g. DataTableProps<T>)
+	// Detect type parameters on the Props interface (e.g. DataTableProps<T extends Record<string,unknown>>).
+	// Use Record<string, unknown> as the safest universal satisfier for constrained generics.
 	const typeParams = propsInterface.getTypeParameters();
 	const typeArgs = typeParams.length > 0
-		? '<' + typeParams.map(() => 'unknown').join(', ') + '>'
+		? '<' + typeParams.map(() => 'Record<string, unknown>').join(', ') + '>'
 		: '';
 
 	const declLines: string[] = [];
@@ -330,7 +331,9 @@ function generateSimpleEntry(
 	const SKIP_PROPS = new Set(['className', 'style', 'ref', 'key']);
 
 	for (const prop of allProperties) {
-		const name = prop.getName();
+		// ts-morph returns quoted names for hyphenated props (e.g. "'aria-label'" instead of "aria-label").
+		// Strip surrounding quotes to get the raw name.
+		const name = prop.getName().replace(/^['"`]|['"`]$/g, '');
 		if (bindConsumedProps.has(name)) continue;
 		// Skip data-* props -- never authored in DSL YAML. Allow aria-* (valid JSX attrs).
 		if (name.startsWith('data-')) continue;
@@ -380,17 +383,20 @@ function generateSimpleEntry(
 		const isNumberValue   = valueProp?.getType().isNumber() ?? false;
 		const valueTypeText   = valueProp?.getTypeNode()?.getText() ?? '';
 		const isDateValue     = valueTypeText === 'Date' || valueTypeText === 'Date | null' || valueTypeText === 'null | Date';
+		const isDateRangeValue = valueTypeText === 'DateRange';
 		// Use 'checked' (boolean) for toggle components (e.g. Switch), 'value' otherwise.
 		const boundAttr = isToggle ? 'checked' : 'value';
 		const valueExpr = isToggle
 			? `Boolean(formData?.[bind])`
-			: isDateValue
-				? `formData?.[bind] ? new Date(String(formData?.[bind])) : null`
-				: isNumberValue
-					? `Number(formData?.[bind] ?? 0)`
-					: isArrayValue
-						? `(formData?.[bind] as string[] | undefined) ?? []`
-						: `String(formData?.[bind] ?? '')`;
+			: isDateRangeValue
+				? `(formData?.[bind] as import('${importPath}').DateRange | undefined) ?? { from: new Date() }`
+				: isDateValue
+					? `formData?.[bind] ? new Date(String(formData?.[bind])) : null`
+					: isNumberValue
+						? `Number(formData?.[bind] ?? 0)`
+						: isArrayValue
+							? `(formData?.[bind] as string[] | undefined) ?? []`
+							: `String(formData?.[bind] ?? '')`;
 
 		const outerDecl = `\t\tconst bind = node['bind'] as string`;
 		const fullOuterDecl = declText ? `${outerDecl}\n${declText}` : outerDecl;
