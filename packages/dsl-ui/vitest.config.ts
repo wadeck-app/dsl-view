@@ -24,6 +24,21 @@ export default defineConfig({
 		alias: [
 			{ find: '@dsl-ui', replacement: path.resolve(__dirname, './src') },
 			{ find: '@dsl-renderer', replacement: path.resolve(__dirname, '../dsl-renderer/src') },
+			// Stub @floating-ui/react-dom with a synchronous implementation for tests.
+			// The real useFloating calls computePosition() (async) then ReactDOM.flushSync(setState),
+			// causing React 18's act() to wait for cascading re-renders (~3-9s per test in JSDOM).
+			{
+				find: '@floating-ui/react-dom',
+				replacement: path.resolve(__dirname, './src/__mocks__/@floating-ui/react-dom.ts'),
+			},
+			// Stub @radix-ui/react-popper with simple pass-through components for tests.
+			// The real Popper uses useFloating (async position computation) and multiple
+			// useLayoutEffect hooks that set state and call getComputedStyle, cascading
+			// React re-renders that add ~1-9s per test in JSDOM.
+			{
+				find: '@radix-ui/react-popper',
+				replacement: path.resolve(__dirname, './src/__mocks__/@radix-ui/react-popper.ts'),
+			},
 		],
 	},
 	test: {
@@ -32,5 +47,16 @@ export default defineConfig({
 		globals: true,
 		setupFiles: ['./src/test-setup.ts'],
 		testTimeout: 30000,
+		server: {
+			deps: {
+				// Inline the Radix Popover chain so Vite processes their imports.
+				// This makes resolve.alias intercept @floating-ui/react-dom and
+				// @radix-ui/react-popper, replacing them with fast synchronous stubs.
+				inline: [
+					'@radix-ui/react-popover',
+					'@radix-ui/react-popper',
+				],
+			},
+		},
 	},
 });

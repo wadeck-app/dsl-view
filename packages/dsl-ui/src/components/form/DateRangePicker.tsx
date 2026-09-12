@@ -40,6 +40,9 @@ export interface DateRangePickerProps {
 	maxDate?: Date;
 	placeholder?: string;
 	dateFormat?: string;
+	/** Controlled open state (for testing and external control) */
+	open?: boolean;
+	onOpenChange?: (open: boolean) => void;
 }
 
 type SelectionPhase = 'from' | 'to';
@@ -96,8 +99,12 @@ export function DateRangePicker({
 	maxDate,
 	placeholder = 'Select a date range...',
 	dateFormat = 'MMM d, yyyy',
+	open: controlledOpen,
+	onOpenChange,
 }: DateRangePickerProps) {
-	const [open, setOpen] = useState(false);
+	const isControlled = controlledOpen !== undefined;
+	const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+	const open = isControlled ? controlledOpen : uncontrolledOpen;
 	const [phase, setPhase] = useState<SelectionPhase>('from');
 	// Pending "from" while user selects "to"
 	const [pendingFrom, setPendingFrom] = useState<Date | null>(null);
@@ -150,7 +157,7 @@ export function DateRangePicker({
 			setPhase('from');
 			setHoveredDate(null);
 			setActivePreset(null);
-			setOpen(false);
+			handleOpenChange(false);
 		}
 	}
 
@@ -166,7 +173,7 @@ export function DateRangePicker({
 			if (range.from) {
 				setLeftMonth(startOfMonth(range.from));
 			}
-			setOpen(false);
+			handleOpenChange(false);
 		}
 		// For 'custom': just leave the calendar open for manual selection
 	}
@@ -180,7 +187,8 @@ export function DateRangePicker({
 	}
 
 	function handleOpenChange(next: boolean) {
-		setOpen(next);
+		if (!isControlled) setUncontrolledOpen(next);
+		onOpenChange?.(next);
 		if (!next) {
 			// Cancel pending selection on close
 			setPhase('from');

@@ -41,6 +41,9 @@ export interface TimePickerProps {
 	minuteStep?: number;
 	disabled?: boolean;
 	placeholder?: string;
+	/** Controlled open state (for testing and external control) */
+	open?: boolean;
+	onOpenChange?: (open: boolean) => void;
 }
 
 /**
@@ -55,8 +58,17 @@ export function TimePicker({
 	minuteStep = 1,
 	disabled,
 	placeholder = 'Select a time...',
+	open: controlledOpen,
+	onOpenChange,
 }: TimePickerProps) {
-	const [open, setOpen] = useState(false);
+	const isControlled = controlledOpen !== undefined;
+	const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+	const open = isControlled ? controlledOpen : uncontrolledOpen;
+
+	function handleOpenChange(next: boolean) {
+		if (!isControlled) setUncontrolledOpen(next);
+		onOpenChange?.(next);
+	}
 	const minuteSpinRef = useRef<HTMLDivElement>(null);
 
 	const parsed = parseTime(value);
@@ -139,11 +151,11 @@ export function TimePicker({
 	const displayValue = formatDisplayTime(value, is12Hour);
 
 	return (
-		<Popover.Root open={open} onOpenChange={v => { if (!disabled) setOpen(v); }}>
+		<Popover.Root open={open} onOpenChange={v => { if (!disabled) handleOpenChange(v); }}>
 			<Popover.Anchor asChild>
 				<button
 					type="button"
-					onClick={() => { if (!disabled) setOpen(v => !v); }}
+					onClick={() => { if (!disabled) handleOpenChange(!open); }}
 					disabled={disabled}
 					aria-haspopup="dialog"
 					aria-expanded={open}

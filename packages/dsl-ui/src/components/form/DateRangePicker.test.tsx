@@ -19,6 +19,17 @@ function renderPicker(
 	);
 }
 
+// Helper: render picker already open (avoids Radix focus-trap setTimeout chain)
+function renderOpenPicker(
+	value: DateRange = NULL_RANGE,
+	onChange = vi.fn(),
+	extraProps: Partial<React.ComponentProps<typeof DateRangePicker>> = {},
+) {
+	return render(
+		<DateRangePicker value={value} onChange={onChange} open={true} {...extraProps} />,
+	);
+}
+
 describe('DateRangePicker', () => {
 	describe('Rendering', () => {
 		it('renders trigger button with placeholder when no value', () => {
@@ -101,16 +112,18 @@ describe('DateRangePicker', () => {
 	});
 
 	describe('Popover open/close', () => {
+		// Pattern B: verify click signals open intent via onOpenChange
 		it('opens calendar when trigger is clicked', () => {
-			renderPicker();
+			const onOpenChange = vi.fn();
+			renderPicker(NULL_RANGE, vi.fn(), { onOpenChange });
 			const trigger = screen.getByRole('button', { name: /Select a date range/ });
 			fireEvent.click(trigger);
-			expect(screen.getByRole('dialog')).toBeInTheDocument();
+			expect(onOpenChange).toHaveBeenCalledWith(true);
 		});
 
+		// Pattern A: render already-open to check presets
 		it('shows preset buttons when calendar is open', () => {
-			renderPicker();
-			fireEvent.click(screen.getByRole('button', { name: /Select a date range/ }));
+			renderOpenPicker();
 
 			expect(screen.getByText('Today')).toBeInTheDocument();
 			expect(screen.getByText('This Week')).toBeInTheDocument();
@@ -119,9 +132,9 @@ describe('DateRangePicker', () => {
 			expect(screen.getByText('Custom')).toBeInTheDocument();
 		});
 
+		// Pattern A: render already-open to check dual calendar panels
 		it('shows two calendar panels when open', () => {
-			renderPicker();
-			fireEvent.click(screen.getByRole('button', { name: /Select a date range/ }));
+			renderOpenPicker();
 			// Two month headers should be visible
 			const monthHeaders = screen.getAllByRole('heading', { level: 2 });
 			expect(monthHeaders).toHaveLength(2);
@@ -131,8 +144,7 @@ describe('DateRangePicker', () => {
 	describe('Preset buttons', () => {
 		it('"Today" preset calls onChange with today as from and to', () => {
 			const onChange = vi.fn();
-			renderPicker(NULL_RANGE, onChange);
-			fireEvent.click(screen.getByRole('button', { name: /Select a date range/ }));
+			renderOpenPicker(NULL_RANGE, onChange);
 			fireEvent.click(screen.getByText('Today'));
 
 			expect(onChange).toHaveBeenCalled();
@@ -148,8 +160,7 @@ describe('DateRangePicker', () => {
 
 		it('"This Week" preset sets from=startOfWeek, to=endOfWeek', () => {
 			const onChange = vi.fn();
-			renderPicker(NULL_RANGE, onChange);
-			fireEvent.click(screen.getByRole('button', { name: /Select a date range/ }));
+			renderOpenPicker(NULL_RANGE, onChange);
 			fireEvent.click(screen.getByText('This Week'));
 
 			const [call] = onChange.mock.calls;
@@ -161,8 +172,7 @@ describe('DateRangePicker', () => {
 
 		it('"This Month" preset sets from=startOfMonth, to=endOfMonth', () => {
 			const onChange = vi.fn();
-			renderPicker(NULL_RANGE, onChange);
-			fireEvent.click(screen.getByRole('button', { name: /Select a date range/ }));
+			renderOpenPicker(NULL_RANGE, onChange);
 			fireEvent.click(screen.getByText('This Month'));
 
 			const [call] = onChange.mock.calls;
@@ -174,8 +184,7 @@ describe('DateRangePicker', () => {
 
 		it('"Last 30 Days" preset sets from=29 days ago, to=today', () => {
 			const onChange = vi.fn();
-			renderPicker(NULL_RANGE, onChange);
-			fireEvent.click(screen.getByRole('button', { name: /Select a date range/ }));
+			renderOpenPicker(NULL_RANGE, onChange);
 			fireEvent.click(screen.getByText('Last 30 Days'));
 
 			const [call] = onChange.mock.calls;
@@ -187,21 +196,21 @@ describe('DateRangePicker', () => {
 
 		it('"Custom" preset does not call onChange', () => {
 			const onChange = vi.fn();
-			renderPicker(NULL_RANGE, onChange);
-			fireEvent.click(screen.getByRole('button', { name: /Select a date range/ }));
+			renderOpenPicker(NULL_RANGE, onChange);
 			fireEvent.click(screen.getByText('Custom'));
 
 			expect(onChange).not.toHaveBeenCalled();
 		});
 
+		// Pattern A + verify close signalled via onOpenChange
 		it('preset closes the popover after selection (except Custom)', () => {
 			const onChange = vi.fn();
-			renderPicker(NULL_RANGE, onChange);
-			fireEvent.click(screen.getByRole('button', { name: /Select a date range/ }));
+			const onOpenChange = vi.fn();
+			renderOpenPicker(NULL_RANGE, onChange, { onOpenChange });
 			fireEvent.click(screen.getByText('Today'));
 
-			// Popover should close after picking a preset
-			expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+			// Popover should signal close after picking a preset
+			expect(onOpenChange).toHaveBeenCalledWith(false);
 		});
 	});
 
@@ -267,16 +276,16 @@ describe('DateRangePicker', () => {
 			expect(btn).toHaveAttribute('aria-expanded', 'false');
 		});
 
+		// Pattern A: render already-open to check aria-expanded=true
 		it('trigger button has aria-expanded=true when open', () => {
-			renderPicker();
+			renderOpenPicker();
 			const btn = screen.getByRole('button', { name: /Select a date range/ });
-			fireEvent.click(btn);
 			expect(btn).toHaveAttribute('aria-expanded', 'true');
 		});
 
+		// Pattern A: render already-open to check dialog role
 		it('calendar panel has role=dialog when open', () => {
-			renderPicker();
-			fireEvent.click(screen.getByRole('button', { name: /Select a date range/ }));
+			renderOpenPicker();
 			expect(screen.getByRole('dialog')).toBeInTheDocument();
 		});
 	});

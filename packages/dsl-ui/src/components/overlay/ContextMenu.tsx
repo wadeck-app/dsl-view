@@ -20,6 +20,9 @@ export interface ContextMenuProps {
 	items: ContextMenuItem[];
 	side?: 'top' | 'right' | 'bottom' | 'left';
 	align?: 'start' | 'center' | 'end';
+	/** Controlled open state */
+	open?: boolean;
+	onOpenChange?: (open: boolean) => void;
 }
 
 // @formatter:off
@@ -33,8 +36,10 @@ const itemDisabledClass = 'opacity-50 cursor-not-allowed text-content-subtle poi
  * @registryCategory disposition
  * @registryTags context-menu dropdown menu kebab overlay
  */
-export function ContextMenu({ trigger, items, side = 'bottom', align = 'start' }: ContextMenuProps) {
-	const [open, setOpen] = useState(false);
+export function ContextMenu({ trigger, items, side = 'bottom', align = 'start', open: controlledOpen, onOpenChange }: ContextMenuProps) {
+	const isControlled = controlledOpen !== undefined;
+	const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+	const open = isControlled ? controlledOpen : uncontrolledOpen;
 	const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
 	// Indices of items that can receive keyboard focus (non-separator, non-disabled)
@@ -43,12 +48,13 @@ export function ContextMenu({ trigger, items, side = 'bottom', align = 'start' }
 		.filter(i => i !== -1);
 
 	function handleOpenChange(next: boolean) {
-		setOpen(next);
+		if (!isControlled) setUncontrolledOpen(next);
+		onOpenChange?.(next);
 	}
 
 	function handleItemClick(item: ContextMenuItem) {
 		if (item.disabled || item.separator) return;
-		setOpen(false);
+		handleOpenChange(false);
 		item.onClick();
 	}
 

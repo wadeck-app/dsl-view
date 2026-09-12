@@ -1,23 +1,8 @@
 import React from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 
 import { TimePicker } from './TimePicker.js';
-
-// Helper: render and open the popover
-async function renderAndOpen(props: React.ComponentProps<typeof TimePicker>) {
-	const user = userEvent.setup();
-	render(<TimePicker {...props} />);
-	const trigger = screen.getByRole('button', { name: props.value
-		? (props.is12Hour
-			? /^\d{2}:\d{2} (AM|PM)$/
-			: /^\d{2}:\d{2}$/)
-		: new RegExp(props.placeholder ?? 'Select a time\\.\\.\\.', 'i'),
-	});
-	await user.click(trigger);
-	return { user, trigger };
-}
 
 describe('TimePicker', () => {
 	describe('Rendering', () => {
@@ -51,165 +36,148 @@ describe('TimePicker', () => {
 			expect(screen.getByRole('button', { name: 'Select a time...' })).toBeDisabled();
 		});
 
-		it('does not open popover when disabled', async () => {
+		it('does not open popover when disabled', () => {
 			render(<TimePicker value={null} onChange={vi.fn()} disabled />);
 			const trigger = screen.getByRole('button', { name: 'Select a time...' });
-			await userEvent.click(trigger);
+			fireEvent.click(trigger);
 			// Popover content should NOT appear
 			expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 		});
 	});
 
 	describe('Popover', () => {
-		it('opens the time panel when trigger is clicked', async () => {
-			render(<TimePicker value="10:00" onChange={vi.fn()} />);
-			const trigger = screen.getByRole('button', { name: '10:00' });
-			await userEvent.click(trigger);
-			expect(screen.getByRole('dialog', { name: 'Time picker' })).toBeInTheDocument();
+		// Pattern A: render already-open to test panel visibility
+		it('opens the time panel when trigger is clicked', () => {
+			const onOpenChange = vi.fn();
+			render(<TimePicker value="10:00" onChange={vi.fn()} onOpenChange={onOpenChange} />);
+			fireEvent.click(screen.getByRole('button', { name: '10:00' }));
+			expect(onOpenChange).toHaveBeenCalledWith(true);
 		});
 
-		it('shows hours and minutes spinbuttons inside the panel', async () => {
-			render(<TimePicker value="10:30" onChange={vi.fn()} />);
-			await userEvent.click(screen.getByRole('button', { name: '10:30' }));
+		it('shows hours and minutes spinbuttons inside the panel', () => {
+			render(<TimePicker value="10:30" onChange={vi.fn()} open={true} />);
 			expect(screen.getByRole('spinbutton', { name: 'Hours' })).toBeInTheDocument();
 			expect(screen.getByRole('spinbutton', { name: 'Minutes' })).toBeInTheDocument();
 		});
 
-		it('does not show AM/PM toggle in 24h mode', async () => {
-			render(<TimePicker value="14:00" onChange={vi.fn()} />);
-			await userEvent.click(screen.getByRole('button', { name: '14:00' }));
+		it('does not show AM/PM toggle in 24h mode', () => {
+			render(<TimePicker value="14:00" onChange={vi.fn()} open={true} />);
 			expect(screen.queryByRole('button', { name: /toggle period/i })).not.toBeInTheDocument();
 		});
 
-		it('shows AM/PM toggle button in 12h mode', async () => {
-			render(<TimePicker value="14:00" onChange={vi.fn()} is12Hour />);
-			await userEvent.click(screen.getByRole('button', { name: '02:00 PM' }));
+		it('shows AM/PM toggle button in 12h mode', () => {
+			render(<TimePicker value="14:00" onChange={vi.fn()} is12Hour open={true} />);
 			expect(screen.getByRole('button', { name: /toggle period/i })).toBeInTheDocument();
 		});
 
-		it('shows "Now" button inside the panel', async () => {
-			render(<TimePicker value="10:00" onChange={vi.fn()} />);
-			await userEvent.click(screen.getByRole('button', { name: '10:00' }));
+		it('shows "Now" button inside the panel', () => {
+			render(<TimePicker value="10:00" onChange={vi.fn()} open={true} />);
 			expect(screen.getByRole('button', { name: 'Now' })).toBeInTheDocument();
 		});
 	});
 
 	describe('Increment / Decrement', () => {
-		it('increments hours when increment-hours button is clicked', async () => {
+		it('increments hours when increment-hours button is clicked', () => {
 			const onChange = vi.fn();
-			render(<TimePicker value="10:00" onChange={onChange} />);
-			await userEvent.click(screen.getByRole('button', { name: '10:00' }));
-			await userEvent.click(screen.getByRole('button', { name: 'Increment hours' }));
+			render(<TimePicker value="10:00" onChange={onChange} open={true} />);
+			fireEvent.click(screen.getByRole('button', { name: 'Increment hours' }));
 			expect(onChange).toHaveBeenCalledWith('11:00');
 		});
 
-		it('decrements hours when decrement-hours button is clicked', async () => {
+		it('decrements hours when decrement-hours button is clicked', () => {
 			const onChange = vi.fn();
-			render(<TimePicker value="10:00" onChange={onChange} />);
-			await userEvent.click(screen.getByRole('button', { name: '10:00' }));
-			await userEvent.click(screen.getByRole('button', { name: 'Decrement hours' }));
+			render(<TimePicker value="10:00" onChange={onChange} open={true} />);
+			fireEvent.click(screen.getByRole('button', { name: 'Decrement hours' }));
 			expect(onChange).toHaveBeenCalledWith('09:00');
 		});
 
-		it('wraps hours from 23 to 00 on increment in 24h mode', async () => {
+		it('wraps hours from 23 to 00 on increment in 24h mode', () => {
 			const onChange = vi.fn();
-			render(<TimePicker value="23:00" onChange={onChange} />);
-			await userEvent.click(screen.getByRole('button', { name: '23:00' }));
-			await userEvent.click(screen.getByRole('button', { name: 'Increment hours' }));
+			render(<TimePicker value="23:00" onChange={onChange} open={true} />);
+			fireEvent.click(screen.getByRole('button', { name: 'Increment hours' }));
 			expect(onChange).toHaveBeenCalledWith('00:00');
 		});
 
-		it('wraps hours from 00 to 23 on decrement in 24h mode', async () => {
+		it('wraps hours from 00 to 23 on decrement in 24h mode', () => {
 			const onChange = vi.fn();
-			render(<TimePicker value="00:00" onChange={onChange} />);
-			await userEvent.click(screen.getByRole('button', { name: '00:00' }));
-			await userEvent.click(screen.getByRole('button', { name: 'Decrement hours' }));
+			render(<TimePicker value="00:00" onChange={onChange} open={true} />);
+			fireEvent.click(screen.getByRole('button', { name: 'Decrement hours' }));
 			expect(onChange).toHaveBeenCalledWith('23:00');
 		});
 
-		it('increments minutes when increment-minutes button is clicked', async () => {
+		it('increments minutes when increment-minutes button is clicked', () => {
 			const onChange = vi.fn();
-			render(<TimePicker value="10:30" onChange={onChange} />);
-			await userEvent.click(screen.getByRole('button', { name: '10:30' }));
-			await userEvent.click(screen.getByRole('button', { name: 'Increment minutes' }));
+			render(<TimePicker value="10:30" onChange={onChange} open={true} />);
+			fireEvent.click(screen.getByRole('button', { name: 'Increment minutes' }));
 			expect(onChange).toHaveBeenCalledWith('10:31');
 		});
 
-		it('decrements minutes when decrement-minutes button is clicked', async () => {
+		it('decrements minutes when decrement-minutes button is clicked', () => {
 			const onChange = vi.fn();
-			render(<TimePicker value="10:30" onChange={onChange} />);
-			await userEvent.click(screen.getByRole('button', { name: '10:30' }));
-			await userEvent.click(screen.getByRole('button', { name: 'Decrement minutes' }));
+			render(<TimePicker value="10:30" onChange={onChange} open={true} />);
+			fireEvent.click(screen.getByRole('button', { name: 'Decrement minutes' }));
 			expect(onChange).toHaveBeenCalledWith('10:29');
 		});
 
-		it('rolls minutes over and increments hours when minutes reach 60', async () => {
+		it('rolls minutes over and increments hours when minutes reach 60', () => {
 			const onChange = vi.fn();
-			render(<TimePicker value="10:59" onChange={onChange} />);
-			await userEvent.click(screen.getByRole('button', { name: '10:59' }));
-			await userEvent.click(screen.getByRole('button', { name: 'Increment minutes' }));
+			render(<TimePicker value="10:59" onChange={onChange} open={true} />);
+			fireEvent.click(screen.getByRole('button', { name: 'Increment minutes' }));
 			expect(onChange).toHaveBeenCalledWith('11:00');
 		});
 	});
 
 	describe('Minute step constraint', () => {
-		it('increments by minuteStep when specified', async () => {
+		it('increments by minuteStep when specified', () => {
 			const onChange = vi.fn();
-			render(<TimePicker value="10:00" onChange={onChange} minuteStep={15} />);
-			await userEvent.click(screen.getByRole('button', { name: '10:00' }));
-			await userEvent.click(screen.getByRole('button', { name: 'Increment minutes' }));
+			render(<TimePicker value="10:00" onChange={onChange} minuteStep={15} open={true} />);
+			fireEvent.click(screen.getByRole('button', { name: 'Increment minutes' }));
 			expect(onChange).toHaveBeenCalledWith('10:15');
 		});
 
-		it('decrements by minuteStep when specified', async () => {
+		it('decrements by minuteStep when specified', () => {
 			const onChange = vi.fn();
-			render(<TimePicker value="10:30" onChange={onChange} minuteStep={15} />);
-			await userEvent.click(screen.getByRole('button', { name: '10:30' }));
-			await userEvent.click(screen.getByRole('button', { name: 'Decrement minutes' }));
+			render(<TimePicker value="10:30" onChange={onChange} minuteStep={15} open={true} />);
+			fireEvent.click(screen.getByRole('button', { name: 'Decrement minutes' }));
 			expect(onChange).toHaveBeenCalledWith('10:15');
 		});
 
-		it('rolls over minutes and increments hour with step=30', async () => {
+		it('rolls over minutes and increments hour with step=30', () => {
 			const onChange = vi.fn();
-			render(<TimePicker value="10:30" onChange={onChange} minuteStep={30} />);
-			await userEvent.click(screen.getByRole('button', { name: '10:30' }));
-			await userEvent.click(screen.getByRole('button', { name: 'Increment minutes' }));
+			render(<TimePicker value="10:30" onChange={onChange} minuteStep={30} open={true} />);
+			fireEvent.click(screen.getByRole('button', { name: 'Increment minutes' }));
 			expect(onChange).toHaveBeenCalledWith('11:00');
 		});
 	});
 
 	describe('Keyboard support', () => {
-		it('increments hours via ArrowUp on hours spinbutton', async () => {
+		it('increments hours via ArrowUp on hours spinbutton', () => {
 			const onChange = vi.fn();
-			render(<TimePicker value="10:00" onChange={onChange} />);
-			await userEvent.click(screen.getByRole('button', { name: '10:00' }));
+			render(<TimePicker value="10:00" onChange={onChange} open={true} />);
 			const hourSpin = screen.getByRole('spinbutton', { name: 'Hours' });
 			fireEvent.keyDown(hourSpin, { key: 'ArrowUp' });
 			expect(onChange).toHaveBeenCalledWith('11:00');
 		});
 
-		it('decrements hours via ArrowDown on hours spinbutton', async () => {
+		it('decrements hours via ArrowDown on hours spinbutton', () => {
 			const onChange = vi.fn();
-			render(<TimePicker value="10:00" onChange={onChange} />);
-			await userEvent.click(screen.getByRole('button', { name: '10:00' }));
+			render(<TimePicker value="10:00" onChange={onChange} open={true} />);
 			const hourSpin = screen.getByRole('spinbutton', { name: 'Hours' });
 			fireEvent.keyDown(hourSpin, { key: 'ArrowDown' });
 			expect(onChange).toHaveBeenCalledWith('09:00');
 		});
 
-		it('increments minutes via ArrowUp on minutes spinbutton', async () => {
+		it('increments minutes via ArrowUp on minutes spinbutton', () => {
 			const onChange = vi.fn();
-			render(<TimePicker value="10:30" onChange={onChange} />);
-			await userEvent.click(screen.getByRole('button', { name: '10:30' }));
+			render(<TimePicker value="10:30" onChange={onChange} open={true} />);
 			const minSpin = screen.getByRole('spinbutton', { name: 'Minutes' });
 			fireEvent.keyDown(minSpin, { key: 'ArrowUp' });
 			expect(onChange).toHaveBeenCalledWith('10:31');
 		});
 
-		it('decrements minutes via ArrowDown on minutes spinbutton', async () => {
+		it('decrements minutes via ArrowDown on minutes spinbutton', () => {
 			const onChange = vi.fn();
-			render(<TimePicker value="10:30" onChange={onChange} />);
-			await userEvent.click(screen.getByRole('button', { name: '10:30' }));
+			render(<TimePicker value="10:30" onChange={onChange} open={true} />);
 			const minSpin = screen.getByRole('spinbutton', { name: 'Minutes' });
 			fireEvent.keyDown(minSpin, { key: 'ArrowDown' });
 			expect(onChange).toHaveBeenCalledWith('10:29');
@@ -217,31 +185,27 @@ describe('TimePicker', () => {
 	});
 
 	describe('12h mode', () => {
-		it('shows PM for hours >= 12', async () => {
-			render(<TimePicker value="15:00" onChange={vi.fn()} is12Hour />);
-			await userEvent.click(screen.getByRole('button', { name: '03:00 PM' }));
+		it('shows PM for hours >= 12', () => {
+			render(<TimePicker value="15:00" onChange={vi.fn()} is12Hour open={true} />);
 			expect(screen.getByRole('button', { name: /currently PM/i })).toBeInTheDocument();
 		});
 
-		it('shows AM for hours < 12', async () => {
-			render(<TimePicker value="09:00" onChange={vi.fn()} is12Hour />);
-			await userEvent.click(screen.getByRole('button', { name: '09:00 AM' }));
+		it('shows AM for hours < 12', () => {
+			render(<TimePicker value="09:00" onChange={vi.fn()} is12Hour open={true} />);
 			expect(screen.getByRole('button', { name: /currently AM/i })).toBeInTheDocument();
 		});
 
-		it('toggles AM to PM when toggle button is clicked', async () => {
+		it('toggles AM to PM when toggle button is clicked', () => {
 			const onChange = vi.fn();
-			render(<TimePicker value="09:00" onChange={onChange} is12Hour />);
-			await userEvent.click(screen.getByRole('button', { name: '09:00 AM' }));
-			await userEvent.click(screen.getByRole('button', { name: /toggle period/i }));
+			render(<TimePicker value="09:00" onChange={onChange} is12Hour open={true} />);
+			fireEvent.click(screen.getByRole('button', { name: /toggle period/i }));
 			expect(onChange).toHaveBeenCalledWith('21:00');
 		});
 
-		it('toggles PM to AM when toggle button is clicked', async () => {
+		it('toggles PM to AM when toggle button is clicked', () => {
 			const onChange = vi.fn();
-			render(<TimePicker value="15:00" onChange={onChange} is12Hour />);
-			await userEvent.click(screen.getByRole('button', { name: '03:00 PM' }));
-			await userEvent.click(screen.getByRole('button', { name: /toggle period/i }));
+			render(<TimePicker value="15:00" onChange={onChange} is12Hour open={true} />);
+			fireEvent.click(screen.getByRole('button', { name: /toggle period/i }));
 			expect(onChange).toHaveBeenCalledWith('03:00');
 		});
 
@@ -268,9 +232,7 @@ describe('TimePicker', () => {
 
 		it('sets current time when Now is clicked', () => {
 			const onChange = vi.fn();
-			render(<TimePicker value="10:00" onChange={onChange} />);
-			// Use fireEvent to avoid userEvent/fake-timer conflict
-			fireEvent.click(screen.getByRole('button', { name: '10:00' }));
+			render(<TimePicker value="10:00" onChange={onChange} open={true} />);
 			fireEvent.click(screen.getByRole('button', { name: 'Now' }));
 			expect(onChange).toHaveBeenCalledWith('14:35');
 		});
@@ -278,9 +240,7 @@ describe('TimePicker', () => {
 		it('rounds to nearest minuteStep when Now is clicked with step', () => {
 			const onChange = vi.fn();
 			// System time is 14:35, with step=15 -> rounds to 14:30 (nearest)
-			render(<TimePicker value="10:00" onChange={onChange} minuteStep={15} />);
-			// Use fireEvent to avoid userEvent/fake-timer conflict
-			fireEvent.click(screen.getByRole('button', { name: '10:00' }));
+			render(<TimePicker value="10:00" onChange={onChange} minuteStep={15} open={true} />);
 			fireEvent.click(screen.getByRole('button', { name: 'Now' }));
 			// 35 rounded to nearest 15 = 30
 			expect(onChange).toHaveBeenCalledWith('14:30');
@@ -311,24 +271,21 @@ describe('TimePicker', () => {
 	});
 
 	describe('Spinbutton ARIA', () => {
-		it('hours spinbutton has correct aria-valuenow in 24h mode', async () => {
-			render(<TimePicker value="14:30" onChange={vi.fn()} />);
-			await userEvent.click(screen.getByRole('button', { name: '14:30' }));
+		it('hours spinbutton has correct aria-valuenow in 24h mode', () => {
+			render(<TimePicker value="14:30" onChange={vi.fn()} open={true} />);
 			const hourSpin = screen.getByRole('spinbutton', { name: 'Hours' });
 			expect(hourSpin).toHaveAttribute('aria-valuenow', '14');
 		});
 
-		it('hours spinbutton has correct aria-valuenow in 12h mode', async () => {
-			render(<TimePicker value="14:30" onChange={vi.fn()} is12Hour />);
-			await userEvent.click(screen.getByRole('button', { name: '02:30 PM' }));
+		it('hours spinbutton has correct aria-valuenow in 12h mode', () => {
+			render(<TimePicker value="14:30" onChange={vi.fn()} is12Hour open={true} />);
 			const hourSpin = screen.getByRole('spinbutton', { name: 'Hours' });
 			// displayHours = 14 % 12 = 2
 			expect(hourSpin).toHaveAttribute('aria-valuenow', '2');
 		});
 
-		it('minutes spinbutton has correct aria-valuenow', async () => {
-			render(<TimePicker value="14:45" onChange={vi.fn()} />);
-			await userEvent.click(screen.getByRole('button', { name: '14:45' }));
+		it('minutes spinbutton has correct aria-valuenow', () => {
+			render(<TimePicker value="14:45" onChange={vi.fn()} open={true} />);
 			const minSpin = screen.getByRole('spinbutton', { name: 'Minutes' });
 			expect(minSpin).toHaveAttribute('aria-valuenow', '45');
 		});

@@ -17,5 +17,5 @@
 		{ "path": "../dsl-renderer" }
 	],
 	"include": ["src/**/*"],
-	"exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/**/*.stories.tsx"]
+	"exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/**/*.stories.tsx", "src/__mocks__/**/*"]
 }
