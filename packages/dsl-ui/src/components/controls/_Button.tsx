@@ -34,9 +34,7 @@ const VARIANT_CLASSES: Record<Variant, string> = {
 		'bg-muted-bg text-content hover:bg-bg-secondary focus:ring-border',
 	success: 'bg-success text-white hover:bg-success/80 focus:ring-success',
 	ghost: 'text-muted hover:bg-muted-bg hover:text-content focus:ring-border',
-	// Inline navigation link - no button chrome, primary color, underline on hover.
-	// Use instead of className overrides for clickable identifiers (IDs, names, paths).
-	link: 'text-primary hover:underline focus:ring-primary px-0 py-0 font-mono',
+	link: 'text-primary hover:underline focus:ring-primary px-0 py-0',
 };
 
 const SIZE_CLASSES: Record<Size, string> = {
