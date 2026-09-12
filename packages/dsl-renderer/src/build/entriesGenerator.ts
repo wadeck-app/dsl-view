@@ -285,8 +285,13 @@ function generateSimpleEntry(
 	const propsInterface = sourceFile.getInterface(`${component.name}Props`);
 
 	if (!propsInterface) {
-		// No Props interface found - generate a no-props render
-		return `render: () => <${component.name} />,`;
+		// No Props interface found — check if the component accepts children via HTML attributes
+		// (e.g. RouterProvider from react-router-dom which wraps HTMLElement).
+		// Generate a children-forwarding render to avoid broken JSX with required children.
+		return `render: ({ node, registry }: RegistryRenderProps) => {
+		const items = node['items'] as unknown[] | undefined
+		return <${component.name}>{items ? renderChildren(items, registry, {}) : null}</${component.name}>
+	},`;
 	}
 
 	const allProperties = propsInterface.getProperties();
@@ -294,11 +299,21 @@ function generateSimpleEntry(
 	// Only support the formData/onChange bind pattern (the one special case worth keeping)
 	const isFormDataBind = bindPattern?.[0] === 'formData' && bindPattern?.[1] === 'onChange';
 
+	// Detect type parameters on the Props interface (e.g. DataTableProps<T>)
+	const typeParams = propsInterface.getTypeParameters();
+	const typeArgs = typeParams.length > 0
+		? '<' + typeParams.map(() => 'unknown').join(', ') + '>'
+		: '';
+
 	const declLines: string[] = [];
 	const jsxAttrs: string[] = [];
 	let hasSlots = false;
 	let hasChildren = false;
 	let childrenDslKey = 'items';
+
+	// Pre-scan: determine if this is a checked-style (toggle) component for bind exclusion
+	const hasCheckedProp = allProperties.some(p => p.getName() === 'checked');
+	const hasValueProp   = allProperties.some(p => p.getName() === 'value');
 
 	// Determine which props are bind-pattern-consumed (value/onChange/bind)
 	const bindConsumedProps = new Set<string>();
@@ -306,6 +321,8 @@ function generateSimpleEntry(
 		bindConsumedProps.add('value');
 		bindConsumedProps.add('onChange');
 		bindConsumedProps.add('bind');
+		// Toggle components (checked but no value) — exclude checked from normal prop loop
+		if (hasCheckedProp && !hasValueProp) bindConsumedProps.add('checked');
 	}
 
 	// Props that are internal to React/HTML and never authored in DSL YAML.
@@ -338,10 +355,14 @@ function generateSimpleEntry(
 				jsxAttrs.push(`${name}={${name} ? renderChildren(${name}, registry, ctx) : null}`);
 			}
 		} else {
-			// Plain prop - resolve reactive expression then cast
-			const propType = `import('${importPath}').${component.name}Props['${name}']`;
-			declLines.push(`const ${name} = resolveExpressionValue(node['${name}'], ctx) as ${propType}`);
-			jsxAttrs.push(`${name}={${name}}`);
+			// Plain prop - resolve reactive expression then cast.
+			// For hyphenated names (e.g. aria-label), use a camelCase JS variable.
+			const varName = name.includes('-')
+				? name.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
+				: name;
+			const propType = `import('${importPath}').${component.name}Props${typeArgs}['${name}']`;
+			declLines.push(`const ${varName} = resolveExpressionValue(node['${name}'], ctx) as ${propType}`);
+			jsxAttrs.push(`${name}={${varName}}`);
 		}
 	}
 
@@ -352,16 +373,24 @@ function generateSimpleEntry(
 		// Generate FormContext wrapper for bind-pattern components
 		const componentDeclaresBindProp = allProperties.some(p => p.getName() === 'bind');
 		const bindAttr = componentDeclaresBindProp ? ' bind={bind}' : '';
-		const valueProp    = allProperties.find(p => p.getName() === 'value');
-		const checkedProp  = allProperties.find(p => p.getName() === 'checked');
-		const isArrayValue = valueProp?.getType().isArray() ?? false;
+		const valueProp       = allProperties.find(p => p.getName() === 'value');
+		const checkedProp     = allProperties.find(p => p.getName() === 'checked');
+		const isToggle        = hasCheckedProp && !hasValueProp;
+		const isArrayValue    = valueProp?.getType().isArray() ?? false;
+		const isNumberValue   = valueProp?.getType().isNumber() ?? false;
+		const valueTypeText   = valueProp?.getTypeNode()?.getText() ?? '';
+		const isDateValue     = valueTypeText === 'Date' || valueTypeText === 'Date | null' || valueTypeText === 'null | Date';
 		// Use 'checked' (boolean) for toggle components (e.g. Switch), 'value' otherwise.
-		const boundAttr = checkedProp && !valueProp ? 'checked' : 'value';
-		const valueExpr = checkedProp && !valueProp
+		const boundAttr = isToggle ? 'checked' : 'value';
+		const valueExpr = isToggle
 			? `Boolean(formData?.[bind])`
-			: isArrayValue
-				? `(formData?.[bind] as string[] | undefined) ?? []`
-				: `String(formData?.[bind] ?? '')`;
+			: isDateValue
+				? `formData?.[bind] ? new Date(String(formData?.[bind])) : null`
+				: isNumberValue
+					? `Number(formData?.[bind] ?? 0)`
+					: isArrayValue
+						? `(formData?.[bind] as string[] | undefined) ?? []`
+						: `String(formData?.[bind] ?? '')`;
 
 		const outerDecl = `\t\tconst bind = node['bind'] as string`;
 		const fullOuterDecl = declText ? `${outerDecl}\n${declText}` : outerDecl;
