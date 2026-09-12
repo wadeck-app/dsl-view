@@ -423,7 +423,10 @@ function relativeImportPath(sourcePath: string, outputDir: string): string {
 	if (nmMatch) {
 		const pkgName = nmMatch[1]!;        // e.g. "@wadeck-app/dsl-ui"
 		const inPkg   = nmMatch[2]!;        // e.g. "src/components/layout/PageContent.tsx"
-		const withoutExt = inPkg.slice(0, -path.extname(inPkg).length);
+		// Use dist/ path so consumers import the compiled output, not raw source.
+		// Raw source imports force Rollup to traverse devDeps (e.g. @radix-ui/*) not installed in the consuming project.
+		const distPkg = inPkg.startsWith('src/') ? 'dist/' + inPkg.slice('src/'.length) : inPkg;
+		const withoutExt = distPkg.slice(0, -path.extname(distPkg).length);
 		return `${pkgName}/${withoutExt}.js`;
 	}
 	const withoutExt = sourcePath.slice(0, -path.extname(sourcePath).length);
