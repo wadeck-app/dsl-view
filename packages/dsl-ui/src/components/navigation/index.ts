@@ -6,3 +6,4 @@ export * from './PageTabs.js';
 export * from './RouterProvider.js';
 export * from './Stepper.js';
 export * from './Tabs.js';
+export * from './TreeView.js';
