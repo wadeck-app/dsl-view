@@ -30,6 +30,14 @@
 		"generate-node-schemas": "tsx scripts/generate-node-schemas.ts"
 	},
 	"dependencies": {
+		"@radix-ui/react-avatar": "^1.0.0",
+		"@radix-ui/react-collapsible": "^1.0.0",
+		"@radix-ui/react-popover": "^1.0.0",
+		"@radix-ui/react-progress": "^1.0.0",
+		"@radix-ui/react-radio-group": "^1.0.0",
+		"@radix-ui/react-separator": "^1.0.0",
+		"@radix-ui/react-slider": "^1.0.0",
+		"@radix-ui/react-switch": "^1.0.0",
 		"@wadeck-app/dsl-renderer": "latest",
 		"date-fns": "^3.6.0",
 		"lucide-react": "^0.511.0",
@@ -42,14 +50,6 @@
 		"react-dom": "^19.0.0"
 	},
 	"devDependencies": {
-		"@radix-ui/react-avatar": "^1.0.0",
-		"@radix-ui/react-collapsible": "^1.0.0",
-		"@radix-ui/react-popover": "^1.0.0",
-		"@radix-ui/react-progress": "^1.0.0",
-		"@radix-ui/react-radio-group": "^1.0.0",
-		"@radix-ui/react-separator": "^1.0.0",
-		"@radix-ui/react-slider": "^1.0.0",
-		"@radix-ui/react-switch": "^1.0.0",
 		"@storybook/addon-docs": "^10.4.6",
 		"@storybook/react": "^10.4.6",
 		"@storybook/react-vite": "^10.4.6",
