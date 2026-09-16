@@ -43,3 +43,34 @@ describe('Button', () => {
 		expect(btn.className).not.toMatch(/text-muted\b/);
 	});
 });
+
+// Reported from a real screen: "Run now", "View logs", "Edit" and "Delete" sat in one row
+// at three different heights. Two of those three came from here - secondary and
+// danger-outline add a 1px border while primary, danger, neutral, success and ghost do
+// not, so at the same size a bordered variant is 2px taller than an unbordered one.
+// Variants choose colour, never geometry.
+describe('Button geometry is variant-independent', () => {
+	const bordered = ['secondary', 'danger-outline'] as const;
+	const unbordered = ['primary', 'danger', 'neutral', 'success', 'ghost'] as const;
+
+	it.each([...bordered, ...unbordered])('%s reserves the same border width', variant => {
+		const { container } = render(<Button variant={variant}>Label</Button>);
+
+		const cls = (container.firstElementChild as HTMLElement).className;
+		// Either a visible border or a transparent one, but always a border box of 1px, so
+		// the outer height does not depend on which variant was picked.
+		expect(cls).toMatch(/\bborder\b/);
+	});
+
+	it('gives every variant an identical class-level box at one size', () => {
+		const boxOf = (variant: string) => {
+			const { container } = render(<Button variant={variant as 'primary'} size="md">Label</Button>);
+			const cls = (container.firstElementChild as HTMLElement).className;
+			// Only the parts that affect height: padding, font size, border width.
+			return cls.split(' ').filter(c => /^(px|py|text-(xs|sm|base)|border)$|^(px|py)-|^border$/.test(c)).sort().join(' ');
+		};
+
+		const boxes = new Set([...bordered, ...unbordered].map(boxOf));
+		expect([...boxes]).toHaveLength(1);
+	});
+});

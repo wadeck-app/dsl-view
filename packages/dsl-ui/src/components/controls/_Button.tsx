@@ -23,17 +23,22 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const BASE =
 	'inline-flex items-center justify-center rounded font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer';
 
+// Every variant carries `border`, transparent where the design has no visible outline.
+// Variants pick colour, never geometry: secondary and danger-outline used to be the only
+// ones with a border, which made them 2px taller than primary/danger/neutral/success at
+// the same size. In a row of actions that reads as buttons of three different heights.
 const VARIANT_CLASSES: Record<Variant, string> = {
 	primary:
-		'bg-[var(--color-primary-solid)] text-white hover:bg-[var(--color-primary-solid-hover)] focus:ring-[var(--color-primary-solid)]',
+		'border border-transparent bg-[var(--color-primary-solid)] text-white hover:bg-[var(--color-primary-solid-hover)] focus:ring-[var(--color-primary-solid)]',
 	secondary:
 		'border border-border bg-surface text-content hover:bg-bg-secondary focus:ring-border',
-	danger: 'bg-danger text-white hover:bg-danger/80 focus:ring-danger',
+	danger: 'border border-transparent bg-danger text-white hover:bg-danger/80 focus:ring-danger',
 	'danger-outline': 'border border-danger text-danger hover:bg-danger-bg focus:ring-danger',
 	neutral:
-		'bg-muted-bg text-content hover:bg-bg-secondary focus:ring-border',
-	success: 'bg-success text-white hover:bg-success/80 focus:ring-success',
-	ghost: 'text-muted hover:bg-muted-bg hover:text-content focus:ring-border',
+		'border border-transparent bg-muted-bg text-content hover:bg-bg-secondary focus:ring-border',
+	success: 'border border-transparent bg-success text-white hover:bg-success/80 focus:ring-success',
+	ghost: 'border border-transparent text-muted hover:bg-muted-bg hover:text-content focus:ring-border',
+	// Deliberately excluded: `link` is text, not a box, so it drops padding and border.
 	link: 'text-primary hover:underline focus:ring-primary px-0 py-0',
 };
 
@@ -67,7 +72,7 @@ export function Button({
 	...props
 }: ButtonProps) {
 	const { size: ctxSize, defaultVariant: ctxVariant } = useButtonContext();
-	// Explicit prop wins → context default → hardcoded fallback.
+	// Explicit prop wins, then the context default, then the hardcoded fallback.
 	const resolvedVariant = variant ?? ctxVariant ?? 'primary';
 	const resolvedSize = size ?? ctxSize ?? 'md';
 	const isDisabled = disabled || loading;
