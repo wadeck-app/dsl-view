@@ -1,0 +1,84 @@
+/**
+ * The design tokens dsl-ui components are built against.
+ *
+ * Consumers import this instead of redeclaring the palette:
+ *
+ *   import '@wadeck-app/dsl-ui/theme.css';
+ *
+ * Pair it with the Tailwind preset, which maps the class names the components use
+ * (bg-surface, text-content, ...) onto these variables:
+ *
+ *   presets: [require('@wadeck-app/dsl-ui/tailwind-preset')]
+ *
+ * Without both, every app ends up with its own copy of the palette and they drift.
+ * That already happened: one consumer defined --color-text where this file says
+ * --color-content, and shipped a dark mode with no --color-warning at all.
+ *
+ * Contains tokens only - no @tailwind directives - so an app can import it without
+ * having Tailwind's layers injected a second time.
+ */
+
+/* ─── Design tokens (light) ─────────────────────────────────────── */
+:root {
+	/* Tells the UA which palette to paint scrollbars and native form controls with.
+	   Inherited, so it covers every descendant. Without it the UA assumes light and
+	   a dark theme gets white scrollbars over a dark page. */
+	color-scheme: light;
+
+	--color-primary: #3b82f6;
+	--color-primary-solid: #3b82f6;
+	--color-primary-solid-hover: #2563eb;
+	--color-primary-light: #eff6ff;
+	--color-border: #e2e8f0;
+	--color-bg: #f8fafc;
+	--color-surface: #ffffff;
+	--color-content: #1e293b;
+	--color-muted: #64748b;
+	--color-muted-bg: #f1f5f9;
+	--color-bg-secondary: #f8fafc;
+	--color-danger: #dc2626;
+	--color-danger-bg: #fef2f2;
+	--color-danger-text: #dc2626;
+	--color-success: #16a34a;
+	--color-success-bg: #f0fdf4;
+	--color-success-text: #16a34a;
+	--color-warning: #d97706;
+	--color-warning-bg: #fffbeb;
+	--color-warning-text: #92400e;
+	--color-info-bg: #eff6ff;
+	--color-info-text: #1e40af;
+}
+
+/* ─── Design tokens (dark) ───────────────────────────────────────── */
+/* Both selectors are supported on purpose: dsl-ui's own useTheme toggles a `dark`
+   class, while consumers that predate it switch on [data-theme="dark"]. Accepting
+   either is what lets an app adopt this file without rewriting its theme switch. */
+.dark,
+[data-theme='dark'] {
+	color-scheme: dark;
+
+	--color-primary: #60a5fa;
+	--color-primary-solid: #3b82f6;
+	--color-primary-solid-hover: #2563eb;
+	--color-primary-light: #1e3a5f;
+	--color-border: #334155;
+	--color-bg: #020617;
+	--color-surface: #1e293b;
+	--color-content: #f1f5f9;
+	--color-muted: #94a3b8;
+	--color-muted-bg: #334155;
+	--color-bg-secondary: #0f172a;
+	--color-danger: #f87171;
+	--color-danger-bg: #450a0a;
+	--color-danger-text: #fca5a5;
+	--color-success: #4ade80;
+	--color-success-bg: #052e16;
+	--color-success-text: #86efac;
+	/* Was missing here while :root defined it, so anything using --color-warning
+	   in dark mode silently fell back to the light #d97706. */
+	--color-warning: #fbbf24;
+	--color-warning-bg: #451a03;
+	--color-warning-text: #fde68a;
+	--color-info-bg: #1e3a5f;
+	--color-info-text: #93c5fd;
+}

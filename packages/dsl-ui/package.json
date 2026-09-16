@@ -9,12 +9,16 @@
 			"import": "./dist/index.js",
 			"types": "./dist/index.d.ts"
 		},
+		"./theme.css": "./src/theme.css",
+		"./tailwind-preset": "./tailwind-preset.js",
+		"./package.json": "./package.json",
 		"./src/*": "./src/*",
 		"./dist/*": "./dist/*"
 	},
 	"files": [
 		"dist",
-		"src"
+		"src",
+		"tailwind-preset.js"
 	],
 	"publishConfig": {
 		"registry": "https://npm.pkg.github.com",
