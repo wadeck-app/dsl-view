@@ -12,7 +12,9 @@ const css = fs.readFileSync(THEME_PATH, 'utf8');
 function ruleBody(selector: string): string {
 	const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 	const match = new RegExp(`${escaped}[^{]*\\{([^}]*)\\}`).exec(css);
-	if (!match) throw new Error(`No rule matching "${selector}" in ${THEME_PATH}`);
+	if (!match) {
+		throw new Error(`No rule matching "${selector}" in ${THEME_PATH}`);
+	}
 	return match[1]!.replace(/\/\*[\s\S]*?\*\//g, '');
 }
 

@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { describe, it, expect } from 'vitest';
 // @ts-expect-error - plain JS preset, no type declarations
-import preset from '../tailwind-preset.js';
+import preset, { dslUiContent } from '../tailwind-preset.js';
 
 const themeCss = fs.readFileSync(path.resolve(__dirname, 'theme.css'), 'utf8')
 	.replace(/\/\*[\s\S]*?\*\//g, '');
@@ -51,12 +51,32 @@ describe('tailwind-preset', () => {
 		expect(variants.some(v => v.includes('[data-theme="dark"]'))).toBe(true);
 	});
 
-	// Without this, a consuming app generates no classes for dsl-ui's own
-	// components and every dsl-ui element renders unstyled.
-	it('points content at this package so consumers scan dsl-ui components', () => {
-		expect(preset.content).toHaveLength(1);
-		const glob = preset.content[0] as string;
-		expect(path.isAbsolute(glob)).toBe(true);
-		expect(fs.existsSync(glob.replace(/[\\/]src[\\/].*$/, '/src'))).toBe(true);
+	// Tailwind reads `content` from the top-level config only; resolveConfig never
+	// looks at a preset's. Declaring it here promised scan paths that were silently
+	// discarded, so a consumer got none of dsl-ui's classes and every dsl-ui
+	// component rendered unstyled while the build reported success.
+	it('declares no content, which Tailwind would ignore anyway', () => {
+		expect(preset.content).toBeUndefined();
+	});
+
+	it('exports the scan paths separately, for consumers to spread', () => {
+		expect(dslUiContent).toHaveLength(1);
+		expect(path.isAbsolute(dslUiContent[0]!)).toBe(true);
+	});
+
+	// fast-glob reads a backslash as an escape rather than a separator, so a
+	// path.join'd Windows path matches nothing.
+	it('uses forward slashes, which is all fast-glob accepts as a separator', () => {
+		expect(dslUiContent[0]).not.toContain('\\');
+	});
+
+	// The point of the glob is that it finds files. An absolute path that resolves
+	// nowhere would still satisfy every assertion above.
+	it('resolves to this package\'s component files', () => {
+		const srcDir = dslUiContent[0]!.replace(/\/\*\*.*$/, '');
+		expect(fs.existsSync(srcDir)).toBe(true);
+		const tsx = fs.readdirSync(srcDir, { recursive: true })
+			.filter(f => String(f).endsWith('.tsx'));
+		expect(tsx.length).toBeGreaterThan(50);
 	});
 });
