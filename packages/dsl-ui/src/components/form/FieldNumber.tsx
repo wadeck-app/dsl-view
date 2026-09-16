@@ -14,6 +14,10 @@ export interface FieldNumberProps {
 	max?: number;
 	suffix?: string;
 	disabled?: boolean;
+	/** Marks the field required. Handled by FieldWrapper. */
+	required?: boolean;
+	/** Validation message. Handled by FieldWrapper. */
+	error?: string;
 	// DSL wiring: ctx key whose boolean value drives the unlimited checkbox
 	unlimited?: string;
 	unlimitedValue?: boolean;
@@ -34,12 +38,18 @@ export function FieldNumber({
 	max,
 	suffix,
 	disabled,
+	required,
+	error,
 	unlimited,
 	unlimitedValue = false,
 	onUnlimitedChange,
 }: FieldNumberProps) {
 	return (
-		<FieldWrapper label={label} description={description}>
+		// Function form, not a plain child: the first child here is the flex row, so letting
+		// FieldWrapper clone it would put the label id and ARIA state on a div and leave the
+		// input with no accessible name.
+		<FieldWrapper label={label} description={description} required={required} error={error}>
+			{control => (
 			<div className="flex items-center gap-3 mt-1">
 				<input
 					type="number"
@@ -49,6 +59,7 @@ export function FieldNumber({
 					disabled={disabled ?? unlimitedValue}
 					onChange={e => onChange(e.target.value)}
 					className={narrowInputClass}
+					{...control}
 				/>
 				{suffix && <span className="text-sm text-muted">{suffix}</span>}
 				{unlimited && (
@@ -58,7 +69,10 @@ export function FieldNumber({
 							checked={unlimitedValue}
 							onChange={e => {
 								onUnlimitedChange?.(e.target.checked);
-								if (e.target.checked) onChange('');
+								if (e.target.checked) {
+										// Clear the number so "unlimited" leaves no stale bound behind.
+										onChange('');
+									}
 							}}
 							className="h-4 w-4"
 						/>
@@ -66,6 +80,7 @@ export function FieldNumber({
 					</label>
 				)}
 			</div>
+			)}
 		</FieldWrapper>
 	);
 }

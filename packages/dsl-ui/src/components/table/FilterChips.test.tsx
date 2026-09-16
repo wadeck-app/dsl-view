@@ -56,3 +56,61 @@ describe('FilterChips', () => {
 		expect(onChange).toHaveBeenCalledWith(['a', 'b']);
 	});
 });
+
+// Single-select is a distinct filter shape, not a degenerate multi-select: exactly one
+// chip is active, an explicit "all" option is one of the choices rather than an empty
+// array, and re-clicking the active chip is a no-op instead of being refused as
+// "cannot deselect the last". A consumer that needed this had reimplemented the whole
+// chip row rather than reuse this component.
+describe('FilterChips mode=single', () => {
+	const options = [
+		{ value: 'all', label: 'All' },
+		{ value: 'cron', label: 'Cron' },
+		{ value: 'failed', label: 'Failed' },
+	];
+
+	it('marks only the selected chip active', () => {
+		render(<FilterChips bind="type" mode="single" options={options} value={['cron']} onChange={() => {}} />);
+
+		expect(screen.getByText('Cron')).toHaveAttribute('aria-pressed', 'true');
+		expect(screen.getByText('All')).toHaveAttribute('aria-pressed', 'false');
+		expect(screen.getByText('Failed')).toHaveAttribute('aria-pressed', 'false');
+	});
+
+	it('replaces the selection rather than adding to it', () => {
+		const onChange = vi.fn();
+		render(<FilterChips bind="type" mode="single" options={options} value={['cron']} onChange={onChange} />);
+
+		fireEvent.click(screen.getByText('Failed'));
+
+		expect(onChange).toHaveBeenCalledWith(['failed']);
+	});
+
+	// The multi-select rule "empty value means every option is active" must not leak
+	// here: an empty single-select means nothing is selected, not everything.
+	it('treats an empty value as nothing selected, not everything', () => {
+		render(<FilterChips bind="type" mode="single" options={options} value={[]} onChange={() => {}} />);
+
+		for (const label of ['All', 'Cron', 'Failed']) {
+			expect(screen.getByText(label)).toHaveAttribute('aria-pressed', 'false');
+		}
+	});
+
+	it('re-clicking the active chip keeps it selected', () => {
+		const onChange = vi.fn();
+		render(<FilterChips bind="type" mode="single" options={options} value={['cron']} onChange={onChange} />);
+
+		fireEvent.click(screen.getByText('Cron'));
+
+		expect(onChange).toHaveBeenCalledWith(['cron']);
+	});
+
+	it('still defaults to multi-select when no mode is given', () => {
+		const onChange = vi.fn();
+		render(<FilterChips bind="type" options={options} value={['cron']} onChange={onChange} />);
+
+		fireEvent.click(screen.getByText('Failed'));
+
+		expect(onChange).toHaveBeenCalledWith(['cron', 'failed']);
+	});
+});

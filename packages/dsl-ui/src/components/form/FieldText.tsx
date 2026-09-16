@@ -12,6 +12,10 @@ export interface FieldTextProps
 	value: string;
 	onChange: (v: string) => void;
 	readOnly?: boolean;
+	/** Marks the field required. Handled by FieldWrapper. */
+	required?: boolean;
+	/** Validation message. Handled by FieldWrapper. */
+	error?: string;
 }
 
 /**
@@ -19,9 +23,9 @@ export interface FieldTextProps
  * @registryTags field
  * @registryBind formData onChange
  */
-export function FieldText({ label, description, value, onChange, readOnly, className, ...rest }: FieldTextProps) {
+export function FieldText({ label, description, value, onChange, readOnly, required, error, className, ...rest }: FieldTextProps) {
 	return (
-		<FieldWrapper label={label} description={description}>
+		<FieldWrapper label={label} description={description} required={required} error={error}>
 			{readOnly ? (
 				<input
 					readOnly

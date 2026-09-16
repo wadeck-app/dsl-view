@@ -80,3 +80,35 @@ describe('FieldNumber', () => {
 		expect(onUnlimitedChange).toHaveBeenCalledWith(false);
 	});
 });
+
+// FieldWrapper links its label to the FIRST child. This component's first child is a flex
+// row, not the input, so the id landed on the div: the label pointed at something
+// unlabelable and the input had no accessible name at all. FieldWrapper now takes a
+// function so a composite field can put the id and ARIA state on the real control.
+describe('FieldNumber label and validation wiring', () => {
+	it('links the label to the input, not to the layout wrapper', () => {
+		render(<FieldNumber label="Timeout" value={30} onChange={vi.fn()} />);
+
+		expect(screen.getByLabelText(/Timeout/)).toBe(screen.getByRole('spinbutton'));
+	});
+
+	it('shows a validation message and marks the input invalid', () => {
+		render(<FieldNumber label="Timeout" value={0} onChange={vi.fn()} error="Must be positive" />);
+
+		expect(screen.getByRole('alert')).toHaveTextContent('Must be positive');
+		expect(screen.getByRole('spinbutton')).toHaveAttribute('aria-invalid', 'true');
+	});
+
+	it('marks nothing invalid without an error', () => {
+		render(<FieldNumber label="Timeout" value={30} onChange={vi.fn()} />);
+
+		expect(screen.queryByRole('alert')).toBeNull();
+		expect(screen.getByRole('spinbutton')).not.toHaveAttribute('aria-invalid');
+	});
+
+	it('marks the field required on the control, not just the label', () => {
+		render(<FieldNumber label="Timeout" value={30} onChange={vi.fn()} required />);
+
+		expect(screen.getByRole('spinbutton')).toHaveAttribute('aria-required', 'true');
+	});
+});
