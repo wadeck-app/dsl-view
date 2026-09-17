@@ -7,7 +7,7 @@ import { Tooltip } from '../overlay/Tooltip.js';
 import { useButtonContext } from './buttonContext.js';
 
 type Variant = 'primary' | 'secondary' | 'danger' | 'danger-outline' | 'neutral' | 'success' | 'ghost' | 'link';
-type Size = 'sm' | 'md' | 'icon' | 'icon-sm' | 'icon-xs';
+type Size = 'sm' | 'md' | 'icon' | 'icon-field' | 'icon-sm' | 'icon-xs';
 type Shape = 'default' | 'stack';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -46,6 +46,9 @@ const SIZE_CLASSES: Record<Size, string> = {
 	sm: 'px-3 py-1 text-xs gap-1.5',
 	md: 'px-4 py-2 text-sm gap-2',
 	icon: 'h-9 w-9 p-0',
+	// 2.375rem is 38px: the height a Field* control renders at (py-2 + text-sm line + border).
+	// A trailing icon button beside a field has to match it, and none of the other icon sizes did.
+	'icon-field': 'h-[2.375rem] w-[2.375rem] p-0',
 	'icon-sm': 'h-7 w-7 p-0',
 	'icon-xs': 'h-5 w-5 p-0',
 };

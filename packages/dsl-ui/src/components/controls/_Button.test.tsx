@@ -74,3 +74,29 @@ describe('Button geometry is variant-independent', () => {
 		expect([...boxes]).toHaveLength(1);
 	});
 });
+
+// A trailing icon button beside a form field has to be the same height as the field, or the
+// pair reads as misaligned. The field controls are py-2 text-sm with a border, i.e. 38px,
+// and the icon sizes were 36/28/20 - none of them matched, so a consumer bottom-aligned a
+// 36px button against a 38px input and the top edges disagreed by 2px.
+describe('icon-field size', () => {
+	it('is offered as a size', () => {
+		const { container } = render(<Button size="icon-field">x</Button>);
+
+		expect((container.firstElementChild as HTMLElement).className).toMatch(/h-\[2\.375rem\]/);
+	});
+
+	it('is square, like the other icon sizes', () => {
+		const { container } = render(<Button size="icon-field">x</Button>);
+
+		const cls = (container.firstElementChild as HTMLElement).className;
+		expect(cls).toMatch(/w-\[2\.375rem\]/);
+	});
+
+	// 2.375rem is 38px: py-2 (8+8) + text-sm line-height (20) + border (1+1).
+	it('matches the height a Field* control renders at', () => {
+		const { container } = render(<Button size="icon-field">x</Button>);
+
+		expect((container.firstElementChild as HTMLElement).className).toContain('h-[2.375rem]');
+	});
+});

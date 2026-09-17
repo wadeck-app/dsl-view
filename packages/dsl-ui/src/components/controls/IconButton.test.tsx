@@ -21,7 +21,7 @@ describe('IconButton', () => {
 
 	// @ts-expect-error -- aria-label is required; omitting it must be a TypeScript error
 	it('type error when aria-label is omitted (compile-time only)', () => {
-		// This test body is intentionally empty — the @ts-expect-error above is the assertion.
+		// This test body is intentionally empty - the @ts-expect-error above is the assertion.
 		void (<IconButton icon={<span />} />);
 	});
 });

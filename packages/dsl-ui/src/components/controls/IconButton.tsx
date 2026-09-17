@@ -5,7 +5,7 @@ import type { ButtonProps } from './_Button.js';
 export interface IconButtonProps extends Omit<ButtonProps, 'children' | 'size'> {
 	icon: React.ReactNode;
 	'aria-label': string;
-	size?: 'icon' | 'icon-sm' | 'icon-xs';
+	size?: 'icon' | 'icon-field' | 'icon-sm' | 'icon-xs';
 }
 
 /**
