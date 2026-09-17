@@ -56,6 +56,18 @@ const SHAPE_CLASSES: Record<Shape, string> = {
 };
 // @formatter:on
 
+/**
+ * The class string for a button of this variant and size.
+ *
+ * Exported so a control that must render as a different element - an anchor, for a
+ * navigation that reads as a button - gets the same geometry by construction rather than by
+ * a copy that drifts. Consumers restating these classes is how one app ended up with 19
+ * distinct button sizings.
+ */
+export function buttonClasses(variant: Variant = 'primary', size: Size = 'md', className = ''): string {
+	return [BASE, VARIANT_CLASSES[variant], SIZE_CLASSES[size], className].filter(Boolean).join(' ');
+}
+
 // Leading underscore on the filename (guiding-principles.md §2/§29): Button is never an
 // independently registrable DSL $type, only an internal React building block consumed directly
 // by ButtonAction/ButtonSave/ButtonCancel/CreateTokenDialog and others. No @registryCategory
