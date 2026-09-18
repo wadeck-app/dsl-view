@@ -5,6 +5,17 @@ import type { BrainRegistry, ChainBrainSpec, RawBrainSpec, SimpleBrainSpec } fro
 import type { Fetcher } from './pageRunnerUtils.js';
 import { resolveAuthHeaders, substituteUrlParams } from './pageRunnerUtils.js';
 
+/**
+ * What a page can read about a brain's own progress, as `$brains.<id>.$pending` and
+ * `$brains.<id>.$error`.
+ *
+ * `$`-prefixed so they cannot collide with a field a brain declares in its own `$outputs`.
+ */
+export interface BrainStatus {
+	$pending: boolean;
+	$error: string | null;
+}
+
 function isReactiveRef(value: unknown): boolean {
 	if (typeof value !== 'string') return false;
 	return (
@@ -171,6 +182,16 @@ export function useBrains(params: {
 	} = params;
 
 	const [brainResults, setBrainResults] = useState<Record<string, unknown>>({});
+	/**
+	 * Per-brain in-flight and failure state, exposed to the page as `$brains.<id>.$pending` and
+	 * `$brains.<id>.$error`.
+	 *
+	 * Without these a page cannot react to its own mutations at all: the brain owns the request, so
+	 * a form's own `loading` never flips and its submit button stays clickable through the save,
+	 * while a rejection went nowhere but the console. "Save appears to do nothing" was both of
+	 * those at once.
+	 */
+	const [brainStatus, setBrainStatus] = useState<Record<string, BrainStatus>>({});
 
 	const setVarRef = useRef(setVar);
 	setVarRef.current = setVar;
@@ -277,11 +298,43 @@ export function useBrains(params: {
 		[brainRegistry, fetcher, getToken]
 	);
 
+	/**
+	 * Brain outputs merged with brain status, which is what a page sees as `$brains`.
+	 *
+	 * Rebuilt every render on purpose: the effect below has no dependency array, so it already runs
+	 * every render, and memoising this would only add a way for the two to disagree.
+	 */
+	const brainsCtx: Record<string, unknown> = {};
+	for (const id of new Set([...Object.keys(brainResults), ...Object.keys(brainStatus)])) {
+		// Narrowed rather than cast: a brain that declared no $outputs has no entry here at all,
+		// and a non-object result is not something to spread.
+		const outputs = brainResults[id];
+		brainsCtx[id] = {
+			...(typeof outputs === 'object' && outputs !== null ? outputs : {}),
+			...(brainStatus[id] ?? { $pending: false, $error: null }),
+		};
+	}
+
+	/*
+	 * THE ctx THIS HOOK MUST RESOLVE AGAINST.
+	 *
+	 * The caller passes a ctx with no `$brains` key: GenericPageRunner adds `$brains` to a SECOND
+	 * ctx, built after this hook returns, for rendering. So a `$brains.<id>.<field>` parameter
+	 * resolved against the caller's ctx was undefined on the first render and undefined on every
+	 * render after it - the value never changed, so the brain never fired.
+	 *
+	 * That made brain-to-brain chaining dead in the `$brains.<id>.<field>` form: an
+	 * $http brain followed by a navigate could never run its second half. Concretely, saving a job
+	 * worked and the page then sat there, because navigateAfterCreate was waiting on a value it
+	 * could not see. The `$chain` form was unaffected, which is why this went unnoticed.
+	 */
+	const ctxWithBrains: Record<string, unknown> = { ...ctx, $brains: brainsCtx };
+
 	useEffect(() => {
 		if (!$brains) return;
 		for (const [brainId, spec] of Object.entries($brains)) {
 			const rawSpec = spec as Record<string, unknown>;
-			const currentReactive = collectReactiveParams(rawSpec, ctx);
+			const currentReactive = collectReactiveParams(rawSpec, ctxWithBrains);
 			const prevReactive = snapshots.current[brainId];
 			const isFirstRender = prevReactive === undefined;
 
@@ -308,13 +361,22 @@ export function useBrains(params: {
 				snapshots.current[brainId] = { ...currentReactive };
 			}
 			if (shouldFire) {
-				const resolvedParams = resolveAllParams(rawSpec, ctx);
-				void runBrain(brainId, spec, resolvedParams, ctx).catch(err => {
-					console.error(`[useBrains] brain "${brainId}" failed:`, getErrorMessage(err));
-				});
+				const resolvedParams = resolveAllParams(rawSpec, ctxWithBrains);
+				setBrainStatus(prev => ({ ...prev, [brainId]: { $pending: true, $error: null } }));
+				void runBrain(brainId, spec, resolvedParams, ctxWithBrains)
+					.then(() => {
+						setBrainStatus(prev => ({ ...prev, [brainId]: { $pending: false, $error: null } }));
+					})
+					.catch(err => {
+						const message = getErrorMessage(err);
+						// Published to the page AND logged. The log alone was the whole error channel,
+						// which is how a failed mutation looked exactly like a successful one.
+						setBrainStatus(prev => ({ ...prev, [brainId]: { $pending: false, $error: message } }));
+						console.error(`[useBrains] brain "${brainId}" failed:`, message);
+					});
 			}
 		}
 	});
 
-	return { brainResults };
+	return { brainResults: brainsCtx };
 }

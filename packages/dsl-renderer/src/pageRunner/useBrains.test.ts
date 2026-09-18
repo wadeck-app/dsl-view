@@ -67,8 +67,10 @@ describe('useBrains', () => {
 				expect(setVar).toHaveBeenCalledTimes(1);
 			});
 			expect(setVar).toHaveBeenCalledWith('greeting', 'hello');
-			// brainResults not set for setVar (no $outputs)
-			expect(result.current.brainResults).toEqual({});
+			// No output FIELDS for setVar, which declares no $outputs. The entry itself exists now
+			// because every brain reports its own $pending/$error, whether it returns anything or not.
+			expect(Object.keys(result.current.brainResults['brain1'] as object).filter(k => !k.startsWith('$')))
+				.toEqual([]);
 		});
 
 		it('a brain with only static string params never re-triggers on re-render', async () => {
@@ -488,7 +490,8 @@ describe('useBrains', () => {
 			await waitFor(() => {
 				expect(result.current.brainResults['brain1']).toBeDefined();
 			});
-			expect(result.current.brainResults['brain1']).toEqual({
+			// toMatchObject, not toEqual: the entry also carries $pending/$error now.
+			expect(result.current.brainResults['brain1']).toMatchObject({
 				content: 'hello',
 				mimeType: 'text/plain',
 			});
@@ -756,12 +759,13 @@ describe('useBrains', () => {
 				))
 			);
 
+			// Waits on the FIELD, not on the entry. An entry now appears as soon as a brain starts,
+			// because it carries $pending, so "the entry exists" no longer means "the call finished"
+			// and this waited on nothing.
 			await waitFor(() => {
-				expect(result.current.brainResults['brain1']).toBeDefined();
-				expect(result.current.brainResults['brain2']).toBeDefined();
+				expect((result.current.brainResults['brain1'] as Record<string, unknown>)['result']).toBe('one');
+				expect((result.current.brainResults['brain2'] as Record<string, unknown>)['result']).toBe('two');
 			});
-			expect((result.current.brainResults['brain1'] as Record<string, unknown>)['result']).toBe('one');
-			expect((result.current.brainResults['brain2'] as Record<string, unknown>)['result']).toBe('two');
 		});
 	});
 
@@ -833,6 +837,129 @@ describe('useBrains', () => {
 				undefined,
 				{ Authorization: 'Bearer bearer-token-123' }
 			);
+		});
+	});
+
+	/*
+	 * Brain-to-brain chaining through `$brains.<id>.<field>` was dead.
+	 *
+	 * useBrains is called with a ctx that has no `$brains` key at all - GenericPageRunner adds
+	 * `$brains: brainResults` to a SECOND ctx, built after the hook returns, for rendering. So the
+	 * reference resolved to undefined on the first render and on every render after it, the value
+	 * never changed, and the downstream brain never fired.
+	 *
+	 * No test caught it because `makeCtx` above supplies `'$brains': {}` and the hook then filled it
+	 * in from its own state - the double was more capable than the real caller.
+	 */
+	describe('a brain waiting on another brain', () => {
+		it('fires once the upstream brain publishes its result', async () => {
+			const fetcher = vi.fn().mockResolvedValue({ id: 'job-42' });
+			const setVar = vi.fn();
+			const $brains = {
+				submit: { $brain: '$brains.$http.post', url: 'POST /api/jobs', $outputs: ['id'] },
+				afterwards: { $brain: '$brains.$ctx.setVar', varName: 'created', value: '$brains.submit.id' },
+			} as unknown as Record<string, import('./brainsTypes.js').RawBrainSpec>;
+
+			renderHook(() => useBrains(makeParams($brains, makeCtx(), { fetcher, setVar })));
+
+			// This is the assertion that failed before the fix, and the reason saving a job left the
+			// page sitting on the form: the navigate brain was waiting on a value it could not see.
+			await waitFor(() => {
+				expect(setVar).toHaveBeenCalledWith('created', 'job-42');
+			});
+		});
+
+		it('does not fire the downstream brain before the upstream one resolves', async () => {
+			const setVar = vi.fn();
+			const fetcher = vi.fn(() => new Promise(() => { /* never settles */ }));
+			const $brains = {
+				submit: { $brain: '$brains.$http.post', url: 'POST /api/jobs', $outputs: ['id'] },
+				afterwards: { $brain: '$brains.$ctx.setVar', varName: 'created', value: '$brains.submit.id' },
+			} as unknown as Record<string, import('./brainsTypes.js').RawBrainSpec>;
+
+			renderHook(() => useBrains(makeParams($brains, makeCtx(), { fetcher, setVar })));
+
+			await waitFor(() => {
+				expect(fetcher).toHaveBeenCalled();
+			});
+			expect(setVar).not.toHaveBeenCalled();
+		});
+	});
+
+	/*
+	 * A page could not observe its own mutations. The brain owns the request, so a form's `loading`
+	 * never flipped and its submit button stayed live through the save, while a rejection reached
+	 * nothing but the console. "Save appears to do nothing" was both at once.
+	 */
+	describe('brain status is visible to the page', () => {
+		function statusOf(results: Record<string, unknown>, id: string) {
+			return results[id] as { $pending: boolean; $error: string | null } | undefined;
+		}
+
+		it('reports $pending while the request is in flight, and clears it after', async () => {
+			let release: ((v: unknown) => void) | undefined;
+			const fetcher = vi.fn(() => new Promise(res => { release = res; }));
+			const $brains = {
+				submit: { $brain: '$brains.$http.post', url: 'POST /api/jobs' },
+			} as unknown as Record<string, import('./brainsTypes.js').RawBrainSpec>;
+
+			const { result } = renderHook(() => useBrains(makeParams($brains, makeCtx(), { fetcher })));
+
+			await waitFor(() => {
+				expect(statusOf(result.current.brainResults, 'submit')?.$pending).toBe(true);
+			});
+
+			await act(async () => { release?.({}); });
+
+			await waitFor(() => {
+				expect(statusOf(result.current.brainResults, 'submit')?.$pending).toBe(false);
+			});
+		});
+
+		it('publishes the failure message rather than only logging it', async () => {
+			const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+			const fetcher = vi.fn().mockRejectedValue(new Error('Daemon RPC error 500'));
+			const $brains = {
+				submit: { $brain: '$brains.$http.post', url: 'POST /api/jobs' },
+			} as unknown as Record<string, import('./brainsTypes.js').RawBrainSpec>;
+
+			const { result } = renderHook(() => useBrains(makeParams($brains, makeCtx(), { fetcher })));
+
+			await waitFor(() => {
+				expect(statusOf(result.current.brainResults, 'submit')?.$error).toContain('500');
+			});
+			expect(statusOf(result.current.brainResults, 'submit')?.$pending).toBe(false);
+			// Still logged: the console line is useful, it was just never the whole channel.
+			expect(logged).toHaveBeenCalled();
+			logged.mockRestore();
+		});
+
+		it('leaves $error null when the brain succeeds', async () => {
+			const $brains = {
+				submit: { $brain: '$brains.$http.post', url: 'POST /api/jobs' },
+			} as unknown as Record<string, import('./brainsTypes.js').RawBrainSpec>;
+
+			const { result } = renderHook(() => useBrains(makeParams($brains, makeCtx())));
+
+			await waitFor(() => {
+				expect(statusOf(result.current.brainResults, 'submit')?.$pending).toBe(false);
+			});
+			expect(statusOf(result.current.brainResults, 'submit')?.$error).toBeNull();
+		});
+
+		// $-prefixed so they cannot shadow a field the brain declares in its own $outputs.
+		it('keeps status keys from colliding with declared output fields', async () => {
+			const fetcher = vi.fn().mockResolvedValue({ id: 'x', $pending: 'not mine' });
+			const $brains = {
+				submit: { $brain: '$brains.$http.post', url: 'POST /api/jobs', $outputs: ['id'] },
+			} as unknown as Record<string, import('./brainsTypes.js').RawBrainSpec>;
+
+			const { result } = renderHook(() => useBrains(makeParams($brains, makeCtx(), { fetcher })));
+
+			await waitFor(() => {
+				expect(statusOf(result.current.brainResults, 'submit')?.$pending).toBe(false);
+			});
+			expect((result.current.brainResults['submit'] as Record<string, unknown>)['id']).toBe('x');
 		});
 	});
 });
