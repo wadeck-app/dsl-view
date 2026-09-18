@@ -19,7 +19,17 @@
  */
 
 /* ─── Design tokens (light) ─────────────────────────────────────── */
-:root {
+/* `.light` and [data-theme='light'] are here, not in a block of their own, so the light palette
+   is defined exactly once and a scope cannot drift from the root.
+   They exist so light can be re-asserted on a SUBTREE inside a dark app - a document preview, a
+   print pane, an embedded light-surfaced widget. Light used to live on :root alone, which made the
+   two directions asymmetric: dark-inside-light worked, light-inside-dark did not.
+   Nesting resolves correctly because custom properties inherit: a descendant takes the value from
+   its NEAREST styled ancestor, so an inner .light beats an outer .dark. Selector specificity only
+   decides when both match the SAME element. */
+:root,
+.light,
+[data-theme='light'] {
 	/* Tells the UA which palette to paint scrollbars and native form controls with.
 	   Inherited, so it covers every descendant. Without it the UA assumes light and
 	   a dark theme gets white scrollbars over a dark page. */

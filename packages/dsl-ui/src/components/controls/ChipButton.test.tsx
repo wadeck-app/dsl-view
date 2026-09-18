@@ -25,15 +25,24 @@ describe('ChipButton state is readable, not just visible', () => {
  * selection IS the content.
  */
 describe('ChipButton emphasis', () => {
-	it('is subtle by default, so no existing chip changes', () => {
-		expect(chip({ active: true }).className).toContain('bg-gray-100');
+	// Tokens, not `bg-gray-100 dark:bg-gray-700`: a dark: variant keys off any .dark ancestor, so a
+	// chip inside a light scope nested in a dark app stayed dark.
+	// Matched as a standalone class, not a substring: the ghost base carries `hover:bg-muted-bg`, so
+	// a plain toContain/not.toContain on 'bg-muted-bg' answers about the hover state instead.
+	const FILL = /(^|\s)bg-muted-bg(\s|$)/;
+
+	it('is subtle by default, drawn from the muted surface token', () => {
+		const el = chip({ active: true });
+
+		expect(el.className).toMatch(FILL);
+		expect(el.className).not.toContain('dark:');
 	});
 
 	it('fills with the primary token when strong', () => {
 		const el = chip({ active: true, emphasis: 'strong' });
 
 		expect(el.className).toContain('bg-[var(--color-primary-solid)]');
-		expect(el.className).not.toContain('bg-gray-100');
+		expect(el.className).not.toMatch(FILL);
 	});
 
 	// Strong is about the active state alone: an unselected chip must stay quiet either way, or a

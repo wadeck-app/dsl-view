@@ -8,14 +8,24 @@ import { describe, it, expect } from 'vitest';
 const THEME_PATH = path.resolve(__dirname, 'theme.css');
 const css = fs.readFileSync(THEME_PATH, 'utf8');
 
-/** Declarations inside the first rule whose selector list matches. */
+/** The stylesheet with comments removed, so prose about CSS is never read as CSS. */
+const cssOnly = css.replace(/\/\*[\s\S]*?\*\//g, '');
+
+/**
+ * Declarations inside the first rule whose selector list matches.
+ *
+ * Matches against the comment-stripped stylesheet. It used to search the raw text, so a comment
+ * that merely MENTIONED a selector was found before the rule itself - a sentence explaining that an
+ * inner light scope beats an outer dark one made this return the light block when asked for the dark
+ * one, and the colour-scheme assertion failed on a file that was perfectly correct.
+ */
 function ruleBody(selector: string): string {
 	const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-	const match = new RegExp(`${escaped}[^{]*\\{([^}]*)\\}`).exec(css);
+	const match = new RegExp(`${escaped}[^{]*\\{([^}]*)\\}`).exec(cssOnly);
 	if (!match) {
 		throw new Error(`No rule matching "${selector}" in ${THEME_PATH}`);
 	}
-	return match[1]!.replace(/\/\*[\s\S]*?\*\//g, '');
+	return match[1]!;
 }
 
 function tokensIn(body: string): Set<string> {
@@ -36,7 +46,29 @@ describe('theme.css', () => {
 
 	// Consumers switch dark mode either way; dropping one silently un-themes an app.
 	it('matches both dark-mode selectors', () => {
-		expect(css).toMatch(/\.dark\s*,\s*\[data-theme='dark'\]/);
+		expect(cssOnly).toMatch(/\.dark\s*,\s*\[data-theme='dark'\]/);
+	});
+
+	/*
+	 * The asymmetry this pins. Light lived on :root alone, so dark-inside-light worked and
+	 * light-inside-dark did not: there was no selector that could re-assert the light palette on a
+	 * subtree. A document preview or print pane inside a dark app had no way to be light.
+	 *
+	 * Both scope selectors share the :root rule rather than repeating 44 tokens, so the palette is
+	 * defined once and a scope cannot drift from the root.
+	 */
+	it('lets the light palette be re-asserted on a subtree, not only at the root', () => {
+		expect(cssOnly).toMatch(/:root\s*,\s*\.light\s*,\s*\[data-theme='light'\]/);
+	});
+
+	it('gives the light scope the same tokens as the root, being the same rule', () => {
+		expect(ruleBody('.light')).toBe(lightBody);
+		expect(ruleBody("[data-theme='light']")).toBe(lightBody);
+	});
+
+	// Symmetry: both directions declare a colour-scheme, or the UA chrome of one of them is wrong.
+	it('declares color-scheme on the light scope too', () => {
+		expect(ruleBody('.light')).toMatch(/color-scheme:\s*light\s*;/);
 	});
 
 	// The bug this pins: --color-warning existed in :root but not in dark, so it

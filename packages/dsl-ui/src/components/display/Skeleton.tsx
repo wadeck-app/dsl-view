@@ -1,5 +1,13 @@
 import React from 'react';
 
+/*
+ * The shimmer uses the muted-bg token, not `bg-gray-200 dark:bg-gray-700`.
+ *
+ * Same two colours, but a `dark:` variant keys off ANY `.dark` ancestor, so inside a ThemeScope that
+ * re-asserts light within a dark app the skeleton stayed dark. Tokens inherit from the nearest scope
+ * instead, which is what makes nesting work at all.
+ */
+
 export interface SkeletonProps {
     width?: string;
     height?: string;
@@ -17,7 +25,7 @@ export function Skeleton({ width = '100%', height = '1rem', variant = 'line', co
 
     const item = (
         <div
-            className={`animate-pulse bg-gray-200 dark:bg-gray-700 ${isCircle ? 'rounded-full' : 'rounded'}`}
+            className={`animate-pulse bg-muted-bg ${isCircle ? 'rounded-full' : 'rounded'}`}
             style={{ width, height: resolvedHeight }}
         />
     );
@@ -31,7 +39,7 @@ export function Skeleton({ width = '100%', height = '1rem', variant = 'line', co
             {Array.from({ length: count }).map((_, i) => (
                 <div
                     key={i}
-                    className={`animate-pulse bg-gray-200 dark:bg-gray-700 ${isCircle ? 'rounded-full' : 'rounded'}`}
+                    className={`animate-pulse bg-muted-bg ${isCircle ? 'rounded-full' : 'rounded'}`}
                     style={{ width, height: resolvedHeight }}
                 />
             ))}

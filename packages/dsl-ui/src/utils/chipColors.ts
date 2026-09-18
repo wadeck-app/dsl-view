@@ -44,7 +44,20 @@ export const CHIP_COLOR_CLASSES: Record<ChipColor, ChipColorClasses> = {
 	},
 };
 
+/*
+ * The default palette, written in TOKENS rather than `bg-gray-100 dark:bg-gray-700`.
+ *
+ * A `dark:` variant keys off ANY `.dark` ancestor, so inside a ThemeScope that re-asserts light
+ * within a dark app the chip kept its dark styling while everything around it went light - measured
+ * at rgb(55,65,81) on a light panel. Tokens inherit from the NEAREST scope, which is the behaviour
+ * that makes nesting work; CSS cannot express "nearest ancestor wins" for a variant selector, so
+ * this had to move to tokens rather than be patched in the selector.
+ *
+ * This is the palette that actually ships - filter chips, the CronBuilder hour grid, the log
+ * auto-scroll toggle all use it. The seven hue palettes above still carry `dark:` variants: their
+ * tints have no token equivalent yet, so they remain the known exception.
+ */
 export const DEFAULT_CHIP_COLORS: ChipColorClasses = {
-	active: 'border-gray-500 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200',
-	inactive: 'border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-400',
+	active: 'border-border bg-muted-bg text-content',
+	inactive: 'border-border text-muted hover:border-content',
 };
