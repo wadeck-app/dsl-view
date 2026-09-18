@@ -53,3 +53,52 @@ describe('Progress', () => {
         expect(indicator).toHaveClass('bg-danger');
     });
 });
+
+// A consumer skipped this component entirely because it could not fit: w-full plus a label on
+// its own line does not go in a dense horizontal row, so a percentage stayed as bare text.
+// That is the component being fragile, not the consumer being lazy.
+describe('Progress in a dense row', () => {
+	it('stacks its label above the bar by default', () => {
+		const { container } = render(<Progress value={40} label="uptime" showValue />);
+
+		// Default keeps the existing two-line arrangement.
+		expect((container.firstElementChild as HTMLElement).className).toContain('w-full');
+	});
+
+	it('puts label, bar and value on one line when inline', () => {
+		const { container } = render(<Progress value={40} label="uptime" showValue layout="inline" />);
+
+		const root = container.firstElementChild as HTMLElement;
+		expect(root.className).toContain('flex');
+		expect(root.className).toContain('items-center');
+		expect(root.className).not.toContain('w-full');
+	});
+
+	it('gives the inline bar a bounded width so it does not eat the row', () => {
+		const { container } = render(<Progress value={40} layout="inline" />);
+
+		const track = container.querySelector('[role="progressbar"], [data-state]');
+		expect(track).not.toBeNull();
+		expect((track as HTMLElement).className).not.toContain('w-full');
+	});
+
+	// Rounding hid the precision a consumer needed: 99.94% availability is not 100%.
+	it('shows an exact value when one is given', () => {
+		render(<Progress value={99.94} showValue valueLabel="99.94%" />);
+
+		expect(screen.getByText('99.94%')).toBeInTheDocument();
+		expect(screen.queryByText('100%')).toBeNull();
+	});
+
+	it('still rounds when no exact value is given', () => {
+		render(<Progress value={99.94} showValue />);
+
+		expect(screen.getByText('100%')).toBeInTheDocument();
+	});
+
+	it('keeps its accessible value whatever the layout', () => {
+		render(<Progress value={40} layout="inline" label="uptime" />);
+
+		expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '40');
+	});
+});

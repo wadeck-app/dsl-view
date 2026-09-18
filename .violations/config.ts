@@ -16,5 +16,9 @@ export default {
     'react/no-inline-svg': { $exclude: ['**/*.test.tsx', '**/*.stories.tsx'] },
     // dsl-renderer engine processes DSL node shapes as unknown at runtime — casts are unavoidable
     'ts/no-unsafe-type-cast': { $exclude: ['packages/dsl-renderer/**'] },
+    // A component annotated for the registry that no barrel re-exports cannot be imported at
+    // all. Checkbox and Radio were both in that state, which is why a consumer put raw inputs
+    // in their place.
+    './.violations/rules/no-unexported-component.ts': true,
   },
 } satisfies ViolationsConfig
