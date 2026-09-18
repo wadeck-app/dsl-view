@@ -1,4 +1,5 @@
-// violations-suppress-start: tailwind/no-raw-color-class chip status palette maps business values to specific hue/shade pairs - not interchangeable with generic theme tokens
+// violations-suppress-start: tailwind/no-raw-color-class the border and hover shades are one value in
+// both themes, so they need no token; the hue IS the meaning here, not a themed surface
 export type ChipColor = 'blue' | 'green' | 'yellow' | 'orange' | 'red' | 'purple' | 'cyan';
 
 export interface ChipColorClasses {
@@ -6,56 +7,59 @@ export interface ChipColorClasses {
 	inactive: string;
 }
 
+/*
+ * Every palette is built from hue tokens, not from `bg-blue-100 dark:bg-blue-900/40` pairs.
+ *
+ * A Tailwind `dark:` variant applies under ANY `.dark` ancestor, so a chip inside a ThemeScope that
+ * re-asserts light within a dark app kept its dark styling while everything around it went light -
+ * measured at rgb(55,65,81) on a light panel. Custom properties resolve against the NEAREST scope
+ * instead, which is what makes a chip nestable. See .claude/docs/theming.md.
+ *
+ * Each hue needs exactly two tokens, a tint and an ink, because that is all that differed between
+ * the themes. Border and hover are one shade in both and stay literal.
+ *
+ * WRITTEN OUT, not generated from the hue name. Tailwind scans source TEXT for class names, so
+ * `bg-hue-${hue}-bg` is a class Tailwind never sees and never emits - the element would carry an
+ * attribute with no rule behind it and the chip would have no colour at all. A loop here would be
+ * tidier and entirely broken.
+ */
+// @formatter:off
 export const CHIP_COLOR_CLASSES: Record<ChipColor, ChipColorClasses> = {
 	blue: {
-		active: 'border-blue-400 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300',
-		inactive:
-			'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-blue-300 hover:text-blue-600',
+		active:   'border-blue-400 bg-hue-blue-bg text-hue-blue',
+		inactive: 'border-border text-muted hover:border-blue-300 hover:text-hue-blue',
 	},
 	green: {
-		active: 'border-green-400 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300',
-		inactive:
-			'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-green-300 hover:text-green-600',
+		active:   'border-green-400 bg-hue-green-bg text-hue-green',
+		inactive: 'border-border text-muted hover:border-green-300 hover:text-hue-green',
 	},
 	yellow: {
-		active: 'border-yellow-400 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300',
-		inactive:
-			'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-yellow-300 hover:text-yellow-600',
+		active:   'border-yellow-400 bg-hue-yellow-bg text-hue-yellow',
+		inactive: 'border-border text-muted hover:border-yellow-300 hover:text-hue-yellow',
 	},
 	orange: {
-		active: 'border-orange-400 bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300',
-		inactive:
-			'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-orange-300 hover:text-orange-600',
+		active:   'border-orange-400 bg-hue-orange-bg text-hue-orange',
+		inactive: 'border-border text-muted hover:border-orange-300 hover:text-hue-orange',
 	},
 	red: {
-		active: 'border-red-400 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300',
-		inactive:
-			'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-red-300 hover:text-red-600',
+		active:   'border-red-400 bg-hue-red-bg text-hue-red',
+		inactive: 'border-border text-muted hover:border-red-300 hover:text-hue-red',
 	},
 	purple: {
-		active: 'border-purple-400 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300',
-		inactive:
-			'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-purple-300 hover:text-purple-600',
+		active:   'border-purple-400 bg-hue-purple-bg text-hue-purple',
+		inactive: 'border-border text-muted hover:border-purple-300 hover:text-hue-purple',
 	},
 	cyan: {
-		active: 'border-cyan-400 bg-cyan-100 dark:bg-cyan-900/40 text-cyan-700 dark:text-cyan-300',
-		inactive:
-			'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-cyan-300 hover:text-cyan-600',
+		active:   'border-cyan-400 bg-hue-cyan-bg text-hue-cyan',
+		inactive: 'border-border text-muted hover:border-cyan-300 hover:text-hue-cyan',
 	},
 };
+// @formatter:on
+// violations-suppress-end: tailwind/no-raw-color-class
 
-/*
- * The default palette, written in TOKENS rather than `bg-gray-100 dark:bg-gray-700`.
- *
- * A `dark:` variant keys off ANY `.dark` ancestor, so inside a ThemeScope that re-asserts light
- * within a dark app the chip kept its dark styling while everything around it went light - measured
- * at rgb(55,65,81) on a light panel. Tokens inherit from the NEAREST scope, which is the behaviour
- * that makes nesting work; CSS cannot express "nearest ancestor wins" for a variant selector, so
- * this had to move to tokens rather than be patched in the selector.
- *
- * This is the palette that actually ships - filter chips, the CronBuilder hour grid, the log
- * auto-scroll toggle all use it. The seven hue palettes above still carry `dark:` variants: their
- * tints have no token equivalent yet, so they remain the known exception.
+/**
+ * The palette used when no colour is named - filter chips, the CronBuilder hour grid, the log
+ * auto-scroll toggle.
  */
 export const DEFAULT_CHIP_COLORS: ChipColorClasses = {
 	active: 'border-border bg-muted-bg text-content',

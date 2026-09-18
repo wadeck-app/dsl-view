@@ -113,19 +113,16 @@ describe('dsl-ui/no-dark-variant', () => {
   })
 
   /*
-   * The hue palettes whose per-theme tints have no token equivalent yet. Listed in the rule so the
-   * debt is named in one place rather than suppressed line by line and forgotten.
+   * No file is exempt any more. Four were grandfathered when the rule landed, because their per-hue
+   * tints had no token equivalent; the --color-hue-* tokens now exist and all four use them.
+   *
+   * Asserted explicitly, because an exemption list is the kind of thing that quietly outlives its
+   * reason - and the files it named are exactly the ones a future change would put back.
    */
-  it('grandfathers the known exceptions', async () => {
+  it('exempts no file, including the four that were once grandfathered', async () => {
     const files = ['chipColors.ts', 'HttpMethodBadge.tsx', 'HttpStatusBadge.tsx', 'ColorPicker.tsx']
       .map(name => write(name, `const cls = 'text-blue-600 dark:text-blue-400'\n`))
 
-    expect(await rule.check(files)).toEqual([])
-  })
-
-  it('still reports a file whose name merely resembles an exception', async () => {
-    const file = write('HttpMethodBadgeRow.tsx', `const cls = 'dark:text-blue-400'\n`)
-
-    expect((await rule.check([file])).length).toBe(1)
+    expect((await rule.check(files)).length).toBe(4)
   })
 })

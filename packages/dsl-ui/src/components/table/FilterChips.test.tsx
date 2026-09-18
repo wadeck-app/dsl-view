@@ -20,19 +20,21 @@ describe('FilterChips', () => {
 	it('all chips are active when value=[] - each chip has its color class', () => {
 		render(<FilterChips bind="tag" options={options} value={[]} onChange={vi.fn()} />);
 		// violations-suppress: tailwind/no-raw-color-class asserting chipColors.ts palette output - raw classes are the expected value
-		expect(screen.getByText('Alpha').className).toContain('bg-blue-100');
+		// The hue token, not bg-blue-100: the raw pair carried a dark: variant, which cannot be nested.
+		expect(screen.getByText('Alpha').className).toContain('bg-hue-blue-bg');
 		// violations-suppress: tailwind/no-raw-color-class asserting chipColors.ts palette output - raw classes are the expected value
-		expect(screen.getByText('Beta').className).toContain('bg-green-100');
+		expect(screen.getByText('Beta').className).toContain('bg-hue-green-bg');
 		// violations-suppress: tailwind/no-raw-color-class asserting chipColors.ts palette output - raw classes are the expected value
-		expect(screen.getByText('Gamma').className).toContain('bg-red-100');
+		expect(screen.getByText('Gamma').className).toContain('bg-hue-red-bg');
 	});
 
 	it('only active chips are highlighted when value is a subset', () => {
 		render(<FilterChips bind="tag" options={options} value={['a']} onChange={vi.fn()} />);
 		// violations-suppress: tailwind/no-raw-color-class asserting chipColors.ts palette output - raw classes are the expected value
-		expect(screen.getByText('Alpha').className).toContain('bg-blue-100');
+		// The hue token, not bg-blue-100: the raw pair carried a dark: variant, which cannot be nested.
+		expect(screen.getByText('Alpha').className).toContain('bg-hue-blue-bg');
 		// violations-suppress: tailwind/no-raw-color-class asserting chipColors.ts palette output - raw classes are the expected value
-		expect(screen.getByText('Beta').className).not.toContain('bg-green-100');
+		expect(screen.getByText('Beta').className).not.toContain('bg-hue-green-bg');
 	});
 
 	it('clicking an active chip removes it from selection', () => {

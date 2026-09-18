@@ -53,9 +53,9 @@ matter if two theme classes landed on the same element.
 Verified at four alternating levels, including the native select and the scrollbar at each.
 See the `Layout/ThemeScope` stories, `AlternatingFourLevels`.
 
-## The one thing that breaks it: `dark:` variants
+## Never use `dark:` variants
 
-Forbidden in dsl-ui components, enforced by `dsl-ui/no-dark-variant`.
+Forbidden in dsl-ui, enforced by `dsl-ui/no-dark-variant` with no exemptions.
 
 The dark variant is configured as a descendant selector (`&:is(.dark *)`), so it applies under *any*
 `.dark` ancestor. A scope re-asserting light inside a dark app flips the tokens and the
@@ -64,9 +64,20 @@ The dark variant is configured as a descendant selector (`&:is(.dark *)`), so it
 Not fixable in the selector: excluding `.light` descendants breaks the mirror case, dark nested
 inside light, and CSS cannot express "nearest ancestor wins" for a variant. Tokens get it for free.
 
-Four files still carry `dark:` and are named in the rule: `chipColors.ts` (the seven hue palettes
-only — the default palette is tokenised), `HttpMethodBadge`, `HttpStatusBadge`, `ColorPicker`. Their
-per-hue tints have no token equivalent yet; fixing them means adding per-hue tokens.
+## Named hues
+
+For things whose colour *is* their meaning — a tag's identity, an HTTP method, a status family —
+where no semantic token applies. Two tokens per hue, a tint and an ink:
+`bg-hue-{blue,green,yellow,orange,red,purple,cyan}-bg` and `text-hue-{…}`.
+
+They replaced the `text-blue-600 dark:text-blue-400` pairs in `chipColors`, both HTTP badges and
+`ColorPicker`, which were the last things that could not be nested.
+
+Border and hover shades stay literal (`border-blue-400`): they are one value in both themes, so they
+need no token. A raw colour class is fine; a raw colour class behind a `dark:` variant is not.
+
+Write hue classes out in full. Tailwind scans source text, so `bg-hue-${hue}-bg` produces no rule
+and the element gets an attribute with nothing behind it.
 
 ## Performance
 

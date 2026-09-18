@@ -10,6 +10,7 @@
 - Its value must be `atomic`, `composite` or `disposition`. Anything else compiles here and fails as a type error in a *consuming* app's generated registry; layout components use `disposition`, not `layout`. Enforced by `dsl-ui/valid-registry-category`.
 - `entriesGenerator` Vite plugin auto-discovers components by scanning for `@registryCategory`; do not manually maintain `src/generated/entries.tsx`.
 - Generated files under `src/generated/` are committed so editors have types without running the dev server.
+- Stories are excluded from the build config because it emits, so `npm run typecheck:stories` (part of `build`) checks them via `tsconfig.stories.json`. Unchecked, a story can misuse the API it demonstrates — `<Badge>ok</Badge>` compiled silently and rendered nothing, since `Badge` takes a `label`.
 
 ## Consumer responsibilities
 - Consumer wires `react-router-dom` routing; renderer does not set up routes.
@@ -19,7 +20,9 @@
 - `content` must list dsl-ui's sources via the preset's named `dslUiContent` export — Tailwind reads `content` from the top-level config only, so a preset cannot contribute scan paths. Omitting it builds successfully and renders every dsl-ui component unstyled.
 
 ## Theming
-- Components style themselves from semantic tokens, never raw palette classes and never Tailwind `dark:` variants — a `dark:` variant applies under any `.dark` ancestor, so a component using one cannot be nested in a `ThemeScope` that re-asserts light. Enforced by `dsl-ui/no-dark-variant`.
+- Components style themselves from semantic tokens, never raw palette classes and never Tailwind `dark:` variants — a `dark:` variant applies under any `.dark` ancestor, so a component using one cannot be nested in a `ThemeScope` that re-asserts light. Enforced by `dsl-ui/no-dark-variant`, no exemptions.
+- Where the colour itself is the meaning (tag identity, HTTP method, status family), use the named hue tokens: `bg-hue-<name>-bg` and `text-hue-<name>`.
+- Write Tailwind class names out in full. Tailwind scans source text, so a class assembled at runtime — `bg-hue-${hue}-bg`, `h-[calc(100vh-${n}rem)]` — generates no CSS rule and the element carries an attribute with nothing behind it.
 - `ThemeScope` themes a subtree via the cascade; `ThemeContext`/`useTheme` toggles the app. See `.claude/docs/theming.md`.
 
 ## Build-time safety

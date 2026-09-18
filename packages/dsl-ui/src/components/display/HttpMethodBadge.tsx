@@ -4,16 +4,25 @@ export interface HttpMethodBadgeProps {
 	method: string;
 }
 
-// HTTP Method colors - dynamic per-method swatch mapping, already safelisted in
-// tailwind.config.js (no single semantic token can represent "one of N method colors")
+/*
+ * One hue token per method, not a `text-blue-600 dark:text-blue-400` pair.
+ *
+ * No single semantic token can mean "one of N method colours", which is why these were literals -
+ * but a dark: variant applies under ANY .dark ancestor, so the badge ignored a ThemeScope that
+ * re-asserted light and stayed on its dark shade over a light panel. A named hue is still a token,
+ * so it resolves against the nearest scope.
+ *
+ * The shade moves a step: 600/400 becomes the hue token's 700/300, shared with the chips. One ink
+ * per hue across the system rather than two that nearly match.
+ */
 const METHOD_COLORS: Record<string, string> = {
-	GET: 'text-blue-600 dark:text-blue-400',
-	POST: 'text-green-600 dark:text-green-400',
-	PUT: 'text-yellow-600 dark:text-yellow-400',
-	PATCH: 'text-orange-600 dark:text-orange-400',
-	DELETE: 'text-red-600 dark:text-red-400',
-	OPTIONS: 'text-purple-600 dark:text-purple-400',
-	HEAD: 'text-cyan-600 dark:text-cyan-400',
+	GET: 'text-hue-blue',
+	POST: 'text-hue-green',
+	PUT: 'text-hue-yellow',
+	PATCH: 'text-hue-orange',
+	DELETE: 'text-hue-red',
+	OPTIONS: 'text-hue-purple',
+	HEAD: 'text-hue-cyan',
 };
 
 /**

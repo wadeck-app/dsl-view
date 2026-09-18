@@ -4,13 +4,22 @@ export interface HttpStatusBadgeProps {
 	status: number;
 }
 
-// HTTP Status colors - dynamic per-status-family swatch mapping, already safelisted in
-// tailwind.config.js (no single semantic token can represent "one of N status-family colors")
+/*
+ * A hue token per status family. These were `text-green-600 dark:text-green-400` pairs, and a dark:
+ * variant applies under ANY .dark ancestor - so the badge kept its dark shade inside a ThemeScope
+ * that re-asserted light. See .claude/docs/theming.md.
+ */
 function statusColor(status: number): string {
-	if (status < 300) return 'text-green-600 dark:text-green-400';
-	if (status < 400) return 'text-yellow-600 dark:text-yellow-400';
-	if (status < 500) return 'text-orange-600 dark:text-orange-400';
-	return 'text-red-600 dark:text-red-400';
+	if (status < 300) {
+		return 'text-hue-green';
+	}
+	if (status < 400) {
+		return 'text-hue-yellow';
+	}
+	if (status < 500) {
+		return 'text-hue-orange';
+	}
+	return 'text-hue-red';
 }
 
 /**

@@ -80,6 +80,24 @@ export default {
 				'warning-text': 'var(--color-warning-text)',
 				'info-bg': 'var(--color-info-bg)',
 				'info-text': 'var(--color-info-text)',
+				// Named hues, for things whose colour carries the meaning: a tag's identity, an HTTP
+				// method, a status class. These replace `text-blue-600 dark:text-blue-400` pairs, which
+				// could not be nested inside a ThemeScope - a dark: variant applies under ANY .dark
+				// ancestor, so it ignored a scope that re-asserted light.
+				'hue-blue': 'var(--color-hue-blue-text)',
+				'hue-blue-bg': 'var(--color-hue-blue-bg)',
+				'hue-green': 'var(--color-hue-green-text)',
+				'hue-green-bg': 'var(--color-hue-green-bg)',
+				'hue-yellow': 'var(--color-hue-yellow-text)',
+				'hue-yellow-bg': 'var(--color-hue-yellow-bg)',
+				'hue-orange': 'var(--color-hue-orange-text)',
+				'hue-orange-bg': 'var(--color-hue-orange-bg)',
+				'hue-red': 'var(--color-hue-red-text)',
+				'hue-red-bg': 'var(--color-hue-red-bg)',
+				'hue-purple': 'var(--color-hue-purple-text)',
+				'hue-purple-bg': 'var(--color-hue-purple-bg)',
+				'hue-cyan': 'var(--color-hue-cyan-text)',
+				'hue-cyan-bg': 'var(--color-hue-cyan-bg)',
 			},
 		},
 	},

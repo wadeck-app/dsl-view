@@ -1,0 +1,28 @@
+/*
+ * Type-checks the stories, which the build config deliberately excludes.
+ *
+ * Stories cannot simply be un-excluded from tsconfig.json: that config EMITS, so they would be
+ * compiled into dist and published. They also cannot go unchecked - they are the design system's
+ * living documentation, and an unchecked story can misuse the very API it is demonstrating. One
+ * did: `<Badge>ok</Badge>` passed silently because Badge takes a `label` prop and children are
+ * dropped, so the badges rendered as empty slivers until someone looked at a screenshot.
+ *
+ * noEmit, so this only ever reports.
+ */
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"noEmit": true,
+		"emitDeclarationOnly": false,
+		// The build config writes a build-info file next to its output; a second config sharing it
+		// would make each run think the other's work was already done.
+		"tsBuildInfoFile": "dist/.tsbuildinfo.stories",
+		"composite": false
+	},
+	"references": [],
+	"include": ["src/**/*"],
+	// Stories and sources only. Test files carry their own pre-existing type debt - an intentional
+	// @ts-expect-error among it - and pulling that in here would bury the story errors this exists
+	// to surface. Checking the tests is a separate job.
+	"exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/__mocks__/**/*"]
+}

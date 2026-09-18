@@ -57,6 +57,25 @@
 	--color-warning-text: #92400e;
 	--color-info-bg: #eff6ff;
 	--color-info-text: #1e40af;
+
+	/* Named hues, for things whose colour IS their meaning: a tag's identity, an HTTP method, a
+	   status class. Tokens rather than `text-blue-600 dark:text-blue-400`, because a dark: variant
+	   applies under any .dark ancestor and so cannot be nested inside a ThemeScope - see
+	   .claude/docs/theming.md. The tint is translucent so it sits on whatever surface is behind it. */
+	--color-hue-blue-bg: #dbeafe;
+	--color-hue-blue-text: #1d4ed8;
+	--color-hue-green-bg: #dcfce7;
+	--color-hue-green-text: #15803d;
+	--color-hue-yellow-bg: #fef9c3;
+	--color-hue-yellow-text: #a16207;
+	--color-hue-orange-bg: #ffedd5;
+	--color-hue-orange-text: #c2410c;
+	--color-hue-red-bg: #fee2e2;
+	--color-hue-red-text: #b91c1c;
+	--color-hue-purple-bg: #f3e8ff;
+	--color-hue-purple-text: #7e22ce;
+	--color-hue-cyan-bg: #cffafe;
+	--color-hue-cyan-text: #0e7490;
 }
 
 /* ─── Design tokens (dark) ───────────────────────────────────────── */
@@ -91,4 +110,21 @@
 	--color-warning-text: #fde68a;
 	--color-info-bg: #1e3a5f;
 	--color-info-text: #93c5fd;
+
+	/* The dark tints are translucent on purpose: an opaque 900 would sit as a solid block on a dark
+	   surface, where the light theme's tint reads as a wash. */
+	--color-hue-blue-bg: rgb(30 58 138 / 0.4);
+	--color-hue-blue-text: #93c5fd;
+	--color-hue-green-bg: rgb(20 83 45 / 0.4);
+	--color-hue-green-text: #86efac;
+	--color-hue-yellow-bg: rgb(113 63 18 / 0.4);
+	--color-hue-yellow-text: #fde047;
+	--color-hue-orange-bg: rgb(124 45 18 / 0.4);
+	--color-hue-orange-text: #fdba74;
+	--color-hue-red-bg: rgb(127 29 29 / 0.4);
+	--color-hue-red-text: #fca5a5;
+	--color-hue-purple-bg: rgb(88 28 135 / 0.4);
+	--color-hue-purple-text: #d8b4fe;
+	--color-hue-cyan-bg: rgb(22 78 99 / 0.4);
+	--color-hue-cyan-text: #67e8f9;
 }

@@ -35,13 +35,14 @@ function withoutComments(src: string): string {
   return out
 }
 
-/** Hue palettes whose per-theme tints have no token equivalent yet. Tracked, not forgiven forever. */
-const KNOWN_EXCEPTIONS = [
-  'chipColors.ts',
-  'HttpMethodBadge.tsx',
-  'HttpStatusBadge.tsx',
-  'ColorPicker.tsx',
-]
+/*
+ * No exceptions.
+ *
+ * Four files were grandfathered when this rule landed - chipColors and the two HTTP badges, whose
+ * per-hue tints had no token equivalent, and ColorPicker's selection ring. The tokens now exist
+ * (--color-hue-*), all four use them, and the list is gone. Adding one back means adding a token
+ * instead.
+ */
 
 export const rule: Rule = {
   id: 'dsl-ui/no-dark-variant',
@@ -58,10 +59,6 @@ export const rule: Rule = {
       if (base.includes('.stories.') || base.includes('.test.')) {
         continue
       }
-      if (KNOWN_EXCEPTIONS.includes(base)) {
-        continue
-      }
-
       let src: string
       try {
         src = fs.readFileSync(file, 'utf8')

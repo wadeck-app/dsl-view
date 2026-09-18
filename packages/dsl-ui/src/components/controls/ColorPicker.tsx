@@ -27,7 +27,10 @@ const colorBgMap: Record<string, string> = {
 // violations-suppress-end: no-non-atomic-color-map
 
 const swatchBaseClass = 'relative flex h-9 w-9 items-center justify-center rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 cursor-pointer';
-const swatchActiveClass = 'ring-2 ring-offset-2 ring-gray-600 dark:ring-gray-300 scale-110';
+// `ring-content`, not `ring-gray-600 dark:ring-gray-300`: the selection ring has to contrast with
+// whatever surface is behind it, which is exactly what the content token already tracks - and a
+// dark: variant would ignore a ThemeScope that re-asserted light.
+const swatchActiveClass = 'ring-2 ring-offset-2 ring-content scale-110';
 const swatchInactiveClass = 'hover:scale-105';
 
 /**
