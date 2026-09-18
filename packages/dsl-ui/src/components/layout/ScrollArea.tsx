@@ -42,7 +42,7 @@ const AXIS_CLS: Record<NonNullable<ScrollAreaProps['axis']>, string> = {
  * overflows, and never scrolls. Every consumer that hand-rolled `overflow-auto` had to rediscover
  * that, and one shipped a pane that silently could not scroll at all.
  *
- * @registryCategory layout
+ * @registryCategory disposition
  * @registryTags scroll overflow pane scrollbar
  */
 export function ScrollArea({

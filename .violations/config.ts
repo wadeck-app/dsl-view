@@ -20,5 +20,11 @@ export default {
     // all. Checkbox and Radio were both in that state, which is why a consumer put raw inputs
     // in their place.
     './.violations/rules/no-unexported-component.ts': true,
+    // An invented category compiles fine here and fails as a type error in a CONSUMING app's
+    // generated registry. Two components shipped with "layout", which is not a category.
+    './.violations/rules/valid-registry-category.ts': true,
+    // A dark: variant applies under ANY .dark ancestor, so a component using one cannot be nested
+    // inside a ThemeScope that re-asserts light. Tokens resolve against the nearest scope instead.
+    './.violations/rules/no-dark-variant.ts': true,
   },
 } satisfies ViolationsConfig

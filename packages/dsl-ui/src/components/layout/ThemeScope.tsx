@@ -60,7 +60,7 @@ const SURFACE_CLS: Record<NonNullable<ThemeScopeProps['surface']>, string> = {
  * a variant selector, so the fix is those components using tokens; it is not something this
  * component can paper over.
  *
- * @registryCategory layout
+ * @registryCategory disposition
  * @registryTags theme scope palette dark light surface
  */
 export function ThemeScope({
