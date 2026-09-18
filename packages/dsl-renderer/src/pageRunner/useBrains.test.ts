@@ -487,8 +487,13 @@ describe('useBrains', () => {
 				))
 			);
 
+			// Waits for the brain to have SETTLED, not merely for its entry to exist. The entry is
+			// created as soon as the brain starts, carrying { $pending: true }, so `toBeDefined()`
+			// was satisfied immediately and the assertions below raced the fetcher's promise: it
+			// happened to have resolved locally and had not on a slower CI runner, where the
+			// received value was the pending placeholder.
 			await waitFor(() => {
-				expect(result.current.brainResults['brain1']).toBeDefined();
+				expect(result.current.brainResults['brain1']?.['$pending']).toBe(false);
 			});
 			// toMatchObject, not toEqual: the entry also carries $pending/$error now.
 			expect(result.current.brainResults['brain1']).toMatchObject({
