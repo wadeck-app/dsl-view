@@ -1,0 +1,53 @@
+import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { ChipButton } from './ChipButton.js';
+
+function chip(props: Partial<React.ComponentProps<typeof ChipButton>> = {}): HTMLElement {
+	render(<ChipButton active={false} onClick={vi.fn()} {...props}>09</ChipButton>);
+	return screen.getByRole('button');
+}
+
+describe('ChipButton state is readable, not just visible', () => {
+	// The only thing a test - or a screen reader - can hold the toggle to.
+	it('reports its state through aria-pressed', () => {
+		expect(chip({ active: true }).getAttribute('aria-pressed')).toBe('true');
+	});
+
+	it('reports the inactive state too, rather than omitting the attribute', () => {
+		expect(chip({ active: false }).getAttribute('aria-pressed')).toBe('false');
+	});
+});
+
+/*
+ * Added for the hour grid in CronBuilder. The default active fill is `bg-gray-100`, which on a
+ * white surface is barely distinguishable from unselected - acceptable for three filter chips
+ * where the label carries the meaning, useless for picking hours out of twenty-four, where the
+ * selection IS the content.
+ */
+describe('ChipButton emphasis', () => {
+	it('is subtle by default, so no existing chip changes', () => {
+		expect(chip({ active: true }).className).toContain('bg-gray-100');
+	});
+
+	it('fills with the primary token when strong', () => {
+		const el = chip({ active: true, emphasis: 'strong' });
+
+		expect(el.className).toContain('bg-[var(--color-primary-solid)]');
+		expect(el.className).not.toContain('bg-gray-100');
+	});
+
+	// Strong is about the active state alone: an unselected chip must stay quiet either way, or a
+	// grid of twenty-four would be a wall of blue.
+	it('leaves the inactive state alone', () => {
+		const el = chip({ active: false, emphasis: 'strong' });
+
+		expect(el.className).not.toContain('bg-[var(--color-primary-solid)]');
+	});
+
+	// A caller that named a palette meant that palette.
+	it('does not override an explicit colour', () => {
+		const el = chip({ active: true, emphasis: 'strong', color: 'blue' });
+
+		expect(el.className).not.toContain('bg-[var(--color-primary-solid)]');
+	});
+});

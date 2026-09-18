@@ -14,3 +14,4 @@ export * from './TableRowActions.js';
 export * from './CardActions.js';
 export * from './DialogFooter.js';
 export * from './PageHeader.js';
+export * from './ScrollArea.js';
