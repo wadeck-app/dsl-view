@@ -47,6 +47,7 @@ The `packages/dsl-renderer/` and `packages/dsl-ui/` directories inside capabilit
 | Doc | Description |
 |---|---|
 | `.claude/guiding-principles.md` | YAML-surface rules, `@registryCategory` pitfalls, build constraints + session lessons |
+| `.claude/docs/theming.md` | Tokens, `ThemeScope` vs `ThemeContext`, subtree nesting, why `dark:` variants are banned |
 | `.claude/out-of-scope.md` | What this project explicitly does not cover |
 | `.claude/product-vision.md` | Roadmap: JSON Schema direction, pluggable ContractAdapter |
 | `.claude/threat-model.md` | Silent failure risks and guardrail threats |

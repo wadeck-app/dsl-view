@@ -7,6 +7,7 @@
 
 ## Component registry
 - `@registryCategory` JSDoc annotation is required for a component to appear in the registry — missing it causes silent exclusion with no warning (known pitfall).
+- Its value must be `atomic`, `composite` or `disposition`. Anything else compiles here and fails as a type error in a *consuming* app's generated registry; layout components use `disposition`, not `layout`. Enforced by `dsl-ui/valid-registry-category`.
 - `entriesGenerator` Vite plugin auto-discovers components by scanning for `@registryCategory`; do not manually maintain `src/generated/entries.tsx`.
 - Generated files under `src/generated/` are committed so editors have types without running the dev server.
 
@@ -14,7 +15,12 @@
 - Consumer wires `react-router-dom` routing; renderer does not set up routes.
 - Consumer supplies `fetcher` prop to `GenericPageRunner`; renderer has no default fetcher.
 - Consumer provides `getToken`; renderer does not enforce or validate tokens.
-- Consumer manages the CSS/Tailwind pipeline; `dsl-ui` ships no built styles.
+- Consumer manages the Tailwind pipeline, but `dsl-ui` owns the palette: it ships `theme.css` (the tokens and `color-scheme`) plus `tailwind-preset.js`, and the consumer imports both. It ships no compiled utility CSS.
+- `content` must list dsl-ui's sources via the preset's named `dslUiContent` export — Tailwind reads `content` from the top-level config only, so a preset cannot contribute scan paths. Omitting it builds successfully and renders every dsl-ui component unstyled.
+
+## Theming
+- Components style themselves from semantic tokens, never raw palette classes and never Tailwind `dark:` variants — a `dark:` variant applies under any `.dark` ancestor, so a component using one cannot be nested in a `ThemeScope` that re-asserts light. Enforced by `dsl-ui/no-dark-variant`.
+- `ThemeScope` themes a subtree via the cascade; `ThemeContext`/`useTheme` toggles the app. See `.claude/docs/theming.md`.
 
 ## Build-time safety
 - `pageTypesGenerator` Vite plugin validates YAML `$sources` URLs against Zod contract types at build time — a URL mismatch fails the TypeScript build.
