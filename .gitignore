@@ -3,3 +3,13 @@ dist/
 *.tsbuildinfo
 .env
 .idea/
+# Crash dump MSYS2 bash drops in the CWD, and storybook's debug log. Both are machine-local noise that
+# otherwise shows as untracked forever, or gets committed by accident.
+*.stackdump
+debug-storybook.log
+# Session scratch: the message file `git commit -F` needs because the commit guardrail rejects
+# heredocs, plus any screenshot taken to verify a change.
+.claude/tmp-*
+# Bypass state, written only by the guardrails plugin after the user approves. Machine-local, and
+# committing it would hand another checkout someone else's approvals.
+.claude/w-guardrails/
