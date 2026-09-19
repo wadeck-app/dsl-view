@@ -7,6 +7,7 @@ export * from './Checkbox.js';
 export * from './CheckboxGroup.js';
 export * from './ChipButton.js';
 export * from './ColorPicker.js';
+export * from './CompactSelect.js';
 export * from './IconButton.js';
 export * from './InviteTokenWidget.js';
 export * from './LiveToggle.js';
