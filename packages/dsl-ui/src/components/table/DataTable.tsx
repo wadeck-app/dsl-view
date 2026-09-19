@@ -304,6 +304,14 @@ export interface DataTableProps<T extends Record<string, unknown>> {
 	onAction?: (action: string, row: T) => void;
 	/** Path template (e.g. `/files/{id}`) interpolated from the clicked row - navigated to via RouterContext. */
 	navigateTo?: string;
+	/**
+	 * Called with the clicked row. Takes precedence over `navigateTo`.
+	 *
+	 * For a consumer that owns its own navigation and so cannot express the destination as a path
+	 * template - a react-router `useNavigate`, or a callback the page passes down. Without it such a
+	 * consumer had to give up row clicks altogether.
+	 */
+	onRowClick?: (row: T) => void;
 	/** @slot tag:filter */
 	filtersTop?: React.ReactNode;
 	/** @slot tag:filter */
@@ -343,6 +351,7 @@ export function DataTable<T extends Record<string, unknown>>({
 	emptyMessage = 'No items',
 	onAction,
 	navigateTo,
+	onRowClick,
 	filtersTop,
 	filters,
 	id,
@@ -371,8 +380,28 @@ export function DataTable<T extends Record<string, unknown>>({
 	);
 
 	const router = useContext(RouterContext);
-	const handleRowClick = navigateTo
-		? (row: T) => router?.navigate(buildTemplatedPath(navigateTo, row))
+	/*
+	 * `onRowClick` wins over `navigateTo`, and is checked first on purpose.
+	 *
+	 * `navigateTo` needs a RouterContext. An app that has not mounted one gets `router?.navigate` -- a
+	 * silent no-op, so clicking a row does nothing at all and says nothing about why. A consumer that
+	 * already owns its own navigation (react-router's useNavigate, or a callback the page supplies)
+	 * has no way to express that through `navigateTo`, and had to drop row clicks entirely.
+	 */
+	const handleRowClick = onRowClick
+		? onRowClick
+		: navigateTo
+		? (row: T) => {
+				if (!router) {
+					// Loud, because the alternative is a dead click. See onRowClick.
+					console.error(
+						'[DataTable] navigateTo="%s" needs a RouterContext, and none is mounted: the row click does nothing. Wrap the app in RouterProvider, or pass onRowClick instead.',
+						navigateTo
+					);
+					return;
+				}
+				router.navigate(buildTemplatedPath(navigateTo, row));
+		  }
 		: undefined;
 
 	// Independent controlled/uncontrolled pairs (replacing the old single all-or-nothing

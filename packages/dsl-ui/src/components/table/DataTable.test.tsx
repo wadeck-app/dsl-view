@@ -270,3 +270,52 @@ describe('DataTable', () => {
 		expect(cell?.className).toMatch(/text-muted/);
 	});
 });
+
+/*
+ * Row clicks. `navigateTo` can only express a path template and needs a RouterContext, so a consumer
+ * that owns its own navigation had to give up row clicks entirely -- and one that simply had not
+ * mounted a provider got a click that did nothing and said nothing.
+ */
+describe('DataTable row clicks', () => {
+	it('onRowClick receives the clicked row', () => {
+		const onRowClick = vi.fn();
+		render(<DataTable rows={rows} columns={columns} onRowClick={onRowClick} />);
+
+		fireEvent.click(screen.getByText('Bob'));
+
+		expect(onRowClick).toHaveBeenCalledTimes(1);
+		expect(onRowClick).toHaveBeenCalledWith(rows[1]);
+	});
+
+	it('marks the row clickable so the affordance matches the behaviour', () => {
+		const { container } = render(<DataTable rows={rows} columns={columns} onRowClick={() => {}} />);
+		expect(container.querySelector('tbody tr')).toHaveClass('cursor-pointer');
+	});
+
+	it('rows are not clickable when neither onRowClick nor navigateTo is given', () => {
+		const { container } = render(<DataTable rows={rows} columns={columns} />);
+		expect(container.querySelector('tbody tr')).not.toHaveClass('cursor-pointer');
+	});
+
+	it('onRowClick wins over navigateTo', () => {
+		const onRowClick = vi.fn();
+		render(<DataTable rows={rows} columns={columns} onRowClick={onRowClick} navigateTo="/x/{id}" />);
+
+		fireEvent.click(screen.getByText('Alice'));
+
+		expect(onRowClick).toHaveBeenCalledWith(rows[0]);
+	});
+
+	// A dead click that explains itself beats one that does not. Without a RouterContext there is
+	// nothing to navigate with, and this used to be `router?.navigate` -- silently nothing.
+	it('navigateTo without a RouterContext says so instead of doing nothing quietly', () => {
+		const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+		render(<DataTable rows={rows} columns={columns} navigateTo="/x/{id}" />);
+
+		fireEvent.click(screen.getByText('Alice'));
+
+		expect(error).toHaveBeenCalled();
+		expect(error.mock.calls[0]?.join(' ')).toContain('RouterContext');
+		error.mockRestore();
+	});
+});
