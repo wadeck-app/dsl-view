@@ -15,6 +15,10 @@ export interface FieldDateRangeProps {
 	placeholder?: string;
 	disabled?: boolean;
 	dateFormat?: string;
+	/** Marks the field required. Handled by FieldWrapper. */
+	required?: boolean;
+	/** Validation message. Handled by FieldWrapper. */
+	error?: string;
 }
 
 /**
@@ -33,9 +37,11 @@ export function FieldDateRange({
 	placeholder,
 	disabled,
 	dateFormat,
+	required,
+	error,
 }: FieldDateRangeProps) {
 	return (
-		<FieldWrapper label={label} description={description}>
+		<FieldWrapper label={label} description={description} required={required} error={error}>
 			<DateRangePicker
 				value={value}
 				onChange={onChange}

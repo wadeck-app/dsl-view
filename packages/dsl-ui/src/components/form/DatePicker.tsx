@@ -3,13 +3,14 @@ import { buildCalendarGrid } from './calendarUtils.js';
 import * as Popover from '@radix-ui/react-popover';
 import { addMonths, format, isAfter, isBefore, isEqual, isSameMonth, isSameYear, isToday, parse, startOfMonth, subMonths } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import type { FieldControlProps } from './FieldWrapper.js';
 
 const inputClass =
 	'block w-full rounded border border-border bg-surface text-content px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed';
 
 const CALENDAR_CLASS = 'z-50 bg-surface border border-border rounded shadow-md p-4 w-80';
 
-export interface DatePickerProps {
+export interface DatePickerProps extends Partial<FieldControlProps> {
 	value: Date | null;
 	onChange?: (date: Date | null) => void;
 	onSelect?: (date: Date) => void;
@@ -37,6 +38,14 @@ export function DatePicker({
 	placeholder = 'Select a date...',
 	disabled,
 	dateFormat = 'MMM d, yyyy',
+	/*
+	 * Collected rather than named one by one so every current and future member of FieldControlProps
+	 * reaches the input. FieldWrapper cloneElement's these onto its first child, and this component
+	 * used to destructure only its own props -- so the id it was handed went nowhere and the
+	 * `<label htmlFor={id}>` above it pointed at an element that did not exist. FieldDate had a
+	 * visible label and no accessible name.
+	 */
+	...control
 }: DatePickerProps) {
 	const [open, setOpen] = useState(false);
 	const [displayMonth, setDisplayMonth] = useState<Date>(() => {
@@ -170,6 +179,7 @@ export function DatePicker({
 					placeholder={placeholder}
 					disabled={disabled}
 					className={inputClass}
+					{...control}
 				/>
 			</Popover.Anchor>
 			<Popover.Portal>

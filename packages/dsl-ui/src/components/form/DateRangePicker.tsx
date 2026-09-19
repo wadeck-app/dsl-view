@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
+import type { FieldControlProps } from './FieldWrapper.js';
 import { buildCalendarGrid } from './calendarUtils.js';
 import {
 	addMonths,
@@ -29,7 +30,7 @@ export interface DateRange {
 	to: Date | null;
 }
 
-export interface DateRangePickerProps {
+export interface DateRangePickerProps extends Partial<FieldControlProps> {
 	value: DateRange;
 	onChange?: (range: DateRange) => void;
 	/** Overall disabled state - no interaction allowed */
@@ -101,6 +102,9 @@ export function DateRangePicker({
 	dateFormat = 'MMM d, yyyy',
 	open: controlledOpen,
 	onOpenChange,
+	// Collected, so every member of FieldControlProps reaches the trigger. See the same comment in
+	// DatePicker: FieldWrapper clones these in, and destructuring only our own props dropped them.
+	...control
 }: DateRangePickerProps) {
 	const isControlled = controlledOpen !== undefined;
 	const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
@@ -211,6 +215,7 @@ export function DateRangePicker({
 					aria-haspopup="dialog"
 					aria-expanded={open}
 					className={triggerClass}
+					{...control}
 				>
 					<CalendarRange className="w-4 h-4 text-muted shrink-0" aria-hidden="true" />
 					<span className={`flex-1 truncate ${triggerText ? 'text-content' : 'text-muted'}`}>

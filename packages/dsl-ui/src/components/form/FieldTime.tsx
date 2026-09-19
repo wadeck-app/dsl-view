@@ -13,6 +13,10 @@ export interface FieldTimeProps {
 	minuteStep?: number;
 	placeholder?: string;
 	disabled?: boolean;
+	/** Marks the field required. Handled by FieldWrapper. */
+	required?: boolean;
+	/** Validation message. Handled by FieldWrapper. */
+	error?: string;
 }
 
 /**
@@ -29,9 +33,11 @@ export function FieldTime({
 	minuteStep,
 	placeholder,
 	disabled,
+	required,
+	error,
 }: FieldTimeProps) {
 	return (
-		<FieldWrapper label={label} description={description}>
+		<FieldWrapper label={label} description={description} required={required} error={error}>
 			<TimePicker
 				value={value}
 				onChange={onChange}

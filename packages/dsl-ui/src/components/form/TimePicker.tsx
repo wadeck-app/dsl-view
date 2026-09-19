@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { ChevronDown, ChevronUp, Clock } from 'lucide-react';
+import type { FieldControlProps } from './FieldWrapper.js';
 
 const triggerClass =
 	'block w-full rounded border border-border bg-surface text-content px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed text-left';
@@ -33,7 +34,7 @@ function formatDisplayTime(value: string | null, is12Hour: boolean): string {
 	return formatTimeValue(hours, minutes);
 }
 
-export interface TimePickerProps {
+export interface TimePickerProps extends Partial<FieldControlProps> {
 	value: string | null;
 	onChange?: (value: string | null) => void;
 	is12Hour?: boolean;
@@ -60,6 +61,9 @@ export function TimePicker({
 	placeholder = 'Select a time...',
 	open: controlledOpen,
 	onOpenChange,
+	// Collected, so every member of FieldControlProps reaches the trigger. See the same comment in
+	// DatePicker: FieldWrapper clones these in, and destructuring only our own props dropped them.
+	...control
 }: TimePickerProps) {
 	const isControlled = controlledOpen !== undefined;
 	const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
@@ -161,6 +165,7 @@ export function TimePicker({
 					aria-expanded={open}
 					aria-label={displayValue || placeholder}
 					className={`${triggerClass} flex items-center gap-2`}
+					{...control}
 				>
 					<Clock className="w-4 h-4 text-muted flex-shrink-0" aria-hidden="true" />
 					<span className={displayValue ? '' : 'text-muted'}>

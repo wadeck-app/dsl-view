@@ -6,6 +6,7 @@ export * from './ButtonSave.js';
 export * from './DatePicker.js';
 export * from './DateRangePicker.js';
 export * from './FieldDateRange.js';
+export * from './FieldDateTime.js';
 export * from './FieldAsyncSelect.js';
 export * from './FieldAutocomplete.js';
 export * from './FieldDate.js';
