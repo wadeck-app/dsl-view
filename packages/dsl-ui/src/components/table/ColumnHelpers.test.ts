@@ -2,13 +2,19 @@ import { describe, expect, it } from 'vitest';
 
 import { ColumnHelpers } from './DataTable.js';
 
-interface LogEntry {
+/*
+ * A type alias, not an interface. `ColumnHelpers.*` is generic over `T extends Record<string,
+ * unknown>`, and only an object type literal gets the implicit index signature that satisfies it --
+ * an interface does not, so every call here was an error the moment the tests were type-checked.
+ * Row types passed to DataTable have to be declared this way.
+ */
+type LogEntry = {
 	ts: string;
 	method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 	path: string;
 	status: number;
 	duration_ms: number;
-}
+};
 
 describe('ColumnHelpers', () => {
 	const row: LogEntry = {
@@ -56,10 +62,11 @@ describe('ColumnHelpers', () => {
 
 	describe('bytes', () => {
 		it('formats bytes value', () => {
-			interface FileEntry {
+			// A type alias for the same reason as LogEntry above.
+			type FileEntry = {
 				size: number;
 				name: string;
-			}
+			};
 			const col = ColumnHelpers.bytes<FileEntry>('size', 'Size');
 			expect(col.format).toBe('bytes');
 			expect(col.render({ size: 1024, name: 'test' })).toBe('1.0 KB');

@@ -1,0 +1,31 @@
+/*
+ * Type-checks the test files, which both the build config and the stories config exclude.
+ *
+ * Without this a test file was never type-checked at all: `build` is `tsc --build && tsc-alias &&
+ * typecheck:stories`, and all three configs exclude `*.test.ts(x)`. So a test asserting against a
+ * prop that no longer exists, or passing the wrong shape to the component it is meant to protect,
+ * compiled to nothing and the suite went green.
+ *
+ * Separate from tsconfig.stories.json rather than merged into it: the tests carry their own debt and
+ * keeping them apart means a story error is never buried under a test error.
+ *
+ * noEmit, so this only ever reports.
+ */
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"noEmit": true,
+		"emitDeclarationOnly": false,
+		// The build config writes a build-info file next to its output; a second config sharing it
+		// would make each run think the other's work was already done.
+		"tsBuildInfoFile": "dist/.tsbuildinfo.tests",
+		"composite": false,
+		// The build config does not need node types; several tests read the package's own files off
+		// disk to assert on the published surface, so they do. Without this every `node:fs` import is
+		// an unresolved module and each callback it feeds is an implicit any.
+		"types": ["@testing-library/jest-dom", "node"]
+	},
+	"references": [],
+	"include": ["src/**/*"],
+	"exclude": ["src/**/*.stories.tsx"]
+}

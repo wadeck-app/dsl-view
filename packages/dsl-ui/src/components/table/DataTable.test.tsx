@@ -197,29 +197,36 @@ describe('DataTable', () => {
 		expect(container.firstChild).toHaveClass('font-mono');
 	});
 
-	it('success variant renders action button with bg-success class when actionsVisible=true', () => {
+	/*
+	 * These two asked for `actionsVisible={true}`, a prop DataTable has never had -- React dropped it
+	 * and both tests passed anyway. The second was worse than useless: it asserted the absence of an
+	 * `opacity-0` class that DataTable does not emit anywhere, so it could not have failed. Both now
+	 * state what the component actually does, which is render action buttons unconditionally.
+	 */
+	it('success variant renders the action button with the bg-success class', () => {
 		const onAction = vi.fn();
 		const cols = [
 			ColumnHelpers.text<Row>('name', 'Name'),
 			ColumnHelpers.actions<Row>([{ label: 'Restore', action: 'restore', variant: 'success' }]),
 		];
-		render(<DataTable rows={rows} columns={cols} onAction={onAction} actionsVisible={true} />);
+		render(<DataTable rows={rows} columns={cols} onAction={onAction} />);
 		const btn = screen.getAllByText('Restore')[0]!;
 		expect(btn).toHaveClass('bg-success');
 	});
 
-	it('actionsVisible=true renders action buttons without opacity-0 class', () => {
+	// Guards against a hover-reveal being introduced: an action a reader cannot see is an action
+	// they will not find.
+	it('renders one action button per row, visible without hovering', () => {
 		const cols = [
 			ColumnHelpers.text<Row>('name', 'Name'),
 			ColumnHelpers.actions<Row>([{ label: 'Delete', action: 'delete', variant: 'danger' }]),
 		];
-		const { container } = render(<DataTable rows={rows} columns={cols} actionsVisible={true} />);
-		// Should not have opacity-0 on the actions container
-		const actionDivs = container.querySelectorAll('.flex.items-center.gap-1');
-		expect(actionDivs.length).toBeGreaterThan(0);
-		actionDivs.forEach(div => {
-			expect(div).not.toHaveClass('opacity-0');
-		});
+		render(<DataTable rows={rows} columns={cols} />);
+		const buttons = screen.getAllByRole('button', { name: 'Delete' });
+		expect(buttons).toHaveLength(rows.length);
+		for (const btn of buttons) {
+			expect(btn).toBeVisible();
+		}
 	});
 
 	it('action button hidden when condition field is truthy and condition starts with !', () => {

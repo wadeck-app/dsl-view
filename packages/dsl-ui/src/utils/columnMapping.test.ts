@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { resolveColumn, resolveColumns } from './columnMapping.js';
+import type { TableColumn } from '../components/table/DataTable.js';
 
-function strip(col: { render: unknown; [key: string]: unknown }) {
+/**
+ * The resolved column minus `render`, which is a function and so not worth comparing structurally.
+ *
+ * Typed as the `TableColumn` it is actually handed. The previous `{ render: unknown; [key: string]:
+ * unknown }` demanded an index signature that `TableColumn` - an interface - does not have, so every
+ * call site here was an error as soon as the tests were type-checked.
+ */
+function strip(col: TableColumn<Record<string, unknown>>) {
 	const { render, ...rest } = col;
 	return rest;
 }

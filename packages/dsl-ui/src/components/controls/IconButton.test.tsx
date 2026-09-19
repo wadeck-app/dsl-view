@@ -19,9 +19,11 @@ describe('IconButton', () => {
 		expect(screen.getByRole('button', { name: 'Edit item' })).toHaveAttribute('title', 'Edit item');
 	});
 
-	// @ts-expect-error -- aria-label is required; omitting it must be a TypeScript error
 	it('type error when aria-label is omitted (compile-time only)', () => {
-		// This test body is intentionally empty - the @ts-expect-error above is the assertion.
+		// The directive has to sit on the JSX, not on the `it(` above it: there it suppressed nothing
+		// (the call is well typed) while the real error on the JSX went unreported, so this asserted
+		// the opposite of what it claims. It only became visible once the tests were type-checked.
+		// @ts-expect-error -- aria-label is required; omitting it must be a TypeScript error
 		void (<IconButton icon={<span />} />);
 	});
 });

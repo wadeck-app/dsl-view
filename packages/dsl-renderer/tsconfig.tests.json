@@ -1,0 +1,20 @@
+/*
+ * Type-checks the test files, which tsconfig.json excludes because it emits and they must not be
+ * published.
+ *
+ * Excluded means unchecked, and unchecked means a test could reference a prop or a brain parameter
+ * that no longer exists and still compile to a green suite. noEmit, so this only ever reports.
+ */
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"noEmit": true,
+		"emitDeclarationOnly": false,
+		// The build config writes a build-info file next to its output; a second config sharing it
+		// would make each run think the other's work was already done.
+		"tsBuildInfoFile": "dist/.tsbuildinfo.tests",
+		"composite": false
+	},
+	"references": [],
+	"include": ["src/**/*"]
+}

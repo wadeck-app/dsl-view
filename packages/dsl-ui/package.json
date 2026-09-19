@@ -25,8 +25,9 @@
 		"access": "public"
 	},
 	"scripts": {
-		"build": "tsc --build tsconfig.json && tsc-alias -p tsconfig.json && npm run typecheck:stories",
+		"build": "tsc --build tsconfig.json && tsc-alias -p tsconfig.json && npm run typecheck:stories && npm run typecheck:tests",
 		"typecheck:stories": "tsc --noEmit -p tsconfig.stories.json",
+		"typecheck:tests": "tsc --noEmit -p tsconfig.tests.json",
 		"clean": "rimraf dist",
 		"test": "vitest run",
 		"test:watch": "vitest",
