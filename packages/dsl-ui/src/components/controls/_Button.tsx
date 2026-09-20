@@ -6,7 +6,7 @@ import { Loader2 } from 'lucide-react';
 import { Tooltip } from '../overlay/Tooltip.js';
 import { useButtonContext } from './buttonContext.js';
 
-type Variant = 'primary' | 'secondary' | 'danger' | 'danger-outline' | 'neutral' | 'success' | 'ghost' | 'link';
+type Variant = 'primary' | 'secondary' | 'danger' | 'danger-outline' | 'neutral' | 'success' | 'ghost' | 'link' | 'chip';
 type Size = 'sm' | 'md' | 'icon' | 'icon-field' | 'icon-sm' | 'icon-xs';
 type Shape = 'default' | 'stack';
 
@@ -40,6 +40,20 @@ const VARIANT_CLASSES: Record<Variant, string> = {
 	ghost: 'border border-transparent text-muted hover:bg-muted-bg hover:text-content focus:ring-border',
 	// Deliberately excluded: `link` is text, not a box, so it drops padding and border.
 	link: 'text-primary hover:underline focus:ring-primary px-0 py-0',
+	/*
+	 * Geometry only. The caller owns fill, ink and outline.
+	 *
+	 * For ChipButton, whose whole job is to apply one of seven hue palettes. It used to build on
+	 * `ghost`, and `ghost` names a colour: its `text-muted` and `border-transparent` collided with the
+	 * palette's `text-hue-*` and `border-*-400`, and which one won was decided by where Tailwind
+	 * happened to emit each utility, not by intent. Both collisions went to ghost -- `.text-muted` is
+	 * emitted after `.text-hue-green`, `.border-transparent` after `.border-green-400` -- so EVERY
+	 * coloured chip rendered with grey ink and no outline, everywhere in the design system. Measured on
+	 * the log pane's "Live" chip: rgb(156,163,175) text on a green fill, which reads as switched off.
+	 *
+	 * A variant that contributes no colour cannot lose that argument.
+	 */
+	chip: 'border focus:ring-border',
 };
 
 const SIZE_CLASSES: Record<Size, string> = {

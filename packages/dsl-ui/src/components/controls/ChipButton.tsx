@@ -59,7 +59,9 @@ export function ChipButton({
 		: colors.inactive;
 	return (
 		<Button
-			variant="ghost"
+			// `chip`, not `ghost`: ghost names a text colour and a border colour, and both collided with
+			// the palette below. See the chip variant in _Button.tsx.
+			variant="chip"
 			onClick={onClick}
 			className={[
 				chipBaseClass,
