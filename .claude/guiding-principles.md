@@ -30,6 +30,9 @@
 - A composite rendering multiple same-role controls (buttons, chips, search inputs) side by side must give them one shared size source (`ButtonContext`, or matching explicit size props) — one sibling defaulting to a different scale than the others is a regression even if each control is correct in isolation (see `FilterBar`'s `SearchBar`/`ChipButton` fix, and the `Breadcrumb`/`Pagination`/`BulkActionsToolbar` icon-size fix).
 - New composite components: add a story to `src/examples/*.stories.tsx` stacking real same-role controls together so size drift is visible in review (see `ToolbarConsistency.stories.tsx`, `SettingsPage.stories.tsx`), and a regression test asserting the resolved `className` doesn't contain a duplicated/conflicting geometry class (see `_Button.test.tsx`, `Tabs.test.tsx`, `PageTabs.test.tsx`, `Breadcrumb.test.tsx`).
 
+## UX guiding principles
+- Dialog/form footer buttons: the whole action cluster is right-aligned within the panel (`justify-end`, not left-aligned or centered) — primary action (e.g. "Save") rightmost and visually emphasized, dismissive action (e.g. "Cancel") immediately to its left, unstyled. Material Design's convention, adopted project-wide (`CardActions`, `DialogFooter`). Sources disagree on left-vs-right: Microsoft's Win32 UX Guide puts the primary action left instead, and Nielsen Norman Group takes no universal stance (recommends matching actual platform-usage data). Apple's position is unverified — their HIG site couldn't be fetched (JS SPA).
+
 ## Build-time safety
 - `pageTypesGenerator` Vite plugin validates YAML `$sources` URLs against Zod contract types at build time — a URL mismatch fails the TypeScript build.
 - `__baseUrl` must be stripped before merging multiple `defineRoutes` results, or TypeScript errors occur.

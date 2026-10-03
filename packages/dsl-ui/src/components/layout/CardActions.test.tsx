@@ -60,6 +60,13 @@ describe('CardActions', () => {
 		expect(result.current).toEqual({ size: 'sm', defaultVariant: 'danger' });
 	});
 
+	// Buttons used to sit left-aligned in the card footer - Material convention right-aligns
+	// the whole action cluster, matching DialogFooter's existing justify-end.
+	it('right-aligns the action cluster', () => {
+		const { container } = render(<CardActions><span>x</span></CardActions>);
+		expect(container.firstChild).toHaveClass('justify-end');
+	});
+
 	it('applies custom className', () => {
 		const { container } = render(<CardActions className="custom-class"><span>x</span></CardActions>);
 		expect(container.firstChild).toHaveClass('custom-class');
