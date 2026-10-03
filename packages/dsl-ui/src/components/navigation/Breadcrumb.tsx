@@ -15,15 +15,15 @@ export interface BreadcrumbProps {
 export function Breadcrumb({ currentPath, onNavigate }: BreadcrumbProps) {
 	const segments = parseBreadcrumbSegments(currentPath);
 	return (
-		<>
+		<div className="flex items-center gap-1">
 			<Button variant="ghost" size="sm" onClick={() => onNavigate('/')} aria-label="Navigate to root">
-				<Home className="h-4 w-4" aria-hidden="true" />
+				<Home className="h-3.5 w-3.5" aria-hidden="true" />
 			</Button>
 			{segments.map(({ label, path, isLast }) => (
 				<React.Fragment key={path}>
 					<span className="text-muted" aria-hidden="true">/</span>
 					{isLast ? (
-						<span className="font-medium text-content">{label}</span>
+						<span className="text-xs font-medium text-content">{label}</span>
 					) : (
 						<Button variant="ghost" size="sm" onClick={() => onNavigate(path)} aria-label={`Navigate to ${path}`}>
 							{label}
@@ -31,6 +31,6 @@ export function Breadcrumb({ currentPath, onNavigate }: BreadcrumbProps) {
 					)}
 				</React.Fragment>
 			))}
-		</>
+		</div>
 	);
 }

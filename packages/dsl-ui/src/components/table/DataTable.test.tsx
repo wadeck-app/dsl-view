@@ -38,14 +38,24 @@ describe('DataTable', () => {
 		expect(screen.getByText('Bob')).toBeInTheDocument();
 	});
 
+	// Was size="sm" + className="p-0" - both set padding on the same button.
+	it('expansion toggle button has no competing padding source', () => {
+		const { container } = render(
+			<DataTable rows={rows} columns={columns} expansion={{}} renderNode={() => <p>details</p>} />
+		);
+		const toggle = container.querySelector('svg')?.closest('button');
+		expect(toggle?.className).not.toMatch(/\bpx-3\b/);
+		expect(toggle?.className).toMatch(/\bp-0\b/);
+	});
+
 	it('calls onAction(actionName, row) when action button clicked', () => {
 		const onAction = vi.fn();
 		const cols = [
 			ColumnHelpers.text<Row>('name', 'Name'),
-			ColumnHelpers.actions<Row>([{ label: 'Edit', action: 'edit' }]),
+			ColumnHelpers.actions<Row>([{ label: 'Edit', icon: null, action: 'edit' }]),
 		];
 		render(<DataTable rows={rows} columns={cols} onAction={onAction} />);
-		fireEvent.click(screen.getAllByText('Edit')[0]!);
+		fireEvent.click(screen.getAllByRole('button', { name: 'Edit' })[0]!);
 		expect(onAction).toHaveBeenCalledWith('edit', rows[0]);
 	});
 
@@ -207,10 +217,10 @@ describe('DataTable', () => {
 		const onAction = vi.fn();
 		const cols = [
 			ColumnHelpers.text<Row>('name', 'Name'),
-			ColumnHelpers.actions<Row>([{ label: 'Restore', action: 'restore', variant: 'success' }]),
+			ColumnHelpers.actions<Row>([{ label: 'Restore', icon: null, action: 'restore', variant: 'success' }]),
 		];
 		render(<DataTable rows={rows} columns={cols} onAction={onAction} />);
-		const btn = screen.getAllByText('Restore')[0]!;
+		const btn = screen.getAllByRole('button', { name: 'Restore' })[0]!;
 		expect(btn).toHaveClass('bg-success');
 	});
 
@@ -219,7 +229,7 @@ describe('DataTable', () => {
 	it('renders one action button per row, visible without hovering', () => {
 		const cols = [
 			ColumnHelpers.text<Row>('name', 'Name'),
-			ColumnHelpers.actions<Row>([{ label: 'Delete', action: 'delete', variant: 'danger' }]),
+			ColumnHelpers.actions<Row>([{ label: 'Delete', icon: null, action: 'delete', variant: 'danger' }]),
 		];
 		render(<DataTable rows={rows} columns={cols} />);
 		const buttons = screen.getAllByRole('button', { name: 'Delete' });
@@ -238,10 +248,10 @@ describe('DataTable', () => {
 		];
 		const cols = [
 			ColumnHelpers.text<TokenRow>('label', 'Label'),
-			ColumnHelpers.actions<TokenRow>([{ label: 'Revoke', action: 'revoke', condition: '!revoked' }]),
+			ColumnHelpers.actions<TokenRow>([{ label: 'Revoke', icon: null, action: 'revoke', condition: '!revoked' }]),
 		];
 		render(<DataTable rows={tokenRows} columns={cols} onAction={vi.fn()} />);
-		const revokeButtons = screen.getAllByText('Revoke');
+		const revokeButtons = screen.getAllByRole('button', { name: 'Revoke' });
 		expect(revokeButtons).toHaveLength(1); // only visible on non-revoked row
 	});
 
@@ -254,10 +264,10 @@ describe('DataTable', () => {
 		];
 		const cols = [
 			ColumnHelpers.text<Row>('name', 'Name'),
-			ColumnHelpers.actions<Row>([{ label: 'Deactivate', action: 'deactivate', condition: 'active' }]),
+			ColumnHelpers.actions<Row>([{ label: 'Deactivate', icon: null, action: 'deactivate', condition: 'active' }]),
 		];
 		render(<DataTable rows={rows} columns={cols} onAction={vi.fn()} />);
-		const buttons = screen.getAllByText('Deactivate');
+		const buttons = screen.getAllByRole('button', { name: 'Deactivate' });
 		expect(buttons).toHaveLength(1); // only visible on active row
 	});
 
@@ -268,6 +278,91 @@ describe('DataTable', () => {
 		const { container } = render(<DataTable rows={rows} columns={[col]} />);
 		const cell = container.querySelector('td');
 		expect(cell?.className).toMatch(/text-muted/);
+	});
+
+	// Sorting now lives on a dedicated IconButton, not the whole label - a sortable header's
+	// label text is plain text, not itself a button.
+	it('sortable header: label is plain text, only the arrow is a button', () => {
+		const cols = [ColumnHelpers.text<Row>('name', 'Name')];
+		cols[0]!.sortable = true;
+		render(<DataTable rows={rows} columns={cols} />);
+		expect(screen.getByText('Name').closest('button')).toBeNull();
+		expect(screen.getByRole('button', { name: 'Sort by Name' })).toBeInTheDocument();
+	});
+
+	// Layout-shift regression: the toolbar must never precede <table> in the DOM, in either
+	// supported position, so selecting a row cannot move any row out from under the user's click.
+	it('batch toolbar never precedes the table in the DOM', () => {
+		const cols = [ColumnHelpers.text<Row>('name', 'Name')];
+		const { container } = render(
+			<DataTable
+				rows={rows}
+				columns={cols}
+				selectable
+				batchActions={[{ label: 'Delete', action: 'delete' }]}
+			/>
+		);
+		fireEvent.click(screen.getAllByRole('checkbox')[1]!);
+		const html = container.innerHTML;
+		const toolbarIdx = html.indexOf('role="toolbar"');
+		const tableIdx = html.indexOf('<table');
+		expect(toolbarIdx).toBeGreaterThan(-1);
+		expect(toolbarIdx).toBeGreaterThan(tableIdx);
+	});
+
+	// A batch action with no explicit variant must look like a real button, not ghost text.
+	it('batch action with no variant defaults to secondary, not ghost', () => {
+		const cols = [ColumnHelpers.text<Row>('name', 'Name')];
+		render(
+			<DataTable
+				rows={rows}
+				columns={cols}
+				selectable
+				batchActions={[{ label: 'Export', action: 'export' }]}
+			/>
+		);
+		fireEvent.click(screen.getAllByRole('checkbox')[1]!);
+		const btn = screen.getByRole('button', { name: 'Export' });
+		expect(btn.className).toMatch(/\bbg-surface\b/);
+	});
+
+	// The "N selected" label was text-sm (14px) next to size="sm" buttons (12px) - same box
+	// center, but different font-size threw off the optical text baseline.
+	it('"N selected" label matches the batch buttons\' font-size', () => {
+		const cols = [ColumnHelpers.text<Row>('name', 'Name')];
+		render(
+			<DataTable rows={rows} columns={cols} selectable batchActions={[{ label: 'Export', action: 'export' }]} />
+		);
+		fireEvent.click(screen.getAllByRole('checkbox')[1]!);
+		const label = screen.getByText('1 selected');
+		expect(label.className).toMatch(/\btext-xs\b/);
+	});
+
+	// Row actions render icon-only - no visible label text, just the icon + aria-label.
+	it('row action renders icon-only, with no visible label text', () => {
+		const cols = [
+			ColumnHelpers.text<Row>('name', 'Name'),
+			ColumnHelpers.actions<Row>([{ label: 'Edit', icon: <svg data-testid="edit-icon" />, action: 'edit' }]),
+		];
+		render(<DataTable rows={rows} columns={cols} />);
+		const btn = screen.getAllByRole('button', { name: 'Edit' })[0]!;
+		expect(btn.textContent?.trim()).toBe('');
+		expect(btn.querySelector('[data-testid="edit-icon"]')).toBeInTheDocument();
+	});
+
+	// Without an icon (e.g. a YAML-authored action, which can't express a ReactNode), falling
+	// back to IconButton would render an invisible icon-less button - must stay a visible text button.
+	it('row action without an icon falls back to a visible text button, not an empty one', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const cols = [
+			ColumnHelpers.text<Row>('name', 'Name'),
+			ColumnHelpers.actions<Row>([{ label: 'Edit', action: 'edit' }]),
+		];
+		render(<DataTable rows={rows} columns={cols} />);
+		const btn = screen.getAllByRole('button', { name: 'Edit' })[0]!;
+		expect(btn.textContent?.trim()).toBe('Edit');
+		expect(warn).toHaveBeenCalled();
+		warn.mockRestore();
 	});
 });
 

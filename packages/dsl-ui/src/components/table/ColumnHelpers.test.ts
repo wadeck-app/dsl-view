@@ -89,7 +89,7 @@ describe('ColumnHelpers', () => {
 
 	describe('actions', () => {
 		it('creates an actions column', () => {
-			const col = ColumnHelpers.actions<LogEntry>([{ label: 'Delete', action: 'delete', variant: 'danger' }]);
+			const col = ColumnHelpers.actions<LogEntry>([{ label: 'Delete', icon: null, action: 'delete', variant: 'danger' }]);
 			expect(col.key).toBe('_actions');
 			expect(col.isActions).toBe(true);
 			expect(col.actions).toHaveLength(1);

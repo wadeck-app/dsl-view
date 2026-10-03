@@ -62,6 +62,8 @@ export function ChipButton({
 			// `chip`, not `ghost`: ghost names a text colour and a border colour, and both collided with
 			// the palette below. See the chip variant in _Button.tsx.
 			variant="chip"
+			// chipBaseClass below owns padding/font-size - size="none" avoids a double geometry source.
+			size="none"
 			onClick={onClick}
 			className={[
 				chipBaseClass,

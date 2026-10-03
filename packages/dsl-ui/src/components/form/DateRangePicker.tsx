@@ -21,7 +21,7 @@ import {
 import { CalendarRange, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 const triggerClass =
-	'flex items-center gap-2 w-full rounded border border-border bg-surface text-content px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-left';
+	'flex items-center gap-2 w-full rounded border border-border bg-surface text-content px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-left';
 
 const PANEL_CLASS = 'z-50 bg-surface border border-border rounded shadow-md p-4';
 

@@ -35,6 +35,20 @@ describe('Dialog', () => {
 		expect(screen.getByText('Rename file')).toBeInTheDocument();
 	});
 
+	// Was h-4 w-4 (16px); other size="sm" buttons (Breadcrumb, Pagination) use 14px icons.
+	it('close icon matches the 14px scale shared with other size="sm" buttons', async () => {
+		const user = userEvent.setup();
+		render(
+			<Dialog title="Rename file" trigger={<button>Open</button>}>
+				<p>body</p>
+			</Dialog>
+		);
+		await user.click(screen.getByRole('button', { name: 'Open' }));
+		const icon = screen.getByRole('button', { name: 'Close dialog' }).querySelector('svg');
+		expect(icon).toHaveClass('h-3.5', 'w-3.5');
+		expect(icon).not.toHaveClass('h-4', 'w-4');
+	});
+
 	it('ESC key closes the dialog', async () => {
 		const user = userEvent.setup();
 		render(

@@ -32,6 +32,19 @@ describe('Button', () => {
 		expect(btn.className).toMatch(/text-primary/);
 	});
 
+	// Same bug class as the chip colour collision above, for size: ChipButton's own
+	// py-0.5 text-xs must not collide with Button's default SIZE_CLASSES.md.
+	it('does not apply SIZE_CLASSES for the chip variant', () => {
+		render(
+			<Button variant="chip" className="px-2.5 py-0.5 text-xs">
+				Live
+			</Button>,
+		);
+		const btn = screen.getByRole('button', { name: 'Live' });
+		expect(btn.className).not.toMatch(/\bpy-2\b/);
+		expect(btn.className).not.toMatch(/\btext-sm\b/);
+	});
+
 	it('explicit prop wins over context (variant=danger beats defaultVariant=ghost)', () => {
 		render(
 			<ButtonContext.Provider value={{ defaultVariant: 'ghost' }}>

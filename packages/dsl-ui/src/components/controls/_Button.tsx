@@ -7,7 +7,7 @@ import { Tooltip } from '../overlay/Tooltip.js';
 import { useButtonContext } from './buttonContext.js';
 
 type Variant = 'primary' | 'secondary' | 'danger' | 'danger-outline' | 'neutral' | 'success' | 'ghost' | 'link' | 'chip';
-type Size = 'sm' | 'md' | 'icon' | 'icon-field' | 'icon-sm' | 'icon-xs';
+type Size = 'sm' | 'md' | 'icon' | 'icon-field' | 'icon-sm' | 'icon-xs' | 'none';
 type Shape = 'default' | 'stack';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -20,8 +20,10 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 // @formatter:off
+// focus-visible, not focus: a mouse click shouldn't paint the keyboard focus ring - that ring
+// is what makes a Tab/ChipButton read as "a button" after clicking it, which they shouldn't.
 const BASE =
-	'inline-flex items-center justify-center rounded font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer';
+	'inline-flex items-center justify-center rounded font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer';
 
 // Every variant carries `border`, transparent where the design has no visible outline.
 // Variants pick colour, never geometry: secondary and danger-outline used to be the only
@@ -29,17 +31,17 @@ const BASE =
 // the same size. In a row of actions that reads as buttons of three different heights.
 const VARIANT_CLASSES: Record<Variant, string> = {
 	primary:
-		'border border-transparent bg-[var(--color-primary-solid)] text-white hover:bg-[var(--color-primary-solid-hover)] focus:ring-[var(--color-primary-solid)]',
+		'border border-transparent bg-[var(--color-primary-solid)] text-white hover:bg-[var(--color-primary-solid-hover)] focus-visible:ring-[var(--color-primary-solid)]',
 	secondary:
-		'border border-border bg-surface text-content hover:bg-bg-secondary focus:ring-border',
-	danger: 'border border-transparent bg-danger text-white hover:bg-danger/80 focus:ring-danger',
-	'danger-outline': 'border border-danger text-danger hover:bg-danger-bg focus:ring-danger',
+		'border border-border bg-surface text-content hover:bg-bg-secondary focus-visible:ring-border',
+	danger: 'border border-transparent bg-danger text-white hover:bg-danger/80 focus-visible:ring-danger',
+	'danger-outline': 'border border-danger text-danger hover:bg-danger-bg focus-visible:ring-danger',
 	neutral:
-		'border border-transparent bg-muted-bg text-content hover:bg-bg-secondary focus:ring-border',
-	success: 'border border-transparent bg-success text-white hover:bg-success/80 focus:ring-success',
-	ghost: 'border border-transparent text-muted hover:bg-muted-bg hover:text-content focus:ring-border',
+		'border border-transparent bg-muted-bg text-content hover:bg-bg-secondary focus-visible:ring-border',
+	success: 'border border-transparent bg-success text-white hover:bg-success/80 focus-visible:ring-success',
+	ghost: 'border border-transparent text-muted hover:bg-muted-bg hover:text-content focus-visible:ring-border',
 	// Deliberately excluded: `link` is text, not a box, so it drops padding and border.
-	link: 'text-primary hover:underline focus:ring-primary px-0 py-0',
+	link: 'text-primary hover:underline focus-visible:ring-primary px-0 py-0',
 	/*
 	 * Geometry only. The caller owns fill, ink and outline.
 	 *
@@ -53,7 +55,7 @@ const VARIANT_CLASSES: Record<Variant, string> = {
 	 *
 	 * A variant that contributes no colour cannot lose that argument.
 	 */
-	chip: 'border focus:ring-border',
+	chip: 'border focus-visible:ring-border',
 };
 
 const SIZE_CLASSES: Record<Size, string> = {
@@ -65,6 +67,8 @@ const SIZE_CLASSES: Record<Size, string> = {
 	'icon-field': 'h-[2.375rem] w-[2.375rem] p-0',
 	'icon-sm': 'h-7 w-7 p-0',
 	'icon-xs': 'h-5 w-5 p-0',
+	// Opt-out for a caller that supplies its own full geometry via className (chip, tab, swatch).
+	none: '',
 };
 
 const SHAPE_CLASSES: Record<Shape, string> = {
@@ -103,7 +107,8 @@ export function Button({
 	const { size: ctxSize, defaultVariant: ctxVariant } = useButtonContext();
 	// Explicit prop wins, then the context default, then the hardcoded fallback.
 	const resolvedVariant = variant ?? ctxVariant ?? 'primary';
-	const resolvedSize = size ?? ctxSize ?? 'md';
+	// 'chip' always owns its own geometry, so it defaults to 'none' rather than 'md'.
+	const resolvedSize = size ?? ctxSize ?? (resolvedVariant === 'chip' ? 'none' : 'md');
 	const isDisabled = disabled || loading;
 	// 'stack' shape callers (option-picker style buttons) own their full color and sizing via className -
 	// SIZE_CLASSES/VARIANT_CLASSES would fight with their custom padding and active/inactive color classes.

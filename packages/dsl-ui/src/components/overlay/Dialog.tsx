@@ -164,7 +164,7 @@ export function Dialog({
 								onClick={handleClose}
 								aria-label="Close dialog"
 							>
-								<X className="h-4 w-4" aria-hidden="true" />
+								<X className="h-3.5 w-3.5" aria-hidden="true" />
 							</Button>
 						</div>
 

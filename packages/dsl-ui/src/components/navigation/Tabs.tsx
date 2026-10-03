@@ -37,13 +37,16 @@ export function Tabs({ tabs, defaultTab, value: controlledValue, onChange }: Tab
 					<Button
 						key={key}
 						type="button"
-						variant="ghost"
+						variant="chip"
+						size="none"
 						onClick={() => handleChange(key)}
 						className={[
-							'-mb-px rounded-t border border-b-0 px-4 py-1.5 text-sm font-medium transition-colors',
+							'-mb-px px-4 py-1.5 text-sm font-medium transition-colors',
+							// Only the border *colour* is set here - chip's own border-width (1px, all
+							// sides) is left untouched to avoid a width collision on the same element.
 							active === key
-								? 'border-border bg-surface text-content'
-								: 'border-transparent text-muted hover:text-content',
+								? 'border-transparent border-b-primary text-primary'
+								: 'border-transparent text-muted hover:text-content hover:border-b-border',
 						].join(' ')}
 					>
 						{label}

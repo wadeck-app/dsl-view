@@ -50,7 +50,7 @@ describe('resolveColumn', () => {
 	it('resolves an actions column via ColumnHelpers.actions', () => {
 		const col = resolveColumn({ type: 'actions', items: [{ label: 'Delete', action: 'delete', variant: 'danger' }] });
 		expect(col.isActions).toBe(true);
-		expect(col.actions).toEqual([{ label: 'Delete', variant: 'danger', action: 'delete', condition: undefined }]);
+		expect(col.actions).toEqual([{ label: 'Delete', icon: undefined, variant: 'danger', action: 'delete', condition: undefined }]);
 	});
 
 	it('dispatches an unrecognized format via extraFormats before falling back to generic handling', () => {

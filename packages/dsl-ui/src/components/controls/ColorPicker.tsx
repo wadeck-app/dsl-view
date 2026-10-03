@@ -51,6 +51,7 @@ export function ColorPicker({ label, options, value, onChange }: ColorPickerProp
 							key={optValue}
 							type="button"
 							variant="ghost"
+							size="none"
 							onClick={() => onChange(optValue)}
 							aria-label={optLabel}
 							aria-pressed={isActive}

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
+import { Eye } from 'lucide-react';
 
 import { DateRangePicker, type DateRange } from '../components/form/DateRangePicker.js';
 import { Drawer } from '../components/overlay/Drawer.js';
@@ -92,7 +93,7 @@ const USER_COLUMNS: TableColumn<User>[] = [
 			),
 	},
 	ColumnHelpers.actions<User>([
-		{ label: 'View details', action: 'view', variant: 'ghost' },
+		{ label: 'View details', icon: <Eye className="h-3.5 w-3.5" />, action: 'view', variant: 'ghost' },
 	]),
 ];
 
@@ -243,7 +244,7 @@ function AdminDashboardPage() {
 							selectable
 							batchActions={[
 								{ label: 'Delete selected', action: 'delete', variant: 'danger' },
-								{ label: 'Export',          action: 'export', variant: 'ghost'  },
+								{ label: 'Export',          action: 'export' },
 							]}
 							onBatchAction={handleBatchAction}
 							onAction={handleAction}
@@ -276,7 +277,7 @@ const meta: Meta = {
 };
 export default meta;
 
-export const AdminDashboard: StoryObj = {
+export const Default: StoryObj = {
 	render: () => <AdminDashboardPage />,
 };
 

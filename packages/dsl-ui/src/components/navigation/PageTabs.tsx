@@ -33,15 +33,18 @@ export function PageTabs({ tabs, activeTab, onChange }: PageTabsProps) {
 						<Button
 							key={tab.id}
 							type="button"
-							variant="ghost"
+							variant="chip"
 							role="tab"
 							aria-selected={isActive}
+							size="none"
 							onClick={() => onChange(tab.id)}
 							className={[
-								'px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
+								'px-4 py-2 text-sm font-medium -mb-px transition-colors',
+								// Only the border *colour* is set here - chip's own border-width (1px, all
+								// sides) is left untouched to avoid a width collision on the same element.
 								isActive
-									? 'border-primary text-primary'
-									: 'border-transparent text-muted hover:text-content hover:border-border',
+									? 'border-transparent border-b-primary text-primary'
+									: 'border-transparent text-muted hover:text-content hover:border-b-border',
 							].join(' ')}
 						>
 							{tab.label}

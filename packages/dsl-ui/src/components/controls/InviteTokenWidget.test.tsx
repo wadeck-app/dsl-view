@@ -37,6 +37,14 @@ describe('InviteTokenWidget', () => {
 		expect(screen.getByText('Generate invite token')).toBeInTheDocument();
 	});
 
+	// className ('px-3') used to collide with Button's default SIZE_CLASSES.md ('px-4').
+	it('Copy button has no competing padding source', () => {
+		renderWidget({ inviteToken: 'abc123', onGenerateToken: vi.fn() });
+		const btn = screen.getByText('Copy').closest('button');
+		expect(btn?.className).not.toMatch(/\bpx-4\b/);
+		expect(btn?.className).toMatch(/\bpx-3\b/);
+	});
+
 	it('shows Generate button when inviteToken=undefined', () => {
 		renderWidget({ inviteToken: undefined, onGenerateToken: vi.fn() });
 		expect(screen.getByText('Generate invite token')).toBeInTheDocument();

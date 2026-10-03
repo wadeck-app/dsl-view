@@ -39,6 +39,7 @@ export function InviteTokenWidget({ inviteToken, onGenerateToken, isPending = fa
 				</p>
 				<Button
 					variant="primary"
+					size="none"
 					onClick={onGenerateToken}
 					disabled={isPending}
 					className="px-4 py-2 text-sm font-medium"
@@ -57,6 +58,7 @@ export function InviteTokenWidget({ inviteToken, onGenerateToken, isPending = fa
 				</code>
 				<Button
 					variant="secondary"
+					size="none"
 					onClick={handleCopy}
 					className="px-3 py-2 text-sm font-medium"
 				>

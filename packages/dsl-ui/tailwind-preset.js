@@ -57,6 +57,11 @@ export default {
 	// the exported dslUiContent into their own content array instead.
 	theme: {
 		extend: {
+			// Inter first, falling back to the system stack if a consumer's build somehow
+			// drops theme.css's @font-face (so text never goes fully unstyled/invisible).
+			fontFamily: {
+				sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+			},
 			colors: {
 				primary: 'var(--color-primary)',
 				'primary-solid': 'var(--color-primary-solid)',

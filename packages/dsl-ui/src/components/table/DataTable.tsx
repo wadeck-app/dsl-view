@@ -19,6 +19,7 @@ import { ChevronDown, ChevronRight, ChevronUp, ChevronsUpDown } from 'lucide-rea
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 
 import { Button } from '../controls/_Button.js';
+import { IconButton } from '../controls/IconButton.js';
 import { Checkbox } from '../controls/Checkbox.js';
 import { HttpMethodBadge } from '../display/HttpMethodBadge.js';
 import { HttpStatusBadge } from '../display/HttpStatusBadge.js';
@@ -174,6 +175,9 @@ function normalizeColumn<T extends Record<string, unknown>>(col: RawYamlColumn):
 
 export interface ActionDef<T extends Record<string, unknown>> {
 	label: string;
+	/** Row actions render icon-only (via IconButton) when given. Without one, falls back to a
+	 * labelled text Button and logs a warning - YAML authoring has no way to express a ReactNode yet. */
+	icon?: React.ReactNode;
 	variant?: 'primary' | 'danger' | 'danger-outline' | 'ghost' | 'success';
 	action: string;
 	onClick?: (row: T) => void;
@@ -220,7 +224,9 @@ interface NumberOptions {
 // @formatter:off
 const filtersTopRowClass = 'flex flex-wrap items-center gap-1.5 border-b border-border px-3 py-2';
 const batchToolbarClass = 'flex items-center gap-3 border-b border-primary bg-primary-light px-3 py-2';
-const theadRowClass = 'border-b border-border text-left text-xs text-muted';
+const floatingBatchToolbarClass =
+	'fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-lg border border-primary bg-primary-light px-4 py-2.5 shadow-lg';
+const theadRowClass = 'border-b border-border text-left text-sm text-muted';
 // @formatter:on
 
 export class ColumnHelpers {
@@ -335,6 +341,12 @@ export interface DataTableProps<T extends Record<string, unknown>> {
 	batchActions?: Array<{ label: string; action: string; variant?: 'primary' | 'danger' | 'ghost' | 'success' }>;
 	/** Called when a batch action is triggered with the selected rows. */
 	onBatchAction?: (actionName: string, rows: T[]) => void;
+	/**
+	 * Where the batch-actions bar renders when rows are selected.
+	 * 'floating' (default): a fixed pill at the bottom of the viewport - never shifts the table.
+	 * 'bottom': static, below the table - rows above it never move either way.
+	 */
+	batchActionsPosition?: 'floating' | 'bottom';
 	expansionCondition?: string;
 	/** When true, applies font-mono to the entire table area. */
 	fontMono?: boolean;
@@ -367,6 +379,7 @@ export function DataTable<T extends Record<string, unknown>>({
 	selectable = false,
 	batchActions = [],
 	onBatchAction,
+	batchActionsPosition = 'floating',
 	expansionCondition,
 	fontMono = false,
 }: DataTableProps<T>) {
@@ -497,6 +510,37 @@ export function DataTable<T extends Record<string, unknown>>({
 	const allSelected = currentPageIds.length > 0 && currentPageIds.every(id => selectedIds.includes(id));
 	const someSelected = selectedIds.length > 0 && !allSelected;
 
+	// position:fixed for 'floating' escapes layout entirely, so it never shifts the table
+	// regardless of where in the DOM it renders - 'bottom' stays in flow, after </table>.
+	const batchToolbar = selectable && selectedIds.length > 0 && batchActions.length > 0 && (
+		<div
+			className={batchActionsPosition === 'floating' ? floatingBatchToolbarClass : batchToolbarClass}
+			role="toolbar"
+			aria-label="Batch actions"
+		>
+			<span className="text-xs font-medium text-primary">
+				{selectedIds.length} selected
+			</span>
+			{batchActions.map(action => (
+				<Button
+					key={action.action}
+					type="button"
+					variant={action.variant ?? 'secondary'}
+					size="sm"
+					onClick={() => {
+						const selectedRows = rows.filter(r =>
+							selectedIds.includes(String(r['id'] ?? ''))
+						);
+						onBatchAction?.(action.action, selectedRows);
+						clearSelection();
+					}}
+				>
+					{action.label}
+				</Button>
+			))}
+		</div>
+	);
+
 	return (
 		<DataTableSelectionCtx.Provider value={{ selectedIds, toggleRow, toggleAll, clearSelection }}>
 			<DataTableFilterCtx.Provider value={{ filters: filterState, setFilter, registerFilterPredicate, tableId: id }}>
@@ -518,48 +562,23 @@ export function DataTable<T extends Record<string, unknown>>({
 							{filters}
 						</div>
 					)}
-					{selectable && selectedIds.length > 0 && batchActions.length > 0 && (
-						<div
-							className={batchToolbarClass}
-							role="toolbar"
-							aria-label="Batch actions"
-						>
-							<span className="text-sm font-medium text-primary">
-								{selectedIds.length} selected
-							</span>
-							{batchActions.map(action => (
-								<Button
-									key={action.action}
-									type="button"
-									variant={action.variant ?? 'ghost'}
-									size="sm"
-									onClick={() => {
-										const selectedRows = rows.filter(r =>
-											selectedIds.includes(String(r['id'] ?? ''))
-										);
-										onBatchAction?.(action.action, selectedRows);
-										clearSelection();
-									}}
-								>
-									{action.label}
-								</Button>
-							))}
-						</div>
-					)}
+					{batchActionsPosition === 'bottom' && batchToolbar}
 					<table className="w-full text-sm">
 						<thead>
 							<tr className={theadRowClass}>
 								{selectable && (
 									<th className="w-8 px-3 py-2">
-										<Checkbox
-											checked={allSelected}
-											ref={el => {
-												if (el) el.indeterminate = someSelected;
-											}}
-											onChange={() => toggleAll(currentPageIds)}
-											aria-label="Select all rows on this page"
-											className="cursor-pointer"
-										/>
+										<div className="flex items-center justify-center">
+											<Checkbox
+												checked={allSelected}
+												ref={el => {
+													if (el) el.indeterminate = someSelected;
+												}}
+												onChange={() => toggleAll(currentPageIds)}
+												aria-label="Select all rows on this page"
+												className="cursor-pointer"
+											/>
+										</div>
 									</th>
 								)}
 								{expansion && <th className="w-8" />}
@@ -577,31 +596,28 @@ export function DataTable<T extends Record<string, unknown>>({
 												className="px-3 py-2 font-normal whitespace-nowrap"
 												style={col.width ? { width: `${col.width * 4}px` } : undefined}
 											>
-												<Button
-													type="button"
-													variant="ghost"
-													size="sm"
-													className="select-none"
-													onClick={() => {
-														let newSort: { key: string; dir: SortDir } | null;
-														if (!isActive) {
-															newSort = { key: col.key, dir: 'asc' };
-														} else if (sort!.dir === 'asc') {
-															newSort = { key: col.key, dir: 'desc' };
-														} else {
-															newSort = null;
-														}
-														setSort(newSort);
-														handleSortColChange(newSort?.key ?? '');
-														handleSortDirChange(newSort?.dir ?? 'asc');
-													}}
-												>
-													{col.label}{' '}
-													<SortIcon
-														className={`h-3 w-3 ${!isActive ? 'opacity-30' : ''}`}
-														aria-hidden="true"
+												<span className="inline-flex items-center gap-1 select-none">
+													{col.label}
+													<IconButton
+														icon={<SortIcon className={`h-3 w-3 ${!isActive ? 'opacity-30' : ''}`} aria-hidden="true" />}
+														aria-label={`Sort by ${col.label}`}
+														size="icon-xs"
+														variant="ghost"
+														onClick={() => {
+															let newSort: { key: string; dir: SortDir } | null;
+															if (!isActive) {
+																newSort = { key: col.key, dir: 'asc' };
+															} else if (sort!.dir === 'asc') {
+																newSort = { key: col.key, dir: 'desc' };
+															} else {
+																newSort = null;
+															}
+															setSort(newSort);
+															handleSortColChange(newSort?.key ?? '');
+															handleSortDirChange(newSort?.dir ?? 'asc');
+														}}
 													/>
-												</Button>
+												</span>
 											</th>
 										);
 									}
@@ -655,17 +671,19 @@ export function DataTable<T extends Record<string, unknown>>({
 											onClick={handleRowClick ? () => handleRowClick(row) : undefined}
 										>
 											{selectable && (
-												<td className="w-8 px-3 py-1.5 text-center">
-													<Checkbox
-														checked={selectedIds.includes(String(row['id'] ?? ''))}
-														onChange={e => {
-															e.stopPropagation();
-															toggleRow(String(row['id'] ?? ''));
-														}}
-														onClick={e => e.stopPropagation()}
-														aria-label={`Select row ${String(row['id'] ?? ri)}`}
-														className="cursor-pointer"
-													/>
+												<td className="w-8 px-3 py-1.5">
+													<div className="flex items-center justify-center">
+														<Checkbox
+															checked={selectedIds.includes(String(row['id'] ?? ''))}
+															onChange={e => {
+																e.stopPropagation();
+																toggleRow(String(row['id'] ?? ''));
+															}}
+															onClick={e => e.stopPropagation()}
+															aria-label={`Select row ${String(row['id'] ?? ri)}`}
+															className="cursor-pointer"
+														/>
+													</div>
 												</td>
 											)}
 											{expansion && (
@@ -674,8 +692,7 @@ export function DataTable<T extends Record<string, unknown>>({
 														<Button
 															type="button"
 															variant="ghost"
-															size="sm"
-															className="p-0"
+															size="icon-xs"
 															onClick={e => {
 																e.stopPropagation();
 																setExpandedRow(expandedRow === stableKey ? null : stableKey);
@@ -710,17 +727,35 @@ export function DataTable<T extends Record<string, unknown>>({
 									return null;
 								}
 																	}
+																	if (!item.icon) {
+																		// Loud, because the alternative is an invisible icon-only
+																		// button - see IconButton's required `icon` prop below.
+																		console.warn(
+																			'[DataTable] action "%s" has no icon: falling back to a text button. Row actions render icon-only; pass an `icon` to use that.',
+																			item.action
+																		);
+																		return (
+																			<Button
+																				key={ii}
+																				type="button"
+																				variant={item.variant ?? 'ghost'}
+																				size="sm"
+																				onClick={() => onAction?.(item.action, row)}
+																				aria-label={item.label}
+																			>
+																				{item.label}
+																			</Button>
+																		);
+																	}
 																	return (
-																		<Button
+																		<IconButton
 																			key={ii}
-																			type="button"
-																			variant={item.variant ?? 'ghost'}
-																			size="sm"
-																			onClick={() => onAction?.(item.action, row)}
+																			icon={item.icon}
 																			aria-label={item.label}
-																		>
-																			{item.label}
-																		</Button>
+																			variant={item.variant ?? 'ghost'}
+																			size="icon-xs"
+																			onClick={() => onAction?.(item.action, row)}
+																		/>
 																	);
 																})}
 															</div>
@@ -773,6 +808,7 @@ export function DataTable<T extends Record<string, unknown>>({
 						</tbody>
 					</table>
 				</div>
+				{batchActionsPosition === 'floating' && batchToolbar}
 			</DataTableFilterCtx.Provider>
 		</DataTableSelectionCtx.Provider>
 	);

@@ -1,7 +1,5 @@
 import React from 'react';
 
-import { X } from 'lucide-react';
-
 import { type ChipColor } from '@dsl-ui/utils/chipColors.js';
 import { Button } from '../controls/_Button.js';
 import { ChipButton } from '../controls/ChipButton.js';
@@ -50,6 +48,7 @@ export function FilterBar({
 					value={search ?? ''}
 					onChange={onSearchChange}
 					placeholder={placeholder}
+					size="sm"
 				/>
 			)}
 
@@ -69,8 +68,7 @@ export function FilterBar({
 			)}
 
 			{showClearAll && (
-				<Button variant="ghost" size="sm" onClick={onClearAll}>
-					<X className="h-3.5 w-3.5" aria-hidden="true" />
+				<Button variant="link" size="none" onClick={onClearAll} className="text-xs">
 					Clear all
 				</Button>
 			)}

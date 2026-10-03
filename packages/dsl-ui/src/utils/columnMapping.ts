@@ -43,8 +43,9 @@ export function resolveColumn<T extends Record<string, unknown>>(
 ): TableColumn<T> {
 	if ((col as YamlActionsColumn).type === 'actions') {
 		const ac = col as YamlActionsColumn;
+		// YAML has no way to express a ReactNode icon yet - icon stays undefined for YAML-authored actions.
 		return ColumnHelpers.actions(
-			ac.items.map(item => ({ label: item.label, variant: item.variant, action: item.action, condition: item.condition }))
+			ac.items.map(item => ({ label: item.label, icon: undefined, variant: item.variant, action: item.action, condition: item.condition }))
 		);
 	}
 	const dc = col as YamlDataColumn;

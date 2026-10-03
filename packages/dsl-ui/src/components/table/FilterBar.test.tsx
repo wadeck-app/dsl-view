@@ -82,4 +82,20 @@ describe('FilterBar', () => {
 		expect(screen.getByRole('search')).toBeInTheDocument();
 		expect(screen.queryByText('Clear all')).toBeNull();
 	});
+
+	// Used to render SearchBar at its default 'md' scale, taller than the chips beside it.
+	it('renders its SearchBar at the chip-matching "sm" scale, not the default "md"', () => {
+		render(<FilterBar search="" onSearchChange={vi.fn()} filters={filters} />);
+		const icon = screen.getByRole('search').querySelector('svg');
+		expect(icon).toHaveClass('h-3', 'w-3');
+		expect(icon).not.toHaveClass('h-3.5');
+	});
+
+	// "Clear all" is a tertiary reset action, not a boxed button - no icon, link style.
+	it('renders "Clear all" as a link, with no icon and no button chrome', () => {
+		render(<FilterBar filters={filters} search="" onSearchChange={vi.fn()} onClearAll={vi.fn()} />);
+		const btn = screen.getByText('Clear all').closest('button');
+		expect(btn?.querySelector('svg')).toBeNull();
+		expect(btn?.className).toMatch(/\btext-primary\b/);
+	});
 });

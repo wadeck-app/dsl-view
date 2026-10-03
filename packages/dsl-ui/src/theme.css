@@ -18,6 +18,38 @@
  * having Tailwind's layers injected a second time.
  */
 
+/* ─── Base font (Inter) ──────────────────────────────────────────── */
+/* Self-hosted (not a Google Fonts @import) so apps work offline and behind a strict CSP.
+   Latin subset only (U+0000-00FF) - covers French accents (é, è, à, ç, ù, â, î, ô, û, ë, ï, ü). */
+@font-face {
+	font-family: 'Inter';
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+	src: url('./fonts/inter/inter-latin-400-normal.woff2') format('woff2');
+}
+@font-face {
+	font-family: 'Inter';
+	font-style: normal;
+	font-weight: 500;
+	font-display: swap;
+	src: url('./fonts/inter/inter-latin-500-normal.woff2') format('woff2');
+}
+@font-face {
+	font-family: 'Inter';
+	font-style: normal;
+	font-weight: 600;
+	font-display: swap;
+	src: url('./fonts/inter/inter-latin-600-normal.woff2') format('woff2');
+}
+@font-face {
+	font-family: 'Inter';
+	font-style: normal;
+	font-weight: 700;
+	font-display: swap;
+	src: url('./fonts/inter/inter-latin-700-normal.woff2') format('woff2');
+}
+
 /* ─── Design tokens (light) ─────────────────────────────────────── */
 /* `.light` and [data-theme='light'] are here, not in a block of their own, so the light palette
    is defined exactly once and a scope cannot drift from the root.
