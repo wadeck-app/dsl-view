@@ -134,7 +134,11 @@ export function useSourceLoader(params: {
 								resolvedUrl = substituteUrlParams(spec.url, resolvedParams);
 								// Skip this source if any path placeholder resolved to empty - avoids malformed URLs
 								const pathPlaceholders = [...spec.url.matchAll(/\{([^}]+)\}/g)].map(match => match[1]!);
-								if (pathPlaceholders.some(p => !resolvedParams[p])) {
+								const emptyPlaceholders = pathPlaceholders.filter(p => !resolvedParams[p]);
+								if (emptyPlaceholders.length > 0) {
+									console.warn(
+										`[useSourceLoader] Skipping source "${key}" (${spec.url}): path placeholder(s) ${emptyPlaceholders.map(p => `"${p}"`).join(', ')} resolved to empty.`
+									);
 									return;
 								}
 								// Append params that weren't consumed as path placeholders as query string

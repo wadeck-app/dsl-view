@@ -156,9 +156,10 @@ describe('useSourceLoader', () => {
 			);
 		});
 
-		it('missing path placeholder skips the source', async () => {
+		it('missing path placeholder skips the source and warns', async () => {
 			const fetcher = vi.fn().mockResolvedValue([]);
 			const searchParams = new URLSearchParams(); // no 'id' param
+			const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
 			const { result } = renderHook(() =>
 				useSourceLoader({
@@ -170,6 +171,9 @@ describe('useSourceLoader', () => {
 
 			await waitFor(() => expect(result.current.loading).toBe(false));
 			expect(fetcher).not.toHaveBeenCalled();
+			expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('"id"'));
+
+			warnSpy.mockRestore();
 		});
 
 		it('reloads url-param-dependent sources when searchParams changes', async () => {
