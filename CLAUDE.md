@@ -36,7 +36,9 @@ Build each package: `npm run build` inside its directory.
 
 `/c/Workspace_Other/capability-framework` - check there for real-world usage patterns (contracts package, custom UI library, app setup, YAML examples).
 
-The `packages/dsl-renderer/` and `packages/dsl-ui/` directories inside capability-framework are **source mirrors** kept for dev-time hot module reloading only. The authoritative source is this repo. Do not treat capability-framework copies as canonical when they diverge.
+capability-framework consumes the real published `@wadeck-app/dsl-renderer` / `@wadeck-app/dsl-ui` packages, pinned to the `edge` dist-tag. dsl-view's CI publishes a new `edge` build on every push to `main`, so changes here reach consumers within about a minute — no local linking needed.
+
+The `packages/dsl-renderer/` and `packages/dsl-ui/` directories still physically present inside capability-framework are orphaned leftovers from before an Aug 2026 migration (commit `26ad35d`) and are not wired into any active build there (removed from its npm `workspaces` array). Treat them as dead code, not as a second source of truth.
 
 ## Consumer documentation
 
