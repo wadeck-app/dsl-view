@@ -107,6 +107,63 @@ describe('DslRenderer', () => {
 	});
 });
 
+describe('ExtensionSlot', () => {
+	it('renders each item from a resolved $sources array, in order', () => {
+		const ctx = {
+			contributions: [
+				{ $type: 'TextBox', text: 'first' },
+				{ $type: 'TextBox', text: 'second' },
+			],
+		};
+		render(<DslRenderer node={{ $type: 'ExtensionSlot', items: '$sources.contributions' }} registry={registry} ctx={ctx} />);
+		const textboxes = screen.getAllByTestId('textbox');
+		expect(textboxes).toHaveLength(2);
+		expect(textboxes[0]).toHaveTextContent('first');
+		expect(textboxes[1]).toHaveTextContent('second');
+	});
+
+	it('renders nothing when the resolved array is empty', () => {
+		const { container } = render(
+			<DslRenderer node={{ $type: 'ExtensionSlot', items: '$sources.contributions' }} registry={registry} ctx={{ contributions: [] }} />
+		);
+		expect(container.firstChild).toBeNull();
+	});
+
+	it('shows an alert when "items" does not resolve to an array', () => {
+		render(
+			<DslRenderer
+				node={{ $type: 'ExtensionSlot', items: '$sources.missing' }}
+				registry={registry}
+				ctx={{}}
+			/>
+		);
+		expect(screen.getByRole('alert')).toHaveTextContent(/did not resolve to an array/i);
+	});
+
+	it('respects $if: hides the slot entirely when false', () => {
+		const { container } = render(
+			<DslRenderer
+				node={{ $type: 'ExtensionSlot', items: '$sources.contributions', $if: '$show' }}
+				registry={registry}
+				ctx={{ show: false, contributions: [{ $type: 'TextBox', text: 'hidden' }] }}
+			/>
+		);
+		expect(container.firstChild).toBeNull();
+	});
+
+	it('does not require a registry entry named ExtensionSlot', () => {
+		expect(registry['ExtensionSlot']).toBeUndefined();
+		render(
+			<DslRenderer
+				node={{ $type: 'ExtensionSlot', items: '$sources.contributions' }}
+				registry={registry}
+				ctx={{ contributions: [{ $type: 'TextBox', text: 'ok' }] }}
+			/>
+		);
+		expect(screen.getByTestId('textbox')).toHaveTextContent('ok');
+	});
+});
+
 describe('resolveExpressionValue', () => {
 	const ctx = {
 		'$vars': { name: 'Alice', nested: { key: 'deep-value' } },

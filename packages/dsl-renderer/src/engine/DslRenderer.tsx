@@ -19,10 +19,18 @@ export interface RendererProps {
 
 const KNOWN_DSL_KEYS = new Set(['$if', '$source', '$context', '$route', '$extends', '$type', '$id', '$outputs']);
 
+// Built-in directive, not a registry component: it needs resolveExpressionValue + renderChildren
+// in the same scope to splice a $sources-backed array of DSL nodes into the tree.
+const EXTENSION_SLOT_TYPE = 'ExtensionSlot';
+
 export function DslRenderer({ node, registry, ctx = {} }: RendererProps): React.ReactElement | null {
 	const type = node['$type'] as string | undefined;
 	if (!type) {
 		return null;
+	}
+
+	if (type === EXTENSION_SLOT_TYPE) {
+		return renderExtensionSlot(node, registry, ctx);
 	}
 
 	const entry = registry[type];
@@ -127,6 +135,34 @@ export function DslRenderer({ node, registry, ctx = {} }: RendererProps): React.
 	}
 
 	return entry.render({ node, registry, ctx: childCtx });
+}
+
+// items ordering/multiplicity is owned by whatever populates the $sources entry (e.g. a server-side
+// slot endpoint) - renderChildren just renders the array in the order it arrives.
+function renderExtensionSlot(
+	node: Record<string, unknown>,
+	registry: ComponentRegistry,
+	ctx: RenderContext
+): React.ReactElement | null {
+	const ifExpr = node['$if'] as string | undefined;
+	if (ifExpr) {
+		const resolved = resolveExpressionValue(ifExpr, ctx);
+		if (!resolved) {
+			return null;
+		}
+	}
+
+	const itemsExpr = node['items'];
+	const items = resolveExpressionValue(itemsExpr, ctx);
+	if (!Array.isArray(items)) {
+		return (
+			<div role="alert">
+				<strong>[ExtensionSlot] &quot;items&quot; did not resolve to an array:</strong> <code>{String(itemsExpr)}</code>
+			</div>
+		);
+	}
+
+	return <>{renderChildren(items, registry, ctx)}</>;
 }
 
 export function resolveExpressionValue(expr: unknown, ctx: RenderContext): unknown {

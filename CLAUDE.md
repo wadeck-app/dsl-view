@@ -36,7 +36,9 @@ Build each package: `npm run build` inside its directory.
 
 `/c/Workspace_Other/capability-framework` - check there for real-world usage patterns (contracts package, custom UI library, app setup, YAML examples).
 
-capability-framework consumes the real published `@wadeck-app/dsl-renderer` / `@wadeck-app/dsl-ui` packages, pinned to the `edge` dist-tag. dsl-view's CI publishes a new `edge` build on every push to `main`, so changes here reach consumers within about a minute — no local linking needed.
+capability-framework consumes the real published `@wadeck-app/dsl-renderer` / `@wadeck-app/dsl-ui` packages, tracking the `latest` dist-tag. dsl-view's CI publishes a new `latest` build on every push to `main`, so changes here reach consumers within about a minute — no local linking needed.
+
+Note: `.github/workflows/publish.yml` calls `wadeck-app/ci-templates`'s `compute-version` action, which can in principle publish under a different dist-tag (e.g. for breaking changes) — but only when a manual `version` input is supplied via `workflow_dispatch`. On a normal push to `main` (no manual input), the action's `else` branch hardcodes `dist_tag=latest` regardless of any breaking-change flag — confirmed 2026-10-11 by reading `compute-version/action.yml` directly. There is currently no dist-tag-based signal that would warn an unpinned `latest` consumer of a breaking change.
 
 The `packages/dsl-renderer/` and `packages/dsl-ui/` directories still physically present inside capability-framework are orphaned leftovers from before an Aug 2026 migration (commit `26ad35d`) and are not wired into any active build there (removed from its npm `workspaces` array). Treat them as dead code, not as a second source of truth.
 
