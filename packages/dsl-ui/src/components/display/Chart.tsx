@@ -40,6 +40,7 @@ export interface ChartProps {
 /**
  * @registryCategory composite
  * @registryTags chart
+ * @registryLazy
  */
 export function Chart({ data, xAxisKey, xAxisType, height = 300, series }: ChartProps) {
 	const hasRightAxis = series.some(s => s.yAxisId === 'right');

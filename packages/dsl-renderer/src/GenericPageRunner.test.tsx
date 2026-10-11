@@ -367,4 +367,112 @@ sections:
 			expect(display).toHaveTextContent('$tick');
 		});
 	});
+
+	// -------------------------------------------------------------------------
+	// Test: @registryLazy-style entry (React.lazy component) renders behind Suspense
+	// -------------------------------------------------------------------------
+
+	it('renders a React.lazy-wrapped entry and shows suspenseFallback while its chunk loads', async () => {
+		let resolveImport!: () => void;
+		const importPromise = new Promise<{ default: React.ComponentType }>(resolve => {
+			resolveImport = () => resolve({ default: () => <div data-testid="lazy-loaded">loaded</div> });
+		});
+		const LazyComp = React.lazy(() => importPromise);
+
+		const LazyEntry: ComponentRegistryEntry = {
+			name: 'LazyComp',
+			category: 'atomic',
+			tags: [],
+			render: () => <LazyComp />,
+		};
+		const lazyRegistry = createRegistry([LazyEntry]);
+
+		render(
+			<MemoryRouter>
+				<GenericPageRunner
+					yamlText={`$type: LazyComp`}
+					registry={lazyRegistry}
+					fetcher={vi.fn().mockResolvedValue({})}
+					brainRegistry={{}}
+					suspenseFallback={<div data-testid="loading-fallback">loading...</div>}
+				/>
+			</MemoryRouter>
+		);
+
+		expect(screen.getByTestId('loading-fallback')).toBeInTheDocument();
+
+		resolveImport();
+
+		await waitFor(() => {
+			expect(screen.getByTestId('lazy-loaded')).toBeInTheDocument();
+		});
+	});
+
+	it('warns when suspenseFallback is not passed and a lazy component is pending', async () => {
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		let resolveImport!: () => void;
+		const importPromise = new Promise<{ default: React.ComponentType }>(resolve => {
+			resolveImport = () => resolve({ default: () => <div data-testid="lazy-loaded">loaded</div> });
+		});
+		const LazyComp = React.lazy(() => importPromise);
+		const LazyEntry: ComponentRegistryEntry = {
+			name: 'LazyComp',
+			category: 'atomic',
+			tags: [],
+			render: () => <LazyComp />,
+		};
+		const lazyRegistry = createRegistry([LazyEntry]);
+
+		render(
+			<MemoryRouter>
+				<GenericPageRunner
+					yamlText={`$type: LazyComp`}
+					registry={lazyRegistry}
+					fetcher={vi.fn().mockResolvedValue({})}
+					brainRegistry={{}}
+				/>
+			</MemoryRouter>
+		);
+
+		await waitFor(() => {
+			expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('suspenseFallback'));
+		});
+
+		resolveImport();
+		await waitFor(() => expect(screen.getByTestId('lazy-loaded')).toBeInTheDocument());
+		warnSpy.mockRestore();
+	});
+
+	it('does not warn when suspenseFallback is explicitly passed as null', async () => {
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		let resolveImport!: () => void;
+		const importPromise = new Promise<{ default: React.ComponentType }>(resolve => {
+			resolveImport = () => resolve({ default: () => <div data-testid="lazy-loaded">loaded</div> });
+		});
+		const LazyComp = React.lazy(() => importPromise);
+		const LazyEntry: ComponentRegistryEntry = {
+			name: 'LazyComp',
+			category: 'atomic',
+			tags: [],
+			render: () => <LazyComp />,
+		};
+		const lazyRegistry = createRegistry([LazyEntry]);
+
+		render(
+			<MemoryRouter>
+				<GenericPageRunner
+					yamlText={`$type: LazyComp`}
+					registry={lazyRegistry}
+					fetcher={vi.fn().mockResolvedValue({})}
+					brainRegistry={{}}
+					suspenseFallback={null}
+				/>
+			</MemoryRouter>
+		);
+
+		resolveImport();
+		await waitFor(() => expect(screen.getByTestId('lazy-loaded')).toBeInTheDocument());
+		expect(warnSpy).not.toHaveBeenCalled();
+		warnSpy.mockRestore();
+	});
 });

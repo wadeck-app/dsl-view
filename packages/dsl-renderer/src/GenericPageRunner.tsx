@@ -18,9 +18,37 @@ export interface GenericPageRunnerProps {
 	getToken?: () => Promise<string | null>;
 	fetcher: Fetcher;
 	brainRegistry?: BrainRegistry;
+	/**
+	 * Backstop fallback for a hand-authored `ComponentRegistryEntry` using bare `React.lazy`
+	 * with no `Suspense` ancestor of its own. Generated `@registryLazy` entries never reach
+	 * this - they wrap their own output in `LazyBoundary` (see engine/LazyBoundary.tsx), which
+	 * has its own fallback and warning. Pass `null` explicitly to opt into no visible fallback
+	 * without a console warning.
+	 */
+	suspenseFallback?: React.ReactNode;
 }
 
-export function GenericPageRunner({ yamlText, registry, getToken, fetcher, brainRegistry }: GenericPageRunnerProps) {
+// Renders only while nothing was passed for `suspenseFallback` - warns once per mount so a
+// blank loading state is never silent (vs. an explicit `null`). Only reachable by a
+// hand-authored lazy entry with no Suspense ancestor of its own - see prop doc above.
+function SuspenseFallbackNotConfiguredWarning(): null {
+	React.useEffect(() => {
+		console.warn(
+			'[GenericPageRunner] A lazily-loaded component is fetching its chunk and no `suspenseFallback` prop was passed - rendering nothing visible. ' +
+				'Pass `suspenseFallback` to show a loading state, or pass `null` explicitly to silence this warning.'
+		);
+	}, []);
+	return null;
+}
+
+export function GenericPageRunner({
+	yamlText,
+	registry,
+	getToken,
+	fetcher,
+	brainRegistry,
+	suspenseFallback,
+}: GenericPageRunnerProps) {
 	const doc = useMemo(() => parseYaml(yamlText) as PageSpec & Record<string, unknown>, [yamlText]);
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars -- $route stripped from spread so it doesn't reach the render tree
@@ -82,5 +110,9 @@ export function GenericPageRunner({ yamlText, registry, getToken, fetcher, brain
 		$brains: brainResults,
 	};
 
-	return <DslRenderer node={node as Record<string, unknown>} registry={registry} ctx={ctx} />;
+	return (
+		<React.Suspense fallback={suspenseFallback !== undefined ? suspenseFallback : <SuspenseFallbackNotConfiguredWarning />}>
+			<DslRenderer node={node as Record<string, unknown>} registry={registry} ctx={ctx} />
+		</React.Suspense>
+	);
 }

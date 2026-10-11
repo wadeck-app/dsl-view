@@ -199,8 +199,13 @@ import { appRegistry } from './registry.js';
   }}
   getToken={() => Promise.resolve(localStorage.getItem('token'))}  // optional
   brainRegistry={{}}   // optional custom brains
+  suspenseFallback={<Spinner />}   // optional, see below — irrelevant for generated @registryLazy entries
 />
 ```
+
+`GenericPageRunner` always wraps its render tree in one page-level `<Suspense>`, but this is a no-op for generated `@registryLazy` entries — `LazyBoundary` (see above) already resolves their suspension locally before it ever reaches this outer boundary. `suspenseFallback` only matters for a hand-authored `ComponentRegistryEntry` using bare `React.lazy` with no `Suspense` ancestor of its own; omitting it warns once in the dev console (pass `null` explicitly to silence it).
+
+There is deliberately no page-level error boundary: catching every rendering error (not just a failed lazy chunk) would mask unrelated bugs behind a misleading message. `LazyBoundary` already warns in the console when a `@registryLazy` component's chunk is loading (no visible fallback configurable per-component for v1) and catches a rejected import with a visible error scoped to that component's own slot. If you hand-author a `ComponentRegistryEntry` using `React.lazy` yourself, wrap its output in `LazyBoundary` for the same containment.
 
 ---
 
@@ -238,6 +243,8 @@ interface FieldSelectSourceProps {
 Skipped props: `className`, `style`, `ref`, `key`, `aria-*`, `data-*`.
 
 Components without `@registryCategory` are silently skipped — no warning.
+
+`@registryLazy` — component is `React.lazy()`-wrapped and split into its own chunk instead of statically imported. Opt in per component, for ones with a heavy own dependency (e.g. `Chart`/recharts cut app-core's bundle ~40%). The generated entry wraps just that component's own output in `LazyBoundary` (exported from `@wadeck-app/dsl-renderer`), so both a loading chunk and a failed chunk load only affect its own slot, not the rest of the page.
 
 ---
 
