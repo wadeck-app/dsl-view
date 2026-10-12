@@ -257,7 +257,6 @@ function AdminDashboardPage() {
 							onPageChange={setPage}
 							total={filteredUsers.length}
 							size={PAGE_SIZE}
-							onSizeChange={() => undefined}
 						/>
 					</Section>
 				</>

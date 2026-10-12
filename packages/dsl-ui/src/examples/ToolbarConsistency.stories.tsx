@@ -67,7 +67,7 @@ function ToolbarConsistencyPage() {
 
 			<div>
 				<RowLabel>Pagination (Button size=&quot;sm&quot;, 14px icon)</RowLabel>
-				<Pagination page={page} onPageChange={setPage} total={100} size={10} onSizeChange={() => undefined} />
+				<Pagination page={page} onPageChange={setPage} total={100} size={10} />
 			</div>
 
 			<div>

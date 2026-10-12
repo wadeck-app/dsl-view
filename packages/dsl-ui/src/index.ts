@@ -9,3 +9,8 @@ export * from './components/overlay/index.js';
 export * from './components/table/index.js';
 
 export { RouterContext } from './RouterContext.js';
+export { UrlParamContext, useUrlParam, useOptionalUrlParam } from './context/UrlParamContext.js';
+export type { UrlParamService } from './context/UrlParamContext.js';
+export { useTheme } from './context/useTheme.js';
+export { ThemeContext } from './context/ThemeContext.js';
+export type { ThemeMode } from './context/ThemeContext.js';

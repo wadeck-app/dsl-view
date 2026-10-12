@@ -484,7 +484,6 @@ export const FullAdminTable: Story = {
 					onPageChange={setPage}
 					total={total}
 					size={PAGE_SIZE}
-					onSizeChange={() => {}}
 				/>
 
 				<Drawer

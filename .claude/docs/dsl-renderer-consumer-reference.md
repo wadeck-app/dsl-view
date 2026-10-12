@@ -248,6 +248,39 @@ Components without `@registryCategory` are silently skipped — no warning.
 
 ---
 
+## URL-param-backed components
+
+`$sources` reactively refetches when a `params` value references `$urlParam.<key>` or `$route.<key>` (see `useSourceLoader`'s `searchParams`/`routeParams` watch) — but only a real react-router URL change triggers it, not a `$vars`/`$outputs` change. A component makes a click actually cause that refetch by writing the URL itself, via `useUrlParam`/`useOptionalUrlParam` from `@wadeck-app/dsl-ui`:
+
+```tsx
+import { useOptionalUrlParam } from '@wadeck-app/dsl-ui';
+
+export function MyWidget({ urlParam, value, onChange }: { urlParam?: string; value?: number; onChange?: (n: number) => void }) {
+  const [urlValue, setUrlValue] = useOptionalUrlParam(urlParam);
+  const activeValue = urlParam ? Number(urlValue) : value;
+  const change = urlParam ? (n: number) => setUrlValue(String(n)) : onChange;
+  // ...
+}
+```
+
+`useOptionalUrlParam(undefined)` returns `[null, noop]` — the component falls back to its own controlled `value`/`onChange` props. `useUrlParam(key)` is the non-optional variant (throws without a `UrlParamContext` provider, i.e. outside `RouterProvider`). Both call react-router's `setSearchParams` under the hood (soft URL update, no reload), so `useSourceLoader`'s reactive watch picks it up.
+
+This is the sanctioned mechanism for any `dsl-ui-*` component accepting a `urlParam: foo` YAML prop — use it instead of hand-rolling react-router plumbing per component. `Pagination` and `PageSizeSelect` are the first two adopters:
+
+```yaml
+- $type: Pagination
+  urlParam: page        # 0-based, backed by ?page= in the URL
+  total: $sources.rows.total
+  size: $sources.rows.limit
+- $type: PageSizeSelect
+  urlParam: size         # backed by ?size= in the URL
+  options: [25, 50, 100]
+```
+
+Omit `urlParam` to use either component in plain controlled mode (`page`/`onPageChange`, `value`/`onChange`).
+
+---
+
 ## Generated files
 
 Both files are auto-generated at `vite dev` / `vite build` start and committed to the repo.
@@ -256,6 +289,69 @@ Both files are auto-generated at `vite dev` / `vite build` start and committed t
 |------|-----------|-------------|
 | `src/generated/entries.tsx` | `entriesGenerator` | ✓ |
 | `src/generated/page-types.ts` | `pageTypesGenerator` | ✓ |
+
+dsl-renderer generates nothing else — in particular, not the app shell. `App.tsx` (routes, nav, layout) is hand-written by the consumer and lives at `src/App.tsx`, importing `@wadeck-app/dsl-renderer`/`@wadeck-app/dsl-ui` as plain bare package imports (no aliases, no relative paths into these packages) — confirmed in `orch-app`, `dsl-library-app`, `dsl-agent-fleet-app`. If an app adds its own local, unpublished generator for its App.tsx (e.g. `dsl-wdrive-app`'s `appGenerator.ts`), that output belongs under `src/generated/` too, for the same "do not edit" signal — it's an app-specific extension, not something dsl-renderer provides.
+
+---
+
+## Compiled DSL artifacts and check-dsl CI
+
+`compileDslDocument`/`compileDslPagesDir` (from `@wadeck-app/dsl-renderer/build/dslCompiler`, Node-only) pre-parse a page's YAML and run the DSL's *static* checks — unknown `$type`, unknown `$`-directive, `nodeSchema` failures — ahead of time, so a broken page fails CI instead of showing a red error box to a user.
+
+Not checked at compile time (need runtime `$sources` data): `ctxSchema`, and whether `$context.expose` references a ctx key that actually exists. `DslRenderer.tsx` still checks both of these at render, in dev, regardless of whether the page was compiled.
+
+### `scripts/check-dsl.ts` (consuming app, not shipped by dsl-renderer)
+
+```ts
+import path from 'path';
+import { compileDslPagesDir } from '@wadeck-app/dsl-renderer/build/dslCompiler';
+import { appRegistry } from '../src/registry.js';
+
+const { results, hasErrors } = compileDslPagesDir(path.join(__dirname, '../src/dsl/pages'), appRegistry);
+
+for (const artifact of results) {
+  for (const d of artifact.diagnostics) {
+    console[d.severity === 'error' ? 'error' : 'warn'](`${artifact.sourcePath} ${d.nodePath} [${d.code}] ${d.message}`);
+  }
+}
+
+process.exit(hasErrors ? 1 : 0);
+```
+
+Wire it into CI as its own step, e.g. `"dsl:check": "tsx scripts/check-dsl.ts"` in `package.json`, run before `npm run build`. There is no Vite plugin wrapper for this — it's a plain Node script, same model as `pageTypesGenerator` but invoked standalone instead of from `vite.config.ts`.
+
+### Example: a page with an error
+
+```yaml
+# src/dsl/pages/items.yaml
+$type: DataTbale        # typo — not a registered component
+rows: $sources.items
+```
+
+```
+src/dsl/pages/items.yaml $ [unknown-component-type] Unknown component type: DataTbale
+```
+Exit code `1`, build fails before deploy — instead of every user who opens this page seeing the red error box.
+
+### Consuming a compiled artifact at runtime (optional)
+
+`GenericPageRunner` accepts a pre-compiled artifact instead of `yamlText` — skips the per-mount YAML parse:
+
+```tsx
+import compiled from './dsl/pages/items.compiled.json';  // produced by your own build step from compileDslDocument()
+import { GenericPageRunner } from '@wadeck-app/dsl-renderer';
+
+<GenericPageRunner compiled={compiled} registry={appRegistry} fetcher={fetcher} />
+```
+
+Rules enforced by `GenericPageRunner` itself:
+- Neither `yamlText` nor `compiled` passed → throws (programming error).
+- `compiled.formatVersion` doesn't match the installed `@wadeck-app/dsl-renderer`'s `COMPILED_DSL_FORMAT_VERSION` → throws (artifact shape may be incompatible).
+- `compiled.registryFingerprint` (from `computeRegistryFingerprint(appRegistry)` at compile time) doesn't match the current registry's fingerprint → `console.warn`, unconditionally (also in production), then renders anyway. This means an artifact compiled against an older/different registry is never silently stale — it warns every time, every environment, until recompiled.
+
+The fingerprint is a structural hash (component names, categories, presence of `nodeSchema`/`ctxSchema`, `allowedChildren` keys) — best-effort drift detection, not a content hash of what's inside a schema. Changing what a `nodeSchema` validates internally, without adding/removing it, won't change the fingerprint or trigger the warning.
+
+Packaging/distributing a `.compiled.json` artifact (zip, install, versioning) is **not** covered by dsl-renderer — that's app-core's domain. This only defines the artifact format and the two consumption points (`compileDslPagesDir` at build time, `compiled` prop at render time).
 
 ---
 
@@ -267,3 +363,6 @@ Both files are auto-generated at `vite dev` / `vite build` start and committed t
 - `dsl.config.yaml` must be adjacent to `vite.config.ts` — `entriesGenerator` auto-discovers it there.
 - A URL in `$sources` that doesn't match the contract generates `@ts-expect-error` in `page-types.ts`, failing the TypeScript build.
 - `src/generated/` is committed so editors have types without running the dev server; do not gitignore it.
+- `compileDslPagesDir`/`compileDslDocument` only catch static DSL errors (`$type`, `$`-directives, `nodeSchema`) — a page can still fail at runtime on `ctxSchema` or a bad `$context.expose`, since those depend on `$sources` data not available at compile time.
+- A compiled artifact's `registryFingerprint` mismatch only warns, it never blocks rendering — don't rely on it as a build gate; use `compileDslPagesDir`'s `hasErrors` in CI for that.
+- A `urlParam: foo` prop only does anything if the component itself calls `useUrlParam`/`useOptionalUrlParam` — passing it to a component that doesn't (most components, before this was introduced) silently resolves to a plain string prop with no wiring. Any page YAML written before this pattern existed (e.g. passing `urlParam:`/`default:` to a component whose props never included them) is stale and should not be copied as a working reference.
