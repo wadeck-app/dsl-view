@@ -190,31 +190,30 @@ describe('useSourceLoader', () => {
 				{ initialProps: { sp: initialSearchParams } }
 			);
 
-			// Wait for initial load with the first date
-			await waitFor(() =>
-				expect(fetcher).toHaveBeenCalledWith(
-					expect.stringContaining('2026-01-01'),
-					undefined,
-					undefined,
-					undefined
-				)
+			// Wait for initial load with the first date - exact count, not just "called with",
+			// so a regression firing the same searchParams change twice doesn't slip through.
+			await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
+			expect(fetcher).toHaveBeenCalledWith(
+				expect.stringContaining('2026-01-01'),
+				undefined,
+				undefined,
+				undefined
 			);
-
-			const callsAfterInitial = fetcher.mock.calls.length;
 
 			// Update searchParams with a new date
 			rerender({ sp: new URLSearchParams('date=2026-01-02') });
 
-			// Should fire fetcher again with the new date
-			await waitFor(() =>
-				expect(fetcher).toHaveBeenCalledWith(
-					expect.stringContaining('2026-01-02'),
-					undefined,
-					undefined,
-					undefined
-				)
+			// Should fire fetcher exactly once more, with the new date
+			await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
+			expect(fetcher).toHaveBeenCalledWith(
+				expect.stringContaining('2026-01-02'),
+				undefined,
+				undefined,
+				undefined
 			);
-			expect(fetcher.mock.calls.length).toBeGreaterThan(callsAfterInitial);
+			// Give any extra, unwanted fetch a chance to land before asserting it didn't.
+			await new Promise(r => setTimeout(r, 50));
+			expect(fetcher).toHaveBeenCalledTimes(2);
 		});
 
 		it('resolves $route.* params in source URL', async () => {
