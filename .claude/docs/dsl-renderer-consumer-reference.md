@@ -184,23 +184,31 @@ export const appRegistry = createRegistry(allEntries);
 
 ## Runtime
 
+`RouterProvider` (from `@wadeck-app/dsl-ui`) must wrap the app, inside a react-router `BrowserRouter` — required for any `urlParam`-backed component (`Pagination`, `PageSizeSelect`, anything using `useUrlParam`/`useOptionalUrlParam`). Omitting it doesn't degrade gracefully: the page throws `useOptionalUrlParam(...) requires UrlParamContext` and renders blank.
+
 ```tsx
 import pageYaml from './dsl/pages/items.yaml?raw';  // ?raw required
 import { GenericPageRunner } from '@wadeck-app/dsl-renderer';
+import { RouterProvider } from '@wadeck-app/dsl-ui';
+import { BrowserRouter } from 'react-router-dom';
 import { appRegistry } from './registry.js';
 
-<GenericPageRunner
-  yamlText={pageYaml}
-  registry={appRegistry}
-  fetcher={async (urlSpec, params?, body?, headers?) => {
-    // urlSpec is e.g. "GET /api/items/" or "PATCH /api/items/{id}"
-    // params contains substituted path vars
-    // return the parsed response body
-  }}
-  getToken={() => Promise.resolve(localStorage.getItem('token'))}  // optional
-  brainRegistry={{}}   // optional custom brains
-  suspenseFallback={<Spinner />}   // optional, see below — irrelevant for generated @registryLazy entries
-/>
+<BrowserRouter>
+  <RouterProvider>
+    <GenericPageRunner
+      yamlText={pageYaml}
+      registry={appRegistry}
+      fetcher={async (urlSpec, params?, body?, headers?) => {
+        // urlSpec is e.g. "GET /api/items/" or "PATCH /api/items/{id}"
+        // params contains substituted path vars
+        // return the parsed response body
+      }}
+      getToken={() => Promise.resolve(localStorage.getItem('token'))}  // optional
+      brainRegistry={{}}   // optional custom brains
+      suspenseFallback={<Spinner />}   // optional, see below — irrelevant for generated @registryLazy entries
+    />
+  </RouterProvider>
+</BrowserRouter>
 ```
 
 `GenericPageRunner` always wraps its render tree in one page-level `<Suspense>`, but this is a no-op for generated `@registryLazy` entries — `LazyBoundary` (see above) already resolves their suspension locally before it ever reaches this outer boundary. `suspenseFallback` only matters for a hand-authored `ComponentRegistryEntry` using bare `React.lazy` with no `Suspense` ancestor of its own; omitting it warns once in the dev console (pass `null` explicitly to silence it).
@@ -263,7 +271,7 @@ export function MyWidget({ urlParam, value, onChange }: { urlParam?: string; val
 }
 ```
 
-`useOptionalUrlParam(undefined)` returns `[null, noop]` — the component falls back to its own controlled `value`/`onChange` props. `useUrlParam(key)` is the non-optional variant (throws without a `UrlParamContext` provider, i.e. outside `RouterProvider`). Both call react-router's `setSearchParams` under the hood (soft URL update, no reload), so `useSourceLoader`'s reactive watch picks it up.
+`useOptionalUrlParam(undefined)` returns `[null, noop]` — the component falls back to its own controlled `value`/`onChange` props, no `RouterProvider` needed for that call. Pass a real key — to either `useOptionalUrlParam` or the non-optional `useUrlParam` — and both throw without a `UrlParamContext` provider (i.e. outside `RouterProvider`). Both call react-router's `setSearchParams` under the hood (soft URL update, no reload), so `useSourceLoader`'s reactive watch picks it up.
 
 This is the sanctioned mechanism for any `dsl-ui-*` component accepting a `urlParam: foo` YAML prop — use it instead of hand-rolling react-router plumbing per component. `Pagination` and `PageSizeSelect` are the first two adopters:
 
@@ -365,4 +373,5 @@ Packaging/distributing a `.compiled.json` artifact (zip, install, versioning) is
 - `src/generated/` is committed so editors have types without running the dev server; do not gitignore it.
 - `compileDslPagesDir`/`compileDslDocument` only catch static DSL errors (`$type`, `$`-directives, `nodeSchema`) — a page can still fail at runtime on `ctxSchema` or a bad `$context.expose`, since those depend on `$sources` data not available at compile time.
 - A compiled artifact's `registryFingerprint` mismatch only warns, it never blocks rendering — don't rely on it as a build gate; use `compileDslPagesDir`'s `hasErrors` in CI for that.
+- Forgetting to wrap the app in `RouterProvider` (`@wadeck-app/dsl-ui`) throws `requires UrlParamContext` and renders blank, the moment any node uses `urlParam: foo` (`Pagination`, `PageSizeSelect`) — not optional once you use one of those.
 - A `urlParam: foo` prop only does anything if the component itself calls `useUrlParam`/`useOptionalUrlParam` — passing it to a component that doesn't (most components, before this was introduced) silently resolves to a plain string prop with no wiring. Any page YAML written before this pattern existed (e.g. passing `urlParam:`/`default:` to a component whose props never included them) is stale and should not be copied as a working reference.
