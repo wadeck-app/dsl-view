@@ -9,6 +9,7 @@ describe('entriesGenerator @registryLazy', () => {
 	const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'entries-generator-test-'));
 	const chartPath = path.join(tmpDir, 'Chart.tsx');
 	const buttonPath = path.join(tmpDir, 'Button.tsx');
+	const expandableRowPath = path.join(tmpDir, 'ExpandableRow.tsx');
 
 	beforeAll(() => {
 		fs.writeFileSync(
@@ -18,6 +19,17 @@ describe('entriesGenerator @registryLazy', () => {
 		fs.writeFileSync(
 			buttonPath,
 			`export interface ButtonProps { label: string }\nexport function Button(props: ButtonProps) { return null }\n`
+		);
+		fs.writeFileSync(
+			expandableRowPath,
+			[
+				"import React from 'react';",
+				'export interface ExpandableRowProps {',
+				'  expansion?: Record<string, unknown>;',
+				'  renderNode?: (node: unknown, ctx: Record<string, unknown>) => React.ReactNode;',
+				'}',
+				'export function ExpandableRow(props: ExpandableRowProps) { return null }',
+			].join('\n')
 		);
 	});
 
@@ -72,5 +84,30 @@ describe('entriesGenerator @registryLazy', () => {
 
 		expect(output).toContain(`import { Button } from '${importPath}'`);
 		expect(output).not.toContain('React.lazy');
+	});
+
+	it('wires a (node, ctx) => ReactNode prop to re-enter renderChildren with merged ctx, not resolveExpressionValue', () => {
+		const output = buildEntriesFile([
+			{
+				name: 'ExpandableRow',
+				category: 'atomic',
+				tags: [],
+				bindPattern: null,
+				lazy: false,
+				allowedChildren: {},
+				providesContext: [],
+				requiresContext: [],
+				sourcePath: expandableRowPath,
+			},
+		]);
+
+		// Must NOT fall into the generic resolveExpressionValue(node['renderNode'], ctx) path -
+		// that's exactly the bug (DataTable.tsx:797 renderNode was always undefined from YAML).
+		expect(output).not.toContain(`resolveExpressionValue(node['renderNode'], ctx)`);
+		expect(output).toContain(
+			'const renderNode = (n: unknown, extraCtx: Record<string, unknown>) => renderChildren([n], registry, { ...ctx, ...extraCtx })[0] ?? null'
+		);
+		// expansion itself is plain data (the YAML sub-node), still resolved normally.
+		expect(output).toContain(`resolveExpressionValue(node['expansion'], ctx)`);
 	});
 });

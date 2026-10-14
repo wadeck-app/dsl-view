@@ -9,7 +9,8 @@
  * - No AUTO_GENERATED_COMPONENTS / per-component wiring hints
  * - No ctxSourceProp / urlBackedPairs / ctxFixedKeyProps etc. — YAML now declares wiring
  * - Props classified as: ReactNode slot -> renderChildren, @registryBind -> FormContext,
- *   everything else -> node['propName'] as PropType (direct cast)
+ *   (node, ctx) => ReactNode callback -> re-enter the DSL renderer per call (e.g. DataTable's
+ *   `renderNode`, for expansion rows), everything else -> node['propName'] as PropType (direct cast)
  */
 
 import fs from 'fs';
@@ -275,6 +276,8 @@ function discoverComponents(srcDir: string, hookWrappers: Map<string, string[]>)
 //
 // The new generic model: every prop is one of:
 //   - React.ReactNode (slot) -> renderChildren(node['propName'], registry, ctx)
+//   - (node, ctx) => ReactNode callback -> a closure that re-enters renderChildren per call,
+//     merging the caller's own extra ctx (e.g. DataTable passing { row } for an expansion)
 //   - Everything else -> node['propName'] as import('...').ComponentNameProps['propName']
 //
 // Special case: @registryBind formData onChange -> wrap with FormContext.
@@ -348,6 +351,12 @@ function generateSimpleEntry(
 		const typeNode = prop.getTypeNode();
 		const typeText = typeNode?.getText() ?? '';
 		const isReactNode = typeText === 'React.ReactNode' || typeText === 'ReactNode';
+		// A callback shaped (node, ctx) => ReactNode - the generic "recurse back into the DSL
+		// renderer for this one sub-node" slot, e.g. DataTable's `renderNode` (expansion rows,
+		// one per clicked row). Unlike a plain React.ReactNode slot it needs extra per-call ctx
+		// (e.g. { row }) merged in by the caller, so it can't be resolved once up front like
+		// other props - the component itself calls it, passing its own extra ctx each time.
+		const isRenderNodeCallback = typeText.includes('=>') && /=>\s*(React\.)?ReactNode\s*$/.test(typeText);
 
 		if (isReactNode) {
 			hasSlots = true;
@@ -361,6 +370,14 @@ function generateSimpleEntry(
 				declLines.push(`const ${name} = node['${name}'] as unknown[] | undefined`);
 				jsxAttrs.push(`${name}={${name} ? renderChildren(${name}, registry, ctx) : null}`);
 			}
+		} else if (isRenderNodeCallback) {
+			const varName = name.includes('-')
+				? name.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
+				: name;
+			declLines.push(
+				`const ${varName} = (n: unknown, extraCtx: Record<string, unknown>) => renderChildren([n], registry, { ...ctx, ...extraCtx })[0] ?? null`
+			);
+			jsxAttrs.push(`${name}={${varName}}`);
 		} else {
 			// Plain prop - resolve reactive expression then cast.
 			// For hyphenated names (e.g. aria-label), use a camelCase JS variable.

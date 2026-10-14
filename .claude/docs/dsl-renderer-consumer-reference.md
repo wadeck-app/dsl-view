@@ -245,10 +245,26 @@ interface FieldSelectSourceProps {
 |-----------|--------------------------|
 | `React.ReactNode` (named prop) | `renderChildren(node['propName'], registry, ctx)` |
 | `children: React.ReactNode` | `renderChildren(node['items'], registry, ctx)` — DSL key is `items` |
+| `(node, ctx) => React.ReactNode` | A closure re-entering `renderChildren` per call, merging the caller's own extra ctx |
 | `@registryBind formData onChange` | Wrapped with FormContext accessor |
 | Everything else | `resolveExpressionValue(node['propName'], ctx)` |
 
 Skipped props: `className`, `style`, `ref`, `key`, `aria-*`, `data-*`.
+
+### `(node, ctx) => ReactNode` props — e.g. DataTable's `expansion`/`renderNode`
+
+Unlike a plain `React.ReactNode` slot (resolved once, up front), this shape is a function the *component itself* calls, once per invocation, with its own extra ctx — e.g. `DataTable` calls `renderNode(expansion, { row })` once per expanded row, where `row` is the clicked row's data (not knowable at render time, only when the user expands that specific row).
+
+```yaml
+- $type: DataTable
+  expansionCondition: payloadText
+  expansion:
+    $type: JsonViewer
+    row: $ctx.row       # required — not auto-injected, "YAML declares all wiring" applies here too
+    field: payloadText
+```
+
+`row` must be wired explicitly via `$ctx.row` — nothing injects it automatically. Before this was wired at the generator level, `renderNode` resolved via the generic `resolveExpressionValue(node['renderNode'], ctx)` path, which is always `undefined` (no YAML can author a function literal) — the expand toggle existed and clicked, but rendered nothing. Same bug class as the pre-fix `Pagination`/`PageSizeSelect` `urlParam` gap.
 
 Components without `@registryCategory` are silently skipped — no warning.
 
