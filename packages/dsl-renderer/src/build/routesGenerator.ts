@@ -7,8 +7,13 @@ export interface PageRoute {
 	/** Source YAML filename, e.g. `worker-detail.yaml`. */
 	filename: string;
 	route: string;
+	/** Absent when the page declares `$navLabel: false` or has no label. */
 	navLabel?: string;
 	navOrder?: number;
+	/** False for `$navVisible: false` or `$navLabel: false`: the route stays, the nav entry is hidden. */
+	navVisible: boolean;
+	/** Every other `$nav<Name>` key, as `{ name: value }` (e.g. `$navBadge` -> `badge`). Meaning is owned by the consumer. */
+	navExtra?: Record<string, unknown>;
 }
 
 export interface RawPage {
@@ -20,6 +25,34 @@ export interface RawPage {
 export function normalizeRouteForComparison(route: string): string {
 	const withoutTrailingSlash = route.length > 1 ? route.replace(/\/+$/, '') : route;
 	return withoutTrailingSlash.replace(/:[A-Za-z0-9_]+/g, ':');
+}
+
+const KNOWN_NAV_KEYS = new Set(['$navLabel', '$navOrder', '$navVisible']);
+
+function parseNavMetadata(filename: string, route: string, doc: Record<string, unknown>): PageRoute {
+	const entry: PageRoute = { filename, route, navVisible: true };
+
+	const label = doc['$navLabel'];
+	if (label === false) entry.navVisible = false;
+	else if (typeof label === 'string') entry.navLabel = label;
+	else if (label !== undefined) throw new Error(`[routesGenerator] ${filename}: $navLabel must be a string or false, got ${JSON.stringify(label)}`);
+
+	const order = doc['$navOrder'];
+	if (typeof order === 'number') entry.navOrder = order;
+	else if (order !== undefined) throw new Error(`[routesGenerator] ${filename}: $navOrder must be a number, got ${JSON.stringify(order)}`);
+
+	const visible = doc['$navVisible'];
+	if (visible === false) entry.navVisible = false;
+	else if (visible !== undefined && visible !== true) throw new Error(`[routesGenerator] ${filename}: $navVisible must be a boolean, got ${JSON.stringify(visible)}`);
+
+	const extra: Record<string, unknown> = {};
+	for (const [k, v] of Object.entries(doc)) {
+		if (!k.startsWith('$nav') || k.length <= 4 || KNOWN_NAV_KEYS.has(k)) continue;
+		extra[k.charAt(4).toLowerCase() + k.slice(5)] = v;
+	}
+	if (Object.keys(extra).length > 0) entry.navExtra = extra;
+
+	return entry;
 }
 
 export function collectPageRoutes(pages: RawPage[]): PageRoute[] {
@@ -43,9 +76,7 @@ export function collectPageRoutes(pages: RawPage[]): PageRoute[] {
 			throw new Error(`[routesGenerator] Duplicate $route '${route}' in ${previous.filename} and ${filename}${detail}`);
 		}
 
-		const entry: PageRoute = { filename, route };
-		if (typeof doc['$navLabel'] === 'string') entry.navLabel = doc['$navLabel'];
-		if (typeof doc['$navOrder'] === 'number') entry.navOrder = doc['$navOrder'];
+		const entry = parseNavMetadata(filename, route, doc);
 		seen.set(key, entry);
 		routes.push(entry);
 	}
@@ -76,6 +107,10 @@ function generateRoutesFile(routes: PageRoute[]): string {
 		'\tsource: string;',
 		'\tnavLabel?: string;',
 		'\tnavOrder?: number;',
+		'\t/** False when the page is hidden from nav ($navVisible: false or $navLabel: false); the route still exists. */',
+		'\tnavVisible: boolean;',
+		'\t/** Other $nav<Name> keys as { name: value }; the consumer owns their meaning (e.g. badge). */',
+		'\tnavExtra?: Record<string, unknown>;',
 		'}',
 		'',
 		'export const dslRoutes: readonly DslRouteEntry[] = ['
@@ -84,6 +119,8 @@ function generateRoutesFile(routes: PageRoute[]): string {
 		const fields = [`route: '${r.route}'`, `yamlText: ${toIdentifier(r.filename)}`, `source: '${r.filename}'`];
 		if (r.navLabel !== undefined) fields.push(`navLabel: ${JSON.stringify(r.navLabel)}`);
 		if (r.navOrder !== undefined) fields.push(`navOrder: ${r.navOrder}`);
+		fields.push(`navVisible: ${r.navVisible}`);
+		if (r.navExtra !== undefined) fields.push(`navExtra: ${JSON.stringify(r.navExtra)}`);
 		lines.push(`\t{ ${fields.join(', ')} },`);
 	}
 	lines.push('];', '');

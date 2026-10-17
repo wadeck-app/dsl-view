@@ -169,6 +169,8 @@ import { dslRoutes } from './generated/routes.js';
 // r.navLabel / r.navOrder (optional) feed the nav; r.source is the YAML filename.
 ```
 
+Nav keys: `$navLabel` (string, or `false` to hide), `$navOrder` (number), `$navVisible` (`false` hides the nav entry but keeps the route). `navVisible` is always emitted (default `true`); `navLabel` is absent when hidden. Every other `$nav<Name>` key lands in `navExtra` as `{ name: value }` (`$navBadge` -> `navExtra.badge`), unvalidated, its meaning owned by the consumer's `App.tsx`. A wrongly typed `$navLabel`/`$navOrder`/`$navVisible` fails the build, but a misspelled extra key (`$navLable`) just becomes an extra entry, so check `navExtra` key names on the consumer side.
+
 `dslRoutes` is typed `readonly DslRouteEntry[]` (the interface is exported from the generated file), not an `as const` union, so filtering or sorting on optional fields like `navOrder` type-checks without a consumer-side re-declaration.
 
 Two pages declaring the same `$route` fail the build, naming both files; so do routes differing only by param name (`/w/:id` vs `/w/:workerId`), which match the same URLs. Pages without `$route` are skipped. `GenericPageRunner` remounts when a route param changes (`/workers/001` to `/workers/002`), so no consumer-side keyed wrapper is needed; query-string changes do not remount.
