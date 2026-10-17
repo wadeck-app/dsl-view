@@ -67,14 +67,26 @@ function generateRoutesFile(routes: PageRoute[]): string {
 	for (const r of routes) {
 		lines.push(`import ${toIdentifier(r.filename)} from '../dsl/pages/${r.filename}?raw';`);
 	}
-	lines.push('', 'export const dslRoutes = [');
+	lines.push(
+		'',
+		'export interface DslRouteEntry {',
+		'\troute: string;',
+		'\tyamlText: string;',
+		'\t/** Source YAML filename. */',
+		'\tsource: string;',
+		'\tnavLabel?: string;',
+		'\tnavOrder?: number;',
+		'}',
+		'',
+		'export const dslRoutes: readonly DslRouteEntry[] = ['
+	);
 	for (const r of routes) {
 		const fields = [`route: '${r.route}'`, `yamlText: ${toIdentifier(r.filename)}`, `source: '${r.filename}'`];
 		if (r.navLabel !== undefined) fields.push(`navLabel: ${JSON.stringify(r.navLabel)}`);
 		if (r.navOrder !== undefined) fields.push(`navOrder: ${r.navOrder}`);
 		lines.push(`\t{ ${fields.join(', ')} },`);
 	}
-	lines.push('] as const;', '');
+	lines.push('];', '');
 	return lines.join('\n');
 }
 

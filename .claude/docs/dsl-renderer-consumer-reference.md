@@ -169,6 +169,8 @@ import { dslRoutes } from './generated/routes.js';
 // r.navLabel / r.navOrder (optional) feed the nav; r.source is the YAML filename.
 ```
 
+`dslRoutes` is typed `readonly DslRouteEntry[]` (the interface is exported from the generated file), not an `as const` union, so filtering or sorting on optional fields like `navOrder` type-checks without a consumer-side re-declaration.
+
 Two pages declaring the same `$route` fail the build, naming both files; so do routes differing only by param name (`/w/:id` vs `/w/:workerId`), which match the same URLs. Pages without `$route` are skipped. `GenericPageRunner` remounts when a route param changes (`/workers/001` to `/workers/002`), so no consumer-side keyed wrapper is needed; query-string changes do not remount.
 
 ### `dsl.config.yaml` (adjacent to `vite.config.ts`)

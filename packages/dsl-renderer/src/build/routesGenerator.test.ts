@@ -76,6 +76,11 @@ describe('buildRoutesFile', () => {
 		expect(out).toContain('yamlText: workerDetailYaml');
 		expect(out).toContain('navLabel: "Worker"');
 		expect(out).not.toContain('fragment');
+		// Widened type, not an `as const` union: optional fields (navOrder) must stay accessible when filtering/sorting.
+		expect(out).toContain('export interface DslRouteEntry');
+		expect(out).toContain('navOrder?: number;');
+		expect(out).toContain('export const dslRoutes: readonly DslRouteEntry[] = [');
+		expect(out).not.toContain('as const');
 	});
 
 	it('throws on duplicate routes instead of writing a file', () => {
