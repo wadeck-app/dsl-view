@@ -26,10 +26,11 @@ export interface PaginationProps {
  */
 export function Pagination({ urlParam, page, onPageChange, total, size }: PaginationProps) {
 	const [urlPage, setUrlPage] = useOptionalUrlParam(urlParam);
-	const activePage = urlParam ? Number(urlPage ?? 0) || 0 : page ?? 0;
+	const totalPages = size > 0 ? Math.ceil(total / size) : 1;
+	const rawPage = urlParam ? Number(urlPage ?? 0) || 0 : page ?? 0;
+	const activePage = Math.min(Math.max(rawPage, 0), totalPages - 1);
 	const changePage = urlParam ? (next: number) => setUrlPage(String(Math.max(0, next))) : onPageChange;
 
-	const totalPages = size > 0 ? Math.ceil(total / size) : 1;
 	if (totalPages <= 1 || !changePage) return null;
 	return (
 		<div className="mt-3 flex items-center gap-2 text-sm text-muted">

@@ -6,13 +6,15 @@ const containerClass =
 export interface JsonViewerProps {
 	row?: Record<string, unknown>;
 	field?: string;
+	/** Caps the viewer's height with internal scroll (CSS value, e.g. "20rem", "400px"). Unset = unbounded, grows with content. */
+	maxHeight?: string;
 }
 
 /**
  * @registryCategory atomic
  * @registryTags json viewer code
  */
-export function JsonViewer({ row, field }: JsonViewerProps) {
+export function JsonViewer({ row, field, maxHeight }: JsonViewerProps) {
 	const json = field ? String(row?.[field] ?? '') : '';
 	let formatted = json;
 	try {
@@ -21,7 +23,10 @@ export function JsonViewer({ row, field }: JsonViewerProps) {
 		// not valid JSON, show raw
 	}
 	return (
-		<pre className={containerClass}>
+		<pre
+			className={maxHeight ? `${containerClass} overflow-y-auto` : containerClass}
+			style={maxHeight ? { maxHeight } : undefined}
+		>
 			{formatted}
 		</pre>
 	);

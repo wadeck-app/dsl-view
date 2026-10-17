@@ -69,6 +69,17 @@ describe('Pagination (urlParam mode)', () => {
 		expect(screen.getByText('Page 3 / 5')).toBeInTheDocument();
 	});
 
+	it('clamps a page beyond the total down to the last page', () => {
+		const service = withUrlParamService({ page: '999' });
+		render(
+			<UrlParamContext.Provider value={service}>
+				<Pagination urlParam="page" total={50} size={10} />
+			</UrlParamContext.Provider>
+		);
+		expect(screen.getByText('Page 5 / 5')).toBeInTheDocument();
+		expect(screen.getByText('Next')).toBeDisabled();
+	});
+
 	it('defaults to page 0 when the url param is unset', () => {
 		const service = withUrlParamService({});
 		render(

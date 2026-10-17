@@ -262,6 +262,7 @@ Unlike a plain `React.ReactNode` slot (resolved once, up front), this shape is a
     $type: JsonViewer
     row: $ctx.row       # required — not auto-injected, "YAML declares all wiring" applies here too
     field: payloadText
+    maxHeight: 20rem    # optional — caps height with internal scroll; omit for unbounded growth
 ```
 
 `row` must be wired explicitly via `$ctx.row` — nothing injects it automatically. Before this was wired at the generator level, `renderNode` resolved via the generic `resolveExpressionValue(node['renderNode'], ctx)` path, which is always `undefined` (no YAML can author a function literal) — the expand toggle existed and clicked, but rendered nothing. Same bug class as the pre-fix `Pagination`/`PageSizeSelect` `urlParam` gap.

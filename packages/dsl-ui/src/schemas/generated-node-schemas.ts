@@ -81,6 +81,7 @@ export const FetchSpinnerNodeSchema = baseNode.extend({
 export const JsonViewerNodeSchema = baseNode.extend({
 	row: z.record(z.string(), z.unknown()).optional(),
 	field: z.string().optional(),
+	maxHeight: z.string().optional(),
 });
 
 export const PageHeaderNodeSchema = baseNode.extend({
