@@ -156,6 +156,21 @@ export default defineConfig({
 });
 ```
 
+### Routes: `routesGenerator`
+
+`$route` lives only in the page YAML. `routesGenerator()` (from `@wadeck-app/dsl-renderer/build/routesGenerator`, add it to `plugins`) emits `src/generated/routes.ts` with route data only; `App.tsx` stays hand-written and maps over it:
+
+```tsx
+import { dslRoutes } from './generated/routes.js';
+
+{dslRoutes.map(r => (
+  <Route key={r.route} path={r.route} element={<GenericPageRunner yamlText={r.yamlText} registry={appRegistry} fetcher={fetcher} />} />
+))}
+// r.navLabel / r.navOrder (optional) feed the nav; r.source is the YAML filename.
+```
+
+Two pages declaring the same `$route` fail the build, naming both files; so do routes differing only by param name (`/w/:id` vs `/w/:workerId`), which match the same URLs. Pages without `$route` are skipped. `GenericPageRunner` remounts when a route param changes (`/workers/001` to `/workers/002`), so no consumer-side keyed wrapper is needed; query-string changes do not remount.
+
 ### `dsl.config.yaml` (adjacent to `vite.config.ts`)
 
 ```yaml

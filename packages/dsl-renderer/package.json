@@ -17,6 +17,10 @@
 			"import": "./dist/build/pageTypesGenerator.js",
 			"types": "./dist/build/pageTypesGenerator.d.ts"
 		},
+		"./build/routesGenerator": {
+			"import": "./dist/build/routesGenerator.js",
+			"types": "./dist/build/routesGenerator.d.ts"
+		},
 		"./build/urlNormalizer": {
 			"import": "./dist/build/urlNormalizer.js",
 			"types": "./dist/build/urlNormalizer.d.ts"

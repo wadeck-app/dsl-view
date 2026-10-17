@@ -41,7 +41,16 @@ function SuspenseFallbackNotConfiguredWarning(): null {
 	return null;
 }
 
-export function GenericPageRunner({
+/**
+ * Remounts the page when a route param changes (/workers/001 -> /workers/002), so vars, outputs,
+ * brain state and source data never leak from one entity to the next.
+ */
+export function GenericPageRunner(props: GenericPageRunnerProps) {
+	const routeParams = useParams();
+	return <PageRunner key={JSON.stringify(routeParams)} {...props} />;
+}
+
+function PageRunner({
 	yamlText,
 	registry,
 	getToken,
