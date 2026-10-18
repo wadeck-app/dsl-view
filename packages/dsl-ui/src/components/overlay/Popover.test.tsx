@@ -13,6 +13,20 @@ describe('Popover', () => {
 		expect(screen.getByRole('button', { name: 'Open' })).toBeInTheDocument();
 	});
 
+	// jsdom has no layout, so positioning itself can't be asserted. What can be: the element Radix
+	// measures as the anchor must have a box. `display: contents` has none (rect 0,0,0,0), which
+	// anchored the panel at the page's top-left corner instead of under the trigger.
+	it('anchors on a wrapper that has a layout box, not display: contents', () => {
+		render(
+			<Popover trigger={<button>Open</button>}>
+				<p>Panel content</p>
+			</Popover>
+		);
+		const anchor = screen.getByRole('button', { name: 'Open' }).parentElement as HTMLElement;
+		expect(anchor.style.display).not.toBe('contents');
+		expect(anchor.style.display).toBe('inline-flex');
+	});
+
 	it('panel is not visible initially', () => {
 		render(
 			<Popover trigger={<button>Open</button>}>

@@ -39,7 +39,8 @@ export function Popover({
 	return (
 		<RadixPopover.Root open={isOpen} onOpenChange={handleOpenChange}>
 			<RadixPopover.Trigger asChild>
-				<span style={{ display: 'contents' }}>{trigger}</span>
+				{/* Radix anchors the panel to this element's rect; `display: contents` has no box and pinned it to the page origin. */}
+					<span style={{ display: 'inline-flex' }}>{trigger}</span>
 			</RadixPopover.Trigger>
 			<RadixPopover.Portal>
 				<RadixPopover.Content
