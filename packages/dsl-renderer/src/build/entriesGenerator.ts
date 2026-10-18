@@ -115,6 +115,10 @@ function findCallExpressionArgIdentifiers(fn: FunctionDeclaration, calleeName: s
 	return names;
 }
 
+// Props that are internal to React/HTML and never authored in DSL YAML.
+// 'children' is intentionally NOT here — it falls through to the hasChildren path.
+const GENERATED_RENDER_SKIP_PROPS = new Set(['className', 'style', 'ref', 'key']);
+
 export function extractAllowedChildren(
 	sourceFile: ReturnType<InstanceType<typeof Project>['addSourceFileAtPath']>,
 	componentName: string
@@ -133,13 +137,60 @@ export function extractAllowedChildren(
 						.map(t => t.trim().replace(/^tag:/, ''))
 						.filter(Boolean);
 					if (tags.length > 0) {
-						result[prop.getName()] = tags;
+						// A ReactNode `children` prop is read from the `items` DSL key by the generated
+						// render (see generateSimpleEntry), so metadata must be keyed by `items`.
+						const propName = prop.getName();
+						const typeText = prop.getTypeNode()?.getText() ?? '';
+						const isReactNode = typeText === 'React.ReactNode' || typeText === 'ReactNode';
+						const dslKey = propName === 'children' && isReactNode ? 'items' : propName;
+						result[dslKey] = tags;
 					}
 				}
 			}
 		}
 	}
 	return result;
+}
+
+// Non-directive DSL keys the generated render reads for this component. MUST mirror the prop
+// filtering in generateSimpleEntry (a consistency test compares both against the generated render).
+export function extractKnownKeys(
+	sourceFile: ReturnType<InstanceType<typeof Project>['addSourceFileAtPath']>,
+	componentName: string,
+	bindPattern: string[] | null
+): string[] {
+	const propsInterface = sourceFile.getInterface(componentName + 'Props');
+	// No Props interface: the fallback render only forwards `items`.
+	if (!propsInterface) return ['items'];
+
+	const properties = propsInterface.getProperties();
+	const isFormDataBind = bindPattern?.[0] === 'formData' && bindPattern?.[1] === 'onChange';
+	const hasCheckedProp = properties.some(p => p.getName() === 'checked');
+	const hasValueProp = properties.some(p => p.getName() === 'value');
+	const consumed = new Set<string>();
+	if (isFormDataBind) {
+		consumed.add('value');
+		consumed.add('onChange');
+		consumed.add('bind');
+		if (hasCheckedProp && !hasValueProp) consumed.add('checked');
+	}
+
+	const keys = new Set<string>();
+	if (isFormDataBind) keys.add('bind');
+	for (const prop of properties) {
+		const name = prop.getName().replace(/^['"`]|['"`]$/g, '');
+		if (consumed.has(name)) continue;
+		if (name.startsWith('data-')) continue;
+		if (!/^[a-zA-Z][a-zA-Z0-9]*$/.test(name) && !name.startsWith('aria-')) continue;
+		if (GENERATED_RENDER_SKIP_PROPS.has(name)) continue;
+		const typeText = prop.getTypeNode()?.getText() ?? '';
+		const isReactNode = typeText === 'React.ReactNode' || typeText === 'ReactNode';
+		// A (node, ctx) => ReactNode callback is wired by the generated render, never read from the YAML node.
+		if (typeText.includes('=>') && /=>\s*(React\.)?ReactNode\s*$/.test(typeText)) continue;
+		// A ReactNode `children` prop is read from the `items` DSL key (see generateSimpleEntry).
+		keys.add(name === 'children' && isReactNode ? 'items' : name);
+	}
+	return [...keys].sort();
 }
 
 export function extractContextNames(
@@ -221,6 +272,8 @@ interface DiscoveredComponent {
 	/** @registryLazy JSDoc tag present: component is React.lazy()-wrapped instead of statically imported. */
 	lazy: boolean;
 	allowedChildren: Record<string, string[]>;
+	/** Optional so hand-built test fixtures can omit it; discoverComponents always sets it. */
+	knownKeys?: string[];
 	providesContext: string[];
 	requiresContext: string[];
 	sourcePath: string;
@@ -259,12 +312,13 @@ function discoverComponents(srcDir: string, hookWrappers: Map<string, string[]>)
 
 			if (category) {
 				const allowedChildren = extractAllowedChildren(sourceFile, name);
+				const knownKeys = extractKnownKeys(sourceFile, name, bindPattern);
 				const providesContext = [...new Set([
 					...extractContextNames(fn.getText(), 'createContext'),
 					...extractProvidesContextFromProviderJsx(fn),
 				])];
 				const requiresContext = extractRequiresContext(fn, hookWrappers);
-				discovered.push({ name, category, tags, bindPattern, lazy, allowedChildren, providesContext, requiresContext, sourcePath: absPath });
+				discovered.push({ name, category, tags, bindPattern, lazy, allowedChildren, knownKeys, providesContext, requiresContext, sourcePath: absPath });
 			}
 		}
 	}
@@ -333,9 +387,7 @@ function generateSimpleEntry(
 		if (hasCheckedProp && !hasValueProp) bindConsumedProps.add('checked');
 	}
 
-	// Props that are internal to React/HTML and never authored in DSL YAML.
-	// 'children' is intentionally NOT here — it falls through to the hasChildren path.
-	const SKIP_PROPS = new Set(['className', 'style', 'ref', 'key']);
+	const SKIP_PROPS = GENERATED_RENDER_SKIP_PROPS;
 
 	for (const prop of allProperties) {
 		// ts-morph returns quoted names for hyphenated props (e.g. "'aria-label'" instead of "aria-label").
@@ -636,13 +688,16 @@ ${importLines.join('\n')}
 	// allEntries array
 	const allEntriesLines = allDiscovered.map(c => `\t${c.name}Entry,`).join('\n');
 
-	// Metadata (allowedChildren, providesContext, requiresContext)
+	// Metadata (allowedChildren, knownKeys, providesContext, requiresContext)
 	const metadataLines = allDiscovered
 		.map(c => {
 			const entryVar = `${c.name}Entry`;
 			const lines: string[] = [];
 			if (Object.keys(c.allowedChildren).length > 0) {
 				lines.push(`${entryVar}.allowedChildren = ${JSON.stringify(c.allowedChildren)};`);
+			}
+			if (c.knownKeys) {
+				lines.push(`${entryVar}.knownKeys = ${JSON.stringify(c.knownKeys)};`);
 			}
 			if (c.providesContext.length > 0) {
 				lines.push(`${entryVar}.providesContext = ${JSON.stringify(c.providesContext)};`);

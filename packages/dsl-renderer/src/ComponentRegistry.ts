@@ -16,6 +16,9 @@ export interface ComponentRegistryEntry {
 	render: (props: RegistryRenderProps) => React.ReactElement | null;
 	// Constraint metadata - populated by entriesGenerator from JSDoc @slot tags and createContext/useContext calls
 	allowedChildren?: Record<string, string[]>; // slotName -> allowed tags (e.g. { fields: ['field'], actions: ['action-bar'] })
+	// Non-directive DSL keys the generated render actually reads (props, `bind`, and `items` for a ReactNode `children` prop).
+	// Absent = unknown (hand-written entry): the build-time compiler reports it as "unchecked" instead of skipping silently.
+	knownKeys?: string[];
 	providesContext?: string[]; // context variable names provided (from createContext() calls)
 	requiresContext?: string[]; // context variable names required (from useContext() calls)
 }

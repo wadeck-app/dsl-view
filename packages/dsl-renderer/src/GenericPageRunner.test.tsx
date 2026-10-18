@@ -5,8 +5,11 @@ import React from 'react';
 
 import type { ComponentRegistryEntry } from './ComponentRegistry.js';
 import { createRegistry } from './ComponentRegistry.js';
+import { COMPILED_DSL_FORMAT_VERSION } from './compiledDslArtifact.js';
+import type { CompiledDslArtifact } from './compiledDslArtifact.js';
 import { GenericPageRunner } from './GenericPageRunner.js';
 import { renderChildren } from './engine/DslRenderer.js';
+import { computeRegistryFingerprint } from './registryHash.js';
 
 // ---------------------------------------------------------------------------
 // Minimal test registry
@@ -473,6 +476,130 @@ sections:
 		resolveImport();
 		await waitFor(() => expect(screen.getByTestId('lazy-loaded')).toBeInTheDocument());
 		expect(warnSpy).not.toHaveBeenCalled();
+		warnSpy.mockRestore();
+	});
+});
+
+describe('GenericPageRunner compiled artifact', () => {
+	function makeArtifact(overrides: Partial<CompiledDslArtifact> = {}): CompiledDslArtifact {
+		return {
+			formatVersion: COMPILED_DSL_FORMAT_VERSION,
+			registryFingerprint: computeRegistryFingerprint(registry),
+			compiledAt: new Date().toISOString(),
+			doc: { $type: 'Label', label: 'from-compiled' },
+			diagnostics: [],
+			...overrides,
+		};
+	}
+
+	it('renders the same output from `compiled` as the equivalent `yamlText`', async () => {
+		render(
+			<MemoryRouter>
+				<GenericPageRunner compiled={makeArtifact()} registry={registry} fetcher={vi.fn().mockResolvedValue({})} brainRegistry={{}} />
+			</MemoryRouter>
+		);
+		await waitFor(() => {
+			expect(screen.getByTestId('label')).toHaveTextContent('from-compiled');
+		});
+	});
+
+	it('renders identically via `compiled` and via the equivalent `yamlText`, including $sources/$vars/$brains', async () => {
+		const yamlText = `
+$sources:
+  books: GET /api/books/
+$vars:
+  greeting: hello
+$brains:
+  increment:
+    $brain: $brains.$ctx.setVar
+    varName: greeting
+    value: $sources.books.0.title
+$type: Sections
+sections:
+  - $type: Label
+    label: loaded
+    value: $sources.books.0.title
+  - $type: VarDisplay
+    varName: greeting
+`;
+		const fetcher = vi.fn().mockResolvedValue([{ title: 'Book A' }]);
+
+		const yamlRender = render(
+			<MemoryRouter>
+				<GenericPageRunner yamlText={yamlText} registry={registry} fetcher={fetcher} brainRegistry={{}} />
+			</MemoryRouter>
+		);
+		await waitFor(() => {
+			expect(yamlRender.getByTestId('label')).toHaveAttribute('data-value', 'Book A');
+			expect(yamlRender.getByTestId('var-display')).toHaveTextContent('Book A');
+		});
+		const yamlHtml = yamlRender.container.innerHTML;
+		yamlRender.unmount();
+
+		const { load: parseYaml } = await import('js-yaml');
+		const doc = parseYaml(yamlText) as Record<string, unknown>;
+		const compiledArtifact = makeArtifact({ doc });
+		const fetcher2 = vi.fn().mockResolvedValue([{ title: 'Book A' }]);
+
+		const compiledRender = render(
+			<MemoryRouter>
+				<GenericPageRunner compiled={compiledArtifact} registry={registry} fetcher={fetcher2} brainRegistry={{}} />
+			</MemoryRouter>
+		);
+		await waitFor(() => {
+			expect(compiledRender.getByTestId('label')).toHaveAttribute('data-value', 'Book A');
+			expect(compiledRender.getByTestId('var-display')).toHaveTextContent('Book A');
+		});
+
+		expect(compiledRender.container.innerHTML).toBe(yamlHtml);
+	});
+
+	it('throws when neither yamlText nor compiled is provided', () => {
+		const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+		expect(() =>
+			render(
+				<MemoryRouter>
+					<GenericPageRunner registry={registry} fetcher={vi.fn().mockResolvedValue({})} brainRegistry={{}} />
+				</MemoryRouter>
+			)
+		).toThrow(/Either `yamlText` or `compiled` must be provided/);
+		consoleErrorSpy.mockRestore();
+	});
+
+	it('throws on a formatVersion mismatch', () => {
+		const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+		expect(() =>
+			render(
+				<MemoryRouter>
+					<GenericPageRunner
+						compiled={makeArtifact({ formatVersion: COMPILED_DSL_FORMAT_VERSION + 1 })}
+						registry={registry}
+						fetcher={vi.fn().mockResolvedValue({})}
+						brainRegistry={{}}
+					/>
+				</MemoryRouter>
+			)
+		).toThrow(/formatVersion/);
+		consoleErrorSpy.mockRestore();
+	});
+
+	it('warns exactly once and still renders on a registryFingerprint mismatch', async () => {
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		render(
+			<MemoryRouter>
+				<GenericPageRunner
+					compiled={makeArtifact({ registryFingerprint: 'stale-fingerprint' })}
+					registry={registry}
+					fetcher={vi.fn().mockResolvedValue({})}
+					brainRegistry={{}}
+				/>
+			</MemoryRouter>
+		);
+		await waitFor(() => {
+			expect(screen.getByTestId('label')).toHaveTextContent('from-compiled');
+		});
+		expect(warnSpy).toHaveBeenCalledTimes(1);
+		expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('different component registry'));
 		warnSpy.mockRestore();
 	});
 });

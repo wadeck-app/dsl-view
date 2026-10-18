@@ -419,7 +419,7 @@ export function pageTypesGenerator(options: PageTypesGeneratorOptions = {}): Plu
 				try {
 					adapter = await loadAdapterFromConfig(dslConfig, appRoot);
 					if (!adapter) {
-						console.info(
+						console.warn(
 							'[pageTypesGenerator] No contracts configured in dsl.config.yaml — ' +
 								'source/brain types will be "unknown". Add a "contracts:" section to enable typed contracts.',
 						);

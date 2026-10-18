@@ -3,7 +3,11 @@ import os from 'os';
 import path from 'path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { buildEntriesFile } from './entriesGenerator.js';
+import { Project } from 'ts-morph';
+
+import { createRegistry } from '../ComponentRegistry.js';
+import { compileDslDocument } from './dslCompiler.js';
+import { buildEntriesFile, extractAllowedChildren, extractKnownKeys } from './entriesGenerator.js';
 
 describe('entriesGenerator @registryLazy', () => {
 	const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'entries-generator-test-'));
@@ -109,5 +113,173 @@ describe('entriesGenerator @registryLazy', () => {
 		);
 		// expansion itself is plain data (the YAML sub-node), still resolved normally.
 		expect(output).toContain(`resolveExpressionValue(node['expansion'], ctx)`);
+	});
+});
+
+describe('extractAllowedChildren DSL key', () => {
+	function extract(source: string, name: string) {
+		const project = new Project({ useInMemoryFileSystem: true, skipFileDependencyResolution: true });
+		return extractAllowedChildren(project.createSourceFile('C.tsx', source), name);
+	}
+
+	it('keys a ReactNode `children` slot by `items`, the key the generated render reads', () => {
+		const result = extract(
+			[
+				'export interface StackProps {',
+				'  /** @slot tag:layout, tag:atomic */',
+				'  children: React.ReactNode;',
+				'}',
+			].join('\n'),
+			'Stack'
+		);
+		expect(result).toEqual({ items: ['layout', 'atomic'] });
+	});
+
+	it('keeps the prop name for a named ReactNode slot', () => {
+		const result = extract(
+			['export interface CardProps {', '  /** @slot tag:action-bar */', '  actions?: React.ReactNode;', '}'].join('\n'),
+			'Card'
+		);
+		expect(result).toEqual({ actions: ['action-bar'] });
+	});
+
+	it('keeps `children` for a non-ReactNode typed prop (e.g. FieldWrapper)', () => {
+		const result = extract(
+			['export interface FieldWrapperProps {', '  /** @slot tag:atomic */', '  children: unknown[];', '}'].join('\n'),
+			'FieldWrapper'
+		);
+		expect(result).toEqual({ children: ['atomic'] });
+	});
+});
+
+describe('extractKnownKeys', () => {
+	const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'known-keys-test-'));
+
+	afterAll(() => {
+		fs.rmSync(tmpDir, { recursive: true, force: true });
+	});
+
+	function keysOf(source: string, name: string, bindPattern: string[] | null = null) {
+		const project = new Project({ useInMemoryFileSystem: true, skipFileDependencyResolution: true });
+		return extractKnownKeys(project.createSourceFile('C.tsx', source), name, bindPattern);
+	}
+
+	it('maps a ReactNode `children` prop to `items` and drops internal/data props', () => {
+		const keys = keysOf(
+			[
+				'export interface StackProps {',
+				'  gap?: string;',
+				'  className?: string;',
+				"  'data-testid'?: string;",
+				"  'aria-label'?: string;",
+				'  actions?: React.ReactNode;',
+				'  children: React.ReactNode;',
+				'}',
+			].join('\n'),
+			'Stack'
+		);
+		expect(keys).toEqual(['actions', 'aria-label', 'gap', 'items']);
+	});
+
+	it('keeps `children` for a non-ReactNode typed prop', () => {
+		expect(keysOf('export interface FieldWrapperProps { children: unknown[] }', 'FieldWrapper')).toEqual(['children']);
+	});
+
+	it('adds `bind` and drops value/onChange for a formData bind component', () => {
+		const keys = keysOf(
+			'export interface FieldProps { label: string; value: string; onChange: (v: string) => void }',
+			'Field',
+			['formData', 'onChange']
+		);
+		expect(keys).toEqual(['bind', 'label']);
+	});
+
+	it('falls back to `items` when there is no Props interface', () => {
+		expect(keysOf('export function RouterProvider() { return null }', 'RouterProvider')).toEqual(['items']);
+	});
+
+	it('matches exactly the node[...] keys read by the generated render (consistency with generateSimpleEntry)', () => {
+		const sources: Array<{ name: string; source: string; bindPattern: string[] | null }> = [
+			{
+				name: 'Mixed',
+				source: [
+					"import React from 'react';",
+					'export interface MixedProps {',
+					'  gap?: string; className?: string; style?: object;',
+					"  'aria-label'?: string; 'data-x'?: string;",
+					'  actions?: React.ReactNode; children: React.ReactNode;',
+					'  renderNode?: (node: unknown, ctx: Record<string, unknown>) => React.ReactNode;',
+					'}',
+					'export function Mixed(props: MixedProps) { return null }',
+				].join('\n'),
+				bindPattern: null,
+			},
+			{
+				name: 'Toggle',
+				source: [
+					'export interface ToggleProps { label: string; checked: boolean; onChange: (v: boolean) => void }',
+					'export function Toggle(props: ToggleProps) { return null }',
+				].join('\n'),
+				bindPattern: ['formData', 'onChange'],
+			},
+		];
+		for (const { name, source, bindPattern } of sources) {
+			const file = path.join(tmpDir, `${name}.tsx`);
+			fs.writeFileSync(file, source);
+			const project = new Project({ skipFileDependencyResolution: true });
+			const knownKeys = extractKnownKeys(project.addSourceFileAtPath(file), name, bindPattern);
+			const output = buildEntriesFile([
+				{
+					name,
+					category: 'atomic',
+					tags: [],
+					bindPattern,
+					lazy: false,
+					allowedChildren: {},
+					knownKeys,
+					providesContext: [],
+					requiresContext: [],
+					sourcePath: file,
+				},
+			]);
+			const readKeys = [...new Set([...output.matchAll(/node\['([^']+)'\]/g)].map((m) => m[1]!))].sort();
+			expect(readKeys).toEqual(knownKeys);
+			expect(output).toContain(`${name}Entry.knownKeys = ${JSON.stringify(knownKeys)};`);
+		}
+	});
+
+	it('end to end: `children:` under a generated VerticalStack-like entry fails the compiler with a hint', () => {
+		const source = [
+			"import React from 'react';",
+			'export interface VerticalStackProps {',
+			'  gap?: string;',
+			'  /** @slot tag:layout, tag:atomic */',
+			'  children: React.ReactNode;',
+			'}',
+			'export function VerticalStack(props: VerticalStackProps) { return null }',
+		].join('\n');
+		const project = new Project({ useInMemoryFileSystem: true, skipFileDependencyResolution: true });
+		const sourceFile = project.createSourceFile('VerticalStack.tsx', source);
+		const registry = createRegistry([
+			{
+				name: 'VerticalStack',
+				category: 'disposition',
+				tags: ['layout'],
+				allowedChildren: extractAllowedChildren(sourceFile, 'VerticalStack'),
+				knownKeys: extractKnownKeys(sourceFile, 'VerticalStack', null),
+				render: () => null,
+			},
+		]);
+
+		const broken = compileDslDocument(`$type: VerticalStack\nchildren:\n  - $type: VerticalStack\n`, registry);
+		expect(broken.diagnostics).toEqual([
+			expect.objectContaining({
+				severity: 'error',
+				code: 'unknown-key',
+				message: expect.stringContaining('Did you mean "items"?'),
+			}),
+		]);
+		const fixed = compileDslDocument(`$type: VerticalStack\nitems:\n  - $type: VerticalStack\n`, registry);
+		expect(fixed.diagnostics).toEqual([]);
 	});
 });

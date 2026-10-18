@@ -17,11 +17,19 @@ export interface RendererProps {
 	ctx?: RenderContext;
 }
 
-const KNOWN_DSL_KEYS = new Set(['$if', '$source', '$context', '$route', '$extends', '$type', '$id', '$outputs']);
+// Exported so the build-time compiler (src/build/dslCompiler.ts) can replicate this
+// static check without duplicating the key list.
+export const KNOWN_DSL_KEYS = new Set(['$if', '$source', '$context', '$route', '$extends', '$type', '$id', '$outputs']);
 
 // Built-in directive, not a registry component: it needs resolveExpressionValue + renderChildren
 // in the same scope to splice a $sources-backed array of DSL nodes into the tree.
-const EXTENSION_SLOT_TYPE = 'ExtensionSlot';
+// Exported so the build-time compiler (src/build/dslCompiler.ts) can special-case it.
+// Page-level `$nav<Name>` keys (e.g. $navLabel) are consumed by routesGenerator, never by the render tree.
+export function omitNavKeys(node: Record<string, unknown>): Record<string, unknown> {
+	return Object.fromEntries(Object.entries(node).filter(([key]) => !key.startsWith('$nav')));
+}
+
+export const EXTENSION_SLOT_TYPE = 'ExtensionSlot';
 
 export function DslRenderer({ node, registry, ctx = {} }: RendererProps): React.ReactElement | null {
 	const type = node['$type'] as string | undefined;

@@ -17,6 +17,10 @@
 			"import": "./dist/build/pageTypesGenerator.js",
 			"types": "./dist/build/pageTypesGenerator.d.ts"
 		},
+		"./build/dslCompiler": {
+			"import": "./dist/build/dslCompiler.js",
+			"types": "./dist/build/dslCompiler.d.ts"
+		},
 		"./build/routesGenerator": {
 			"import": "./dist/build/routesGenerator.js",
 			"types": "./dist/build/routesGenerator.d.ts"
