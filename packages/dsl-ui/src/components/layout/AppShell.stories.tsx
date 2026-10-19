@@ -90,3 +90,22 @@ export const LightAndDark: Story = {
 		</div>
 	),
 };
+
+const MANY = Array.from({ length: 16 }, (_, i) => ({ id: `m${i}`, title: `Module ${i + 1}`, color: ['#0d9488', '#7c3aed', '#e11d48', '#0284c7'][i % 4]! }));
+
+/** More tabs than the bar can hold: the current one (the 12th) is scrolled into view and `moreLabel` lists the cut-off tabs. */
+export const ManyTabs: Story = {
+	render: () => (
+		<div className="w-[640px] max-w-full">
+			<AppShell
+				brand="my-app"
+				tabs={MANY.map((m, i) => ({ id: m.id, label: m.title, href: `#/${m.id}`, accent: m.color, current: i === 11 ? ('true' as const) : undefined }))}
+				tabsLabel="Modules"
+				menu={MENU}
+				moreLabel="More"
+			>
+				<Page />
+			</AppShell>
+		</div>
+	),
+};
