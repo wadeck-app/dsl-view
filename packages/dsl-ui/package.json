@@ -10,6 +10,7 @@
 			"types": "./dist/index.d.ts"
 		},
 		"./theme.css": "./src/theme.css",
+		"./known-keys.json": "./src/known-keys.json",
 		"./tailwind-preset": "./tailwind-preset.js",
 		"./package.json": "./package.json",
 		"./src/*": "./src/*",
@@ -33,7 +34,8 @@
 		"test:watch": "vitest",
 		"storybook": "storybook dev -p 6006 --no-open",
 		"build-storybook": "storybook build",
-		"generate-node-schemas": "node scripts/generate-node-schemas.ts"
+		"generate-node-schemas": "node scripts/generate-node-schemas.ts",
+		"generate-known-keys": "node scripts/generate-known-keys.ts"
 	},
 	"dependencies": {
 		"@fontsource/inter": "^5.3.0",

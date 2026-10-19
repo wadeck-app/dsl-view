@@ -1,0 +1,983 @@
+{
+	"ActionBar": {
+		"knownKeys": [
+			"items"
+		],
+		"allowedChildren": {
+			"items": [
+				"btn"
+			]
+		}
+	},
+	"Avatar": {
+		"knownKeys": [
+			"alt",
+			"fallback",
+			"size",
+			"src"
+		]
+	},
+	"BackLink": {
+		"knownKeys": [
+			"label",
+			"to"
+		]
+	},
+	"Badge": {
+		"knownKeys": [
+			"label",
+			"size",
+			"tone",
+			"variant"
+		]
+	},
+	"Breadcrumb": {
+		"knownKeys": [
+			"currentPath",
+			"onNavigate"
+		]
+	},
+	"BulkActionsToolbar": {
+		"knownKeys": [
+			"items",
+			"onClearSelection",
+			"selectedCount"
+		]
+	},
+	"ButtonAction": {
+		"knownKeys": [
+			"disabled",
+			"disabledReason",
+			"icon",
+			"label",
+			"loading",
+			"onClick",
+			"size",
+			"type",
+			"variant"
+		]
+	},
+	"ButtonCancel": {
+		"knownKeys": [
+			"disabled",
+			"label",
+			"onCancel"
+		]
+	},
+	"ButtonLink": {
+		"knownKeys": [
+			"icon",
+			"label",
+			"size",
+			"to",
+			"variant"
+		]
+	},
+	"ButtonSave": {
+		"knownKeys": [
+			"disabledReason",
+			"hasChanges",
+			"isPending",
+			"label",
+			"onClick"
+		]
+	},
+	"Card": {
+		"knownKeys": [
+			"border",
+			"footer",
+			"header",
+			"items",
+			"onClick",
+			"padding",
+			"shadow"
+		],
+		"allowedChildren": {
+			"items": [
+				"layout",
+				"display",
+				"composite"
+			]
+		}
+	},
+	"CardActions": {
+		"knownKeys": [
+			"items"
+		]
+	},
+	"Chart": {
+		"knownKeys": [
+			"data",
+			"height",
+			"series",
+			"xAxisKey",
+			"xAxisType"
+		]
+	},
+	"CheckboxGroup": {
+		"knownKeys": [
+			"bind",
+			"label",
+			"options",
+			"orientation"
+		]
+	},
+	"ChipButton": {
+		"knownKeys": [
+			"active",
+			"aria-label",
+			"aria-pressed",
+			"color",
+			"emphasis",
+			"items",
+			"onClick",
+			"shape",
+			"title"
+		],
+		"allowedChildren": {
+			"items": [
+				"atomic"
+			]
+		}
+	},
+	"Collapsible": {
+		"knownKeys": [
+			"defaultOpen",
+			"items",
+			"title"
+		],
+		"allowedChildren": {
+			"items": [
+				"field",
+				"layout",
+				"atomic"
+			]
+		}
+	},
+	"ColorPicker": {
+		"knownKeys": [
+			"bind",
+			"label",
+			"options"
+		]
+	},
+	"CompactSelect": {
+		"knownKeys": [
+			"ariaLabel",
+			"bind",
+			"disabled",
+			"options",
+			"placeholder"
+		]
+	},
+	"ConfirmDialog": {
+		"knownKeys": [
+			"confirmLabel",
+			"confirmVariant",
+			"message",
+			"onConfirm",
+			"onOpenChange",
+			"open",
+			"title"
+		],
+		"allowedChildren": {
+			"message": [
+				"content"
+			]
+		}
+	},
+	"ContextMenu": {
+		"knownKeys": [
+			"align",
+			"items",
+			"onOpenChange",
+			"open",
+			"side",
+			"trigger"
+		]
+	},
+	"CronBuilder": {
+		"knownKeys": [
+			"onChange",
+			"onClose",
+			"value"
+		]
+	},
+	"DataTable": {
+		"knownKeys": [
+			"batchActions",
+			"batchActionsPosition",
+			"columns",
+			"defaultFilters",
+			"emptyMessage",
+			"expansion",
+			"expansionCondition",
+			"filters",
+			"filtersTop",
+			"fontMono",
+			"id",
+			"loading",
+			"navigateTo",
+			"onAction",
+			"onBatchAction",
+			"onPageChange",
+			"onRowClick",
+			"onSortColChange",
+			"onSortDirChange",
+			"page",
+			"rows",
+			"selectable",
+			"sortCol",
+			"sortDir"
+		],
+		"allowedChildren": {
+			"filtersTop": [
+				"filter"
+			],
+			"filters": [
+				"filter"
+			]
+		}
+	},
+	"DatePicker": {
+		"knownKeys": [
+			"bind",
+			"dateFormat",
+			"disabled",
+			"isDateDisabled",
+			"maxDate",
+			"minDate",
+			"onSelect",
+			"placeholder"
+		]
+	},
+	"DateRangePicker": {
+		"knownKeys": [
+			"bind",
+			"dateFormat",
+			"disabled",
+			"isDisabled",
+			"maxDate",
+			"minDate",
+			"onOpenChange",
+			"open",
+			"placeholder"
+		]
+	},
+	"DeleteButton": {
+		"knownKeys": [
+			"items"
+		]
+	},
+	"Dialog": {
+		"knownKeys": [
+			"actions",
+			"items",
+			"onOpenChange",
+			"open",
+			"size",
+			"title",
+			"trigger"
+		],
+		"allowedChildren": {
+			"trigger": [
+				"btn"
+			],
+			"items": [
+				"field",
+				"layout",
+				"table",
+				"display",
+				"composite"
+			],
+			"actions": [
+				"btn"
+			]
+		}
+	},
+	"DialogFooter": {
+		"knownKeys": [
+			"items"
+		]
+	},
+	"DialogForm": {
+		"knownKeys": [
+			"fields",
+			"initialData",
+			"onClose",
+			"onSubmit",
+			"onSubmitEdit",
+			"size",
+			"title",
+			"visible"
+		],
+		"allowedChildren": {
+			"fields": [
+				"field"
+			]
+		}
+	},
+	"Divider": {
+		"knownKeys": [
+			"label",
+			"orientation"
+		]
+	},
+	"Drawer": {
+		"knownKeys": [
+			"footer",
+			"hideCloseButton",
+			"items",
+			"onClose",
+			"open",
+			"side",
+			"size",
+			"title"
+		]
+	},
+	"FetchSpinner": {
+		"knownKeys": [
+			"loading"
+		]
+	},
+	"FieldAsyncSelect": {
+		"knownKeys": [
+			"bind",
+			"debounceMs",
+			"description",
+			"disabled",
+			"error",
+			"label",
+			"loadOptions",
+			"name",
+			"noOptionsMessage",
+			"placeholder",
+			"required"
+		]
+	},
+	"FieldAutocomplete": {
+		"knownKeys": [
+			"bind",
+			"description",
+			"disabled",
+			"label",
+			"options",
+			"placeholder"
+		]
+	},
+	"FieldDate": {
+		"knownKeys": [
+			"bind",
+			"dateFormat",
+			"description",
+			"disabled",
+			"error",
+			"isDateDisabled",
+			"label",
+			"maxDate",
+			"minDate",
+			"placeholder",
+			"required"
+		]
+	},
+	"FieldDateRange": {
+		"knownKeys": [
+			"bind",
+			"dateFormat",
+			"description",
+			"disabled",
+			"error",
+			"isDisabled",
+			"label",
+			"maxDate",
+			"minDate",
+			"placeholder",
+			"required"
+		]
+	},
+	"FieldDateTime": {
+		"knownKeys": [
+			"bind",
+			"dateFormat",
+			"datePlaceholder",
+			"description",
+			"disabled",
+			"error",
+			"is12Hour",
+			"isDateDisabled",
+			"label",
+			"maxDate",
+			"minDate",
+			"minuteStep",
+			"onOpenChange",
+			"open",
+			"required",
+			"timePlaceholder"
+		]
+	},
+	"FieldMultiSelect": {
+		"knownKeys": [
+			"bind",
+			"description",
+			"disabled",
+			"error",
+			"label",
+			"maxSelected",
+			"name",
+			"options",
+			"placeholder",
+			"required"
+		]
+	},
+	"FieldNumber": {
+		"knownKeys": [
+			"bind",
+			"description",
+			"disabled",
+			"error",
+			"label",
+			"max",
+			"min",
+			"onUnlimitedChange",
+			"required",
+			"suffix",
+			"unlimited",
+			"unlimitedValue"
+		]
+	},
+	"FieldReadOnly": {
+		"knownKeys": [
+			"copyable",
+			"description",
+			"label",
+			"mono",
+			"value"
+		]
+	},
+	"FieldSelect": {
+		"knownKeys": [
+			"bind",
+			"description",
+			"error",
+			"label",
+			"options",
+			"placeholder",
+			"required"
+		]
+	},
+	"FieldTags": {
+		"knownKeys": [
+			"allowDuplicates",
+			"bind",
+			"description",
+			"disabled",
+			"error",
+			"label",
+			"maxTags",
+			"name",
+			"placeholder",
+			"required"
+		]
+	},
+	"FieldText": {
+		"knownKeys": [
+			"bind",
+			"description",
+			"error",
+			"label",
+			"readOnly",
+			"required"
+		]
+	},
+	"FieldTextarea": {
+		"knownKeys": [
+			"bind",
+			"description",
+			"label",
+			"rows"
+		]
+	},
+	"FieldTime": {
+		"knownKeys": [
+			"bind",
+			"description",
+			"disabled",
+			"error",
+			"is12Hour",
+			"label",
+			"minuteStep",
+			"placeholder",
+			"required"
+		]
+	},
+	"FieldWrapper": {
+		"knownKeys": [
+			"children",
+			"description",
+			"error",
+			"label",
+			"required"
+		],
+		"allowedChildren": {
+			"children": [
+				"atomic"
+			]
+		}
+	},
+	"FilterBar": {
+		"knownKeys": [
+			"filters",
+			"onClearAll",
+			"onFilterChange",
+			"onSearchChange",
+			"placeholder",
+			"search"
+		]
+	},
+	"FilterChips": {
+		"knownKeys": [
+			"bind",
+			"mode",
+			"onChange",
+			"options",
+			"value"
+		]
+	},
+	"Form": {
+		"knownKeys": [
+			"actions",
+			"fields",
+			"initialData",
+			"onSubmit"
+		],
+		"allowedChildren": {
+			"fields": [
+				"field"
+			],
+			"actions": [
+				"action-bar",
+				"form-specific"
+			]
+		}
+	},
+	"HorizontalStack": {
+		"knownKeys": [
+			"align",
+			"gap",
+			"itemSizes",
+			"items",
+			"justify"
+		],
+		"allowedChildren": {
+			"items": [
+				"layout",
+				"table",
+				"form",
+				"display",
+				"composite",
+				"atomic"
+			]
+		}
+	},
+	"HttpMethodBadge": {
+		"knownKeys": [
+			"method"
+		]
+	},
+	"HttpStatusBadge": {
+		"knownKeys": [
+			"status"
+		]
+	},
+	"IconButton": {
+		"knownKeys": [
+			"aria-label",
+			"icon",
+			"size"
+		]
+	},
+	"InlineEdit": {
+		"knownKeys": [
+			"disabled",
+			"editClassName",
+			"multiline",
+			"onChange",
+			"placeholder",
+			"validate",
+			"value"
+		]
+	},
+	"InviteTokenWidget": {
+		"knownKeys": [
+			"inviteToken",
+			"isPending",
+			"onGenerateToken"
+		]
+	},
+	"JsonViewer": {
+		"knownKeys": [
+			"field",
+			"maxHeight",
+			"row"
+		]
+	},
+	"Link": {
+		"knownKeys": [
+			"external",
+			"href",
+			"label",
+			"variant"
+		]
+	},
+	"LiveToggle": {
+		"knownKeys": [
+			"live",
+			"onChange"
+		]
+	},
+	"NavBar": {
+		"knownKeys": [
+			"items"
+		]
+	},
+	"PageContent": {
+		"knownKeys": [
+			"maxWidth",
+			"sections"
+		],
+		"allowedChildren": {
+			"sections": [
+				"layout",
+				"composite",
+				"header",
+				"content",
+				"chart",
+				"table",
+				"tabs",
+				"navigation",
+				"action-bar",
+				"form",
+				"stepper",
+				"wizard",
+				"upload",
+				"dropzone",
+				"file",
+				"navigator",
+				"browser",
+				"keys",
+				"security",
+				"scopes",
+				"admin",
+				"management",
+				"versions",
+				"history"
+			]
+		}
+	},
+	"PageHeader": {
+		"knownKeys": [
+			"headerActions",
+			"icon",
+			"size",
+			"subtitle",
+			"title"
+		],
+		"allowedChildren": {
+			"headerActions": [
+				"button",
+				"action"
+			]
+		}
+	},
+	"PageSection": {
+		"knownKeys": [
+			"actions",
+			"items",
+			"title"
+		]
+	},
+	"PageSizeSelect": {
+		"knownKeys": [
+			"onChange",
+			"options",
+			"urlParam",
+			"value"
+		]
+	},
+	"PageTabs": {
+		"knownKeys": [
+			"activeTab",
+			"onChange",
+			"tabs"
+		]
+	},
+	"Pagination": {
+		"knownKeys": [
+			"onPageChange",
+			"page",
+			"size",
+			"total",
+			"urlParam"
+		]
+	},
+	"Popover": {
+		"knownKeys": [
+			"align",
+			"items",
+			"onOpenChange",
+			"open",
+			"side",
+			"trigger"
+		]
+	},
+	"Progress": {
+		"knownKeys": [
+			"label",
+			"layout",
+			"max",
+			"showValue",
+			"size",
+			"value",
+			"valueLabel",
+			"variant"
+		]
+	},
+	"RadioGroup": {
+		"knownKeys": [
+			"bind",
+			"label",
+			"options",
+			"orientation"
+		]
+	},
+	"RefreshButton": {
+		"knownKeys": [
+			"loading",
+			"onClick"
+		]
+	},
+	"RelativeDate": {
+		"knownKeys": [
+			"date",
+			"format",
+			"live",
+			"tooltip"
+		]
+	},
+	"RouterProvider": {
+		"knownKeys": [
+			"items"
+		]
+	},
+	"ScrollArea": {
+		"knownKeys": [
+			"axis",
+			"items",
+			"scheme"
+		]
+	},
+	"SearchBar": {
+		"knownKeys": [
+			"debounceMs",
+			"focusExpand",
+			"onChange",
+			"placeholder",
+			"size",
+			"value"
+		]
+	},
+	"Section": {
+		"knownKeys": [
+			"items",
+			"title"
+		],
+		"allowedChildren": {
+			"items": [
+				"layout",
+				"table",
+				"form",
+				"display",
+				"composite"
+			]
+		}
+	},
+	"ShownFetchedCounter": {
+		"knownKeys": [
+			"entriesField",
+			"pushRight",
+			"raw",
+			"totalField"
+		]
+	},
+	"Skeleton": {
+		"knownKeys": [
+			"count",
+			"height",
+			"variant",
+			"width"
+		]
+	},
+	"Slider": {
+		"knownKeys": [
+			"bind",
+			"disabled",
+			"label",
+			"max",
+			"min",
+			"showValue",
+			"step"
+		]
+	},
+	"SortableColumn": {
+		"knownKeys": [
+			"currentSort",
+			"label",
+			"onSort",
+			"sortKey"
+		]
+	},
+	"Spinner": {
+		"knownKeys": [
+			"label",
+			"size"
+		]
+	},
+	"StatTile": {
+		"knownKeys": [
+			"icon",
+			"label",
+			"loading",
+			"trend",
+			"value"
+		]
+	},
+	"StatusFilter": {
+		"knownKeys": [
+			"field",
+			"onChange",
+			"options",
+			"value"
+		]
+	},
+	"Stepper": {
+		"knownKeys": [
+			"completedLabel",
+			"onCancel",
+			"onComplete",
+			"steps"
+		]
+	},
+	"Switch": {
+		"knownKeys": [
+			"bind",
+			"disabled",
+			"label",
+			"size"
+		]
+	},
+	"TabButton": {
+		"knownKeys": [
+			"active"
+		]
+	},
+	"TableRowActions": {
+		"knownKeys": [
+			"items"
+		]
+	},
+	"Tabs": {
+		"knownKeys": [
+			"defaultTab",
+			"onChange",
+			"tabs",
+			"value"
+		]
+	},
+	"Tag": {
+		"knownKeys": [
+			"color",
+			"label",
+			"onRemove"
+		]
+	},
+	"ThemePicker": {
+		"knownKeys": [
+			"bind",
+			"label",
+			"options"
+		]
+	},
+	"ThemeScope": {
+		"knownKeys": [
+			"items",
+			"surface",
+			"theme",
+			"tokens"
+		]
+	},
+	"TimePicker": {
+		"knownKeys": [
+			"bind",
+			"disabled",
+			"is12Hour",
+			"minuteStep",
+			"onOpenChange",
+			"open",
+			"placeholder"
+		]
+	},
+	"ToastProvider": {
+		"knownKeys": [
+			"items"
+		],
+		"allowedChildren": {
+			"items": [
+				"layout",
+				"content"
+			]
+		}
+	},
+	"Tooltip": {
+		"knownKeys": [
+			"content",
+			"items"
+		],
+		"allowedChildren": {
+			"items": [
+				"atomic",
+				"composite"
+			]
+		}
+	},
+	"TreeView": {
+		"knownKeys": [
+			"defaultExpandedIds",
+			"expandedIds",
+			"nodes",
+			"onExpandChange",
+			"onSelect",
+			"selectedId"
+		]
+	},
+	"UnsavedBadge": {
+		"knownKeys": [
+			"hasChanges"
+		]
+	},
+	"VerticalStack": {
+		"knownKeys": [
+			"gap",
+			"items"
+		],
+		"allowedChildren": {
+			"items": [
+				"layout",
+				"table",
+				"form",
+				"display",
+				"composite",
+				"atomic"
+			]
+		}
+	}
+}
