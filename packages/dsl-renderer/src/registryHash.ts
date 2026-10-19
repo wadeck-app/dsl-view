@@ -27,6 +27,7 @@ export function computeRegistryFingerprint(registry: ComponentRegistry): string 
 	const parts = names.map((name) => {
 		const entry = registry[name]!;
 		const allowedChildrenKeys = Object.keys(entry.allowedChildren ?? {}).sort();
+		const mapSlotKeys = Object.keys(entry.mapSlots ?? {}).sort();
 		return [
 			name,
 			entry.category,
@@ -34,6 +35,8 @@ export function computeRegistryFingerprint(registry: ComponentRegistry): string 
 			entry.ctxSchema ? '1' : '0',
 			entry.knownKeys ? '1' : '0',
 			allowedChildrenKeys.join(','),
+			// Appended only when present, so a registry without map slots keeps the fingerprint it had before this field existed.
+			...(mapSlotKeys.length > 0 ? [mapSlotKeys.join(',')] : []),
 		].join('|');
 	});
 	return fnv1a(parts.join('\n'));

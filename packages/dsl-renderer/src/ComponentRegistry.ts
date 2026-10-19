@@ -1,6 +1,8 @@
 import type React from 'react';
 import type { z } from 'zod';
 
+import type { MapSlotSpec } from './dslKeys.js';
+
 export interface RegistryRenderProps {
 	node: Record<string, unknown>;
 	registry: ComponentRegistry;
@@ -19,6 +21,8 @@ export interface ComponentRegistryEntry {
 	// Non-directive DSL keys the generated render actually reads (props, `bind`, and `items` for a ReactNode `children` prop).
 	// Absent = unknown (hand-written entry): the build-time compiler reports it as "unchecked" instead of skipping silently.
 	knownKeys?: string[];
+	// Props holding a map of named entries that each carry a nested DSL node (see MapSlotSpec), e.g. AbTest `variants`.
+	mapSlots?: Record<string, MapSlotSpec>;
 	providesContext?: string[]; // context variable names provided (from createContext() calls)
 	requiresContext?: string[]; // context variable names required (from useContext() calls)
 }

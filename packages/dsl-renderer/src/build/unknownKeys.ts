@@ -2,6 +2,7 @@ import type { z } from 'zod';
 
 import type { CompiledDslDiagnostic } from '../compiledDslArtifact.js';
 import { EXTENSION_SLOT_TYPE, KNOWN_DSL_KEYS, omitNavKeys } from '../dslKeys.js';
+import type { MapSlotSpec } from '../dslKeys.js';
 
 // Isomorphic and React-free on purpose: a CLI can validate author views against a JSON manifest of the
 // built-in components without loading the renderer or the generated entries.
@@ -10,6 +11,7 @@ import { EXTENSION_SLOT_TYPE, KNOWN_DSL_KEYS, omitNavKeys } from '../dslKeys.js'
 export interface DslKeysEntry {
 	knownKeys?: string[];
 	allowedChildren?: Record<string, string[]>;
+	mapSlots?: Record<string, MapSlotSpec>;
 	nodeSchema?: z.ZodSchema;
 }
 
@@ -18,13 +20,14 @@ export type DslKeysManifest = Record<string, DslKeysEntry>;
 
 /** Serializable subset of a registry (no render functions, no schemas), meant to be shipped as JSON. */
 export function buildKnownKeysManifest(
-	entries: Array<{ name: string; knownKeys?: string[]; allowedChildren?: Record<string, string[]> }>
+	entries: Array<{ name: string; knownKeys?: string[]; allowedChildren?: Record<string, string[]>; mapSlots?: Record<string, MapSlotSpec> }>
 ): DslKeysManifest {
 	const manifest: DslKeysManifest = {};
 	for (const entry of [...entries].sort((a, b) => a.name.localeCompare(b.name))) {
 		manifest[entry.name] = {
 			...(entry.knownKeys ? { knownKeys: [...entry.knownKeys].sort() } : {}),
 			...(entry.allowedChildren && Object.keys(entry.allowedChildren).length > 0 ? { allowedChildren: entry.allowedChildren } : {}),
+			...(entry.mapSlots && Object.keys(entry.mapSlots).length > 0 ? { mapSlots: entry.mapSlots } : {}),
 		};
 	}
 	return manifest;
@@ -160,6 +163,77 @@ function walk(node: unknown, manifest: DslKeysManifest, nodePath: string, diagno
 		slotValue.forEach((child, i) => {
 			walk(child, manifest, `${nodePath}.${slotKey}[${i}]`, diagnostics, skipType);
 		});
+	}
+
+	for (const [slotKey, spec] of Object.entries(entry.mapSlots ?? {})) {
+		walkMapSlot(record[slotKey], slotKey, spec, type, manifest, nodePath, diagnostics, skipType);
+	}
+}
+
+// A prop that is a map of named entries, each carrying one nested node (e.g. AbTest `variants.<key>.view`).
+// Every shape error is reported: an entry that is not an object, an unknown key in it, a missing nested node.
+function walkMapSlot(
+	value: unknown,
+	slotKey: string,
+	spec: MapSlotSpec,
+	type: string,
+	manifest: DslKeysManifest,
+	nodePath: string,
+	diagnostics: CompiledDslDiagnostic[],
+	skipType?: (type: string) => boolean
+): void {
+	if (value === undefined) {
+		return;
+	}
+	if (!value || typeof value !== 'object' || Array.isArray(value)) {
+		diagnostics.push({
+			severity: 'error',
+			type,
+			nodePath,
+			code: 'invalid-map-slot',
+			message: `[${type}] "${slotKey}" must be a map of named entries, each with: ${spec.keys.join(', ')}`,
+		});
+		return;
+	}
+	for (const [entryKey, entryValue] of Object.entries(value)) {
+		const entryPath = `${nodePath}.${slotKey}.${entryKey}`;
+		if (!entryValue || typeof entryValue !== 'object' || Array.isArray(entryValue)) {
+			diagnostics.push({
+				severity: 'error',
+				type,
+				nodePath: entryPath,
+				code: 'invalid-map-slot',
+				message: `[${type}] "${slotKey}.${entryKey}" must be a map with: ${spec.keys.join(', ')}`,
+			});
+			continue;
+		}
+		const entry = entryValue as Record<string, unknown>;
+		for (const key of Object.keys(entry)) {
+			if (!spec.keys.includes(key)) {
+				const suggestion = suggestKey(key, spec.keys);
+				diagnostics.push({
+					severity: 'error',
+					type,
+					nodePath: entryPath,
+					code: 'unknown-key',
+					message:
+						`[${type}] unknown key "${key}" in "${slotKey}.${entryKey}" - the renderer ignores it, so it has no effect.` +
+						(suggestion ? ` Did you mean "${suggestion}"?` : '') +
+						` Known keys: ${[...spec.keys].sort().join(', ')}`,
+				});
+			}
+		}
+		if (entry[spec.nodeKey] === undefined) {
+			diagnostics.push({
+				severity: 'error',
+				type,
+				nodePath: entryPath,
+				code: 'invalid-map-slot',
+				message: `[${type}] "${slotKey}.${entryKey}" has no "${spec.nodeKey}": nothing to render for this entry`,
+			});
+			continue;
+		}
+		walk(entry[spec.nodeKey], manifest, `${entryPath}.${spec.nodeKey}`, diagnostics, skipType);
 	}
 }
 

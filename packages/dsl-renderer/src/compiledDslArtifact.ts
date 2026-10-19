@@ -8,7 +8,7 @@ export interface CompiledDslDiagnostic {
 	severity: 'error' | 'warning';
 	type: string;
 	nodePath: string;
-	code: 'unknown-component-type' | 'unknown-directive' | 'node-schema' | 'unknown-key' | 'unchecked-keys';
+	code: 'unknown-component-type' | 'unknown-directive' | 'node-schema' | 'unknown-key' | 'unchecked-keys' | 'invalid-map-slot';
 	message: string;
 }
 

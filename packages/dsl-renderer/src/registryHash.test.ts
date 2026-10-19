@@ -73,3 +73,12 @@ describe('computeRegistryFingerprint', () => {
 		expect(before).toBe(after);
 	});
 });
+
+describe('computeRegistryFingerprint mapSlots', () => {
+	it('changes when a map slot is added, and is unchanged for entries without one', () => {
+		const before = computeRegistryFingerprint(createRegistry([Panel]));
+		const withMap: ComponentRegistryEntry = { ...Panel, mapSlots: { variants: { keys: ['view'], nodeKey: 'view' } } };
+		expect(computeRegistryFingerprint(createRegistry([withMap]))).not.toBe(before);
+		expect(computeRegistryFingerprint(createRegistry([{ ...Panel, mapSlots: {} }]))).toBe(before);
+	});
+});

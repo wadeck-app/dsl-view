@@ -22,6 +22,7 @@ import { fileURLToPath } from 'url';
 import type { Plugin } from 'vite';
 import { buildKnownKeysManifest } from './unknownKeys.js';
 import type { DslKeysManifest } from './unknownKeys.js';
+import type { MapSlotSpec } from '../dslKeys.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -154,6 +155,46 @@ export function extractAllowedChildren(
 	return result;
 }
 
+// Props documented with `@mapSlot <nodeKey>` hold a map of named entries, each carrying one nested DSL node under
+// `<nodeKey>` (e.g. `/** @mapSlot view */ variants: Record<string, AbVariantSpec>`). The entry's allowed keys are the
+// properties of the interface named as the Record's value type, declared in the same file. Fails loudly (build error)
+// when the shape cannot be derived: a map slot the walker silently skips would leave nested views unchecked.
+export function extractMapSlots(
+	sourceFile: ReturnType<InstanceType<typeof Project>['addSourceFileAtPath']>,
+	componentName: string
+): Record<string, MapSlotSpec> {
+	const propsInterface = sourceFile.getInterface(componentName + 'Props');
+	if (!propsInterface) return {};
+
+	const result: Record<string, MapSlotSpec> = {};
+	for (const prop of propsInterface.getProperties()) {
+		for (const doc of prop.getJsDocs()) {
+			for (const tag of doc.getTags()) {
+				if (tag.getTagName() !== 'mapSlot') continue;
+				const where = `${componentName}Props.${prop.getName()}`;
+				const nodeKey = tag.getCommentText()?.trim() ?? '';
+				if (!nodeKey) {
+					throw new Error(`[entriesGenerator] ${where}: @mapSlot needs the key holding the nested node, e.g. "@mapSlot view"`);
+				}
+				const typeText = prop.getTypeNode()?.getText() ?? '';
+				const match = /^Record<\s*string\s*,\s*(\w+)\s*>$/.exec(typeText);
+				const entryInterface = match?.[1] ? sourceFile.getInterface(match[1]) : undefined;
+				if (!entryInterface) {
+					throw new Error(
+						`[entriesGenerator] ${where}: @mapSlot needs the type "Record<string, SomeInterface>" with SomeInterface declared in the same file, got "${typeText}"`
+					);
+				}
+				const keys = entryInterface.getProperties().map((p) => p.getName().replace(/^['"`]|['"`]$/g, ''));
+				if (!keys.includes(nodeKey)) {
+					throw new Error(`[entriesGenerator] ${where}: @mapSlot key "${nodeKey}" is not a property of ${entryInterface.getName()} (${keys.join(', ')})`);
+				}
+				result[prop.getName()] = { keys, nodeKey };
+			}
+		}
+	}
+	return result;
+}
+
 // Non-directive DSL keys the generated render reads for this component. MUST mirror the prop
 // filtering in generateSimpleEntry (a consistency test compares both against the generated render).
 export function extractKnownKeys(
@@ -276,6 +317,8 @@ interface DiscoveredComponent {
 	allowedChildren: Record<string, string[]>;
 	/** Optional so hand-built test fixtures can omit it; discoverComponents always sets it. */
 	knownKeys?: string[];
+	/** Optional like knownKeys; see extractMapSlots. */
+	mapSlots?: Record<string, MapSlotSpec>;
 	providesContext: string[];
 	requiresContext: string[];
 	sourcePath: string;
@@ -315,12 +358,13 @@ function discoverComponents(srcDir: string, hookWrappers: Map<string, string[]>)
 			if (category) {
 				const allowedChildren = extractAllowedChildren(sourceFile, name);
 				const knownKeys = extractKnownKeys(sourceFile, name, bindPattern);
+				const mapSlots = extractMapSlots(sourceFile, name);
 				const providesContext = [...new Set([
 					...extractContextNames(fn.getText(), 'createContext'),
 					...extractProvidesContextFromProviderJsx(fn),
 				])];
 				const requiresContext = extractRequiresContext(fn, hookWrappers);
-				discovered.push({ name, category, tags, bindPattern, lazy, allowedChildren, knownKeys, providesContext, requiresContext, sourcePath: absPath });
+				discovered.push({ name, category, tags, bindPattern, lazy, allowedChildren, knownKeys, mapSlots, providesContext, requiresContext, sourcePath: absPath });
 			}
 		}
 	}
@@ -707,6 +751,9 @@ ${importLines.join('\n')}
 			const lines: string[] = [];
 			if (Object.keys(c.allowedChildren).length > 0) {
 				lines.push(`${entryVar}.allowedChildren = ${JSON.stringify(c.allowedChildren)};`);
+			}
+			if (c.mapSlots && Object.keys(c.mapSlots).length > 0) {
+				lines.push(`${entryVar}.mapSlots = ${JSON.stringify(c.mapSlots)};`);
 			}
 			if (c.knownKeys) {
 				lines.push(`${entryVar}.knownKeys = ${JSON.stringify(c.knownKeys)};`);

@@ -7,7 +7,7 @@ import { Project } from 'ts-morph';
 
 import { createRegistry } from '../ComponentRegistry.js';
 import { compileDslDocument } from './dslCompiler.js';
-import { buildEntriesFile, extractAllowedChildren, extractKnownKeys } from './entriesGenerator.js';
+import { buildEntriesFile, extractAllowedChildren, extractKnownKeys, extractMapSlots } from './entriesGenerator.js';
 
 describe('entriesGenerator @registryLazy', () => {
 	const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'entries-generator-test-'));
@@ -152,6 +152,31 @@ describe('extractAllowedChildren DSL key', () => {
 	});
 });
 
+describe('extractMapSlots', () => {
+	function mapSlotsOf(source: string, name: string) {
+		const project = new Project({ useInMemoryFileSystem: true, skipFileDependencyResolution: true });
+		return extractMapSlots(project.createSourceFile('C.tsx', source), name);
+	}
+	const entry = ['export interface VariantSpec {', '  label: string;', '  hint: string;', '  view: unknown;', '}'];
+
+	it('derives the entry keys from the Record value interface and keeps the node key', () => {
+		const result = mapSlotsOf([...entry, 'export interface XProps {', '  /** @mapSlot view */', '  variants: Record<string, VariantSpec>;', '}'].join('\n'), 'X');
+		expect(result).toEqual({ variants: { keys: ['label', 'hint', 'view'], nodeKey: 'view' } });
+	});
+
+	it('returns nothing for a component without @mapSlot', () => {
+		expect(mapSlotsOf('export interface XProps { gap?: string }', 'X')).toEqual({});
+	});
+
+	it('fails loudly when the shape cannot be derived (never a silently unchecked slot)', () => {
+		const props = (decl: string, tag = '@mapSlot view') => [...entry, 'export interface XProps {', `  /** ${tag} */`, `  ${decl}`, '}'].join('\n');
+		expect(() => mapSlotsOf(props('variants: Record<string, Unknown>;'), 'X')).toThrow(/same file/);
+		expect(() => mapSlotsOf(props('variants: string[];'), 'X')).toThrow(/Record<string, SomeInterface>/);
+		expect(() => mapSlotsOf(props('variants: Record<string, VariantSpec>;', '@mapSlot'), 'X')).toThrow(/needs the key/);
+		expect(() => mapSlotsOf(props('variants: Record<string, VariantSpec>;', '@mapSlot node'), 'X')).toThrow(/not a property of VariantSpec/);
+	});
+});
+
 describe('extractKnownKeys', () => {
 	const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'known-keys-test-'));
 
@@ -281,5 +306,56 @@ describe('extractKnownKeys', () => {
 		]);
 		const fixed = compileDslDocument(`$type: VerticalStack\nitems:\n  - $type: VerticalStack\n`, registry);
 		expect(fixed.diagnostics).toEqual([]);
+	});
+});
+
+describe('@mapSlot end to end (a prop that is a map of named entries carrying a nested node)', () => {
+	const source = [
+		"import React from 'react';",
+		'export interface ExperimentVariant { label: string; hint: string; view: unknown }',
+		'export interface ExperimentProps {',
+		'  id: string;',
+		'  /** @mapSlot view */',
+		'  variants: Record<string, ExperimentVariant>;',
+		'  renderNode: (node: unknown, ctx: Record<string, unknown>) => React.ReactNode;',
+		'}',
+		'export function Experiment(props: ExperimentProps) { return null }',
+	].join('\n');
+	// buildEntriesFile re-reads the component from disk.
+	const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'map-slot-test-'));
+	const sourcePath = path.join(tmpDir, 'Experiment.tsx');
+	fs.writeFileSync(sourcePath, source);
+	afterAll(() => {
+		fs.rmSync(tmpDir, { recursive: true, force: true });
+	});
+	const project = new Project({ skipFileDependencyResolution: true });
+	const sourceFile = project.addSourceFileAtPath(sourcePath);
+	const mapSlots = extractMapSlots(sourceFile, 'Experiment');
+	const knownKeys = extractKnownKeys(sourceFile, 'Experiment', null);
+
+	it('emits the metadata and wires the callback (not a YAML key) to the DSL renderer', () => {
+		expect(knownKeys).toEqual(['id', 'variants']);
+		const output = buildEntriesFile([
+			{ name: 'Experiment', category: 'disposition', tags: [], bindPattern: null, lazy: false, allowedChildren: {}, knownKeys, mapSlots, providesContext: [], requiresContext: [], sourcePath: sourcePath },
+		]);
+		expect(output).toContain(`ExperimentEntry.mapSlots = ${JSON.stringify(mapSlots)};`);
+		expect(output).toContain('renderNode={renderNode}');
+		expect(output).toContain('renderChildren([n], registry, { ...ctx, ...extraCtx })');
+	});
+
+	it('the compiler recurses into the nested nodes and rejects unknown keys at every level', () => {
+		const registry = createRegistry([
+			{ name: 'Experiment', category: 'disposition', tags: [], knownKeys, mapSlots, render: () => null },
+			{ name: 'Label', category: 'atomic', tags: [], knownKeys: ['label'], render: () => null },
+		]);
+		const yaml = (variant: string) => `$type: Experiment\nid: t\nvariants:\n  a:\n    label: A\n    hint: a\n${variant}`;
+		expect(compileDslDocument(yaml('    view:\n      $type: Label\n      label: hi\n'), registry).diagnostics).toEqual([]);
+		expect(compileDslDocument(yaml('    view:\n      $type: Label\n      lable: hi\n'), registry).diagnostics).toEqual([
+			expect.objectContaining({ code: 'unknown-key', type: 'Label', nodePath: '$.variants.a.view', message: expect.stringContaining('Did you mean "label"?') }),
+		]);
+		expect(compileDslDocument(yaml('    views:\n      $type: Label\n'), registry).diagnostics).toEqual([
+			expect.objectContaining({ code: 'unknown-key', type: 'Experiment', nodePath: '$.variants.a' }),
+			expect.objectContaining({ code: 'invalid-map-slot', nodePath: '$.variants.a' }),
+		]);
 	});
 });
