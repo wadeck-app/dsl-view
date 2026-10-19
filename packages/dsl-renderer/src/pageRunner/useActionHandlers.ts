@@ -1,11 +1,15 @@
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { KNOWN_ACTION_KEYS } from '../dslKeys.js';
 import { getErrorMessage } from '../errors.js';
-import { collectRowUrlParams, normalizeAction, resolveAuthHeaders, substituteUrlParams } from './pageRunnerUtils.js';
-import type { ActionErrorInfo, Fetcher, PageSpec } from './pageRunnerUtils.js';
+import type { Notify } from '../notifier.js';
+import { collectRowUrlParams, normalizeAction, notifyFailure, notifySuccess, resolveAuthHeaders, substituteUrlParams } from './pageRunnerUtils.js';
+import type { ActionErrorInfo, ActionSpec, Fetcher, PageSpec } from './pageRunnerUtils.js';
 
 export function useActionHandlers(params: {
+	/** Where success/failure feedback goes: the host's notifier, or the runner's inline banner. */
+	notify: Notify;
 	/** Called when a row or batch action fails (HTTP error, missing URL placeholder...). */
 	onActionError?: (error: Error, info: ActionErrorInfo) => void;
 	$actions: PageSpec['$actions'];
@@ -27,8 +31,10 @@ export function useActionHandlers(params: {
 	onAction: (actionName: string, row: Record<string, unknown>) => Promise<void>;
 	onBatchAction: (actionName: string, rows: Record<string, unknown>[]) => Promise<void>;
 	extras: Record<string, unknown>;
+	/** `<actionName>: true` while at least one call of that action is in flight. Exposed to YAML as `$ctx.$actionPending.<name>`. */
+	actionPending: Record<string, boolean>;
 } {
-	const { $actions, invalidateSourceCache, mountedRef, routeParams, searchParams, getToken, fetcher, loadSources, onActionError } = params;
+	const { $actions, invalidateSourceCache, mountedRef, routeParams, searchParams, getToken, fetcher, loadSources, onActionError, notify } = params;
 
 	const routeParamsRef = useRef(routeParams);
 	useEffect(() => {
@@ -46,12 +52,69 @@ export function useActionHandlers(params: {
 		onActionErrorRef.current = onActionError;
 	}, [onActionError]);
 
+	// One feedback path for every action (named handlers, row, batch): the host sees the same Notification shape.
+	const notifyRef = useRef(notify);
+	useEffect(() => {
+		notifyRef.current = notify;
+	}, [notify]);
+
+	// Double-submit guard + pending flags. Keyed per call target (row actions: action + row id) so two different
+	// rows can run in parallel but the same one cannot be fired twice.
+	const inFlightRef = useRef(new Set<string>());
+	const [pendingCounts, setPendingCounts] = useState<Record<string, number>>({});
+	const begin = useCallback(
+		(actionName: string, flightKey: string): boolean => {
+			if (inFlightRef.current.has(flightKey)) {
+				console.warn(`[GenericPageRunner] action "${actionName}" is already running - ignoring the repeated call`);
+				return false;
+			}
+			inFlightRef.current.add(flightKey);
+			if (mountedRef.current) {
+				setPendingCounts(prev => ({ ...prev, [actionName]: (prev[actionName] ?? 0) + 1 }));
+			}
+			return true;
+		},
+		[mountedRef]
+	);
+	const end = useCallback(
+		(actionName: string, flightKey: string) => {
+			inFlightRef.current.delete(flightKey);
+			if (mountedRef.current) {
+				setPendingCounts(prev => ({ ...prev, [actionName]: Math.max(0, (prev[actionName] ?? 1) - 1) }));
+			}
+		},
+		[mountedRef]
+	);
+	const actionPending = useMemo(() => {
+		const flags: Record<string, boolean> = {};
+		for (const [name, count] of Object.entries(pendingCounts)) {
+			flags[name] = count > 0;
+		}
+		return flags;
+	}, [pendingCounts]);
+
+	// A typo in an action key (e.g. sucessMessage) would silently fall back to the default behaviour. The same
+	// check runs at compile time (findUnknownKeys); this covers pages run from raw YAML.
+	useEffect(() => {
+		for (const [name, rawSpec] of Object.entries($actions ?? {})) {
+			if (typeof rawSpec !== 'object' || rawSpec === null) {
+				continue;
+			}
+			for (const key of Object.keys(rawSpec)) {
+				if (!(KNOWN_ACTION_KEYS as readonly string[]).includes(key)) {
+					console.error(`[GenericPageRunner] $actions.${name}: unknown action key "${key}". Known keys: ${KNOWN_ACTION_KEYS.join(', ')}`);
+				}
+			}
+		}
+	}, [$actions]);
+
 	// Row and batch actions are fired from a click handler that does not await them, so a rejection
-	// would only surface as an unhandledrejection nobody sees. Report it instead: to the host hook
+	// would only surface as an unhandledrejection nobody sees. Report it instead: to the notifier, to the host hook
 	// when given (e.g. to show a toast), always to the console with the action name.
-	const reportActionError = useCallback((actionName: string, kind: ActionErrorInfo['kind'], error: unknown) => {
+	const reportActionError = useCallback((actionName: string, kind: ActionErrorInfo['kind'], error: unknown, spec?: ActionSpec) => {
 		const err = error instanceof Error ? error : new Error(String(error));
 		console.error(`[GenericPageRunner] ${kind} action "${actionName}" failed: ${getErrorMessage(err)}`);
+		notifyFailure(notifyRef.current, actionName, spec, err);
 		onActionErrorRef.current?.(err, { action: actionName, kind });
 	}, []);
 
@@ -60,77 +123,96 @@ export function useActionHandlers(params: {
 		for (const [name, rawSpec] of Object.entries($actions ?? {})) {
 			const spec = normalizeAction(rawSpec);
 			handlers[name] = async (extraBody?: Record<string, unknown>) => {
-				if (spec.confirm && !window.confirm(spec.confirm)) {
-					return;
+				if (!begin(name, name)) {
+					return undefined;
 				}
-				const authHeaders = await resolveAuthHeaders(getToken);
-				const body = extraBody && Object.keys(extraBody).length > 0 ? extraBody : undefined;
-				let result: unknown;
-				if (spec.url) {
-					// Resolve {param} placeholders in URL from route params, URL search params, and extraBody
-					const currentRouteParams = routeParamsRef.current ?? {};
-					const currentSearchParams = searchParamsRef.current;
-					const allParams: Record<string, string> = { ...currentRouteParams };
-					if (currentSearchParams) {
-						for (const [k, v] of currentSearchParams.entries()) {
-							if (!(k in allParams)) allParams[k] = v;
+				try {
+					if (spec.confirm && !window.confirm(spec.confirm)) {
+						return undefined;
+					}
+					const authHeaders = await resolveAuthHeaders(getToken);
+					const body = extraBody && Object.keys(extraBody).length > 0 ? extraBody : undefined;
+					let result: unknown;
+					if (spec.url) {
+						// Resolve {param} placeholders in URL from route params, URL search params, and extraBody
+						const currentRouteParams = routeParamsRef.current ?? {};
+						const currentSearchParams = searchParamsRef.current;
+						const allParams: Record<string, string> = { ...currentRouteParams };
+						if (currentSearchParams) {
+							for (const [k, v] of currentSearchParams.entries()) {
+								if (!(k in allParams)) allParams[k] = v;
+							}
+						}
+						if (extraBody) {
+							for (const [k, v] of Object.entries(extraBody)) {
+								if (!(k in allParams) && v != null) allParams[k] = String(v);
+							}
+						}
+						const resolvedUrl = substituteUrlParams(spec.url, allParams);
+						result = await fetcher(resolvedUrl, undefined, body, authHeaders);
+						notifySuccess(notifyRef.current, name, spec, result);
+						if (spec.resultKey && mountedRef.current) {
+							setExtras(prev => ({
+								...prev,
+								[spec.resultKey!]: (result as Record<string, unknown>)?.[spec.resultKey!] ?? result,
+							}));
+						}
+					} else if (spec.resultKey) {
+						// No-URL action: store extraBody (or a timestamp sentinel) in extras under resultKey
+						result = extraBody ?? { _ts: Date.now() };
+						if (mountedRef.current) {
+							setExtras(prev => ({ ...prev, [spec.resultKey!]: result }));
 						}
 					}
-					if (extraBody) {
-						for (const [k, v] of Object.entries(extraBody)) {
-							if (!(k in allParams) && v != null) allParams[k] = String(v);
+					if (spec.reloadSources) {
+						if (Array.isArray(spec.reloadSources)) {
+							for (const sourceKey of spec.reloadSources) {
+								invalidateSourceCache(sourceKey);
+							}
+							await loadSources(false, {}, new Set(spec.reloadSources));
+						} else {
+							await loadSources(false, {});
 						}
 					}
-					const resolvedUrl = substituteUrlParams(spec.url, allParams);
-					result = await fetcher(resolvedUrl, undefined, body, authHeaders);
-					if (spec.resultKey && mountedRef.current) {
-						setExtras(prev => ({
-							...prev,
-							[spec.resultKey!]: (result as Record<string, unknown>)?.[spec.resultKey!] ?? result,
-						}));
-					}
-				} else if (spec.resultKey) {
-					// No-URL action: store extraBody (or a timestamp sentinel) in extras under resultKey
-					result = extraBody ?? { _ts: Date.now() };
-					if (mountedRef.current) {
-						setExtras(prev => ({ ...prev, [spec.resultKey!]: result }));
-					}
+					return result;
+				} catch (error) {
+					// Rethrown: a form keeps its values and a caller can still react to the rejection.
+					notifyFailure(notifyRef.current, name, spec, error);
+					throw error;
+				} finally {
+					end(name, name);
 				}
-				if (spec.reloadSources) {
-					if (Array.isArray(spec.reloadSources)) {
-						for (const sourceKey of spec.reloadSources) {
-							invalidateSourceCache(sourceKey);
-						}
-						await loadSources(false, {}, new Set(spec.reloadSources));
-					} else {
-						await loadSources(false, {});
-					}
-				}
-				return result;
 			};
 		}
 		return handlers;
-	}, [$actions, fetcher, getToken, invalidateSourceCache, loadSources, mountedRef]);
+	}, [$actions, fetcher, getToken, invalidateSourceCache, loadSources, mountedRef, begin, end]);
 
 	const onAction = useCallback(
 		async (actionName: string, row: Record<string, unknown>) => {
+			let spec: ActionSpec | undefined;
+			let flightKey: string | undefined;
 			try {
 				const rawSpec = $actions?.[actionName];
 				if (!rawSpec) {
 					throw new Error(`[onAction] No action spec found for "${actionName}" - check $actions in YAML`);
 				}
-				const spec = normalizeAction(rawSpec);
+				spec = normalizeAction(rawSpec);
 				if (!spec.url) {
 					// No-URL row action: store the row under resultKey (e.g. openEdit stores the selected row)
 					if (spec.resultKey && mountedRef.current) {
-						setExtras(prev => ({ ...prev, [spec.resultKey!]: row }));
+						setExtras(prev => ({ ...prev, [spec!.resultKey!]: row }));
 					}
+					return;
+				}
+				const id = String(row['id'] ?? '');
+				flightKey = `${actionName}:${id}`;
+				if (!begin(actionName, flightKey)) {
+					flightKey = undefined;
 					return;
 				}
 				if (spec.confirm && !window.confirm(spec.confirm)) {
 					return;
 				}
-				const id = String(row['id'] ?? '');
 				// {key} placeholders come from the clicked row first, then route params, then URL search params.
 				// Resolved here (not left to the host fetcher) so every host gets the same behaviour.
 				const urlParams = collectRowUrlParams(row, routeParamsRef.current, searchParamsRef.current);
@@ -138,14 +220,15 @@ export function useActionHandlers(params: {
 					encode: true,
 					onMissing: key => {
 						throw new Error(
-							`[onAction] action "${actionName}": URL placeholder {${key}} has no value in "${spec.url}" ` +
+							`[onAction] action "${actionName}": URL placeholder {${key}} has no value in "${spec!.url}" ` +
 								`(row keys: ${Object.keys(row).join(', ') || 'none'}; route params: ${Object.keys(routeParamsRef.current ?? {}).join(', ') || 'none'}). ` +
 								`Use a field that exists in the row, or fix the placeholder in $actions.${actionName}.url`
 						);
 					},
 				});
 				const authHeaders = await resolveAuthHeaders(getToken);
-				await fetcher(resolvedUrl, { id }, undefined, authHeaders);
+				const result = await fetcher(resolvedUrl, { id }, undefined, authHeaders);
+				notifySuccess(notifyRef.current, actionName, spec, result);
 				if (spec.reloadSources) {
 					if (Array.isArray(spec.reloadSources)) {
 						for (const sourceKey of spec.reloadSources) {
@@ -159,37 +242,52 @@ export function useActionHandlers(params: {
 					await loadSources(false, {});
 				}
 			} catch (error) {
-				reportActionError(actionName, 'row', error);
+				reportActionError(actionName, 'row', error, spec);
+			} finally {
+				if (flightKey) {
+					end(actionName, flightKey);
+				}
 			}
 		},
-		[$actions, fetcher, getToken, invalidateSourceCache, loadSources, mountedRef, reportActionError]
+		[$actions, fetcher, getToken, invalidateSourceCache, loadSources, mountedRef, reportActionError, begin, end]
 	);
 
 	const onBatchAction = useCallback(
 		async (actionName: string, rows: unknown[]) => {
+			let spec: ActionSpec | undefined;
+			let started = false;
 			try {
 				const rawSpec = $actions?.[actionName];
 				if (!rawSpec) {
 					console.warn(`[GenericPageRunner] No action spec found for "${actionName}" - check $actions in YAML`);
 					return;
 				}
-				const spec = normalizeAction(rawSpec);
+				spec = normalizeAction(rawSpec);
 				if (!spec.url) {
 					console.warn(`[GenericPageRunner] Batch action "${actionName}" has no url - skipping fetcher`);
 					return;
 				}
+				if (!begin(actionName, `${actionName}:batch`)) {
+					return;
+				}
+				started = true;
 				// Strip {id} placeholder from batch URL (batch sends ids in body)
 				const batchUrl = spec.url.replace(/\{[^}]+\}/g, '').replace(/\/+$/, '');
 				const ids = rows.map(r => (r as Record<string, unknown>)['id']);
 				const authHeaders = await resolveAuthHeaders(getToken);
-				await fetcher(batchUrl, undefined, { ids }, authHeaders);
+				const result = await fetcher(batchUrl, undefined, { ids }, authHeaders);
+				notifySuccess(notifyRef.current, actionName, spec, result);
 				await loadSources(false, {});
 			} catch (error) {
-				reportActionError(actionName, 'batch', error);
+				reportActionError(actionName, 'batch', error, spec);
+			} finally {
+				if (started) {
+					end(actionName, `${actionName}:batch`);
+				}
 			}
 		},
-		[$actions, fetcher, getToken, loadSources, reportActionError]
+		[$actions, fetcher, getToken, loadSources, reportActionError, begin, end]
 	);
 
-	return { namedHandlers, onAction, onBatchAction, extras };
+	return { namedHandlers, onAction, onBatchAction, extras, actionPending };
 }

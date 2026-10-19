@@ -1,11 +1,13 @@
 import { load as parseYaml } from 'js-yaml';
-import React, { useMemo } from 'react';
+import React, { useContext, useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 
 import type { CompiledDslArtifact } from './compiledDslArtifact.js';
 import { COMPILED_DSL_FORMAT_VERSION } from './compiledDslArtifact.js';
 import type { ComponentRegistry } from './ComponentRegistry.js';
 import { DslRenderer, omitNavKeys } from './engine/DslRenderer.js';
+import { ActionBanner } from './ActionBanner.js';
+import { NotifierContext, useBannerNotifier } from './notifier.js';
 import type { BrainRegistry } from './pageRunner/brainsTypes.js';
 import { useActionHandlers } from './pageRunner/useActionHandlers.js';
 import { useBrains } from './pageRunner/useBrains.js';
@@ -27,7 +29,7 @@ export interface GenericPageRunnerProps {
 	/**
 	 * Called when a row action (DataTable `action:` item) or a batch action fails: HTTP error from the
 	 * fetcher, or a `{placeholder}` in the action url that has no value in the row. Use it to tell the
-	 * user (e.g. a toast). Without it the failure is only logged with `console.error`.
+	 * user (e.g. a toast). Independent of the notifier: it is called in addition to it.
 	 */
 	onActionError?: (error: Error, info: ActionErrorInfo) => void;
 	/**
@@ -103,6 +105,12 @@ function PageRunner({
 	const [searchParams] = useSearchParams();
 	const routeParams = useParams() as Record<string, string>;
 
+	// Action feedback: the host's NotifierProvider when there is one, otherwise an inline banner above the page.
+	// Never silent either way.
+	const hostNotify = useContext(NotifierContext);
+	const banner = useBannerNotifier();
+	const notify = hostNotify ?? banner.notify;
+
 	const { vars, setVar } = useVars(varsDecl as Record<string, unknown> | undefined);
 	const { outputs, publishOutput } = useOutputs();
 
@@ -114,7 +122,8 @@ function PageRunner({
 		fetcher,
 	});
 
-	const { namedHandlers, onAction, onBatchAction, extras } = useActionHandlers({
+	const { namedHandlers, onAction, onBatchAction, extras, actionPending } = useActionHandlers({
+		notify,
 		$actions,
 		invalidateSourceCache,
 		mountedRef,
@@ -134,6 +143,7 @@ function PageRunner({
 		onAction,
 		onBatchAction,
 		...namedHandlers,
+		$actionPending: actionPending,
 		$vars: vars,
 		$outputs: outputs,
 		$publishOutput: publishOutput,
@@ -150,6 +160,7 @@ function PageRunner({
 		getToken,
 		fetcher,
 		routeParams,
+		notify,
 	});
 
 	const ctx: Record<string, unknown> = {
@@ -158,8 +169,11 @@ function PageRunner({
 	};
 
 	return (
-		<React.Suspense fallback={suspenseFallback !== undefined ? suspenseFallback : <SuspenseFallbackNotConfiguredWarning />}>
-			<DslRenderer node={node as Record<string, unknown>} registry={registry} ctx={ctx} />
-		</React.Suspense>
+		<NotifierContext.Provider value={notify}>
+			{hostNotify ? null : <ActionBanner items={banner.items} onDismiss={banner.dismiss} />}
+			<React.Suspense fallback={suspenseFallback !== undefined ? suspenseFallback : <SuspenseFallbackNotConfiguredWarning />}>
+				<DslRenderer node={node as Record<string, unknown>} registry={registry} ctx={ctx} />
+			</React.Suspense>
+		</NotifierContext.Provider>
 	);
 }

@@ -22,6 +22,29 @@ describe('findUnknownKeys (manifest only, no registry, no React)', () => {
 		expect(diagnostics).toEqual([expect.objectContaining({ code: 'unknown-key', type: 'Label', nodePath: '$.items[0]' })]);
 	});
 
+	it('reports an unknown $actions key with a suggestion, and accepts the feedback knobs', () => {
+		const diagnostics = findUnknownKeys(
+			{
+				$actions: {
+					ok: { url: 'POST /a', successMessage: 'Done', errorPrefix: 'Could not', notify: false, reloadSources: true, confirm: 'Sure?', resultKey: 'k' },
+					typo: { url: 'POST /b', sucessMessage: 'x' },
+					shorthand: 'POST /c',
+				},
+				$type: 'Label',
+				label: 'hi',
+			},
+			manifest
+		);
+		expect(diagnostics).toEqual([
+			expect.objectContaining({
+				code: 'unknown-action-key',
+				severity: 'error',
+				nodePath: '$actions.typo',
+				message: expect.stringContaining('Did you mean "successMessage"?'),
+			}),
+		]);
+	});
+
 	it('strips page-level keys and $nav* like the runtime', () => {
 		const diagnostics = findUnknownKeys({ $route: '/x', $navLabel: 'X', $sources: {}, $type: 'Label', label: 'hi' }, manifest);
 		expect(diagnostics).toEqual([]);

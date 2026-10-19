@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { getErrorMessage } from '../errors.js';
+import type { Notify } from '../notifier.js';
 import type { BrainRegistry, ChainBrainSpec, RawBrainSpec, SimpleBrainSpec } from './brainsTypes.js';
 import type { Fetcher } from './pageRunnerUtils.js';
-import { resolveAuthHeaders, substituteUrlParams } from './pageRunnerUtils.js';
+import { notifyFailure, resolveAuthHeaders, substituteUrlParams } from './pageRunnerUtils.js';
 
 /**
  * What a page can read about a brain's own progress, as `$brains.<id>.$pending` and
@@ -166,6 +167,8 @@ export function useBrains(params: {
 	getToken?: () => Promise<string | null>;
 	fetcher: Fetcher;
 	routeParams?: Record<string, string>;
+	/** Receives a failed brain (never a success: brains also drive data loading). Opt out per brain with `$notify: false`. */
+	notify?: Notify;
 }): {
 	brainResults: Record<string, unknown>;
 } {
@@ -179,6 +182,7 @@ export function useBrains(params: {
 		getToken,
 		fetcher,
 		routeParams,
+		notify,
 	} = params;
 
 	const [brainResults, setBrainResults] = useState<Record<string, unknown>>({});
@@ -201,6 +205,8 @@ export function useBrains(params: {
 	invalidateRef.current = invalidateSourceCache;
 	const routeParamsRef = useRef(routeParams);
 	routeParamsRef.current = routeParams;
+	const notifyRef = useRef<Notify | undefined>(notify);
+	notifyRef.current = notify;
 
 	// snapshots[brainId] = last-known reactive param values (for change detection)
 	const snapshots = useRef<Record<string, Record<string, unknown>>>({});
@@ -373,6 +379,9 @@ export function useBrains(params: {
 						// which is how a failed mutation looked exactly like a successful one.
 						setBrainStatus(prev => ({ ...prev, [brainId]: { $pending: false, $error: message } }));
 						console.error(`[useBrains] brain "${brainId}" failed:`, message);
+						if (rawSpec['$notify'] !== false && notifyRef.current) {
+							notifyFailure(notifyRef.current, brainId, undefined, err);
+						}
 					});
 			}
 		}

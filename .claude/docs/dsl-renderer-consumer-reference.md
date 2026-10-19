@@ -234,8 +234,33 @@ import { appRegistry } from './registry.js';
 **Row and batch actions** (a DataTable `action:` item, a bulk action):
 - `{key}` in the action `url` is filled by dsl-renderer before the fetcher is called, from the clicked row, then route params, then URL search params. Values are percent-encoded. The fetcher receives the final URL (and still `{ id }` as `params` for hosts that read it).
 - A `{key}` with no value fails loudly: no request is sent, the error names the action, the placeholder and the row keys.
-- A failure (HTTP error, missing placeholder) is reported to `onActionError` and to `console.error`, never as an unhandled rejection. Without `onActionError` the user sees nothing: pass one that shows a toast.
+- A failure (HTTP error, missing placeholder) is reported to the notifier (see below), to `onActionError` and to `console.error`, never as an unhandled rejection.
 - `$actions` handlers called from a Form (`$ctx.<name>`) are unchanged: they do not encode values, and a missing `{key}` becomes an empty string.
+
+**Action feedback** (every `$actions` call that sent a request, and every failed `$brains` entry):
+- Success -> `{ kind: 'success', message }`, failure -> `{ kind: 'error', message, status? }`, both with `action` = the `$actions` name or brain id. The failure message is the fetcher's `Error.message` (put the actionable server text there); `status` is the Error's numeric `status` when present.
+- No host setup needed: without a notifier the runner shows an inline banner above the page (`role="status"` for success, auto-dismissed after 5 s; `role="alert"` for errors, dismissed by the user). Feedback is never console-only.
+- To route feedback to your toast stack, wrap the runner (or the whole app) once:
+
+```tsx
+<NotifierProvider notify={({ kind, message }) => (kind === 'error' ? toast.error(message) : toast.success(message))}>
+  <GenericPageRunner ... />
+</NotifierProvider>
+```
+
+  Types: `Notify = (n: Notification) => void`, `Notification = { kind: 'success' | 'error'; message: string; status?: number; action?: string }`. A provider replaces the banner. Widgets use `useNotifier()`, which throws outside a runner or provider. `onActionError` still fires for row and batch failures, in addition to the notifier.
+- No feedback for an action that sent no request (no `url`, or `confirm` declined).
+- Per-action keys in `$actions.<name>` (unknown keys are a compile-time error and a `console.error` at runtime):
+
+| Key | Effect |
+|---|---|
+| `successMessage` | Success text. Default `Done`. A `message` string in the JSON response overrides it. |
+| `errorPrefix` | Failure text becomes `<prefix>: <message>`. |
+| `notify: false` | No feedback for this action. Failures still reach `console.error` and `onActionError`. |
+
+- A `$brains` entry accepts `$notify: false` to keep its failure out of the feedback (still published as `$brains.<id>.$error`).
+- Double submit: while an action runs, a repeated call of the same action (same row for row actions) is ignored with a console warning. `$ctx.$actionPending.<name>` is `true` while it runs, e.g. `disabled: $ctx.$actionPending.clearEntry` on a button. DataTable action buttons are not disabled automatically.
+- A failed named handler (`$ctx.<name>`) still rejects after notifying, so a form keeps its values.
 
 `GenericPageRunner` always wraps its render tree in one page-level `<Suspense>`, but this is a no-op for generated `@registryLazy` entries — `LazyBoundary` (see above) already resolves their suspension locally before it ever reaches this outer boundary. `suspenseFallback` only matters for a hand-authored `ComponentRegistryEntry` using bare `React.lazy` with no `Suspense` ancestor of its own; omitting it warns once in the dev console (pass `null` explicitly to silence it).
 

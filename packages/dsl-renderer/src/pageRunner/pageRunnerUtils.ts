@@ -1,3 +1,6 @@
+import { getErrorMessage } from '../errors.js';
+import type { Notify } from '../notifier.js';
+
 export interface ActionSpec {
 	url?: string;
 	resultKey?: string;
@@ -5,6 +8,12 @@ export interface ActionSpec {
 	reloadSources?: boolean | string[];
 	/** If set, shows a window.confirm dialog with this message before executing the action. */
 	confirm?: string;
+	/** Shown on success when the server response carries no `message` string. Default: "Done". */
+	successMessage?: string;
+	/** Prepended to the failure message: `errorPrefix: "Could not replay"` -> "Could not replay: <server message>". */
+	errorPrefix?: string;
+	/** false = no success/failure feedback for this action (e.g. a silent background reload). Failures are still logged. */
+	notify?: boolean;
 }
 
 export type RawActionSpec = string | ActionSpec;
@@ -300,4 +309,32 @@ export function topoLevels(keys: string[], deps: Record<string, string[]>): stri
 		remaining = remaining.filter(sourceKey => !placed.has(sourceKey));
 	}
 	return levels;
+}
+
+/** Success feedback for a request that went out. The server may override the message with a `message` string in its JSON response. */
+export function notifySuccess(notify: Notify, actionName: string, spec: ActionSpec, result: unknown): void {
+	if (spec.notify === false) {
+		return;
+	}
+	const serverMessage = typeof result === 'object' && result !== null ? (result as { message?: unknown }).message : undefined;
+	notify({
+		kind: 'success',
+		message: typeof serverMessage === 'string' && serverMessage !== '' ? serverMessage : (spec.successMessage ?? 'Done'),
+		action: actionName,
+	});
+}
+
+/** Failure feedback. `spec` is undefined when the failure happened before the spec could be read (unknown action name): always reported then. */
+export function notifyFailure(notify: Notify, actionName: string, spec: ActionSpec | undefined, error: unknown): void {
+	if (spec?.notify === false) {
+		return;
+	}
+	const message = getErrorMessage(error);
+	const status = typeof error === 'object' && error !== null ? (error as { status?: unknown }).status : undefined;
+	notify({
+		kind: 'error',
+		message: spec?.errorPrefix ? `${spec.errorPrefix}: ${message}` : message,
+		status: typeof status === 'number' ? status : undefined,
+		action: actionName,
+	});
 }

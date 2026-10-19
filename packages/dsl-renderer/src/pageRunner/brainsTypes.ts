@@ -6,6 +6,8 @@ export interface SimpleBrainSpec {
 	$brain: string;
 	$outputs?: string[];
 	$reload?: string[];
+	/** false = a failure of this brain is only logged / published as `$brains.<id>.$error`, not shown as feedback. */
+	$notify?: boolean;
 	[param: string]: unknown;
 }
 
@@ -19,6 +21,8 @@ export interface ChainStepSpec {
 export interface ChainBrainSpec {
 	$chain: ChainStepSpec[];
 	$reload?: string[];
+	/** false = a failure of this brain is only logged / published as `$brains.<id>.$error`, not shown as feedback. */
+	$notify?: boolean;
 	[param: string]: unknown;
 }
 

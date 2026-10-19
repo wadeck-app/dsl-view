@@ -1,7 +1,7 @@
 import type { z } from 'zod';
 
 import type { CompiledDslDiagnostic } from '../compiledDslArtifact.js';
-import { EXTENSION_SLOT_TYPE, KNOWN_DSL_KEYS, omitNavKeys } from '../dslKeys.js';
+import { EXTENSION_SLOT_TYPE, KNOWN_ACTION_KEYS, KNOWN_DSL_KEYS, omitNavKeys } from '../dslKeys.js';
 import type { MapSlotSpec } from '../dslKeys.js';
 
 // Isomorphic and React-free on purpose: a CLI can validate author views against a JSON manifest of the
@@ -243,6 +243,26 @@ function walkMapSlot(
  * Types not in the manifest are reported as `unknown-component-type`; pass `skipType` (e.g. `(t) => t.includes(':')`
  * for `<moduleId>:<Name>` dsl-lib components) to leave types the manifest cannot describe unchecked.
  */
+function findUnknownActionKeys($actions: unknown, diagnostics: CompiledDslDiagnostic[]): void {
+	if ($actions == null || typeof $actions !== 'object') return;
+	const known: string[] = [...KNOWN_ACTION_KEYS];
+	for (const [name, spec] of Object.entries($actions as Record<string, unknown>)) {
+		// String form is just the url shorthand.
+		if (spec == null || typeof spec !== 'object') continue;
+		for (const key of Object.keys(spec)) {
+			if (known.includes(key)) continue;
+			const suggestion = suggestKey(key, known);
+			diagnostics.push({
+				severity: 'error',
+				type: '$actions',
+				nodePath: `$actions.${name}`,
+				code: 'unknown-action-key',
+				message: `[$actions.${name}] unknown action key "${key}"${suggestion ? `. Did you mean "${suggestion}"?` : ''} Known keys: ${known.join(', ')}`,
+			});
+		}
+	}
+}
+
 export function findUnknownKeys(
 	doc: Record<string, unknown>,
 	manifest: DslKeysManifest,
@@ -251,6 +271,7 @@ export function findUnknownKeys(
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const { $sources, $actions, $route, $vars, $brains, ...pageNode } = doc;
 	const diagnostics: CompiledDslDiagnostic[] = [];
+	findUnknownActionKeys($actions, diagnostics);
 	walk(omitNavKeys(pageNode), manifest, '$', diagnostics, options?.skipType);
 	return diagnostics;
 }

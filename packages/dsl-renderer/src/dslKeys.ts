@@ -24,3 +24,7 @@ export interface MapSlotSpec {
 export function omitNavKeys(node: Record<string, unknown>): Record<string, unknown> {
 	return Object.fromEntries(Object.entries(node).filter(([key]) => !key.startsWith('$nav')));
 }
+
+// Keys an object-form `$actions.<name>` entry may carry. Anything else is an authoring mistake (a typo
+// such as `sucessMessage` would otherwise silently fall back to the default message).
+export const KNOWN_ACTION_KEYS = ['url', 'resultKey', 'reloadSources', 'confirm', 'successMessage', 'errorPrefix', 'notify'] as const;
