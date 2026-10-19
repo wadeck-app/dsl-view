@@ -21,6 +21,10 @@
 			"import": "./dist/build/dslCompiler.js",
 			"types": "./dist/build/dslCompiler.d.ts"
 		},
+		"./build/unknownKeys": {
+			"import": "./dist/build/unknownKeys.js",
+			"types": "./dist/build/unknownKeys.d.ts"
+		},
 		"./build/routesGenerator": {
 			"import": "./dist/build/routesGenerator.js",
 			"types": "./dist/build/routesGenerator.d.ts"

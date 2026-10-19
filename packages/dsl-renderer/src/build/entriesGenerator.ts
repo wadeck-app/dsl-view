@@ -20,6 +20,8 @@ import type { FunctionDeclaration } from 'ts-morph';
 import { load as parseYaml } from 'js-yaml';
 import { fileURLToPath } from 'url';
 import type { Plugin } from 'vite';
+import { buildKnownKeysManifest } from './unknownKeys.js';
+import type { DslKeysManifest } from './unknownKeys.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -571,6 +573,16 @@ export interface BuildEntriesOptions {
 	/** When true, generated imports use package names (e.g. '@wadeck-app/dsl-renderer')
 	 *  instead of monorepo-relative paths. Use when the generator runs as an installed npm package. */
 	usePackageImports?: boolean;
+}
+
+/**
+ * Key metadata (knownKeys, allowedChildren) of every `@registryCategory` component found under `componentDirs`,
+ * as a serializable manifest. Same discovery as the generated registry, so a CLI validating author views
+ * against this JSON sees exactly what the renderer reads. See findUnknownKeys in ./unknownKeys.
+ */
+export function generateKnownKeysManifest(componentDirs: string[]): DslKeysManifest {
+	const hookWrappers = collectContextHookWrappers(componentDirs);
+	return buildKnownKeysManifest(componentDirs.flatMap((dir) => discoverComponents(dir, hookWrappers)));
 }
 
 // Overload for test usage: pass only the override discovered array.

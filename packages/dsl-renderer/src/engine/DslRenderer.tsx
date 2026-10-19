@@ -6,6 +6,7 @@ import React from 'react';
 declare const process: { env: Record<string, string | undefined> } | undefined;
 
 import type { ComponentRegistry } from '../ComponentRegistry.js';
+import { EXTENSION_SLOT_TYPE, KNOWN_DSL_KEYS, omitNavKeys } from '../dslKeys.js';
 
 export interface RenderContext {
 	[key: string]: unknown;
@@ -17,19 +18,8 @@ export interface RendererProps {
 	ctx?: RenderContext;
 }
 
-// Exported so the build-time compiler (src/build/dslCompiler.ts) can replicate this
-// static check without duplicating the key list.
-export const KNOWN_DSL_KEYS = new Set(['$if', '$source', '$context', '$route', '$extends', '$type', '$id', '$outputs']);
-
-// Built-in directive, not a registry component: it needs resolveExpressionValue + renderChildren
-// in the same scope to splice a $sources-backed array of DSL nodes into the tree.
-// Exported so the build-time compiler (src/build/dslCompiler.ts) can special-case it.
-// Page-level `$nav<Name>` keys (e.g. $navLabel) are consumed by routesGenerator, never by the render tree.
-export function omitNavKeys(node: Record<string, unknown>): Record<string, unknown> {
-	return Object.fromEntries(Object.entries(node).filter(([key]) => !key.startsWith('$nav')));
-}
-
-export const EXTENSION_SLOT_TYPE = 'ExtensionSlot';
+// Defined in a React-free module so Node tooling can share them; re-exported to keep this module's public surface.
+export { EXTENSION_SLOT_TYPE, KNOWN_DSL_KEYS, omitNavKeys };
 
 export function DslRenderer({ node, registry, ctx = {} }: RendererProps): React.ReactElement | null {
 	const type = node['$type'] as string | undefined;
