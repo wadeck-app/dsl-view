@@ -16,3 +16,6 @@ export * from './DialogFooter.js';
 export * from './PageHeader.js';
 export * from './ScrollArea.js';
 export * from './ThemeScope.js';
+export * from './accent.js';
+export * from './AccentScope.js';
+export * from './useRootAccent.js';
