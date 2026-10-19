@@ -82,3 +82,12 @@ describe('computeRegistryFingerprint mapSlots', () => {
 		expect(computeRegistryFingerprint(createRegistry([{ ...Panel, mapSlots: {} }]))).toBe(before);
 	});
 });
+
+describe('computeRegistryFingerprint itemKeys', () => {
+	it('changes when item keys are added, and is unchanged for entries without any', () => {
+		const before = computeRegistryFingerprint(createRegistry([Panel]));
+		const withItems: ComponentRegistryEntry = { ...Panel, itemKeys: { columns: { keys: ['field'] } } };
+		expect(computeRegistryFingerprint(createRegistry([withItems]))).not.toBe(before);
+		expect(computeRegistryFingerprint(createRegistry([{ ...Panel, itemKeys: {} }]))).toBe(before);
+	});
+});

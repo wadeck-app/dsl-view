@@ -1,7 +1,7 @@
 import type React from 'react';
 import type { z } from 'zod';
 
-import type { MapSlotSpec } from './dslKeys.js';
+import type { ItemKeysSpec, MapSlotSpec } from './dslKeys.js';
 
 export interface RegistryRenderProps {
 	node: Record<string, unknown>;
@@ -23,6 +23,8 @@ export interface ComponentRegistryEntry {
 	knownKeys?: string[];
 	// Props holding a map of named entries that each carry a nested DSL node (see MapSlotSpec), e.g. AbTest `variants`.
 	mapSlots?: Record<string, MapSlotSpec>;
+	// Props holding an array of plain objects authored in YAML (see ItemKeysSpec), e.g. DataTable `columns`.
+	itemKeys?: Record<string, ItemKeysSpec>;
 	providesContext?: string[]; // context variable names provided (from createContext() calls)
 	requiresContext?: string[]; // context variable names required (from useContext() calls)
 }

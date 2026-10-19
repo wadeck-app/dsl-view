@@ -20,6 +20,20 @@ export interface MapSlotSpec {
 	nodeKey: string;
 }
 
+/**
+ * The shape of a prop that is an ARRAY OF PLAIN OBJECTS authored in YAML (e.g. DataTable `columns`). The walker rejects
+ * unknown keys in every item, so a key the component silently drops (`widht`, an option it never implemented) is an
+ * error instead of a no-op.
+ */
+export interface ItemKeysSpec {
+	/** Keys an item may carry. */
+	keys: string[];
+	/** Item variants chosen by the item's `type` value (e.g. `actions`): their own key list replaces `keys`. */
+	byType?: Record<string, ItemKeysSpec>;
+	/** Keys of an item that are themselves arrays of plain objects (e.g. an actions column's `items`). */
+	arrays?: Record<string, ItemKeysSpec>;
+}
+
 // Page-level `$nav<Name>` keys (e.g. $navLabel) are consumed by routesGenerator, never by the render tree.
 export function omitNavKeys(node: Record<string, unknown>): Record<string, unknown> {
 	return Object.fromEntries(Object.entries(node).filter(([key]) => !key.startsWith('$nav')));

@@ -2,7 +2,7 @@ import type { z } from 'zod';
 
 import type { CompiledDslDiagnostic } from '../compiledDslArtifact.js';
 import { EXTENSION_SLOT_TYPE, KNOWN_ACTION_KEYS, KNOWN_DSL_KEYS, omitNavKeys } from '../dslKeys.js';
-import type { MapSlotSpec } from '../dslKeys.js';
+import type { ItemKeysSpec, MapSlotSpec } from '../dslKeys.js';
 
 // Isomorphic and React-free on purpose: a CLI can validate author views against a JSON manifest of the
 // built-in components without loading the renderer or the generated entries.
@@ -12,6 +12,7 @@ export interface DslKeysEntry {
 	knownKeys?: string[];
 	allowedChildren?: Record<string, string[]>;
 	mapSlots?: Record<string, MapSlotSpec>;
+	itemKeys?: Record<string, ItemKeysSpec>;
 	nodeSchema?: z.ZodSchema;
 }
 
@@ -20,7 +21,7 @@ export type DslKeysManifest = Record<string, DslKeysEntry>;
 
 /** Serializable subset of a registry (no render functions, no schemas), meant to be shipped as JSON. */
 export function buildKnownKeysManifest(
-	entries: Array<{ name: string; knownKeys?: string[]; allowedChildren?: Record<string, string[]>; mapSlots?: Record<string, MapSlotSpec> }>
+	entries: Array<{ name: string; knownKeys?: string[]; allowedChildren?: Record<string, string[]>; mapSlots?: Record<string, MapSlotSpec>; itemKeys?: Record<string, ItemKeysSpec> }>
 ): DslKeysManifest {
 	const manifest: DslKeysManifest = {};
 	for (const entry of [...entries].sort((a, b) => a.name.localeCompare(b.name))) {
@@ -28,6 +29,7 @@ export function buildKnownKeysManifest(
 			...(entry.knownKeys ? { knownKeys: [...entry.knownKeys].sort() } : {}),
 			...(entry.allowedChildren && Object.keys(entry.allowedChildren).length > 0 ? { allowedChildren: entry.allowedChildren } : {}),
 			...(entry.mapSlots && Object.keys(entry.mapSlots).length > 0 ? { mapSlots: entry.mapSlots } : {}),
+			...(entry.itemKeys && Object.keys(entry.itemKeys).length > 0 ? { itemKeys: entry.itemKeys } : {}),
 		};
 	}
 	return manifest;
@@ -168,6 +170,58 @@ function walk(node: unknown, manifest: DslKeysManifest, nodePath: string, diagno
 	for (const [slotKey, spec] of Object.entries(entry.mapSlots ?? {})) {
 		walkMapSlot(record[slotKey], slotKey, spec, type, manifest, nodePath, diagnostics, skipType);
 	}
+
+	for (const [propKey, spec] of Object.entries(entry.itemKeys ?? {})) {
+		walkItemKeys(record[propKey], propKey, spec, type, `${nodePath}.${propKey}`, diagnostics);
+	}
+}
+
+// A prop that is an array of plain objects (e.g. DataTable `columns`): every item key must be one the component reads.
+// A string is an expression bound at runtime (`$sources.x`), which cannot be checked here and is left alone on purpose.
+function walkItemKeys(
+	value: unknown,
+	label: string,
+	spec: ItemKeysSpec,
+	type: string,
+	path: string,
+	diagnostics: CompiledDslDiagnostic[]
+): void {
+	if (value === undefined || typeof value === 'string') {
+		return;
+	}
+	if (!Array.isArray(value)) {
+		diagnostics.push({ severity: 'error', type, nodePath: path, code: 'invalid-item-keys', message: `[${type}] "${label}" must be a list of maps` });
+		return;
+	}
+	value.forEach((item, i) => {
+		const itemPath = `${path}[${i}]`;
+		if (!item || typeof item !== 'object' || Array.isArray(item)) {
+			diagnostics.push({ severity: 'error', type, nodePath: itemPath, code: 'invalid-item-keys', message: `[${type}] "${label}[${i}]" must be a map` });
+			return;
+		}
+		const record = item as Record<string, unknown>;
+		const itemType = record['type'];
+		const effective = typeof itemType === 'string' ? spec.byType?.[itemType] ?? spec : spec;
+		for (const key of Object.keys(record)) {
+			if (effective.keys.includes(key)) {
+				continue;
+			}
+			const suggestion = suggestKey(key, effective.keys);
+			diagnostics.push({
+				severity: 'error',
+				type,
+				nodePath: itemPath,
+				code: 'unknown-key',
+				message:
+					`[${type}] unknown key "${key}" in "${label}[${i}]" - the renderer ignores it, so it has no effect.` +
+					(suggestion ? ` Did you mean "${suggestion}"?` : '') +
+					` Known keys: ${[...effective.keys].sort().join(', ')}`,
+			});
+		}
+		for (const [arrayKey, arraySpec] of Object.entries(effective.arrays ?? {})) {
+			walkItemKeys(record[arrayKey], `${label}[${i}].${arrayKey}`, arraySpec, type, `${itemPath}.${arrayKey}`, diagnostics);
+		}
+	});
 }
 
 // A prop that is a map of named entries, each carrying one nested node (e.g. AbTest `variants.<key>.view`).

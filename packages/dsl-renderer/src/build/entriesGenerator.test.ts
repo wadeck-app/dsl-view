@@ -7,7 +7,7 @@ import { Project } from 'ts-morph';
 
 import { createRegistry } from '../ComponentRegistry.js';
 import { compileDslDocument } from './dslCompiler.js';
-import { buildEntriesFile, extractAllowedChildren, extractKnownKeys, extractMapSlots } from './entriesGenerator.js';
+import { buildEntriesFile, extractAllowedChildren, extractItemKeys, extractKnownKeys, extractMapSlots } from './entriesGenerator.js';
 
 describe('entriesGenerator @registryLazy', () => {
 	const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'entries-generator-test-'));
@@ -174,6 +174,39 @@ describe('extractMapSlots', () => {
 		expect(() => mapSlotsOf(props('variants: string[];'), 'X')).toThrow(/Record<string, SomeInterface>/);
 		expect(() => mapSlotsOf(props('variants: Record<string, VariantSpec>;', '@mapSlot'), 'X')).toThrow(/needs the key/);
 		expect(() => mapSlotsOf(props('variants: Record<string, VariantSpec>;', '@mapSlot node'), 'X')).toThrow(/not a property of VariantSpec/);
+	});
+});
+
+describe('extractItemKeys', () => {
+	function itemKeysOf(source: string, name: string) {
+		const project = new Project({ useInMemoryFileSystem: true, skipFileDependencyResolution: true });
+		return extractItemKeys(project.createSourceFile('C.tsx', source), name);
+	}
+	const specs = [
+		'export interface ItemSpec { label: string; action: string }',
+		'export interface ColSpec { field?: string; width?: number }',
+		"export interface ActionsColSpec { type: 'actions'; items?: ItemSpec[] }",
+	];
+	const props = (tag: string) => [...specs, 'export interface XProps {', `  /** ${tag} */`, '  columns: unknown[];', '}'].join('\n');
+
+	it('derives the default item keys, the typed variant and the nested array keys from the interfaces', () => {
+		expect(itemKeysOf(props('@itemKeys ColSpec, ActionsColSpec'), 'X')).toEqual({
+			columns: {
+				keys: ['field', 'width'],
+				byType: { actions: { keys: ['type', 'items'], arrays: { items: { keys: ['label', 'action'] } } } },
+			},
+		});
+	});
+
+	it('returns nothing for a component without @itemKeys', () => {
+		expect(itemKeysOf('export interface XProps { gap?: string }', 'X')).toEqual({});
+	});
+
+	it('fails loudly when the shape cannot be derived (never a silently unchecked prop)', () => {
+		expect(() => itemKeysOf(props('@itemKeys'), 'X')).toThrow(/needs interface names/);
+		expect(() => itemKeysOf(props('@itemKeys Missing'), 'X')).toThrow(/not an interface declared in the same file/);
+		expect(() => itemKeysOf(props('@itemKeys ActionsColSpec'), 'X')).toThrow(/without a literal/);
+		expect(() => itemKeysOf(props('@itemKeys ColSpec, ItemSpec'), 'X')).toThrow(/two interfaces without a literal/);
 	});
 });
 

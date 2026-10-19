@@ -120,3 +120,64 @@ describe('mapSlots (a map of named entries that each carry a nested node)', () =
 		expect(JSON.parse(JSON.stringify(built))['Experiment'].mapSlots).toEqual({ variants: { keys: ['view'], nodeKey: 'view' } });
 	});
 });
+
+describe('itemKeys (an array of plain objects authored in YAML, e.g. DataTable columns)', () => {
+	const itemManifest: DslKeysManifest = {
+		Table: {
+			knownKeys: ['columns'],
+			itemKeys: {
+				columns: {
+					keys: ['field', 'label', 'width'],
+					byType: { actions: { keys: ['type', 'items'], arrays: { items: { keys: ['label', 'action'] } } } },
+				},
+			},
+		},
+	};
+
+	it('accepts supported column keys, an expression string, and a missing prop', () => {
+		expect(findUnknownKeys({ $type: 'Table', columns: [{ field: 'a', label: 'A', width: 4 }] }, itemManifest)).toEqual([]);
+		expect(findUnknownKeys({ $type: 'Table', columns: '$sources.cols' }, itemManifest)).toEqual([]);
+		expect(findUnknownKeys({ $type: 'Table' }, itemManifest)).toEqual([]);
+	});
+
+	it('reports an ignored column key with its path, a suggestion and the known keys', () => {
+		const diagnostics = findUnknownKeys({ $type: 'Table', columns: [{ field: 'a' }, { field: 'b', widht: 4 }] }, itemManifest);
+		expect(diagnostics).toEqual([
+			expect.objectContaining({
+				code: 'unknown-key',
+				type: 'Table',
+				nodePath: '$.columns[1]',
+				message: expect.stringContaining('Did you mean "width"?'),
+			}),
+		]);
+		expect(diagnostics[0]!.message).toContain('Known keys: field, label, width');
+	});
+
+	it('uses the variant selected by type and follows nested arrays', () => {
+		const diagnostics = findUnknownKeys(
+			{ $type: 'Table', columns: [{ type: 'actions', items: [{ label: 'Go', action: 'go', colour: 'red' }], label: 'x' }] },
+			itemManifest
+		);
+		expect(diagnostics.map((d) => [d.nodePath, d.message.match(/unknown key "(\w+)"/)?.[1]])).toEqual([
+			['$.columns[0]', 'label'],
+			['$.columns[0].items[0]', 'colour'],
+		]);
+	});
+
+	it('flags a type the default item does not declare, and a non-list or non-map value', () => {
+		expect(findUnknownKeys({ $type: 'Table', columns: [{ type: 'text', field: 'a' }] }, itemManifest)).toEqual([
+			expect.objectContaining({ code: 'unknown-key', nodePath: '$.columns[0]' }),
+		]);
+		expect(findUnknownKeys({ $type: 'Table', columns: { field: 'a' } }, itemManifest)).toEqual([
+			expect.objectContaining({ code: 'invalid-item-keys', nodePath: '$.columns' }),
+		]);
+		expect(findUnknownKeys({ $type: 'Table', columns: ['a'] }, itemManifest)).toEqual([
+			expect.objectContaining({ code: 'invalid-item-keys', nodePath: '$.columns[0]' }),
+		]);
+	});
+
+	it('survives the JSON round trip of buildKnownKeysManifest', () => {
+		const built = buildKnownKeysManifest([{ name: 'Table', knownKeys: ['columns'], itemKeys: { columns: { keys: ['field'] } } }]);
+		expect(JSON.parse(JSON.stringify(built))['Table'].itemKeys).toEqual({ columns: { keys: ['field'] } });
+	});
+});

@@ -22,7 +22,7 @@ import { fileURLToPath } from 'url';
 import type { Plugin } from 'vite';
 import { buildKnownKeysManifest } from './unknownKeys.js';
 import type { DslKeysManifest } from './unknownKeys.js';
-import type { MapSlotSpec } from '../dslKeys.js';
+import type { ItemKeysSpec, MapSlotSpec } from '../dslKeys.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -195,6 +195,77 @@ export function extractMapSlots(
 	return result;
 }
 
+type TsSourceFile = ReturnType<InstanceType<typeof Project>['addSourceFileAtPath']>;
+
+function propertyNames(iface: { getProperties(): Array<{ getName(): string }> }): string[] {
+	return iface.getProperties().map((p) => p.getName().replace(/^['"`]|['"`]$/g, ''));
+}
+
+// Keys of one YAML object interface, plus the keys of its own array-of-interface properties (e.g. an actions
+// column's `items: ActionItemSpec[]`). `visited` guards against self-referencing interfaces.
+function itemSpecOf(sourceFile: TsSourceFile, interfaceName: string, where: string, visited: Set<string>): ItemKeysSpec {
+	const iface = sourceFile.getInterface(interfaceName);
+	if (!iface) {
+		throw new Error(`[entriesGenerator] ${where}: @itemKeys names "${interfaceName}", which is not an interface declared in the same file`);
+	}
+	if (visited.has(interfaceName)) {
+		throw new Error(`[entriesGenerator] ${where}: @itemKeys interface "${interfaceName}" references itself`);
+	}
+	const nextVisited = new Set(visited).add(interfaceName);
+	const arrays: Record<string, ItemKeysSpec> = {};
+	for (const prop of iface.getProperties()) {
+		const typeText = prop.getTypeNode()?.getText() ?? '';
+		const match = /^(\w+)\[\]$/.exec(typeText) ?? /^Array<\s*(\w+)\s*>$/.exec(typeText);
+		if (match?.[1] && sourceFile.getInterface(match[1])) {
+			arrays[prop.getName().replace(/^['"`]|['"`]$/g, '')] = itemSpecOf(sourceFile, match[1], where, nextVisited);
+		}
+	}
+	return { keys: propertyNames(iface), ...(Object.keys(arrays).length > 0 ? { arrays } : {}) };
+}
+
+// Props documented with `@itemKeys A, B` hold an array of plain objects authored in YAML (e.g. DataTable `columns`).
+// Each named interface (same file) lists the keys one kind of item may carry. An interface whose `type` property is a
+// string literal (`type: 'actions'`) describes the items with that `type`; exactly one interface must have no such
+// literal and describes all other items. Array-of-interface properties are followed (an actions column's `items`).
+// Fails loudly (build error) when the shape cannot be derived: a silently unchecked prop would leave typos unflagged.
+export function extractItemKeys(sourceFile: TsSourceFile, componentName: string): Record<string, ItemKeysSpec> {
+	const propsInterface = sourceFile.getInterface(componentName + 'Props');
+	if (!propsInterface) return {};
+
+	const result: Record<string, ItemKeysSpec> = {};
+	for (const prop of propsInterface.getProperties()) {
+		for (const doc of prop.getJsDocs()) {
+			for (const tag of doc.getTags()) {
+				if (tag.getTagName() !== 'itemKeys') continue;
+				const where = `${componentName}Props.${prop.getName()}`;
+				const names = (tag.getCommentText() ?? '').split(',').map((n) => n.trim()).filter(Boolean);
+				if (names.length === 0) {
+					throw new Error(`[entriesGenerator] ${where}: @itemKeys needs interface names, e.g. "@itemKeys ColumnSpec, ActionsColumnSpec"`);
+				}
+				let base: ItemKeysSpec | undefined;
+				const byType: Record<string, ItemKeysSpec> = {};
+				for (const name of names) {
+					const spec = itemSpecOf(sourceFile, name, where, new Set());
+					const typeProp = sourceFile.getInterface(name)!.getProperty('type');
+					const literal = /^['"](.+)['"]$/.exec(typeProp?.getTypeNode()?.getText() ?? '')?.[1];
+					if (literal) {
+						byType[literal] = spec;
+					} else if (base) {
+						throw new Error(`[entriesGenerator] ${where}: @itemKeys has two interfaces without a literal \`type\` ("${name}" and another); only one may describe the default item`);
+					} else {
+						base = spec;
+					}
+				}
+				if (!base) {
+					throw new Error(`[entriesGenerator] ${where}: @itemKeys needs one interface without a literal \`type\` for the default item`);
+				}
+				result[prop.getName()] = { ...base, ...(Object.keys(byType).length > 0 ? { byType } : {}) };
+			}
+		}
+	}
+	return result;
+}
+
 // Non-directive DSL keys the generated render reads for this component. MUST mirror the prop
 // filtering in generateSimpleEntry (a consistency test compares both against the generated render).
 export function extractKnownKeys(
@@ -319,6 +390,8 @@ interface DiscoveredComponent {
 	knownKeys?: string[];
 	/** Optional like knownKeys; see extractMapSlots. */
 	mapSlots?: Record<string, MapSlotSpec>;
+	/** Optional like knownKeys; see extractItemKeys. */
+	itemKeys?: Record<string, ItemKeysSpec>;
 	providesContext: string[];
 	requiresContext: string[];
 	sourcePath: string;
@@ -359,12 +432,13 @@ function discoverComponents(srcDir: string, hookWrappers: Map<string, string[]>)
 				const allowedChildren = extractAllowedChildren(sourceFile, name);
 				const knownKeys = extractKnownKeys(sourceFile, name, bindPattern);
 				const mapSlots = extractMapSlots(sourceFile, name);
+				const itemKeys = extractItemKeys(sourceFile, name);
 				const providesContext = [...new Set([
 					...extractContextNames(fn.getText(), 'createContext'),
 					...extractProvidesContextFromProviderJsx(fn),
 				])];
 				const requiresContext = extractRequiresContext(fn, hookWrappers);
-				discovered.push({ name, category, tags, bindPattern, lazy, allowedChildren, knownKeys, mapSlots, providesContext, requiresContext, sourcePath: absPath });
+				discovered.push({ name, category, tags, bindPattern, lazy, allowedChildren, knownKeys, mapSlots, itemKeys, providesContext, requiresContext, sourcePath: absPath });
 			}
 		}
 	}
@@ -764,7 +838,10 @@ ${importLines.join('\n')}
 			if (c.mapSlots && Object.keys(c.mapSlots).length > 0) {
 				lines.push(`${entryVar}.mapSlots = ${JSON.stringify(c.mapSlots)};`);
 			}
-			if (c.knownKeys) {
+			if (c.itemKeys && Object.keys(c.itemKeys).length > 0) {
+					lines.push(`${entryVar}.itemKeys = ${JSON.stringify(c.itemKeys)};`);
+				}
+				if (c.knownKeys) {
 				lines.push(`${entryVar}.knownKeys = ${JSON.stringify(c.knownKeys)};`);
 			}
 			if (c.providesContext.length > 0) {
