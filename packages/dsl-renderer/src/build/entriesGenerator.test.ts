@@ -385,3 +385,35 @@ describe('@mapSlot end to end (a prop that is a map of named entries carrying a 
 		]);
 	});
 });
+
+describe('render-node callback prop (registry must be destructured when the generated line uses it)', () => {
+	const source = [
+		'export interface PickerProps {',
+		'  renderNode: (node: unknown, ctx: Record<string, unknown>) => React.ReactNode;',
+		'}',
+		'export function Picker(props: PickerProps) { return null }',
+		'export interface PlainProps {',
+		'  title?: string;',
+		'}',
+		'export function Plain(props: PlainProps) { return null }',
+	].join('\n');
+	const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'render-node-test-'));
+	const sourcePath = path.join(tmpDir, 'Picker.tsx');
+	fs.writeFileSync(sourcePath, source);
+	afterAll(() => {
+		fs.rmSync(tmpDir, { recursive: true, force: true });
+	});
+	const entry = (name: string) => ({ name, category: 'composite', tags: [], bindPattern: null, lazy: false, allowedChildren: {}, providesContext: [], requiresContext: [], sourcePath });
+
+	it('destructures registry when only a render-node callback uses it', () => {
+		const output = buildEntriesFile([entry('Picker')]);
+		expect(output).toContain('renderChildren([n], registry,');
+		expect(output).toContain('render: ({ node, registry, ctx }: RegistryRenderProps)');
+	});
+
+	it('does not destructure registry when nothing uses it (noUnusedParameters in consumers)', () => {
+		const output = buildEntriesFile([entry('Plain')]);
+		expect(output).toContain('render: ({ node, ctx }: RegistryRenderProps)');
+		expect(output).not.toContain('registry');
+	});
+});

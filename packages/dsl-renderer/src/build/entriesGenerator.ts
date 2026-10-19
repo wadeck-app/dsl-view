@@ -416,6 +416,8 @@ function generateSimpleEntry(
 	const declLines: string[] = [];
 	const jsxAttrs: string[] = [];
 	let hasSlots = false;
+	// True when any generated line calls renderChildren(..., registry, ...), so `registry` must be destructured.
+	let usesRegistry = false;
 	let hasChildren = false;
 	let childrenDslKey = 'items';
 
@@ -458,6 +460,7 @@ function generateSimpleEntry(
 
 		if (isReactNode) {
 			hasSlots = true;
+			usesRegistry = true;
 			if (name === 'children') {
 				hasChildren = true;
 				// Check for custom childrenDslKey from JSDoc @slot or conventions
@@ -469,6 +472,7 @@ function generateSimpleEntry(
 				jsxAttrs.push(`${name}={${name} ? renderChildren(${name}, registry, ctx) : null}`);
 			}
 		} else if (isRenderNodeCallback) {
+			usesRegistry = true;
 			const varName = name.includes('-')
 				? name.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
 				: name;
@@ -526,7 +530,7 @@ function generateSimpleEntry(
 		const outerDecl = `\t\tconst bind = node['bind'] as string`;
 		const fullOuterDecl = declText ? `${outerDecl}\n${declText}` : outerDecl;
 
-		return `render: ({ node, ctx }: RegistryRenderProps) => {
+		return `render: ({ node, ${usesRegistry ? 'registry, ' : ''}ctx }: RegistryRenderProps) => {
 ${fullOuterDecl}
 		function ${component.name}WithContext() {
 			const formCtx = useFormContext()
@@ -554,13 +558,13 @@ ${fullDecl}
 	},`;
 	}
 
-	if (declLines.length === 0 && !hasSlots) {
+	if (declLines.length === 0 && !usesRegistry) {
 		return `render: () => <${component.name} />,`;
 	}
 
-	// All entries with props need ctx for resolveExpressionValue
-	const needsRegistry = hasSlots;
-	if (needsRegistry) {
+	// All entries with props need ctx for resolveExpressionValue; registry only when a line uses it
+	// (named slot or render-node callback), otherwise it would be an unused destructured variable.
+	if (usesRegistry) {
 		return `render: ({ node, registry, ctx }: RegistryRenderProps) => {
 ${declText}
 		return <${component.name}${attrsText} />
