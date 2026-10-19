@@ -481,6 +481,7 @@ import { AbExperiments } from '@wadeck-app/dsl-ui';
 | `AbTest` inside a variant | Allowed, with its own id; its row exists while its variant is shown. |
 | `AbExperiments` inside `AbExperiments` | `console.error`; only the outer dock exists. |
 
+- Host tests declared deeper than the `AbExperiments` mount: call `useRegisterAbTests([test, ...])` where `useAbTest` is called. A new array each render is fine; rows are removed on unmount or when a test leaves the array. Same duplicate-id rule as above; without `AbExperiments` it warns once in development.
 - The build-time check (`compileDslDocument`, `findUnknownKeys`) walks `variants.*.view` and rejects unknown keys at both levels (`mapSlots` metadata, from `@mapSlot view` on the prop). It does not check that `initial` is a variant; the renderer does.
 - Non-initial variants ship in the view: nothing confidential in them. `enabled` hides the tool, it does not shrink the bundle.
 - Needs `@wadeck-app/dsl-renderer` and `dsl-ui` generated registries from the same release: an older generator lacks `mapSlots`, so the nested views go unchecked without a message.
