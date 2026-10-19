@@ -307,6 +307,11 @@ export interface DataTableProps<T extends Record<string, unknown>> {
 	columns: TableColumn<T>[];
 	loading?: boolean;
 	emptyMessage?: string;
+	/**
+	 * Called with the action name and the row when a row-action button (`type: actions` column) is clicked.
+	 * Defaults to the page's `$actions` handler (ctx.onAction), so `action: <name>` items work without wiring.
+	 * @ctxDefault
+	 */
 	onAction?: (action: string, row: T) => void;
 	/** Path template (e.g. `/files/{id}`) interpolated from the clicked row - navigated to via RouterContext. */
 	navigateTo?: string;
@@ -339,7 +344,11 @@ export interface DataTableProps<T extends Record<string, unknown>> {
 	selectable?: boolean;
 	/** Actions available when rows are selected. */
 	batchActions?: Array<{ label: string; action: string; variant?: 'primary' | 'danger' | 'ghost' | 'success' }>;
-	/** Called when a batch action is triggered with the selected rows. */
+	/**
+	 * Called when a batch action is triggered with the selected rows.
+	 * Defaults to the page's `$actions` batch handler (ctx.onBatchAction).
+	 * @ctxDefault
+	 */
 	onBatchAction?: (actionName: string, rows: T[]) => void;
 	/**
 	 * Where the batch-actions bar renders when rows are selected.

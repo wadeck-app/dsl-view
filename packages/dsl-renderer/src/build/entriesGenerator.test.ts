@@ -309,6 +309,32 @@ describe('extractKnownKeys', () => {
 	});
 });
 
+describe('@ctxDefault (a callback prop that defaults to the same-named ctx entry)', () => {
+	const source = [
+		'export interface GridProps {',
+		'  /** @ctxDefault */',
+		'  onAction?: (action: string, row: unknown) => void;',
+		'  onRowClick?: (row: unknown) => void;',
+		'}',
+		'export function Grid(props: GridProps) { return null }',
+	].join('\n');
+	const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ctx-default-test-'));
+	const sourcePath = path.join(tmpDir, 'Grid.tsx');
+	fs.writeFileSync(sourcePath, source);
+	afterAll(() => {
+		fs.rmSync(tmpDir, { recursive: true, force: true });
+	});
+
+	it('falls back to ctx only for the tagged prop; an untagged callback stays YAML-only', () => {
+		const output = buildEntriesFile([
+			{ name: 'Grid', category: 'composite', tags: [], bindPattern: null, lazy: false, allowedChildren: {}, providesContext: [], requiresContext: [], sourcePath },
+		]);
+		expect(output).toContain(`const onAction = (resolveExpressionValue(node['onAction'], ctx) ?? ctx['onAction'])`);
+		expect(output).toContain(`const onRowClick = (resolveExpressionValue(node['onRowClick'], ctx))`);
+		expect(output).not.toContain(`ctx['onRowClick']`);
+	});
+});
+
 describe('@mapSlot end to end (a prop that is a map of named entries carrying a nested node)', () => {
 	const source = [
 		"import React from 'react';",
