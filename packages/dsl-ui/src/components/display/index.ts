@@ -14,3 +14,5 @@ export * from './Spinner.js';
 export * from './InlineEdit.js';
 export * from './Tag.js';
 export * from './RelativeDate.js';
+export * from './InitialsTile.js';
+export * from './initials.js';

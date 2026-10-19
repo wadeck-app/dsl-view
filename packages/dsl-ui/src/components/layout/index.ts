@@ -19,3 +19,4 @@ export * from './ThemeScope.js';
 export * from './accent.js';
 export * from './AccentScope.js';
 export * from './useRootAccent.js';
+export * from './AppShell.js';
