@@ -170,8 +170,57 @@ export function resolveParamValue(
 	return value;
 }
 
-export function substituteUrlParams(url: string, params: Record<string, string>): string {
-	return url.replace(/\{([^}]+)\}/g, (_, key: string) => params[key] ?? '');
+export interface ActionErrorInfo {
+	action: string;
+	/** `row` = a per-row action (DataTable `action:` item), `batch` = a bulk action over selected rows. */
+	kind: 'row' | 'batch';
+}
+
+/** Primitive row values (id, name...) first, then route params, then search params; later sources never override earlier ones. */
+export function collectRowUrlParams(
+	row: Record<string, unknown>,
+	routeParams?: Record<string, string>,
+	searchParams?: URLSearchParams
+): Record<string, string> {
+	const result: Record<string, string> = {};
+	for (const [k, v] of Object.entries(row)) {
+		if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
+			result[k] = String(v);
+		}
+	}
+	for (const [k, v] of Object.entries(routeParams ?? {})) {
+		if (!(k in result)) {
+			result[k] = v;
+		}
+	}
+	if (searchParams) {
+		for (const [k, v] of searchParams.entries()) {
+			if (!(k in result)) {
+				result[k] = v;
+			}
+		}
+	}
+	return result;
+}
+
+export interface SubstituteUrlOptions {
+	/** Percent-encode each substituted value (a path segment must not smuggle `/`, `?` or `#`). */
+	encode?: boolean;
+	/** Called for a `{key}` with no value. Throw to fail loudly; the return value is substituted otherwise. */
+	onMissing?: (key: string) => string;
+}
+
+export function substituteUrlParams(url: string, params: Record<string, string>, options?: SubstituteUrlOptions): string {
+	return url.replace(/\{([^}]+)\}/g, (_, key: string) => {
+		const value = params[key];
+		if (value === undefined || value === '') {
+			if (options?.onMissing) {
+				return options.onMissing(key);
+			}
+			return value ?? '';
+		}
+		return options?.encode ? encodeURIComponent(value) : value;
+	});
 }
 
 export async function resolveAuthHeaders(

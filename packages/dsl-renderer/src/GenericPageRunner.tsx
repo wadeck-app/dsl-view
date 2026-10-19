@@ -10,7 +10,7 @@ import type { BrainRegistry } from './pageRunner/brainsTypes.js';
 import { useActionHandlers } from './pageRunner/useActionHandlers.js';
 import { useBrains } from './pageRunner/useBrains.js';
 import { useOutputs } from './pageRunner/useOutputs.js';
-import type { Fetcher, PageSpec } from './pageRunner/pageRunnerUtils.js';
+import type { ActionErrorInfo, Fetcher, PageSpec } from './pageRunner/pageRunnerUtils.js';
 import { computeRegistryFingerprint } from './registryHash.js';
 import { useSourceLoader } from './pageRunner/useSourceLoader.js';
 import { useVars } from './pageRunner/useVars.js';
@@ -24,6 +24,12 @@ export interface GenericPageRunnerProps {
 	getToken?: () => Promise<string | null>;
 	fetcher: Fetcher;
 	brainRegistry?: BrainRegistry;
+	/**
+	 * Called when a row action (DataTable `action:` item) or a batch action fails: HTTP error from the
+	 * fetcher, or a `{placeholder}` in the action url that has no value in the row. Use it to tell the
+	 * user (e.g. a toast). Without it the failure is only logged with `console.error`.
+	 */
+	onActionError?: (error: Error, info: ActionErrorInfo) => void;
 	/**
 	 * Backstop fallback for a hand-authored `ComponentRegistryEntry` using bare `React.lazy`
 	 * with no `Suspense` ancestor of its own. Generated `@registryLazy` entries never reach
@@ -63,6 +69,7 @@ function PageRunner({
 	getToken,
 	fetcher,
 	brainRegistry,
+	onActionError,
 	suspenseFallback,
 }: GenericPageRunnerProps) {
 	const doc = useMemo(() => {
@@ -116,6 +123,7 @@ function PageRunner({
 		getToken,
 		fetcher,
 		loadSources,
+		onActionError,
 	});
 
 	const baseCtx: Record<string, unknown> = {

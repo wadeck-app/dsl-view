@@ -225,10 +225,17 @@ import { appRegistry } from './registry.js';
       getToken={() => Promise.resolve(localStorage.getItem('token'))}  // optional
       brainRegistry={{}}   // optional custom brains
       suspenseFallback={<Spinner />}   // optional, see below — irrelevant for generated @registryLazy entries
+      onActionError={(error, { action, kind }) => toast.error(error.message)}   // optional, see below
     />
   </RouterProvider>
 </BrowserRouter>
 ```
+
+**Row and batch actions** (a DataTable `action:` item, a bulk action):
+- `{key}` in the action `url` is filled by dsl-renderer before the fetcher is called, from the clicked row, then route params, then URL search params. Values are percent-encoded. The fetcher receives the final URL (and still `{ id }` as `params` for hosts that read it).
+- A `{key}` with no value fails loudly: no request is sent, the error names the action, the placeholder and the row keys.
+- A failure (HTTP error, missing placeholder) is reported to `onActionError` and to `console.error`, never as an unhandled rejection. Without `onActionError` the user sees nothing: pass one that shows a toast.
+- `$actions` handlers called from a Form (`$ctx.<name>`) are unchanged: they do not encode values, and a missing `{key}` becomes an empty string.
 
 `GenericPageRunner` always wraps its render tree in one page-level `<Suspense>`, but this is a no-op for generated `@registryLazy` entries — `LazyBoundary` (see above) already resolves their suspension locally before it ever reaches this outer boundary. `suspenseFallback` only matters for a hand-authored `ComponentRegistryEntry` using bare `React.lazy` with no `Suspense` ancestor of its own; omitting it warns once in the dev console (pass `null` explicitly to silence it).
 

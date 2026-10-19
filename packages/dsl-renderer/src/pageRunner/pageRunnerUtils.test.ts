@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+	collectRowUrlParams,
 	resolveParamValue,
 	substituteUrlParams,
 	topoSortSources,
@@ -94,6 +95,29 @@ describe('substituteUrlParams', () => {
 	it('unmatched placeholder becomes empty string', () => {
 		const result = substituteUrlParams('GET /api/{missing}', {});
 		expect(result).toBe('GET /api/');
+	});
+
+	it('encode option percent-encodes values', () => {
+		expect(substituteUrlParams('GET /api/{id}', { id: 'a/b' }, { encode: true })).toBe('GET /api/a%2Fb');
+	});
+
+	it('onMissing is called for absent or empty values', () => {
+		const onMissing = (key: string): string => {
+			throw new Error(`missing ${key}`);
+		};
+		expect(() => substituteUrlParams('GET /api/{id}', {}, { onMissing })).toThrow('missing id');
+		expect(() => substituteUrlParams('GET /api/{id}', { id: '' }, { onMissing })).toThrow('missing id');
+	});
+});
+
+describe('collectRowUrlParams', () => {
+	it('row values win over route params, which win over search params; non-primitives are skipped', () => {
+		const result = collectRowUrlParams(
+			{ id: 7, nested: { a: 1 }, nothing: null, flag: true },
+			{ id: 'route', slug: 'r' },
+			new URLSearchParams('slug=s&q=x')
+		);
+		expect(result).toEqual({ id: '7', flag: 'true', slug: 'r', q: 'x' });
 	});
 });
 

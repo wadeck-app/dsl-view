@@ -1,10 +1,13 @@
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { normalizeAction, resolveAuthHeaders, substituteUrlParams } from './pageRunnerUtils.js';
-import type { Fetcher, PageSpec } from './pageRunnerUtils.js';
+import { getErrorMessage } from '../errors.js';
+import { collectRowUrlParams, normalizeAction, resolveAuthHeaders, substituteUrlParams } from './pageRunnerUtils.js';
+import type { ActionErrorInfo, Fetcher, PageSpec } from './pageRunnerUtils.js';
 
 export function useActionHandlers(params: {
+	/** Called when a row or batch action fails (HTTP error, missing URL placeholder...). */
+	onActionError?: (error: Error, info: ActionErrorInfo) => void;
 	$actions: PageSpec['$actions'];
 	invalidateSourceCache: (sourceKey: string) => void;
 	mountedRef: React.RefObject<boolean>;
@@ -25,7 +28,7 @@ export function useActionHandlers(params: {
 	onBatchAction: (actionName: string, rows: Record<string, unknown>[]) => Promise<void>;
 	extras: Record<string, unknown>;
 } {
-	const { $actions, invalidateSourceCache, mountedRef, routeParams, searchParams, getToken, fetcher, loadSources } = params;
+	const { $actions, invalidateSourceCache, mountedRef, routeParams, searchParams, getToken, fetcher, loadSources, onActionError } = params;
 
 	const routeParamsRef = useRef(routeParams);
 	useEffect(() => {
@@ -37,6 +40,20 @@ export function useActionHandlers(params: {
 	}, [searchParams]);
 
 	const [extras, setExtras] = useState<Record<string, unknown>>({});
+
+	const onActionErrorRef = useRef(onActionError);
+	useEffect(() => {
+		onActionErrorRef.current = onActionError;
+	}, [onActionError]);
+
+	// Row and batch actions are fired from a click handler that does not await them, so a rejection
+	// would only surface as an unhandledrejection nobody sees. Report it instead: to the host hook
+	// when given (e.g. to show a toast), always to the console with the action name.
+	const reportActionError = useCallback((actionName: string, kind: ActionErrorInfo['kind'], error: unknown) => {
+		const err = error instanceof Error ? error : new Error(String(error));
+		console.error(`[GenericPageRunner] ${kind} action "${actionName}" failed: ${getErrorMessage(err)}`);
+		onActionErrorRef.current?.(err, { action: actionName, kind });
+	}, []);
 
 	const namedHandlers = useMemo(() => {
 		const handlers: Record<string, (extraBody?: Record<string, unknown>) => Promise<unknown>> = {};
@@ -97,60 +114,81 @@ export function useActionHandlers(params: {
 
 	const onAction = useCallback(
 		async (actionName: string, row: Record<string, unknown>) => {
-			const rawSpec = $actions?.[actionName];
-			if (!rawSpec) {
-				throw new Error(`[onAction] No action spec found for "${actionName}" - check $actions in YAML`);
-			}
-			const spec = normalizeAction(rawSpec);
-			if (!spec.url) {
-				// No-URL row action: store the row under resultKey (e.g. openEdit stores the selected row)
-				if (spec.resultKey && mountedRef.current) {
-					setExtras(prev => ({ ...prev, [spec.resultKey!]: row }));
+			try {
+				const rawSpec = $actions?.[actionName];
+				if (!rawSpec) {
+					throw new Error(`[onAction] No action spec found for "${actionName}" - check $actions in YAML`);
 				}
-				return;
-			}
-			if (spec.confirm && !window.confirm(spec.confirm)) {
-				return;
-			}
-			const id = String(row['id'] ?? '');
-			const authHeaders = await resolveAuthHeaders(getToken);
-			await fetcher(spec.url, { id }, undefined, authHeaders);
-			if (spec.reloadSources) {
-				if (Array.isArray(spec.reloadSources)) {
-					for (const sourceKey of spec.reloadSources) {
-						invalidateSourceCache(sourceKey);
+				const spec = normalizeAction(rawSpec);
+				if (!spec.url) {
+					// No-URL row action: store the row under resultKey (e.g. openEdit stores the selected row)
+					if (spec.resultKey && mountedRef.current) {
+						setExtras(prev => ({ ...prev, [spec.resultKey!]: row }));
 					}
-					await loadSources(false, {}, new Set(spec.reloadSources));
+					return;
+				}
+				if (spec.confirm && !window.confirm(spec.confirm)) {
+					return;
+				}
+				const id = String(row['id'] ?? '');
+				// {key} placeholders come from the clicked row first, then route params, then URL search params.
+				// Resolved here (not left to the host fetcher) so every host gets the same behaviour.
+				const urlParams = collectRowUrlParams(row, routeParamsRef.current, searchParamsRef.current);
+				const resolvedUrl = substituteUrlParams(spec.url, urlParams, {
+					encode: true,
+					onMissing: key => {
+						throw new Error(
+							`[onAction] action "${actionName}": URL placeholder {${key}} has no value in "${spec.url}" ` +
+								`(row keys: ${Object.keys(row).join(', ') || 'none'}; route params: ${Object.keys(routeParamsRef.current ?? {}).join(', ') || 'none'}). ` +
+								`Use a field that exists in the row, or fix the placeholder in $actions.${actionName}.url`
+						);
+					},
+				});
+				const authHeaders = await resolveAuthHeaders(getToken);
+				await fetcher(resolvedUrl, { id }, undefined, authHeaders);
+				if (spec.reloadSources) {
+					if (Array.isArray(spec.reloadSources)) {
+						for (const sourceKey of spec.reloadSources) {
+							invalidateSourceCache(sourceKey);
+						}
+						await loadSources(false, {}, new Set(spec.reloadSources));
+					} else {
+						await loadSources(false, {});
+					}
 				} else {
 					await loadSources(false, {});
 				}
-			} else {
-				await loadSources(false, {});
+			} catch (error) {
+				reportActionError(actionName, 'row', error);
 			}
 		},
-		[$actions, fetcher, getToken, invalidateSourceCache, loadSources, mountedRef]
+		[$actions, fetcher, getToken, invalidateSourceCache, loadSources, mountedRef, reportActionError]
 	);
 
 	const onBatchAction = useCallback(
 		async (actionName: string, rows: unknown[]) => {
-			const rawSpec = $actions?.[actionName];
-			if (!rawSpec) {
-				console.warn(`[GenericPageRunner] No action spec found for "${actionName}" - check $actions in YAML`);
-				return;
+			try {
+				const rawSpec = $actions?.[actionName];
+				if (!rawSpec) {
+					console.warn(`[GenericPageRunner] No action spec found for "${actionName}" - check $actions in YAML`);
+					return;
+				}
+				const spec = normalizeAction(rawSpec);
+				if (!spec.url) {
+					console.warn(`[GenericPageRunner] Batch action "${actionName}" has no url - skipping fetcher`);
+					return;
+				}
+				// Strip {id} placeholder from batch URL (batch sends ids in body)
+				const batchUrl = spec.url.replace(/\{[^}]+\}/g, '').replace(/\/+$/, '');
+				const ids = rows.map(r => (r as Record<string, unknown>)['id']);
+				const authHeaders = await resolveAuthHeaders(getToken);
+				await fetcher(batchUrl, undefined, { ids }, authHeaders);
+				await loadSources(false, {});
+			} catch (error) {
+				reportActionError(actionName, 'batch', error);
 			}
-			const spec = normalizeAction(rawSpec);
-			if (!spec.url) {
-				console.warn(`[GenericPageRunner] Batch action "${actionName}" has no url - skipping fetcher`);
-				return;
-			}
-			// Strip {id} placeholder from batch URL (batch sends ids in body)
-			const batchUrl = spec.url.replace(/\{[^}]+\}/g, '').replace(/\/+$/, '');
-			const ids = rows.map(r => (r as Record<string, unknown>)['id']);
-			const authHeaders = await resolveAuthHeaders(getToken);
-			await fetcher(batchUrl, undefined, { ids }, authHeaders);
-			await loadSources(false, {});
 		},
-		[$actions, fetcher, getToken, loadSources]
+		[$actions, fetcher, getToken, loadSources, reportActionError]
 	);
 
 	return { namedHandlers, onAction, onBatchAction, extras };

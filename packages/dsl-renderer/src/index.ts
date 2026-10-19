@@ -9,7 +9,7 @@ export { createRegistry } from './ComponentRegistry.js';
 export type { ComponentRegistry, ComponentRegistryEntry, RegistryRenderProps } from './ComponentRegistry.js';
 export { GenericPageRunner } from './GenericPageRunner.js';
 export type { GenericPageRunnerProps } from './GenericPageRunner.js';
-export type { Fetcher } from './pageRunner/pageRunnerUtils.js';
+export type { ActionErrorInfo, Fetcher } from './pageRunner/pageRunnerUtils.js';
 export { computeRegistryFingerprint } from './registryHash.js';
 export { COMPILED_DSL_FORMAT_VERSION } from './compiledDslArtifact.js';
 export type { CompiledDslArtifact, CompiledDslDiagnostic } from './compiledDslArtifact.js';
