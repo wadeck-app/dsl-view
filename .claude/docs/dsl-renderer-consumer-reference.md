@@ -486,6 +486,27 @@ import { AbExperiments } from '@wadeck-app/dsl-ui';
 - Needs `@wadeck-app/dsl-renderer` and `dsl-ui` generated registries from the same release: an older generator lacks `mapSlots`, so the nested views go unchecked without a message.
 - A module that uses `AbTest` in its views must declare a `dslLib.shared` range on `@wadeck-app/dsl-ui` that excludes shells without it (see app-core `module-authoring.md`).
 
+## Chart
+
+```yaml
+$type: Chart
+data: $sources.series
+xAxisKey: ts
+xAxisType: time          # real timestamps; `category` shows the value as is
+xFormat: time            # date (default) | time (HH:MM) | datetime; viewer's LOCAL time zone; warns on `category`
+yFormat: number          # bytes (DEFAULT) | number
+yUnit: "%"               # optional suffix on every Y tick and tooltip value
+variant: sparkline       # default | sparkline
+showLegend: false        # default true; false for sparkline
+height: 80
+series:
+  - { key: events, name: Events, type: bar, yAxisId: left }   # no `color` -> theme palette
+```
+
+- `yFormat` defaults to `bytes` (1753 -> "1.7 KB") because byte charts exist (wdrive disk usage). A count must set `yFormat: number` (1753 -> "1.8K", locale-aware).
+- `sparkline` = no grid, no axes, no legend, tooltip kept, tight padding; the series still bind to their axes, which are only hidden.
+- A series without `color` takes the next entry of a theme palette (`--color-primary-solid`, then success, warning, danger, purple, cyan, orange), so it follows light and dark. An explicit `color` is used as is.
+
 ## Pitfalls
 
 - `@registryCategory` missing -> component silently excluded from registry.

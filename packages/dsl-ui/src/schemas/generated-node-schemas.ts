@@ -50,6 +50,7 @@ export const ColorPickerNodeSchema = baseNode.extend({
 });
 
 export const CompactSelectNodeSchema = baseNode.extend({
+	urlParam: z.string().optional(),
 	value: z.string(),
 	options: z.array(z.unknown()),
 	ariaLabel: z.string(),
@@ -167,6 +168,11 @@ export const ChartNodeSchema = baseNode.extend({
 	data: z.array(z.unknown()).optional(),
 	xAxisKey: z.string(),
 	xAxisType: z.enum(['time', 'category']),
+	xFormat: z.unknown().default('date'),
+	yFormat: z.unknown().default('bytes'),
+	yUnit: z.string().optional(),
+	variant: z.enum(['default', 'sparkline']).default('default'),
+	showLegend: z.boolean().optional(),
 	height: z.number().default(300),
 	series: z.array(ChartSeriesConfigSchema),
 });
@@ -819,7 +825,8 @@ export const PaginationNodeSchema = baseNode.extend({
 });
 
 export const SearchBarNodeSchema = baseNode.extend({
-	value: z.string(),
+	urlParam: z.string().optional(),
+	value: z.string().optional(),
 	placeholder: z.string().optional(),
 	debounceMs: z.number().optional(),
 	focusExpand: z.boolean().optional(),

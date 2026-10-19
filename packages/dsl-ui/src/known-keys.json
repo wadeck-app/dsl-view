@@ -128,8 +128,13 @@
 			"data",
 			"height",
 			"series",
+			"showLegend",
+			"variant",
 			"xAxisKey",
-			"xAxisType"
+			"xAxisType",
+			"xFormat",
+			"yFormat",
+			"yUnit"
 		]
 	},
 	"CheckboxGroup": {
