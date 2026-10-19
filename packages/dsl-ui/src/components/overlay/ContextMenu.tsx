@@ -48,12 +48,16 @@ export function ContextMenu({ trigger, items, side = 'bottom', align = 'start', 
 		.filter(i => i !== -1);
 
 	function handleOpenChange(next: boolean) {
-		if (!isControlled) setUncontrolledOpen(next);
+		if (!isControlled) {
+			setUncontrolledOpen(next);
+		}
 		onOpenChange?.(next);
 	}
 
 	function handleItemClick(item: ContextMenuItem) {
-		if (item.disabled || item.separator) return;
+		if (item.disabled || item.separator) {
+			return;
+		}
 		handleOpenChange(false);
 		item.onClick();
 	}
@@ -88,7 +92,8 @@ export function ContextMenu({ trigger, items, side = 'bottom', align = 'start', 
 	return (
 		<RadixPopover.Root open={open} onOpenChange={handleOpenChange}>
 			<RadixPopover.Trigger asChild>
-				<span style={{ display: 'contents' }}>{trigger}</span>
+				{/* Radix anchors the menu to this element's rect; `display: contents` has no box and pinned it to the page origin. */}
+				<span style={{ display: 'inline-flex' }}>{trigger}</span>
 			</RadixPopover.Trigger>
 			<RadixPopover.Portal>
 				<RadixPopover.Content

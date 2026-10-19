@@ -20,6 +20,18 @@ function renderMenu(items = defaultItems, props = {}) {
 	);
 }
 
+describe('ContextMenu anchor', () => {
+	// jsdom has no layout, so positioning itself can't be asserted. What can be: the element Radix
+	// measures as the anchor must have a box. `display: contents` has none (rect 0,0,0,0), which
+	// anchored the menu at the page's top-left corner instead of under the trigger.
+	it('anchors on a wrapper that has a layout box, not display: contents', () => {
+		renderMenu();
+		const anchor = screen.getByRole('button', { name: 'Menu' }).parentElement as HTMLElement;
+		expect(anchor.style.display).not.toBe('contents');
+		expect(anchor.style.display).toBe('inline-flex');
+	});
+});
+
 // Helper: render menu already open (avoids Radix focus-trap setTimeout chain)
 function renderOpenMenu(items = defaultItems, props: Record<string, unknown> = {}) {
 	return render(
