@@ -17,6 +17,7 @@ interface ToastContextValue {
 
 export const ToastContext = createContext<ToastContextValue | null>(null);
 
+// Success and info toasts auto-dismiss; an error stays until the user dismisses it (a failure must not vanish unread).
 const TOAST_DURATION_MS = 4000;
 
 const variantStyles: Record<ToastVariant, string> = {
@@ -32,7 +33,7 @@ const variantIcons: Record<ToastVariant, React.ReactNode> = {
 };
 
 const dismissButtonClass =
-	'shrink-0 opacity-60 hover:opacity-100 transition-opacity cursor-pointer focus:outline-none';
+	'shrink-0 rounded opacity-60 hover:opacity-100 transition-opacity cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-current';
 
 let nextId = 0;
 
@@ -59,10 +60,12 @@ export function ToastProvider({ children }: ToastProviderProps) {
 		(message: string, variant: ToastVariant) => {
 			const id = ++nextId;
 			setToasts(prev => [...prev, { id, message, variant }]);
-			timers.current.set(
-				id,
-				setTimeout(() => dismiss(id), TOAST_DURATION_MS)
-			);
+			if (variant !== 'error') {
+				timers.current.set(
+					id,
+					setTimeout(() => dismiss(id), TOAST_DURATION_MS)
+				);
+			}
 		},
 		[dismiss]
 	);
@@ -89,7 +92,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
 				{toasts.map(toast => (
 					<div
 						key={toast.id}
-						role="status"
+						role={toast.variant === 'error' ? 'alert' : 'status'}
 						className={[
 							'pointer-events-auto flex items-center gap-2 rounded border px-3 py-2 text-sm shadow-md min-w-48 max-w-sm',
 							variantStyles[toast.variant],
@@ -114,6 +117,8 @@ export function ToastProvider({ children }: ToastProviderProps) {
 
 export function useToast(): ToastContextValue {
 	const ctx = useContext(ToastContext);
-	if (!ctx) throw new Error('useToast must be used inside <ToastProvider>');
+	if (!ctx) {
+		throw new Error('useToast must be used inside <ToastProvider>');
+	}
 	return ctx;
 }

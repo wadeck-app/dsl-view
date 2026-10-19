@@ -248,6 +248,8 @@ import { appRegistry } from './registry.js';
 </NotifierProvider>
 ```
 
+  dsl-ui's `ToastProvider` fits this mapping: `toast.error` stays until dismissed and is `role="alert"`; success and info auto-dismiss after 4 s and are `role="status"`.
+
   Types: `Notify = (n: Notification) => void`, `Notification = { kind: 'success' | 'error'; message: string; status?: number; action?: string }`. A provider replaces the banner. Widgets use `useNotifier()`, which throws outside a runner or provider. `onActionError` still fires for row and batch failures, in addition to the notifier.
 - No feedback for an action that sent no request (no `url`, or `confirm` declined).
 - Per-action keys in `$actions.<name>` (unknown keys are a compile-time error and a `console.error` at runtime):
