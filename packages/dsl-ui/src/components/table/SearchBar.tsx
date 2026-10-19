@@ -1,6 +1,7 @@
 import { Search, X } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 
+import { useOptionalUrlParam } from '../../context/UrlParamContext.js';
 import { Button } from '../controls/_Button.js';
 
 // @formatter:off
@@ -21,8 +22,16 @@ const focusExpandClass = 'transition-all duration-200 focus:w-64';
 // @formatter:on
 
 export interface SearchBarProps {
-	value: string;
-	onChange: (value: string) => void;
+	/**
+	 * URL search param name backing the text, e.g. "q". When set, SearchBar reads/writes it via
+	 * UrlParamContext (see useOptionalUrlParam) and `value`/`onChange` are ignored, so a page can
+	 * filter a $sources entry with `$urlParam.q` without any wiring. Requires RouterProvider.
+	 */
+	urlParam?: string;
+	/** Required unless `urlParam` is set. */
+	value?: string;
+	/** Required unless `urlParam` is set. */
+	onChange?: (value: string) => void;
 	placeholder?: string;
 	/** 0 = call onChange synchronously on every keystroke, no debounce. */
 	debounceMs?: number;
@@ -36,7 +45,13 @@ export interface SearchBarProps {
  * @registryCategory composite
  * @registryTags filter search
  */
-export function SearchBar({ value, onChange, placeholder, debounceMs = 300, focusExpand = false, size = 'md' }: SearchBarProps) {
+export function SearchBar({ urlParam, value: valueProp, onChange: onChangeProp, placeholder, debounceMs = 300, focusExpand = false, size = 'md' }: SearchBarProps) {
+	const [urlValue, setUrlValue] = useOptionalUrlParam(urlParam);
+	if (urlParam == null && (valueProp === undefined || onChangeProp === undefined)) {
+		throw new Error('[SearchBar] needs either "urlParam" or both "value" and "onChange"');
+	}
+	const value = urlParam != null ? urlValue ?? '' : valueProp ?? '';
+	const onChange = urlParam != null ? setUrlValue : onChangeProp!;
 	const [localValue, setLocalValue] = useState(value);
 	const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const sizeClasses = SIZE_CLASSES[size];

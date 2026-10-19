@@ -185,7 +185,8 @@
 			"bind",
 			"disabled",
 			"options",
-			"placeholder"
+			"placeholder",
+			"urlParam"
 		]
 	},
 	"ConfirmDialog": {
@@ -801,6 +802,7 @@
 			"onChange",
 			"placeholder",
 			"size",
+			"urlParam",
 			"value"
 		]
 	},

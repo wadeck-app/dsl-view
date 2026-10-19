@@ -1,6 +1,7 @@
 import React from 'react';
 import { ChevronDown } from 'lucide-react';
 
+import { useOptionalUrlParam } from '../../context/UrlParamContext.js';
 import type { FieldSelectOption } from '../form/FieldSelect.js';
 
 // pr-8 reserves the chevron's column. A native select draws its own arrow inside the box, so the
@@ -12,8 +13,16 @@ const chevronClass = 'pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -
 // @formatter:on
 
 export interface CompactSelectProps {
+	/**
+	 * URL search param name backing the selected value, e.g. "status". When set, CompactSelect
+	 * reads/writes it via UrlParamContext (see useOptionalUrlParam) and `value`/`onChange` are
+	 * ignored, so a page can filter a $sources entry with `$urlParam.status`. Requires RouterProvider.
+	 */
+	urlParam?: string;
+	/** Ignored when `urlParam` is set. */
 	value: string;
 	options: FieldSelectOption[];
+	/** Ignored when `urlParam` is set. */
 	onChange: (value: string) => void;
 	/**
 	 * The control's accessible name. Required, not optional.
@@ -44,7 +53,10 @@ export interface CompactSelectProps {
  * @registryTags select compact toolbar
  * @registryBind formData onChange
  */
-export function CompactSelect({ value, options, onChange, ariaLabel, placeholder, disabled }: CompactSelectProps) {
+export function CompactSelect({ urlParam, value: valueProp, options, onChange: onChangeProp, ariaLabel, placeholder, disabled }: CompactSelectProps) {
+	const [urlValue, setUrlValue] = useOptionalUrlParam(urlParam);
+	const value = urlParam != null ? urlValue ?? '' : valueProp;
+	const onChange = urlParam != null ? setUrlValue : onChangeProp;
 	return (
 		<span className="relative inline-flex">
 			{/* violations-suppress: react/no-raw-input CompactSelect IS the atomic wrapper for this select interaction, as PageSizeSelect is for pagination */}
