@@ -22,6 +22,8 @@ import { Button } from '../controls/_Button.js';
 import { IconButton } from '../controls/IconButton.js';
 import { Checkbox } from '../controls/Checkbox.js';
 import { HttpMethodBadge } from '../display/HttpMethodBadge.js';
+import { Badge } from '../display/Badge.js';
+import type { BadgeVariant } from '../display/Badge.js';
 import { HttpStatusBadge } from '../display/HttpStatusBadge.js';
 import { formatBytes } from '@dsl-ui/utils/formatBytes.js';
 import { RouterContext } from '@dsl-ui/RouterContext.js';
@@ -137,37 +139,185 @@ function applyFilters<T extends Record<string, unknown>>(
 // Converts raw YAML column defs (from DSL entries) to proper TableColumn objects.
 // A raw YAML column may look like: { field: 'title', label: 'Title' }
 // or an actions column: { type: 'actions', items: [{ label: 'Edit', action: 'openEdit' }] }
+//
+// The interfaces below are the SOURCE OF TRUTH for the keys a YAML column may carry: the build tooling
+// derives the unknown-key check from them (@itemKeys on DataTableProps.columns), so a key added here is
+// accepted by the compiler and a key not listed here is an error instead of a silent no-op.
 
-interface RawYamlColumn {
+const BADGE_VARIANTS: readonly BadgeVariant[] = ['default', 'primary', 'success', 'warning', 'danger', 'info'];
+const COLUMN_FORMATS: readonly ColumnFormat[] = ['datetime', 'date', 'time', 'bytes', 'ms', 'httpMethod', 'httpStatus'];
+
+/** A data column authored in YAML. */
+export interface DataTableColumnSpec {
+	/** Row field shown in this column. `key` is an accepted alias. */
 	field?: string;
-	label?: string;
-	type?: string;
-	items?: Array<{ label: string; action: string; variant?: string; condition?: string }>;
-	render?: (row: Record<string, unknown>) => React.ReactNode;
 	key?: string;
-	isActions?: boolean;
-	actions?: unknown[];
+	label?: string;
+	/** Fixed width in Tailwind spacing units (48 = 12rem). Implies no wrapping. */
+	width?: number;
+	/** Single line cut with an ellipsis; the full text is the cell's tooltip. */
+	truncate?: boolean;
+	/** Single line, never wrapped (a long value widens the column instead of breaking mid-word). */
+	nowrap?: boolean;
+	mono?: boolean;
+	muted?: boolean;
+	/** Click-to-sort header. */
+	sortable?: boolean;
+	/** datetime | date | time | bytes | ms | httpMethod | httpStatus. */
+	format?: string;
+	/** Shows the value as a Badge: map of cell value to badge variant (default | primary | success | warning | danger | info). Values not in the map stay plain text. */
+	badge?: Record<string, string>;
 }
 
-function normalizeColumn<T extends Record<string, unknown>>(col: RawYamlColumn): TableColumn<T> {
+/** One button of an actions column authored in YAML. */
+export interface DataTableActionItemSpec {
+	label: string;
+	action: string;
+	variant?: string;
+	/** Row field: shown when truthy; `!field`: shown when falsy. */
+	condition?: string;
+}
+
+/** A row-actions column authored in YAML (`type: actions`). */
+export interface DataTableActionsColumnSpec {
+	type: 'actions';
+	items?: DataTableActionItemSpec[];
+	width?: number;
+}
+
+// Keys normalizeColumn also accepts on a hand-built column object (not authored in YAML).
+const NON_YAML_COLUMN_KEYS = ['render', 'isActions', 'actions'];
+
+// MUST list the same keys as DataTableColumnSpec / DataTableActionsColumnSpec / DataTableActionItemSpec: a test
+// compares them with what the build tooling extracts from those interfaces.
+export const DATA_TABLE_COLUMN_KEYS = ['field', 'key', 'label', 'width', 'truncate', 'nowrap', 'mono', 'muted', 'sortable', 'format', 'badge'] as const;
+export const DATA_TABLE_ACTIONS_COLUMN_KEYS = ['type', 'items', 'width'] as const;
+export const DATA_TABLE_ACTION_ITEM_KEYS = ['label', 'action', 'variant', 'condition'] as const;
+
+type RawYamlColumn = Partial<DataTableColumnSpec> &
+	Partial<DataTableActionsColumnSpec> & {
+		type?: string;
+		render?: (row: Record<string, unknown>) => React.ReactNode;
+		isActions?: boolean;
+		actions?: unknown[];
+	};
+
+// The memoised normalisation can re-run when the page re-resolves its props: report each distinct problem once.
+const reported = new Set<string>();
+function warnOnce(message: string): void {
+	if (reported.has(message)) {
+		return;
+	}
+	reported.add(message);
+	console.error(message);
+}
+
+function describeKeys(keys: readonly string[]): string {
+	return [...keys].sort().join(', ');
+}
+
+// A key DataTable ignores is an authoring mistake: say so once per column definition, naming the column.
+function warnUnsupportedColumnKeys(col: Record<string, unknown>, index: number): void {
+	const isActions = col['type'] === 'actions' || col['isActions'];
+	const allowed: readonly string[] = isActions ? DATA_TABLE_ACTIONS_COLUMN_KEYS : DATA_TABLE_COLUMN_KEYS;
+	const where = typeof col['field'] === 'string' ? `"${col['field']}"` : `#${index}`;
+	for (const key of Object.keys(col)) {
+		if (allowed.includes(key) || NON_YAML_COLUMN_KEYS.includes(key)) {
+			continue;
+		}
+		const hint = key === '$type' && col[key] === 'actions' ? ' Actions columns are written `type: actions` (no `$`).' : '';
+		warnOnce(
+			`[DataTable] column ${where}: unknown key "${key}" is ignored.${hint} Supported keys for ${isActions ? 'an actions' : 'a data'} column: ${describeKeys(allowed)}.`
+		);
+	}
+	if (isActions && Array.isArray(col['items'])) {
+		(col['items'] as unknown[]).forEach((item, i) => {
+			if (!item || typeof item !== 'object') {
+				return;
+			}
+			for (const key of Object.keys(item)) {
+				if (!(DATA_TABLE_ACTION_ITEM_KEYS as readonly string[]).includes(key) && key !== 'icon') {
+					warnOnce(
+						`[DataTable] actions column ${where}, item #${i}: unknown key "${key}" is ignored. Supported keys: ${describeKeys(DATA_TABLE_ACTION_ITEM_KEYS)}.`
+					);
+				}
+			}
+		});
+	}
+}
+
+function badgeVariantFor(value: unknown, map: Record<string, string>, where: string): BadgeVariant | undefined {
+	const variant = map[String(value ?? '')];
+	if (variant === undefined) {
+		return undefined;
+	}
+	if (!(BADGE_VARIANTS as readonly string[]).includes(variant)) {
+		warnOnce(`[DataTable] column ${where}: badge variant "${variant}" is not one of ${BADGE_VARIANTS.join(', ')}; showing the neutral variant.`);
+		return 'default';
+	}
+	return variant as BadgeVariant;
+}
+
+function normalizeColumn<T extends Record<string, unknown>>(col: RawYamlColumn, index = 0): TableColumn<T> {
 	// Already a proper TableColumn (has render function)
-	if (typeof col.render === 'function') return col as unknown as TableColumn<T>;
+	if (typeof col.render === 'function') {
+		return col as unknown as TableColumn<T>;
+	}
+	warnUnsupportedColumnKeys(col, index);
 	// Actions column
 	if (col.type === 'actions' || col.isActions) {
 		return {
 			key: '_actions',
 			label: '',
 			isActions: true,
+			width: col.width,
 			actions: (col.items ?? col.actions ?? []) as ActionDef<T>[],
 			render: () => null,
 		};
 	}
 	// Plain field column
 	const field = col.field ?? col.key ?? '';
+	const where = `"${field || index}"`;
+	let format: ColumnFormat | undefined;
+	if (col.format !== undefined) {
+		if ((COLUMN_FORMATS as readonly string[]).includes(col.format)) {
+			format = col.format as ColumnFormat;
+		} else {
+			warnOnce(`[DataTable] column ${where}: unknown format "${col.format}" is ignored. Supported formats: ${COLUMN_FORMATS.join(', ')}.`);
+		}
+	}
+	const badge = col.badge;
+	const render = (row: T): React.ReactNode => {
+		const value = row[field];
+		if (badge) {
+			const variant = badgeVariantFor(value, badge, where);
+			// Unmapped values stay plain text: a badge would claim a status the page never declared.
+			if (variant) {
+				return <Badge label={String(value)} variant={variant} tone="subtle" />;
+			}
+		}
+		if (format === 'httpMethod') {
+			return <HttpMethodBadge method={String(value ?? '')} />;
+		}
+		if (format === 'httpStatus') {
+			return <HttpStatusBadge status={Number(value)} />;
+		}
+		if (format) {
+			return formatValue(value, format as ColumnValueFormat);
+		}
+		return String(value ?? '');
+	};
 	return {
 		key: field,
 		label: col.label ?? field,
-		render: (row: T) => String(row[field] ?? ''),
+		width: col.width,
+		truncate: col.truncate,
+		nowrap: col.nowrap,
+		mono: col.mono,
+		muted: col.muted,
+		sortable: col.sortable,
+		format,
+		render,
 	};
 }
 
@@ -195,6 +345,8 @@ export interface TableColumn<T extends Record<string, unknown>> {
 	format?: 'datetime' | 'date' | 'time' | 'bytes' | 'ms' | 'httpMethod' | 'httpStatus';
 	width?: number;
 	truncate?: boolean;
+	/** When true, the cell never wraps (a long value widens the column instead of breaking mid-word). */
+	nowrap?: boolean;
 	sortable?: boolean;
 	isActions?: boolean;
 	actions?: ActionDef<T>[];
@@ -304,6 +456,10 @@ export class ColumnHelpers {
 
 export interface DataTableProps<T extends Record<string, unknown>> {
 	rows: T[];
+	/**
+	 * Columns: proper TableColumn objects (ColumnHelpers) or YAML column maps.
+	 * @itemKeys DataTableColumnSpec, DataTableActionsColumnSpec
+	 */
 	columns: TableColumn<T>[];
 	loading?: boolean;
 	emptyMessage?: string;
@@ -396,7 +552,7 @@ export function DataTable<T extends Record<string, unknown>>({
 	// column defs (from DSL entriesGenerator). This allows declarative YAML to drive DataTable
 	// without requiring ColumnHelpers in every call site.
 	const normalizedColumns = useMemo(
-		() => (columns ?? []).map(col => normalizeColumn<T>(col as unknown as RawYamlColumn)),
+		() => (columns ?? []).map((col, index) => normalizeColumn<T>(col as unknown as RawYamlColumn, index)),
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 		[columns]
 	);
@@ -780,7 +936,7 @@ export function DataTable<T extends Record<string, unknown>>({
 													col.format === 'datetime' ||
 													col.format === 'date';
 												// Content columns (no fixed width, not metadata) allow wrapping; others are nowrap
-												const isFlexContent = !isMuted && !col.width && !col.truncate;
+												const isFlexContent = !isMuted && !col.width && !col.truncate && !col.nowrap;
 												return (
 													<td
 														key={col.key}

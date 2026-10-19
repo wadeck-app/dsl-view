@@ -759,6 +759,7 @@ const TableColumnSchema = z.object({
 	format: z.enum(['datetime', 'date', 'time', 'bytes', 'ms', 'httpMethod', 'httpStatus']).optional(),
 	width: z.number().optional(),
 	truncate: z.boolean().optional(),
+	nowrap: z.boolean().optional(),
 	sortable: z.boolean().optional(),
 	isActions: z.boolean().optional(),
 	actions: z.array(ActionDefSchema).optional(),

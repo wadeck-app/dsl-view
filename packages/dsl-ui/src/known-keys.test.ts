@@ -45,3 +45,21 @@ describe('known-keys.json (shipped manifest for CLIs)', () => {
 		]);
 	});
 });
+
+describe('known-keys.json DataTable columns', () => {
+	it('flags an ignored column key (and the `$type: actions` mistake) with only the JSON', async () => {
+		if (!fs.existsSync(unknownKeysPath)) {
+			throw new Error(`dsl-renderer is not built (${unknownKeysPath} missing): run \`npm run build\` in packages/dsl-renderer first.`);
+		}
+		const { findUnknownKeys } = await import(/* @vite-ignore */ unknownKeysPath);
+		const table = (columns: unknown[]) => ({ $type: 'DataTable', rows: '$sources.rows', columns });
+		expect(findUnknownKeys(table([{ field: 'a', label: 'A', width: 8, nowrap: true, badge: { x: 'success' } }, { type: 'actions', items: [{ label: 'Go', action: 'go' }] }]), manifest)).toEqual([]);
+		expect(findUnknownKeys(table([{ field: 'a', widht: 8 }]), manifest)).toEqual([
+			expect.objectContaining({ code: 'unknown-key', type: 'DataTable', nodePath: '$.columns[0]', message: expect.stringContaining('Did you mean "width"?') }),
+		]);
+		expect(findUnknownKeys(table([{ $type: 'actions', label: 'Actions', items: [] }]), manifest)).toEqual([
+			expect.objectContaining({ code: 'unknown-key', nodePath: '$.columns[0]', message: expect.stringContaining('"$type"') }),
+			expect.objectContaining({ code: 'unknown-key', nodePath: '$.columns[0]', message: expect.stringContaining('"items"') }),
+		]);
+	});
+});

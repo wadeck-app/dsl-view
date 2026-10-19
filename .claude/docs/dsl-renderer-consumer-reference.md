@@ -508,6 +508,26 @@ series:
 - `sparkline` = no grid, no axes, no legend, tooltip kept, tight padding; the series still bind to their axes, which are only hidden.
 - A series without `color` takes the next entry of a theme palette (`--color-primary-solid`, then success, warning, danger, purple, cyan, orange), so it follows light and dark. An explicit `color` is used as is.
 
+## DataTable columns
+
+```yaml
+$type: DataTable
+columns:
+  - { field: event, label: Event, mono: true, truncate: true }          # ellipsis + full text as tooltip
+  - { field: state, label: State, nowrap: true,
+      badge: { completed: success, failed: danger, pending: warning } } # cell value -> Badge variant
+  - { field: at, label: At, format: datetime }                          # datetime | date | time | bytes | ms | httpMethod | httpStatus
+  - { field: tries, label: Tries, width: 12, sortable: true }           # width in Tailwind units (12 = 3rem)
+  - { type: actions, items: [{ label: Clear, action: clearEntry, variant: danger-outline, condition: "!locked" }] }
+```
+
+- Column keys: `field` (alias `key`), `label`, `width`, `truncate`, `nowrap`, `mono`, `muted`, `sortable`, `format`, `badge`. Actions column: `type`, `items`, `width`; item keys: `label`, `action`, `variant`, `condition`.
+- Any other column key is an error: `compileDslDocument` / `findUnknownKeys` report it with the column path, and `DataTable` logs it once with `console.error`. Earlier versions dropped everything but `field`/`label` silently, so `width`, `truncate`, `mono`, `muted`, `format` and `sortable` start taking effect on pages that already declared them.
+- An actions column is `type: actions`. `$type: actions` (older wdrive pages) was never recognised: the column rendered as an empty data column; it is now reported.
+- Default wrapping is unchanged: a plain column breaks anywhere (`break-all`). In a narrow container use `nowrap` (never wraps, the column widens), `truncate`, or `width`.
+- `badge`: values missing from the map stay plain text; a variant other than `default | primary | success | warning | danger | info` logs an error and shows the neutral variant.
+- `format` renders in the viewer's locale and local time zone.
+
 ## Pitfalls
 
 - `@registryCategory` missing -> component silently excluded from registry.

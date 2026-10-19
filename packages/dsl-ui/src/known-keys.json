@@ -261,6 +261,42 @@
 			"filters": [
 				"filter"
 			]
+		},
+		"itemKeys": {
+			"columns": {
+				"keys": [
+					"field",
+					"key",
+					"label",
+					"width",
+					"truncate",
+					"nowrap",
+					"mono",
+					"muted",
+					"sortable",
+					"format",
+					"badge"
+				],
+				"byType": {
+					"actions": {
+						"keys": [
+							"type",
+							"items",
+							"width"
+						],
+						"arrays": {
+							"items": {
+								"keys": [
+									"label",
+									"action",
+									"variant",
+									"condition"
+								]
+							}
+						}
+					}
+				}
+			}
 		}
 	},
 	"DatePicker": {
