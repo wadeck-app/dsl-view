@@ -3,3 +3,5 @@
 export * from './AbDock.js';
 export * from './useAbTest.js';
 export { isDev } from './isDev.js';
+export * from './AbExperiments.js';
+export * from './AbTest.js';

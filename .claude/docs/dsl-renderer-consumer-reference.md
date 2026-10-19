@@ -415,6 +415,43 @@ Packaging/distributing a `.compiled.json` artifact (zip, install, versioning) is
 
 ---
 
+## A/B experiments in views (`AbTest`, `AbExperiments`)
+
+A view declares a test with the `AbTest` node; the host mounts ONE dock for all of them.
+
+```yaml
+$type: AbTest
+id: tab-style            # letters, digits, _ and -; names localStorage `ab.<id>` and the URL parameter
+label: Tab style         # row name in the dock
+initial: pill            # reference variant; must be a key of `variants`
+variants:
+  pill: { label: Pill, hint: Tinted pill behind the active tab., view: { $type: Tabs, ... } }
+  ring: { label: Ring, hint: Outline ring around the active tab., view: { $type: Tabs, ... } }
+```
+
+Host (once, near the root; React, not YAML):
+
+```tsx
+import { AbExperiments } from '@wadeck-app/dsl-ui';
+<AbExperiments enabled={settings.experiments}>{app}</AbExperiments>   // `tests={[...]}` adds useAbTest tests to the same dock
+```
+
+| Situation | Behaviour |
+|---|---|
+| `enabled` false, or omitted outside a development build | Every `AbTest` renders `initial`. Storage and URL are never read. No dock. |
+| `enabled` true | Chosen variant renders; choice kept in `localStorage ab.<id>`; `?ab.<id>=<variant>` wins for that page load without being stored; other tabs sync. |
+| No `AbExperiments` in development | Stored choice applies, nobody can change it; warned once. Outside development: `initial`, silent. |
+| Same id, identical declaration, in two places | One dock row, one choice (e.g. a repeated widget). |
+| Same id, different declaration (or same id as a host `useAbTest`) | `console.error` naming the id; the second is not in the dock. |
+| Bad declaration (unknown `initial`, no variants, variant without `label`/`hint`/`view`) | `console.error` plus an `alert` box, never a guessed variant. |
+| `AbTest` inside a variant | Allowed, with its own id; its row exists while its variant is shown. |
+| `AbExperiments` inside `AbExperiments` | `console.error`; only the outer dock exists. |
+
+- The build-time check (`compileDslDocument`, `findUnknownKeys`) walks `variants.*.view` and rejects unknown keys at both levels (`mapSlots` metadata, from `@mapSlot view` on the prop). It does not check that `initial` is a variant; the renderer does.
+- Non-initial variants ship in the view: nothing confidential in them. `enabled` hides the tool, it does not shrink the bundle.
+- Needs `@wadeck-app/dsl-renderer` and `dsl-ui` generated registries from the same release: an older generator lacks `mapSlots`, so the nested views go unchecked without a message.
+- A module that uses `AbTest` in its views must declare a `dslLib.shared` range on `@wadeck-app/dsl-ui` that excludes shells without it (see app-core `module-authoring.md`).
+
 ## Pitfalls
 
 - `@registryCategory` missing -> component silently excluded from registry.

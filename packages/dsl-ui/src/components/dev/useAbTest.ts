@@ -1,4 +1,4 @@
-import type { AbTest } from './AbDock.js';
+import type { AbTest } from './abTypes.js';
 import { usePersistentChoice } from './usePersistentChoice.js';
 
 export interface AbOptionSpec {

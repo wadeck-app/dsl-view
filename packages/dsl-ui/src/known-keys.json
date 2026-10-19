@@ -1,4 +1,22 @@
 {
+	"AbTest": {
+		"knownKeys": [
+			"id",
+			"initial",
+			"label",
+			"variants"
+		],
+		"mapSlots": {
+			"variants": {
+				"keys": [
+					"label",
+					"hint",
+					"view"
+				],
+				"nodeKey": "view"
+			}
+		}
+	},
 	"ActionBar": {
 		"knownKeys": [
 			"items"

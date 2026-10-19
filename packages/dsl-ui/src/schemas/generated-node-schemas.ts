@@ -128,6 +128,19 @@ export const ThemePickerNodeSchema = baseNode.extend({
 	value: z.string(),
 });
 
+const AbVariantSpecSchema = z.object({
+	label: z.string(),
+	hint: z.string(),
+	view: z.unknown(),
+});
+
+export const AbTestNodeSchema = baseNode.extend({
+	id: z.string(),
+	label: z.string(),
+	initial: z.string(),
+	variants: z.record(z.string(), AbVariantSpecSchema),
+});
+
 export const AvatarNodeSchema = baseNode.extend({
 	src: z.string().optional(),
 	alt: z.string().optional(),

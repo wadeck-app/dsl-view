@@ -29,4 +29,19 @@ describe('known-keys.json (shipped manifest for CLIs)', () => {
 		const diagnostics = findUnknownKeys({ $type: 'VerticalStack', children: [] }, manifest);
 		expect(diagnostics).toEqual([expect.objectContaining({ code: 'unknown-key', message: expect.stringContaining('Did you mean "items"?') })]);
 	});
+
+	it('validates the views nested in AbTest variants with only the JSON', async () => {
+		if (!fs.existsSync(unknownKeysPath)) {
+			throw new Error(`dsl-renderer is not built (${unknownKeysPath} missing): run \`npm run build\` in packages/dsl-renderer first.`);
+		}
+		const { findUnknownKeys } = await import(/* @vite-ignore */ unknownKeysPath);
+		const test = (variant: Record<string, unknown>) => ({ $type: 'AbTest', id: 't', label: 'T', initial: 'a', variants: { a: { label: 'A', hint: 'a', ...variant } } });
+		expect(findUnknownKeys(test({ view: { $type: 'VerticalStack', items: [] } }), manifest)).toEqual([]);
+		expect(findUnknownKeys(test({ view: { $type: 'VerticalStack', children: [] } }), manifest)).toEqual([
+			expect.objectContaining({ code: 'unknown-key', type: 'VerticalStack', nodePath: '$.variants.a.view', message: expect.stringContaining('Did you mean "items"?') }),
+		]);
+		expect(findUnknownKeys(test({ view: { $type: 'VerticalStack' }, hnt: 'x' }), manifest)).toEqual([
+			expect.objectContaining({ code: 'unknown-key', type: 'AbTest', nodePath: '$.variants.a', message: expect.stringContaining('Did you mean "hint"?') }),
+		]);
+	});
 });

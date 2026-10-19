@@ -8,7 +8,8 @@ import { isDev } from './isDev.js';
 import { usePersistentSet } from './usePersistentSet.js';
 
 export { HIDDEN_TESTS_KEY } from './abTypes.js';
-export type { AbOption, AbTest } from './abTypes.js';
+export type { AbOption } from './abTypes.js';
+export type { AbTest } from './AbTest.js';
 
 // z-[9999]: stays above every overlay, modal and sticky element of the page.
 const DOCK_POSITION_CLASS = 'fixed bottom-6 left-1/2 z-[9999] -translate-x-1/2';
