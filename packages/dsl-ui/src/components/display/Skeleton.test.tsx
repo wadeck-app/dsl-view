@@ -39,4 +39,15 @@ describe('Skeleton', () => {
         expect(item.style.width).toBe('200px');
         expect(item.style.height).toBe('40px');
     });
+
+    it('has no status role when decorative (the parent announces the loading state once)', () => {
+        const { container } = render(<Skeleton decorative />);
+        expect(screen.queryByRole('status')).toBeNull();
+        expect(container.firstElementChild).toHaveAttribute('aria-hidden', 'true');
+    });
+
+    it('stays still for users who asked for reduced motion', () => {
+        const { container } = render(<Skeleton />);
+        expect(container.querySelector('.animate-pulse')).toHaveClass('motion-reduce:animate-none');
+    });
 });

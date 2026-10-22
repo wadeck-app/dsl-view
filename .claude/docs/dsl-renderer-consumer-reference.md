@@ -544,6 +544,37 @@ columns:
 - `badge`: values missing from the map stay plain text; a variant other than `default | primary | success | warning | danger | info` logs an error and shows the neutral variant.
 - `format` renders in the viewer's locale and local time zone.
 
+## Loading, refreshing and failed loads
+
+A component must not say "empty" before its data has arrived. No YAML is needed:
+
+| Page state | ctx | `DataTable` / `StatTile` / `Pagination` |
+|---|---|---|
+| First load pending | `$initialLoading: true` | `DataTable`: skeleton rows with the table's own columns (header stays, one `role="status"` "Loading...", `aria-busy`). `StatTile`: skeleton. `Pagination`: renders nothing (no "Page NaN"). |
+| Refetch (filter, page, poll, `RefreshButton`, action reload) | `$refreshing: true` | Rows stay. `DataTable` sets `aria-busy` and dims the rows slightly after 300 ms (a fast poll never flashes). |
+| Loaded, nothing returned | both `false` | `emptyMessage`. |
+| Load failed | `$initialLoading` goes `false` | The failure is reported through the notifier (`Could not load the data: <message>`, with `status`); a poll that keeps failing with the same message is reported once. The table then shows its `emptyMessage`: read the notification, not the table. |
+
+- Defaults come from `@ctxDefault`: `DataTable.loading` and `StatTile.loading` read `$initialLoading`, `DataTable.refreshing` reads `$refreshing`. An explicit `loading:` / `refreshing:` in the YAML wins. `@ctxDefault <key>` names a differently-spelled ctx entry.
+- `ctx.loading` (true on any non-polled load, including `reloadSources` actions) is unchanged; bind it only if you want a skeleton on action reloads.
+- `Skeleton` takes `decorative` (no status role, for a parent that announces once) and honours `prefers-reduced-motion`.
+
+`RefreshButton` re-runs the page's sources with the same loader as the poll timer; it does not touch the poll interval.
+
+```yaml
+- $type: HorizontalStack
+  items:
+    - $type: SearchBar
+      urlParam: event
+    - $type: RefreshButton
+      source: history        # a $sources key; omit it to refresh every source of the page
+      label: Refresh         # accessible name and text, default "Refresh"
+```
+
+- Disabled and spinning while it runs; the rows stay. A failed refresh (and an unknown `source`, which lists the page's sources) goes through the notifier, every time.
+- Outside a `GenericPageRunner` it logs an error and stays disabled. The legacy `onClick` / `loading` props still work (wdrive's `$outputs: onClick`).
+- Needs dsl-ui and dsl-renderer from the same release; with an older generated registry the button has nothing to call (the error above).
+
 ## Pitfalls
 
 - `@registryCategory` missing -> component silently excluded from registry.

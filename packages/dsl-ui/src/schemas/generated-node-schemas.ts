@@ -96,6 +96,8 @@ export const RadioGroupNodeSchema = baseNode.extend({
 
 export const RefreshButtonNodeSchema = baseNode.extend({
 	loading: z.boolean().optional(),
+	source: z.string().optional(),
+	label: z.string().default('Refresh'),
 });
 
 export const SliderNodeSchema = baseNode.extend({
@@ -238,6 +240,7 @@ export const SkeletonNodeSchema = baseNode.extend({
 	height: z.string().optional(),
 	variant: z.enum(['line', 'circle', 'block']).optional(),
 	count: z.number().optional(),
+	decorative: z.boolean().optional(),
 });
 
 export const SpinnerNodeSchema = baseNode.extend({
@@ -771,6 +774,7 @@ export const DataTableNodeSchema = baseNode.extend({
 	rows: z.array(z.unknown()),
 	columns: z.array(TableColumnSchema),
 	loading: z.boolean().optional(),
+	refreshing: z.boolean().optional(),
 	emptyMessage: z.string().optional(),
 	navigateTo: z.string().optional(),
 	filtersTop: z.array(z.unknown()).optional(),

@@ -26,6 +26,8 @@ export interface PaginationProps {
  */
 export function Pagination({ urlParam, page, onPageChange, total, size }: PaginationProps) {
 	const [urlPage, setUrlPage] = useOptionalUrlParam(urlParam);
+	// total/size come from `$sources`: while they are not loaded yet there is nothing to paginate (and "Page NaN / NaN" to avoid).
+	if (!Number.isFinite(total) || !Number.isFinite(size)) return null;
 	const totalPages = size > 0 ? Math.ceil(total / size) : 1;
 	const rawPage = urlParam ? Number(urlPage ?? 0) || 0 : page ?? 0;
 	const activePage = Math.min(Math.max(rawPage, 0), totalPages - 1);

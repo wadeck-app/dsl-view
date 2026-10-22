@@ -23,6 +23,7 @@ import { IconButton } from '../controls/IconButton.js';
 import { Checkbox } from '../controls/Checkbox.js';
 import { HttpMethodBadge } from '../display/HttpMethodBadge.js';
 import { Badge } from '../display/Badge.js';
+import { Skeleton } from '../display/Skeleton.js';
 import type { BadgeVariant } from '../display/Badge.js';
 import { HttpStatusBadge } from '../display/HttpStatusBadge.js';
 import { formatBytes } from '@dsl-ui/utils/formatBytes.js';
@@ -454,6 +455,10 @@ export class ColumnHelpers {
 
 // --- DataTable<T> -------------------------------------------------------------
 
+// Placeholder rows shown while the first load is pending; widths vary so the bars read as text rather than a block.
+const SKELETON_ROWS = [0, 1, 2, 3, 4];
+const SKELETON_WIDTHS = ['70%', '45%', '85%', '60%', '35%'];
+
 export interface DataTableProps<T extends Record<string, unknown>> {
 	rows: T[];
 	/**
@@ -461,7 +466,19 @@ export interface DataTableProps<T extends Record<string, unknown>> {
 	 * @itemKeys DataTableColumnSpec, DataTableActionsColumnSpec
 	 */
 	columns: TableColumn<T>[];
+	/**
+	 * Shows a loading skeleton instead of the rows and the empty message. Unset, it follows the page: true until the
+	 * page's first load of `$sources` has finished, so the table never says "empty" before its data has arrived.
+	 * A refetch (filter, page, poll, action reload) keeps the previous rows on screen.
+	 * @ctxDefault $initialLoading
+	 */
 	loading?: boolean;
+	/**
+	 * A refetch is in flight while the rows are already shown (filter, page, poll, refresh button): they stay, and
+	 * after a short delay (so a fast poll never flashes) they dim slightly. Unset, it follows the page.
+	 * @ctxDefault $refreshing
+	 */
+	refreshing?: boolean;
 	emptyMessage?: string;
 	/**
 	 * Called with the action name and the row when a row-action button (`type: actions` column) is clicked.
@@ -525,6 +542,7 @@ export function DataTable<T extends Record<string, unknown>>({
 	rows = [] as unknown as T[],
 	columns,
 	loading = false,
+	refreshing = false,
 	emptyMessage = 'No items',
 	onAction,
 	navigateTo,
@@ -728,7 +746,7 @@ export function DataTable<T extends Record<string, unknown>>({
 						</div>
 					)}
 					{batchActionsPosition === 'bottom' && batchToolbar}
-					<table className="w-full text-sm">
+					<table className="w-full text-sm" aria-busy={loading || refreshing || undefined}>
 						<thead>
 							<tr className={theadRowClass}>
 								{selectable && (
@@ -798,20 +816,32 @@ export function DataTable<T extends Record<string, unknown>>({
 								})}
 							</tr>
 						</thead>
-						<tbody>
+						<tbody
+							className={
+								refreshing && !loading
+									? 'opacity-60 transition-opacity duration-200 delay-300 motion-reduce:transition-none'
+									: 'transition-opacity duration-200'
+							}
+						>
 							{loading ? (
-								<tr>
-									<td colSpan={normalizedColumns.length + (expansion ? 1 : 0) + (selectable ? 1 : 0)}>
-										<div className="flex flex-col items-center justify-center py-16 text-muted">
-											<span className="sr-only">Loading...</span>
-											<div className="w-full max-w-xs space-y-2 animate-pulse px-8">
-												{[1, 2, 3].map(i => (
-													<div key={i} className="h-4 rounded bg-bg-secondary" />
-												))}
-											</div>
-										</div>
-									</td>
-								</tr>
+								// Skeleton rows laid out like the real ones (same columns, header stays): nothing jumps when the data arrives.
+								// One status for assistive tech; the bars themselves are decorative.
+								SKELETON_ROWS.map(ri => (
+									<tr key={ri} className="border-b border-border">
+										{selectable && <td className="px-3 py-3" />}
+										{expansion && <td className="w-8" />}
+										{normalizedColumns.map((col, ci) => (
+											<td key={col.key} className="px-3 py-3">
+												{ri === 0 && ci === 0 && (
+													<span role="status" className="sr-only">
+														Loading...
+													</span>
+												)}
+												<Skeleton decorative width={SKELETON_WIDTHS[(ri + ci) % SKELETON_WIDTHS.length]} height="0.875rem" />
+											</td>
+										))}
+									</tr>
+								))
 							) : sortedRows.length === 0 ? (
 								<tr>
 									<td colSpan={normalizedColumns.length + (expansion ? 1 : 0) + (selectable ? 1 : 0)}>

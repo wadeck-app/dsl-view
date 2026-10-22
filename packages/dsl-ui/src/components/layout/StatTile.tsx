@@ -12,6 +12,10 @@ export interface StatTileProps {
     value: string | number;
     trend?: StatTileTrend;
     icon?: React.ReactNode;
+    /**
+     * Skeleton instead of the value. Unset, it follows the page: true until the page's first load of `$sources` has finished.
+     * @ctxDefault $initialLoading
+     */
     loading?: boolean;
     className?: string;
 }

@@ -250,6 +250,7 @@
 			"onSortColChange",
 			"onSortDirChange",
 			"page",
+			"refreshing",
 			"rows",
 			"selectable",
 			"sortCol",
@@ -814,8 +815,11 @@
 	},
 	"RefreshButton": {
 		"knownKeys": [
+			"label",
 			"loading",
-			"onClick"
+			"onClick",
+			"onRefresh",
+			"source"
 		]
 	},
 	"RelativeDate": {
@@ -876,6 +880,7 @@
 	"Skeleton": {
 		"knownKeys": [
 			"count",
+			"decorative",
 			"height",
 			"variant",
 			"width"

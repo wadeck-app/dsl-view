@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ColumnHelpers, DataTable, useDataTableFilter } from './DataTable.js';
@@ -19,6 +19,39 @@ describe('DataTable', () => {
 	it('shows "Loading..." when loading=true', () => {
 		render(<DataTable rows={[]} columns={columns} loading={true} />);
 		expect(screen.getByText('Loading...')).toBeInTheDocument();
+	});
+
+	it('announces the loading state (role=status, aria-busy) and never shows the empty message while loading', () => {
+		render(<DataTable rows={[]} columns={columns} loading={true} emptyMessage="Nothing here" />);
+		expect(screen.getByRole('status')).toHaveTextContent('Loading...');
+		expect(screen.getByRole('table')).toHaveAttribute('aria-busy', 'true');
+		expect(screen.queryByText('Nothing here')).toBeNull();
+	});
+
+	it('loads as skeleton rows laid out like the real ones: one cell per column, a single status for the whole table', () => {
+		render(<DataTable rows={[]} columns={columns} loading={true} />);
+		expect(screen.getAllByRole('status')).toHaveLength(1);
+		const bodyRows = screen.getAllByRole('row').slice(1);
+		expect(bodyRows.length).toBeGreaterThanOrEqual(3);
+		for (const row of bodyRows) {
+			expect(within(row).getAllByRole('cell')).toHaveLength(columns.length);
+		}
+		// The header (column names) stays during the load.
+		expect(screen.getByText('Name')).toBeInTheDocument();
+	});
+
+	it('keeps the rows while a refetch is in flight: busy, but no skeleton and no empty message', () => {
+		render(<DataTable rows={rows} columns={columns} refreshing={true} emptyMessage="Nothing here" />);
+		expect(screen.getByText('Alice')).toBeInTheDocument();
+		expect(screen.getByRole('table')).toHaveAttribute('aria-busy', 'true');
+		expect(screen.queryByRole('status')).toBeNull();
+		expect(screen.queryByText('Nothing here')).toBeNull();
+	});
+
+	it('is not busy once loaded', () => {
+		render(<DataTable rows={[]} columns={columns} loading={false} emptyMessage="Nothing here" />);
+		expect(screen.getByRole('table')).not.toHaveAttribute('aria-busy');
+		expect(screen.queryByRole('status')).toBeNull();
 	});
 
 	it('shows emptyMessage when rows=[] and loading=false', () => {

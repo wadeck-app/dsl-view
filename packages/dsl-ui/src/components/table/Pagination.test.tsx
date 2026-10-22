@@ -12,6 +12,14 @@ describe('Pagination (controlled mode)', () => {
 		expect(container).toBeEmptyDOMElement();
 	});
 
+	it('renders nothing (not "Page NaN / NaN") while total or size is not loaded yet', () => {
+		const unloaded = undefined as unknown as number;
+		const { container, rerender } = render(<Pagination page={0} total={unloaded} size={10} onPageChange={vi.fn()} />);
+		expect(container).toBeEmptyDOMElement();
+		rerender(<Pagination page={0} total={30} size={unloaded} onPageChange={vi.fn()} />);
+		expect(container).toBeEmptyDOMElement();
+	});
+
 	it('renders "Page 1 / 3" format', () => {
 		render(<Pagination page={0} total={30} size={10} onPageChange={vi.fn()} />);
 		expect(screen.getByText('Page 1 / 3')).toBeInTheDocument();
