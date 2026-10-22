@@ -32,6 +32,8 @@ const COLLAPSE_OPTIONS = ['open', 'collapsed'] as const;
  * it). N counts every test, hidden rows included. Collapsing only hides the UI: every choice stays applied. The state
  * is kept in localStorage (`ab.collapsed`) and follows other tabs, like the choices.
  *
+ * With no test at all it renders nothing (no chevron, no pill). Hidden rows still count as tests.
+ *
  * Development only, built in: it renders nothing outside development (see isDev.ts), so a test left in the code can
  * never reach users. `enabled` forces it on or off, e.g. for a staging build. A production build still contains the
  * code unless the bundler removes the dead branch: do not rely on this to shrink the bundle, only to hide the tool.
@@ -42,6 +44,7 @@ const COLLAPSE_OPTIONS = ['open', 'collapsed'] as const;
  */
 export function AbDock({ tests, enabled = isDev() }: { tests: readonly AbTest[]; enabled?: boolean }): React.ReactElement | null {
 	const [hidden, toggleHidden] = usePersistentSet(HIDDEN_TESTS_KEY);
+	// The fold state is read even with no test yet: a test registering later must find the stored state, not 'open'.
 	const [dockState, setDockState] = usePersistentChoice(COLLAPSED_DOCK_KEY, COLLAPSE_OPTIONS, 'open', 'dock state', undefined, enabled);
 	const dockId = useId();
 	const collapseRef = useRef<HTMLButtonElement>(null);
@@ -58,7 +61,8 @@ export function AbDock({ tests, enabled = isDev() }: { tests: readonly AbTest[];
 			collapseRef.current?.focus();
 		}
 	}, [collapsed]);
-	if (!enabled) {
+	// Nothing to show without a test: no chevron, no pill. The stored fold state is only read, never written, here.
+	if (!enabled || tests.length === 0) {
 		return null;
 	}
 	const collapse = (): void => {
