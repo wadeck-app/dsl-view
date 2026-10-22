@@ -324,6 +324,16 @@ export function notifySuccess(notify: Notify, actionName: string, spec: ActionSp
 	});
 }
 
+/** A `$sources` load failed: the page keeps whatever it had (nothing on first load), so say so instead of letting a table read as empty. */
+export function notifyLoadFailure(notify: Notify, error: unknown): void {
+	const status = typeof error === 'object' && error !== null ? (error as { status?: unknown }).status : undefined;
+	notify({
+		kind: 'error',
+		message: `Could not load the data: ${getErrorMessage(error)}`,
+		status: typeof status === 'number' ? status : undefined,
+	});
+}
+
 /** Failure feedback. `spec` is undefined when the failure happened before the spec could be read (unknown action name): always reported then. */
 export function notifyFailure(notify: Notify, actionName: string, spec: ActionSpec | undefined, error: unknown): void {
 	if (spec?.notify === false) {

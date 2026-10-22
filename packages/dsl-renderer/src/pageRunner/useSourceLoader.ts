@@ -20,9 +20,16 @@ export function useSourceLoader(params: {
 	routeParams?: Record<string, string>;
 	getToken?: () => Promise<string | null>;
 	fetcher: Fetcher;
+	/**
+	 * Called when a load fails (initial, poll or a URL-param refetch), once per distinct message until a load
+	 * succeeds again, so a failing poll does not repeat the same notification every tick.
+	 */
+	onLoadError?: (error: unknown) => void;
 }): {
 	sourceData: Record<string, unknown>;
 	loading: boolean;
+	/** True only until the first non-polled load has finished (success or failure): no data yet, as opposed to a refetch that keeps the previous data. */
+	initialLoading: boolean;
 	isRefreshing: boolean;
 	loadSources: (
 		isPolled?: boolean,
@@ -34,13 +41,29 @@ export function useSourceLoader(params: {
 	mountedRef: React.RefObject<boolean>;
 	invalidateSourceCache: (sourceKey: string) => void;
 } {
-	const { $sources, searchParams, routeParams, getToken, fetcher } = params;
+	const { $sources, searchParams, routeParams, getToken, fetcher, onLoadError } = params;
 
 	const sourceKeys = useMemo(() => Object.keys($sources ?? {}), [$sources]);
 
 	const [sourceData, setSourceData] = useState<Record<string, unknown>>({});
 	const [loading, setLoading] = useState(sourceKeys.length > 0);
 	const [isRefreshing, setIsRefreshing] = useState(false);
+	const [loadedOnce, setLoadedOnce] = useState(sourceKeys.length === 0);
+
+	const onLoadErrorRef = useRef(onLoadError);
+	useEffect(() => {
+		onLoadErrorRef.current = onLoadError;
+	}, [onLoadError]);
+	const lastReportedErrorRef = useRef<string | null>(null);
+	const reportLoadError = useCallback((err: unknown) => {
+		const message = getErrorMessage(err);
+		console.error('[useSourceLoader] load failed:', message);
+		if (lastReportedErrorRef.current === message) {
+			return;
+		}
+		lastReportedErrorRef.current = message;
+		onLoadErrorRef.current?.(err);
+	}, []);
 
 	const mountedRef = useRef(true);
 	useEffect(() => {
@@ -199,12 +222,14 @@ export function useSourceLoader(params: {
 				} else {
 					setSourceData(accumulated);
 				}
+				lastReportedErrorRef.current = null;
 			} finally {
 				if (mountedRef.current) {
 					if (isPolled) {
 						setIsRefreshing(false);
 					} else {
 						setLoading(false);
+						setLoadedOnce(true);
 					}
 				}
 			}
@@ -214,10 +239,8 @@ export function useSourceLoader(params: {
 
 	// Initial load - catch errors so the rejection is handled and loading resets to false
 	useEffect(() => {
-		void loadSources(false, {}).catch(err => {
-			console.error('[useSourceLoader] initial load failed:', getErrorMessage(err));
-		});
-	}, [loadSources]);
+		void loadSources(false, {}).catch(reportLoadError);
+	}, [loadSources, reportLoadError]);
 
 	useEffect(() => {
 		if (!$sources) {
@@ -256,7 +279,7 @@ export function useSourceLoader(params: {
 			// We pass an empty ctx snapshot here; for richer $ctx support during polls
 			// a ref to the live ctx could be passed instead.
 			const id = setInterval(() => {
-				void loadSources(true, {}, undefined, true);
+				void loadSources(true, {}, undefined, true).catch(reportLoadError);
 			}, intervalMs);
 			intervals.push(id);
 		}
@@ -266,7 +289,7 @@ export function useSourceLoader(params: {
 				clearInterval(id);
 			}
 		};
-	}, [$sources, loadSources, searchParams]);
+	}, [$sources, loadSources, searchParams, reportLoadError]);
 
 	const normalizedSpecsForFilter = useMemo(() => {
 		if (!$sources) {
@@ -302,14 +325,14 @@ export function useSourceLoader(params: {
 		if (urlParamDependentSources.size === 0) {
 			return;
 		}
-		void loadSources(true, {}, urlParamDependentSources);
+		void loadSources(true, {}, urlParamDependentSources).catch(reportLoadError);
 	// routeParams is a new object each render from useParams - stringify to stabilize comparison
 	// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [searchParams, JSON.stringify(routeParams), urlParamDependentSources, loadSources]);
+	}, [searchParams, JSON.stringify(routeParams), urlParamDependentSources, loadSources, reportLoadError]);
 
 	const invalidateSourceCache = useCallback((sourceKey: string) => {
 		sourceManagerRef.current.invalidateSource(sourceKey);
 	}, []);
 
-	return { sourceData, loading, isRefreshing, loadSources, mountedRef, invalidateSourceCache };
+	return { sourceData, loading, initialLoading: loading && !loadedOnce, isRefreshing, loadSources, mountedRef, invalidateSourceCache };
 }

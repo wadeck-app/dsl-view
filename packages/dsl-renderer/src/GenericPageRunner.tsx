@@ -12,6 +12,7 @@ import type { BrainRegistry } from './pageRunner/brainsTypes.js';
 import { useActionHandlers } from './pageRunner/useActionHandlers.js';
 import { useBrains } from './pageRunner/useBrains.js';
 import { useOutputs } from './pageRunner/useOutputs.js';
+import { notifyLoadFailure } from './pageRunner/pageRunnerUtils.js';
 import type { ActionErrorInfo, Fetcher, PageSpec } from './pageRunner/pageRunnerUtils.js';
 import { computeRegistryFingerprint } from './registryHash.js';
 import { useSourceLoader } from './pageRunner/useSourceLoader.js';
@@ -114,12 +115,14 @@ function PageRunner({
 	const { vars, setVar } = useVars(varsDecl as Record<string, unknown> | undefined);
 	const { outputs, publishOutput } = useOutputs();
 
-	const { sourceData, loading, isRefreshing, loadSources, mountedRef, invalidateSourceCache } = useSourceLoader({
+	const { sourceData, loading, initialLoading, isRefreshing, loadSources, mountedRef, invalidateSourceCache } = useSourceLoader({
 		$sources,
 		searchParams,
 		routeParams,
 		getToken,
 		fetcher,
+		// A failed load leaves the sources undefined, which a table would otherwise present as "empty": say it failed.
+		onLoadError: error => notifyLoadFailure(notify, error),
 	});
 
 	const { namedHandlers, onAction, onBatchAction, extras, actionPending } = useActionHandlers({
@@ -135,9 +138,37 @@ function PageRunner({
 		onActionError,
 	});
 
+	// `$refresh([source])`, defaulted into RefreshButton.onRefresh (@ctxDefault). Same loader as the poll timer: the cache entry
+	// is dropped (a poll-style load does not repopulate it) and the previous data stays until the answer arrives.
+	// A failure is the user's own click: always reported, never deduplicated like a poll failure.
+	const refresh = async (source?: string): Promise<void> => {
+		const known = Object.keys($sources ?? {});
+		if (source !== undefined && !known.includes(source)) {
+			notify({
+				kind: 'error',
+				message: `Cannot refresh unknown source "${source}". This page has: ${known.length > 0 ? known.join(', ') : '(no $sources)'}.`,
+			});
+			return;
+		}
+		const keys = source === undefined ? known : [source];
+		for (const key of keys) {
+			invalidateSourceCache(key);
+		}
+		try {
+			await loadSources(true, {}, source === undefined ? undefined : new Set([source]), true);
+		} catch (error) {
+			console.error('[GenericPageRunner] refresh failed:', error);
+			notifyLoadFailure(notify, error);
+		}
+	};
+
 	const baseCtx: Record<string, unknown> = {
 		...sourceData,
+		$refresh: refresh,
 		loading,
+		// True only until the first load finishes: components that default their `loading` from the page (@ctxDefault) read this,
+		// so a refetch (filter, page, poll, action reload) keeps showing the previous data instead of a skeleton.
+		$initialLoading: initialLoading,
 		$refreshing: isRefreshing,
 		...extras,
 		onAction,

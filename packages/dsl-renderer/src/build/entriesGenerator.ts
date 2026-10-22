@@ -564,8 +564,10 @@ function generateSimpleEntry(
 			// @ctxDefault: when the YAML does not set this prop, fall back to the same-named ctx entry
 			// (e.g. DataTable.onAction -> ctx.onAction built by GenericPageRunner from $actions), so a
 			// handler the page already declares does not need an `onAction: $onAction` line per node.
-			const ctxDefault = prop.getJsDocs().some(doc => doc.getTags().some(tag => tag.getTagName() === 'ctxDefault'));
-			const ctxFallback = ctxDefault ? ` ?? ctx['${name}']` : '';
+			// `@ctxDefault $initialLoading` names a differently-spelled ctx entry (the first word of the tag text).
+			const ctxDefaultTag = prop.getJsDocs().flatMap(doc => doc.getTags()).find(tag => tag.getTagName() === 'ctxDefault');
+			const ctxDefaultKey = ctxDefaultTag ? (ctxDefaultTag.getCommentText()?.trim().split(/\s+/)[0] || name) : undefined;
+			const ctxFallback = ctxDefaultKey ? ` ?? ctx['${ctxDefaultKey}']` : '';
 			declLines.push(`const ${varName} = (resolveExpressionValue(node['${name}'], ctx)${ctxFallback}) as ${propType}`);
 			jsxAttrs.push(`${name}={${varName}}`);
 		}

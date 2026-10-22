@@ -348,6 +348,8 @@ describe('@ctxDefault (a callback prop that defaults to the same-named ctx entry
 		'  /** @ctxDefault */',
 		'  onAction?: (action: string, row: unknown) => void;',
 		'  onRowClick?: (row: unknown) => void;',
+		'  /** @ctxDefault $initialLoading */',
+		'  loading?: boolean;',
 		'}',
 		'export function Grid(props: GridProps) { return null }',
 	].join('\n');
@@ -365,6 +367,14 @@ describe('@ctxDefault (a callback prop that defaults to the same-named ctx entry
 		expect(output).toContain(`const onAction = (resolveExpressionValue(node['onAction'], ctx) ?? ctx['onAction'])`);
 		expect(output).toContain(`const onRowClick = (resolveExpressionValue(node['onRowClick'], ctx))`);
 		expect(output).not.toContain(`ctx['onRowClick']`);
+	});
+
+	it('`@ctxDefault <key>` falls back to the named ctx entry instead of the same-named one', () => {
+		const output = buildEntriesFile([
+			{ name: 'Grid', category: 'composite', tags: [], bindPattern: null, lazy: false, allowedChildren: {}, providesContext: [], requiresContext: [], sourcePath },
+		]);
+		expect(output).toContain(`const loading = (resolveExpressionValue(node['loading'], ctx) ?? ctx['$initialLoading'])`);
+		expect(output).not.toContain(`ctx['loading']`);
 	});
 });
 
