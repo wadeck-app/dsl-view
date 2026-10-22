@@ -28,6 +28,11 @@ export interface SearchBarProps {
 	 * filter a $sources entry with `$urlParam.q` without any wiring. Requires RouterProvider.
 	 */
 	urlParam?: string;
+	/**
+	 * Other URL search params deleted in the same URL update when the text changes, typically
+	 * ["page"] so narrowing a filter does not leave a stale page number behind. Requires `urlParam`.
+	 */
+	resetUrlParams?: string[];
 	/** Required unless `urlParam` is set. */
 	value?: string;
 	/** Required unless `urlParam` is set. */
@@ -45,8 +50,8 @@ export interface SearchBarProps {
  * @registryCategory composite
  * @registryTags filter search
  */
-export function SearchBar({ urlParam, value: valueProp, onChange: onChangeProp, placeholder, debounceMs = 300, focusExpand = false, size = 'md' }: SearchBarProps) {
-	const [urlValue, setUrlValue] = useOptionalUrlParam(urlParam);
+export function SearchBar({ urlParam, resetUrlParams, value: valueProp, onChange: onChangeProp, placeholder, debounceMs = 300, focusExpand = false, size = 'md' }: SearchBarProps) {
+	const [urlValue, setUrlValue] = useOptionalUrlParam(urlParam, { resetUrlParams });
 	if (urlParam == null && (valueProp === undefined || onChangeProp === undefined)) {
 		throw new Error('[SearchBar] needs either "urlParam" or both "value" and "onChange"');
 	}

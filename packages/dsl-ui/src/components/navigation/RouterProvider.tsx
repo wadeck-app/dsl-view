@@ -21,11 +21,14 @@ export function RouterProvider({ children }: { children: React.ReactNode }) {
 	const urlParamService: UrlParamService = useMemo(
 		() => ({
 			get: (key: string) => searchParams.get(key),
-			set: (key: string, value: string, opts?: { replace?: boolean }) => {
+			set: (key: string, value: string, opts?: { replace?: boolean; remove?: string[] }) => {
 				setSearchParams(
 					prev => {
 						const next = new URLSearchParams(prev);
 						next.set(key, value);
+							for (const removed of opts?.remove ?? []) {
+								next.delete(removed);
+							}
 						return next;
 					},
 					{ replace: opts?.replace ?? false }

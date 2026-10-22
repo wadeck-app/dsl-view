@@ -19,6 +19,11 @@ export interface CompactSelectProps {
 	 * ignored, so a page can filter a $sources entry with `$urlParam.status`. Requires RouterProvider.
 	 */
 	urlParam?: string;
+	/**
+	 * Other URL search params deleted in the same URL update when the choice changes, typically
+	 * ["page"] so changing a filter does not leave a stale page number behind. Requires `urlParam`.
+	 */
+	resetUrlParams?: string[];
 	/** Ignored when `urlParam` is set. */
 	value: string;
 	options: FieldSelectOption[];
@@ -53,8 +58,8 @@ export interface CompactSelectProps {
  * @registryTags select compact toolbar
  * @registryBind formData onChange
  */
-export function CompactSelect({ urlParam, value: valueProp, options, onChange: onChangeProp, ariaLabel, placeholder, disabled }: CompactSelectProps) {
-	const [urlValue, setUrlValue] = useOptionalUrlParam(urlParam);
+export function CompactSelect({ urlParam, resetUrlParams, value: valueProp, options, onChange: onChangeProp, ariaLabel, placeholder, disabled }: CompactSelectProps) {
+	const [urlValue, setUrlValue] = useOptionalUrlParam(urlParam, { resetUrlParams });
 	const value = urlParam != null ? urlValue ?? '' : valueProp;
 	const onChange = urlParam != null ? setUrlValue : onChangeProp;
 	return (

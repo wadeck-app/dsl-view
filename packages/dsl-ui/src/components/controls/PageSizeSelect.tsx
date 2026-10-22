@@ -12,6 +12,13 @@ export interface PageSizeSelectProps {
 	 * `onChange` are ignored.
 	 */
 	urlParam?: string;
+	/**
+	 * Other URL search params deleted in the same URL update when the size changes, typically
+	 * ["page"]: a new page size shifts the page boundaries, so the old page number points at the
+	 * wrong rows or past the end. Not applied by default (existing pages keep their behaviour).
+	 * Requires `urlParam`.
+	 */
+	resetUrlParams?: string[];
 	/** Ignored when `urlParam` is set. */
 	value?: number;
 	options: number[];
@@ -23,8 +30,8 @@ export interface PageSizeSelectProps {
  * @registryCategory atomic
  * @registryTags pagination select
  */
-export function PageSizeSelect({ urlParam, value, options, onChange }: PageSizeSelectProps) {
-	const [urlSize, setUrlSize] = useOptionalUrlParam(urlParam);
+export function PageSizeSelect({ urlParam, resetUrlParams, value, options, onChange }: PageSizeSelectProps) {
+	const [urlSize, setUrlSize] = useOptionalUrlParam(urlParam, { resetUrlParams });
 	const activeValue = urlParam ? Number(urlSize) || options[0] : value ?? options[0];
 	const changeValue = urlParam ? (n: number) => setUrlSize(String(n)) : onChange;
 

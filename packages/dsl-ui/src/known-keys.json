@@ -191,6 +191,7 @@
 			"disabled",
 			"options",
 			"placeholder",
+			"resetUrlParams",
 			"urlParam"
 		]
 	},
@@ -760,6 +761,7 @@
 		"knownKeys": [
 			"onChange",
 			"options",
+			"resetUrlParams",
 			"urlParam",
 			"value"
 		]
@@ -842,6 +844,7 @@
 			"focusExpand",
 			"onChange",
 			"placeholder",
+			"resetUrlParams",
 			"size",
 			"urlParam",
 			"value"

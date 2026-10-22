@@ -357,6 +357,21 @@ This is the sanctioned mechanism for any `dsl-ui-*` component accepting a `urlPa
 
 Omit `urlParam` to use either component in plain controlled mode (`page`/`onPageChange`, `value`/`onChange`).
 
+**Resetting `page` when a filter changes.** `SearchBar`, `CompactSelect` and `PageSizeSelect` accept `resetUrlParams: [page]`: those keys are deleted in the same URL update as the control's own key (one `replace` navigation, other params kept). Not applied by default, so without it a filter change on `page=3` leaves `page=3` and the table shows an empty page.
+
+```yaml
+- $type: SearchBar
+  urlParam: event
+  resetUrlParams: [page]
+- $type: CompactSelect
+  urlParam: status
+  resetUrlParams: [page]
+  ariaLabel: Status
+  options: [...]
+```
+
+`resetUrlParams` without `urlParam`, or containing the control's own `urlParam`, throws. A custom `UrlParamService` host must honour `set(key, value, { remove })`; `useOptionalUrlParam(key, { resetUrlParams })` is the hook form.
+
 ---
 
 ## Generated files

@@ -51,6 +51,7 @@ export const ColorPickerNodeSchema = baseNode.extend({
 
 export const CompactSelectNodeSchema = baseNode.extend({
 	urlParam: z.string().optional(),
+	resetUrlParams: z.array(z.string()).optional(),
 	value: z.string(),
 	options: z.array(z.unknown()),
 	ariaLabel: z.string(),
@@ -75,6 +76,7 @@ export const LiveToggleNodeSchema = baseNode.extend({
 
 export const PageSizeSelectNodeSchema = baseNode.extend({
 	urlParam: z.string().optional(),
+	resetUrlParams: z.array(z.string()).optional(),
 	value: z.number().optional(),
 	options: z.array(z.number()),
 });
@@ -827,6 +829,7 @@ export const PaginationNodeSchema = baseNode.extend({
 
 export const SearchBarNodeSchema = baseNode.extend({
 	urlParam: z.string().optional(),
+	resetUrlParams: z.array(z.string()).optional(),
 	value: z.string().optional(),
 	placeholder: z.string().optional(),
 	debounceMs: z.number().optional(),
