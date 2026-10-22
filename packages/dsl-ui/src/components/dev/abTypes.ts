@@ -17,3 +17,6 @@ export interface AbTest {
 	value: string;
 	onSelect: (id: string) => void;
 }
+
+// Whole-dock state: 'open' (default) or 'collapsed' (a small pill; every choice stays applied).
+export const COLLAPSED_DOCK_KEY = 'ab.collapsed';

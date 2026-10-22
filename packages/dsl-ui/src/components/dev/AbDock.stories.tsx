@@ -41,3 +41,25 @@ function Demo() {
 }
 
 export const TwoTests: Story = { render: () => <Demo /> };
+
+const ROW_NAMES = ['Dashboard width', 'Columns', 'Gap', 'Cell height', 'Bar', 'Filter chips'] as const;
+
+// Six rows: the dock covers a good part of the page. Fold it with the chevron on its top edge, or Escape inside it.
+function ManyRowsDemo() {
+	const tests = [
+		useAbTest({ id: 'many-0', label: ROW_NAMES[0], initial: 'a', options: { a: { label: 'A', hint: 'First variant.' }, b: { label: 'B', hint: 'Second variant.' } } }),
+		useAbTest({ id: 'many-1', label: ROW_NAMES[1], initial: 'a', options: { a: { label: 'A', hint: 'First variant.' }, b: { label: 'B', hint: 'Second variant.' } } }),
+		useAbTest({ id: 'many-2', label: ROW_NAMES[2], initial: 'a', options: { a: { label: 'A', hint: 'First variant.' }, b: { label: 'B', hint: 'Second variant.' } } }),
+		useAbTest({ id: 'many-3', label: ROW_NAMES[3], initial: 'a', options: { a: { label: 'A', hint: 'First variant.' }, b: { label: 'B', hint: 'Second variant.' } } }),
+		useAbTest({ id: 'many-4', label: ROW_NAMES[4], initial: 'a', options: { a: { label: 'A', hint: 'First variant.' }, b: { label: 'B', hint: 'Second variant.' } } }),
+		useAbTest({ id: 'many-5', label: ROW_NAMES[5], initial: 'a', options: { a: { label: 'A', hint: 'First variant.' }, b: { label: 'B', hint: 'Second variant.' } } }),
+	];
+	return (
+		<div className="min-h-screen bg-bg p-8 text-content">
+			<p>Six rows. Fold the dock with the chevron on its top edge, or press Escape while the focus is inside it.</p>
+			<AbDock tests={tests} enabled />
+		</div>
+	);
+}
+
+export const SixRowsFoldable: Story = { render: () => <ManyRowsDemo /> };
