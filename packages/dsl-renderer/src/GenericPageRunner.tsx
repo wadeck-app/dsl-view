@@ -23,6 +23,12 @@ export interface GenericPageRunnerProps {
 	yamlText?: string;
 	/** Pre-compiled artifact from `compileDslDocument`/`compileDslPagesDir`, used instead of `yamlText`. */
 	compiled?: CompiledDslArtifact;
+	/**
+	 * Optional explicit page identity. By default the runner remounts when the document (`yamlText` /
+	 * `compiled`) or a route param changes. Pass a stable key (e.g. the page path) to decide it yourself:
+	 * the page then remounts exactly when this value changes, whatever the document text is.
+	 */
+	pageKey?: string;
 	registry: ComponentRegistry;
 	getToken?: () => Promise<string | null>;
 	fetcher: Fetcher;
@@ -57,12 +63,27 @@ function SuspenseFallbackNotConfiguredWarning(): null {
 }
 
 /**
- * Remounts the page when a route param changes (/workers/001 -> /workers/002), so vars, outputs,
- * brain state and source data never leak from one entity to the next.
+ * Remounts the page when its identity changes, so vars, outputs, brain state, source data and action
+ * feedback never leak from one page or entity to the next:
+ * - a route param changes (/workers/001 -> /workers/002);
+ * - the document changes (a host that keeps ONE element mounted and swaps `yamlText` / `compiled`,
+ *   e.g. /jobs/new -> /jobs, where both routes have no params).
+ * The same document re-rendered (identical `yamlText`, polling, re-render of the host) never remounts.
  */
 export function GenericPageRunner(props: GenericPageRunnerProps) {
 	const routeParams = useParams();
-	return <PageRunner key={JSON.stringify(routeParams)} {...props} />;
+	const { yamlText, compiled, pageKey } = props;
+	// Document text itself rather than a hash: no collision can leave a stale page mounted, and equal strings compare cheaply.
+	const documentIdentity = useMemo(() => {
+		if (pageKey !== undefined) {
+			return `key:${pageKey}`;
+		}
+		if (compiled) {
+			return `compiled:${compiled.sourcePath ?? ''}:${JSON.stringify(compiled.doc)}`;
+		}
+		return `yaml:${yamlText ?? ''}`;
+	}, [yamlText, compiled, pageKey]);
+	return <PageRunner key={`${JSON.stringify(routeParams)}|${documentIdentity}`} {...props} />;
 }
 
 function PageRunner({
