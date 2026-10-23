@@ -264,6 +264,9 @@ function readDefault(prop: PropertySignature): string | null {
 // A ReactNode `children` prop is authored under the `items` DSL key: the generated render in
 // dsl-renderer's entriesGenerator (generateSimpleEntry / extractKnownKeys) reads node['items'].
 // Keep this rule in sync with it (dsl-ui's schema consistency test guards the drift).
+// Optional directives other than `$type` (required). Must equal KNOWN_DSL_KEYS minus `$type` in dsl-renderer.
+const BASE_NODE_DIRECTIVES = ['$if', '$source', '$context', '$route', '$extends', '$id', '$outputs'] as const;
+
 function dslKeyFor(prop: PropertySignature): string {
 	const name = prop.getName();
 	const typeText = prop.getTypeNode()?.getText() ?? '';
@@ -301,19 +304,50 @@ function propertyToZodField(prop: PropertySignature, indent: string): string | n
 	return `${indent}${name}: ${zodExpr}`;
 }
 
-function interfaceToZodSchema(iface: InterfaceDeclaration, schemaName: string, isNodeSchema = false): string {
+// Props the generated render never reads from the YAML node (mirrors extractKnownKeys in dsl-renderer): with the
+// formData/onChange bind pattern, `value`/`onChange` are replaced by `bind`, and a toggle's `checked` too.
+function bindConsumedProps(members: PropertySignature[], bindPattern: string[] | null): Set<string> {
+	const consumed = new Set<string>();
+	if (bindPattern?.[0] === 'formData' && bindPattern?.[1] === 'onChange') {
+		consumed.add('value');
+		consumed.add('onChange');
+		consumed.add('bind');
+		const names = members.map((m) => m.getName());
+		if (names.includes('checked') && !names.includes('value')) consumed.add('checked');
+	}
+	return consumed;
+}
+
+// A YAML value may be an expression (`$sources.x`, `$vars.y`) that the renderer resolves later, so a node schema
+// must accept one wherever it accepts a literal. Plain strings and unknown already do.
+function withExpression(zodExpr: string): string {
+	let core = zodExpr;
+	let suffix = '';
+	for (;;) {
+		const m = /(\.optional\(\)|\.nullable\(\))$/.exec(core);
+		if (!m) break;
+		suffix = m[1] + suffix;
+		core = core.slice(0, -m[1].length);
+	}
+	if (core === 'z.string()' || core === 'z.unknown()') return zodExpr;
+	return `dsl(${core})${suffix}`;
+}
+
+function interfaceToZodSchema(iface: InterfaceDeclaration, schemaName: string, isNodeSchema = false, bindPattern: string[] | null = null): string {
 	currentInterfaceName = iface.getName();
 	const members = iface.getProperties();
 	const lines: string[] = [];
+	const consumed = isNodeSchema ? bindConsumedProps(members, bindPattern) : new Set<string>();
+	if (isNodeSchema && bindPattern?.[0] === 'formData') {
+		lines.push('\tbind: z.string().optional()');
+	}
 
 	for (const prop of members) {
 		// Only top-level node schemas describe DSL nodes; sub-schemas keep the raw prop names.
 		const name = isNodeSchema ? dslKeyFor(prop) : prop.getName();
-		// type is handled by baseNode.extend — only skip for top-level node schemas
-		if (isNodeSchema && name === 'type') {
+		if (consumed.has(name)) {
 			continue;
 		}
-
 		const isOptional = prop.hasQuestionToken();
 		const typeNode = prop.getTypeNode();
 		if (!typeNode) {
@@ -327,6 +361,15 @@ function interfaceToZodSchema(iface: InterfaceDeclaration, schemaName: string, i
 		// Callback property -> skip entirely
 		if (zodExpr === null) {
 			continue;
+		}
+		if (isNodeSchema) {
+			// A prop whose YAML items have their own key spec (@itemKeys) is not shaped like the prop's TypeScript
+			// type (DataTable columns: YAML `field` / `type: actions`, not TableColumn): the unknown-key walker owns it.
+			const hasItemKeys = prop.getJsDocs().some((d) => d.getTags().some((t) => t.getTagName() === 'itemKeys'));
+			if (hasItemKeys) {
+				zodExpr = 'z.array(z.unknown())';
+			}
+			zodExpr = withExpression(zodExpr);
 		}
 
 		if (isOptional && !zodExpr.endsWith('.optional()')) {
@@ -342,7 +385,7 @@ function interfaceToZodSchema(iface: InterfaceDeclaration, schemaName: string, i
 	}
 
 	if (isNodeSchema) {
-		// Node schemas extend baseNode (which contributes `type: z.string()`)
+		// Node schemas extend baseNode (which contributes the `$type` / `$if` / ... directives)
 		if (lines.length === 0) {
 			return `const ${schemaName} = baseNode.extend({});`;
 		}
@@ -467,7 +510,10 @@ for (const file of files) {
 	// Reset currentFileInterfaces to only include interfaces in this file
 	currentFileInterfaces = new Set(sourceFile.getInterfaces().map(i => i.getName()));
 
-	const schemaCode = interfaceToZodSchema(propsInterface, schemaName, true);
+	const componentDoc = sourceFile.getFunction(componentName)?.getJsDocs()[0];
+	const bindTag = componentDoc?.getTags().find((t) => t.getTagName() === 'registryBind');
+	const bindPattern = bindTag ? (bindTag.getCommentText() ?? '').trim().split(/\s+/).filter(Boolean) : null;
+	const schemaCode = interfaceToZodSchema(propsInterface, schemaName, true, bindPattern);
 	const fileBlock = [...subSchemas, `export ${schemaCode}`].join('\n\n');
 	schemaBlocks.push(fileBlock);
 	autoCount++;
@@ -477,7 +523,17 @@ const output = [
 	'// src/schemas/generated-node-schemas.ts — GENERATED from XxxProps interfaces by scripts/generate-node-schemas.ts, do not edit',
 	"import { z } from 'zod';",
 	'',
-	'const baseNode = z.object({ type: z.string() });',
+	'// Directives every DSL node may carry (mirrors KNOWN_DSL_KEYS in dsl-renderer, a test keeps them in sync).',
+	'// A node is authored with `$type`, never `type`: `type` is an ordinary prop of some components (Chart, ButtonAction).',
+	'// Other keys are not rejected here: unknown keys are reported by the knownKeys check, not twice.',
+	'const baseNode = z.object({',
+	'\t$type: z.string(),',
+	...BASE_NODE_DIRECTIVES.map((key) => `\t${key}: z.unknown().optional(),`),
+	'});',
+	'',
+	'// A prop may hold an expression (`$sources.x`, `$vars.y`) resolved at render time, so it is accepted wherever the literal is.',
+	"const expr = z.string().startsWith('$');",
+	'const dsl = <T extends z.ZodType>(schema: T) => z.union([schema, expr]);',
 	'',
 	schemaBlocks.join('\n\n'),
 	'',

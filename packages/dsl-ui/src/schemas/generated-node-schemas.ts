@@ -1,16 +1,33 @@
 // src/schemas/generated-node-schemas.ts — GENERATED from XxxProps interfaces by scripts/generate-node-schemas.ts, do not edit
 import { z } from 'zod';
 
-const baseNode = z.object({ type: z.string() });
+// Directives every DSL node may carry (mirrors KNOWN_DSL_KEYS in dsl-renderer, a test keeps them in sync).
+// A node is authored with `$type`, never `type`: `type` is an ordinary prop of some components (Chart, ButtonAction).
+// Other keys are not rejected here: unknown keys are reported by the knownKeys check, not twice.
+const baseNode = z.object({
+	$type: z.string(),
+	$if: z.unknown().optional(),
+	$source: z.unknown().optional(),
+	$context: z.unknown().optional(),
+	$route: z.unknown().optional(),
+	$extends: z.unknown().optional(),
+	$id: z.unknown().optional(),
+	$outputs: z.unknown().optional(),
+});
+
+// A prop may hold an expression (`$sources.x`, `$vars.y`) resolved at render time, so it is accepted wherever the literal is.
+const expr = z.string().startsWith('$');
+const dsl = <T extends z.ZodType>(schema: T) => z.union([schema, expr]);
 
 export const ButtonActionNodeSchema = baseNode.extend({
 	label: z.string(),
-	variant: z.enum(['primary', 'secondary', 'danger', 'danger-outline', 'success']).optional(),
-	icon: z.array(z.unknown()).optional(),
-	size: z.enum(['sm', 'md']).optional(),
-	disabled: z.boolean().optional(),
+	variant: dsl(z.enum(['primary', 'secondary', 'danger', 'danger-outline', 'success'])).optional(),
+	icon: dsl(z.array(z.unknown())).optional(),
+	size: dsl(z.enum(['sm', 'md'])).optional(),
+	disabled: dsl(z.boolean()).optional(),
 	disabledReason: z.string().optional(),
-	loading: z.boolean().optional(),
+	loading: dsl(z.boolean()).optional(),
+	type: dsl(z.enum(['button', 'submit'])).optional(),
 });
 
 const CheckboxOptionSchema = z.object({
@@ -20,19 +37,19 @@ const CheckboxOptionSchema = z.object({
 });
 
 export const CheckboxGroupNodeSchema = baseNode.extend({
-	options: z.array(CheckboxOptionSchema),
-	value: z.array(z.string()),
+	bind: z.string().optional(),
+	options: dsl(z.array(CheckboxOptionSchema)),
 	label: z.string().optional(),
-	orientation: z.enum(['vertical', 'horizontal']).optional(),
+	orientation: dsl(z.enum(['vertical', 'horizontal'])).optional(),
 });
 
 export const ChipButtonNodeSchema = baseNode.extend({
-	active: z.boolean(),
+	active: dsl(z.boolean()),
 	color: z.unknown().optional(),
-	items: z.array(z.unknown()).optional(),
-	shape: z.enum(['pill', 'square']).optional(),
-	emphasis: z.enum(['subtle', 'strong']).optional(),
-	'aria-pressed': z.boolean().optional(),
+	items: dsl(z.array(z.unknown())).optional(),
+	shape: dsl(z.enum(['pill', 'square'])).optional(),
+	emphasis: dsl(z.enum(['subtle', 'strong'])).optional(),
+	'aria-pressed': dsl(z.boolean()).optional(),
 	'aria-label': z.string().optional(),
 	title: z.string().optional(),
 	className: z.string().optional(),
@@ -44,41 +61,41 @@ const ColorOptionSchema = z.object({
 });
 
 export const ColorPickerNodeSchema = baseNode.extend({
+	bind: z.string().optional(),
 	label: z.string(),
-	options: z.array(ColorOptionSchema),
-	value: z.string(),
+	options: dsl(z.array(ColorOptionSchema)),
 });
 
 export const CompactSelectNodeSchema = baseNode.extend({
+	bind: z.string().optional(),
 	urlParam: z.string().optional(),
-	resetUrlParams: z.array(z.string()).optional(),
-	value: z.string(),
-	options: z.array(z.unknown()),
+	resetUrlParams: dsl(z.array(z.string())).optional(),
+	options: dsl(z.array(z.unknown())),
 	ariaLabel: z.string(),
 	placeholder: z.string().optional(),
-	disabled: z.boolean().optional(),
+	disabled: dsl(z.boolean()).optional(),
 });
 
 export const IconButtonNodeSchema = baseNode.extend({
-	icon: z.array(z.unknown()).optional(),
+	icon: dsl(z.array(z.unknown())).optional(),
 	'aria-label': z.string(),
-	size: z.enum(['icon', 'icon-field', 'icon-sm', 'icon-xs']).optional(),
+	size: dsl(z.enum(['icon', 'icon-field', 'icon-sm', 'icon-xs'])).optional(),
 });
 
 export const InviteTokenWidgetNodeSchema = baseNode.extend({
 	inviteToken: z.string().nullable().optional(),
-	isPending: z.boolean().optional(),
+	isPending: dsl(z.boolean()).optional(),
 });
 
 export const LiveToggleNodeSchema = baseNode.extend({
-	live: z.boolean(),
+	live: dsl(z.boolean()),
 });
 
 export const PageSizeSelectNodeSchema = baseNode.extend({
 	urlParam: z.string().optional(),
-	resetUrlParams: z.array(z.string()).optional(),
-	value: z.number().optional(),
-	options: z.array(z.number()),
+	resetUrlParams: dsl(z.array(z.string())).optional(),
+	value: dsl(z.number()).optional(),
+	options: dsl(z.array(z.number())),
 });
 
 const RadioOptionSchema = z.object({
@@ -88,37 +105,37 @@ const RadioOptionSchema = z.object({
 });
 
 export const RadioGroupNodeSchema = baseNode.extend({
-	options: z.array(RadioOptionSchema),
-	value: z.string(),
+	bind: z.string().optional(),
+	options: dsl(z.array(RadioOptionSchema)),
 	label: z.string().optional(),
-	orientation: z.enum(['vertical', 'horizontal']).optional(),
+	orientation: dsl(z.enum(['vertical', 'horizontal'])).optional(),
 });
 
 export const RefreshButtonNodeSchema = baseNode.extend({
-	loading: z.boolean().optional(),
+	loading: dsl(z.boolean()).optional(),
 	source: z.string().optional(),
 	label: z.string().default('Refresh'),
 });
 
 export const SliderNodeSchema = baseNode.extend({
-	value: z.number(),
-	min: z.number().optional(),
-	max: z.number().optional(),
-	step: z.number().optional(),
-	disabled: z.boolean().optional(),
+	bind: z.string().optional(),
+	min: dsl(z.number()).optional(),
+	max: dsl(z.number()).optional(),
+	step: dsl(z.number()).optional(),
+	disabled: dsl(z.boolean()).optional(),
 	label: z.string().optional(),
-	showValue: z.boolean().optional(),
+	showValue: dsl(z.boolean()).optional(),
 });
 
 export const SwitchNodeSchema = baseNode.extend({
+	bind: z.string().optional(),
 	label: z.string().optional(),
-	checked: z.boolean(),
-	disabled: z.boolean().optional(),
-	size: z.enum(['sm', 'md']).optional(),
+	disabled: dsl(z.boolean()).optional(),
+	size: dsl(z.enum(['sm', 'md'])).optional(),
 });
 
 export const TabButtonNodeSchema = baseNode.extend({
-	active: z.boolean().optional(),
+	active: dsl(z.boolean()).optional(),
 });
 
 const ThemeOptionSchema = z.object({
@@ -128,9 +145,9 @@ const ThemeOptionSchema = z.object({
 });
 
 export const ThemePickerNodeSchema = baseNode.extend({
+	bind: z.string().optional(),
 	label: z.string(),
-	options: z.array(ThemeOptionSchema),
-	value: z.string(),
+	options: dsl(z.array(ThemeOptionSchema)),
 });
 
 const AbVariantSpecSchema = z.object({
@@ -143,21 +160,21 @@ export const AbTestNodeSchema = baseNode.extend({
 	id: z.string(),
 	label: z.string(),
 	initial: z.string(),
-	variants: z.record(z.string(), AbVariantSpecSchema),
+	variants: dsl(z.record(z.string(), AbVariantSpecSchema)),
 });
 
 export const AvatarNodeSchema = baseNode.extend({
 	src: z.string().optional(),
 	alt: z.string().optional(),
 	fallback: z.string().optional(),
-	size: z.enum(['sm', 'md', 'lg']).optional(),
+	size: dsl(z.enum(['sm', 'md', 'lg'])).optional(),
 });
 
 export const BadgeNodeSchema = baseNode.extend({
 	label: z.string(),
-	variant: z.enum(['default', 'primary', 'success', 'warning', 'danger', 'info']).optional(),
-	tone: z.enum(['solid', 'subtle']).optional(),
-	size: z.enum(['sm', 'md']).optional(),
+	variant: dsl(z.enum(['default', 'primary', 'success', 'warning', 'danger', 'info'])).optional(),
+	tone: dsl(z.enum(['solid', 'subtle'])).optional(),
+	size: dsl(z.enum(['sm', 'md'])).optional(),
 });
 
 const ChartSeriesConfigSchema = z.object({
@@ -169,20 +186,20 @@ const ChartSeriesConfigSchema = z.object({
 });
 
 export const ChartNodeSchema = baseNode.extend({
-	data: z.array(z.unknown()).optional(),
+	data: dsl(z.array(z.unknown())).optional(),
 	xAxisKey: z.string(),
-	xAxisType: z.enum(['time', 'category']),
+	xAxisType: dsl(z.enum(['time', 'category'])),
 	xFormat: z.unknown().default('date'),
 	yFormat: z.unknown().default('bytes'),
 	yUnit: z.string().optional(),
-	variant: z.enum(['default', 'sparkline']).default('default'),
-	showLegend: z.boolean().optional(),
-	height: z.number().default(300),
-	series: z.array(ChartSeriesConfigSchema),
+	variant: dsl(z.enum(['default', 'sparkline'])).default('default'),
+	showLegend: dsl(z.boolean()).optional(),
+	height: dsl(z.number()).default(300),
+	series: dsl(z.array(ChartSeriesConfigSchema)),
 });
 
 export const FetchSpinnerNodeSchema = baseNode.extend({
-	loading: z.boolean(),
+	loading: dsl(z.boolean()),
 });
 
 export const HttpMethodBadgeNodeSchema = baseNode.extend({
@@ -190,20 +207,20 @@ export const HttpMethodBadgeNodeSchema = baseNode.extend({
 });
 
 export const HttpStatusBadgeNodeSchema = baseNode.extend({
-	status: z.number(),
+	status: dsl(z.number()),
 });
 
 export const InlineEditNodeSchema = baseNode.extend({
 	value: z.string(),
 	placeholder: z.string().optional(),
-	disabled: z.boolean().optional(),
-	multiline: z.boolean().optional(),
+	disabled: dsl(z.boolean()).optional(),
+	multiline: dsl(z.boolean()).optional(),
 	className: z.string().optional(),
 	editClassName: z.string().optional(),
 });
 
 export const JsonViewerNodeSchema = baseNode.extend({
-	row: z.record(z.string(), z.unknown()).optional(),
+	row: dsl(z.record(z.string(), z.unknown())).optional(),
 	field: z.string().optional(),
 	maxHeight: z.string().optional(),
 });
@@ -212,56 +229,56 @@ export const PageHeaderNodeSchema = baseNode.extend({
 	title: z.string(),
 	subtitle: z.string().optional(),
 	icon: z.unknown().optional(),
-	headerActions: z.array(z.unknown()).optional(),
-	size: z.enum(['default', 'sm']).optional(),
+	headerActions: dsl(z.array(z.unknown())).optional(),
+	size: dsl(z.enum(['default', 'sm'])).optional(),
 });
 
 export const ProgressNodeSchema = baseNode.extend({
-	value: z.number(),
-	max: z.number().optional(),
-	variant: z.enum(['default', 'success', 'danger']).optional(),
+	value: dsl(z.number()),
+	max: dsl(z.number()).optional(),
+	variant: dsl(z.enum(['default', 'success', 'danger'])).optional(),
 	label: z.string().optional(),
-	showValue: z.boolean().optional(),
-	size: z.enum(['sm', 'md']).optional(),
-	layout: z.enum(['stacked', 'inline']).optional(),
+	showValue: dsl(z.boolean()).optional(),
+	size: dsl(z.enum(['sm', 'md'])).optional(),
+	layout: dsl(z.enum(['stacked', 'inline'])).optional(),
 	valueLabel: z.string().optional(),
 });
 
 export const RelativeDateNodeSchema = baseNode.extend({
-	date: z.union([z.unknown(), z.string(), z.number()]),
+	date: dsl(z.union([z.unknown(), z.string(), z.number()])),
 	className: z.string().optional(),
-	live: z.boolean().default(true),
-	tooltip: z.boolean().default(true),
+	live: dsl(z.boolean()).default(true),
+	tooltip: dsl(z.boolean()).default(true),
 	format: z.string().optional(),
 });
 
 export const SkeletonNodeSchema = baseNode.extend({
 	width: z.string().optional(),
 	height: z.string().optional(),
-	variant: z.enum(['line', 'circle', 'block']).optional(),
-	count: z.number().optional(),
-	decorative: z.boolean().optional(),
+	variant: dsl(z.enum(['line', 'circle', 'block'])).optional(),
+	count: dsl(z.number()).optional(),
+	decorative: dsl(z.boolean()).optional(),
 });
 
 export const SpinnerNodeSchema = baseNode.extend({
-	size: z.enum(['sm', 'md', 'lg']).optional(),
+	size: dsl(z.enum(['sm', 'md', 'lg'])).optional(),
 	label: z.string().optional(),
 });
 
 export const TagNodeSchema = baseNode.extend({
 	label: z.string(),
-	color: z.enum(['default', 'blue', 'green', 'red', 'yellow', 'purple']).optional(),
+	color: dsl(z.enum(['default', 'blue', 'green', 'red', 'yellow', 'purple'])).optional(),
 });
 
 export const ButtonCancelNodeSchema = baseNode.extend({
 	label: z.string().optional(),
-	disabled: z.boolean().optional(),
+	disabled: dsl(z.boolean()).optional(),
 });
 
 export const ButtonSaveNodeSchema = baseNode.extend({
 	label: z.string().optional(),
-	isPending: z.boolean().optional(),
-	hasChanges: z.boolean().optional(),
+	isPending: dsl(z.boolean()).optional(),
+	hasChanges: dsl(z.boolean()).optional(),
 	disabledReason: z.string().optional(),
 });
 
@@ -270,11 +287,11 @@ export const CronBuilderNodeSchema = baseNode.extend({
 });
 
 export const DatePickerNodeSchema = baseNode.extend({
-	value: z.unknown().nullable(),
+	bind: z.string().optional(),
 	minDate: z.unknown().optional(),
 	maxDate: z.unknown().optional(),
 	placeholder: z.string().optional(),
-	disabled: z.boolean().optional(),
+	disabled: dsl(z.boolean()).optional(),
 	dateFormat: z.string().optional(),
 });
 
@@ -284,13 +301,13 @@ const DateRangeSchema = z.object({
 });
 
 export const DateRangePickerNodeSchema = baseNode.extend({
-	value: DateRangeSchema,
-	disabled: z.boolean().optional(),
+	bind: z.string().optional(),
+	disabled: dsl(z.boolean()).optional(),
 	minDate: z.unknown().optional(),
 	maxDate: z.unknown().optional(),
 	placeholder: z.string().optional(),
 	dateFormat: z.string().optional(),
-	open: z.boolean().optional(),
+	open: dsl(z.boolean()).optional(),
 });
 
 const FieldAsyncSelectOptionSchema = z.object({
@@ -299,15 +316,15 @@ const FieldAsyncSelectOptionSchema = z.object({
 });
 
 export const FieldAsyncSelectNodeSchema = baseNode.extend({
+	bind: z.string().optional(),
 	name: z.string().optional(),
 	label: z.string(),
 	description: z.string().optional(),
-	required: z.boolean().optional(),
+	required: dsl(z.boolean()).optional(),
 	error: z.string().optional(),
-	disabled: z.boolean().optional(),
-	value: z.string().nullable(),
+	disabled: dsl(z.boolean()).optional(),
 	placeholder: z.string().optional(),
-	debounceMs: z.number().optional(),
+	debounceMs: dsl(z.number()).optional(),
 	noOptionsMessage: z.string().optional(),
 });
 
@@ -317,55 +334,55 @@ const FieldAutocompleteOptionSchema = z.object({
 });
 
 export const FieldAutocompleteNodeSchema = baseNode.extend({
+	bind: z.string().optional(),
 	label: z.string(),
 	description: z.string().optional(),
-	options: z.array(FieldAutocompleteOptionSchema),
-	value: z.string(),
+	options: dsl(z.array(FieldAutocompleteOptionSchema)),
 	placeholder: z.string().optional(),
-	disabled: z.boolean().optional(),
+	disabled: dsl(z.boolean()).optional(),
 });
 
 export const FieldDateNodeSchema = baseNode.extend({
+	bind: z.string().optional(),
 	label: z.string(),
 	description: z.string().optional(),
-	value: z.unknown().nullable(),
 	minDate: z.unknown().optional(),
 	maxDate: z.unknown().optional(),
 	placeholder: z.string().optional(),
-	disabled: z.boolean().optional(),
+	disabled: dsl(z.boolean()).optional(),
 	dateFormat: z.string().optional(),
-	required: z.boolean().optional(),
+	required: dsl(z.boolean()).optional(),
 	error: z.string().optional(),
 });
 
 export const FieldDateRangeNodeSchema = baseNode.extend({
+	bind: z.string().optional(),
 	label: z.string(),
 	description: z.string().optional(),
-	value: z.unknown(),
 	minDate: z.unknown().optional(),
 	maxDate: z.unknown().optional(),
 	placeholder: z.string().optional(),
-	disabled: z.boolean().optional(),
+	disabled: dsl(z.boolean()).optional(),
 	dateFormat: z.string().optional(),
-	required: z.boolean().optional(),
+	required: dsl(z.boolean()).optional(),
 	error: z.string().optional(),
 });
 
 export const FieldDateTimeNodeSchema = baseNode.extend({
+	bind: z.string().optional(),
 	label: z.string(),
 	description: z.string().optional(),
-	value: z.unknown().nullable(),
 	minDate: z.unknown().optional(),
 	maxDate: z.unknown().optional(),
 	datePlaceholder: z.string().optional(),
 	timePlaceholder: z.string().optional(),
-	disabled: z.boolean().optional(),
+	disabled: dsl(z.boolean()).optional(),
 	dateFormat: z.string().optional(),
-	is12Hour: z.boolean().optional(),
-	minuteStep: z.number().optional(),
-	required: z.boolean().optional(),
+	is12Hour: dsl(z.boolean()).optional(),
+	minuteStep: dsl(z.number()).optional(),
+	required: dsl(z.boolean()).optional(),
 	error: z.string().optional(),
-	open: z.boolean().optional(),
+	open: dsl(z.boolean()).optional(),
 });
 
 const FieldMultiSelectOptionSchema = z.object({
@@ -374,38 +391,38 @@ const FieldMultiSelectOptionSchema = z.object({
 });
 
 export const FieldMultiSelectNodeSchema = baseNode.extend({
+	bind: z.string().optional(),
 	name: z.string().optional(),
 	label: z.string(),
 	description: z.string().optional(),
-	required: z.boolean().optional(),
+	required: dsl(z.boolean()).optional(),
 	error: z.string().optional(),
-	disabled: z.boolean().optional(),
-	value: z.array(z.string()),
-	options: z.array(FieldMultiSelectOptionSchema),
+	disabled: dsl(z.boolean()).optional(),
+	options: dsl(z.array(FieldMultiSelectOptionSchema)),
 	placeholder: z.string().optional(),
-	maxSelected: z.number().optional(),
+	maxSelected: dsl(z.number()).optional(),
 });
 
 export const FieldNumberNodeSchema = baseNode.extend({
+	bind: z.string().optional(),
 	label: z.string(),
 	description: z.string().optional(),
-	value: z.union([z.string(), z.number()]),
-	min: z.number().optional(),
-	max: z.number().optional(),
+	min: dsl(z.number()).optional(),
+	max: dsl(z.number()).optional(),
 	suffix: z.string().optional(),
-	disabled: z.boolean().optional(),
-	required: z.boolean().optional(),
+	disabled: dsl(z.boolean()).optional(),
+	required: dsl(z.boolean()).optional(),
 	error: z.string().optional(),
 	unlimited: z.string().optional(),
-	unlimitedValue: z.boolean().optional(),
+	unlimitedValue: dsl(z.boolean()).optional(),
 });
 
 export const FieldReadOnlyNodeSchema = baseNode.extend({
 	label: z.string(),
 	description: z.string().optional(),
 	value: z.string(),
-	mono: z.boolean().optional(),
-	copyable: z.boolean().optional(),
+	mono: dsl(z.boolean()).optional(),
+	copyable: dsl(z.boolean()).optional(),
 });
 
 const FieldSelectOptionSchema = z.object({
@@ -414,155 +431,155 @@ const FieldSelectOptionSchema = z.object({
 });
 
 export const FieldSelectNodeSchema = baseNode.extend({
+	bind: z.string().optional(),
 	label: z.string(),
 	description: z.string().optional(),
-	value: z.string(),
-	options: z.array(FieldSelectOptionSchema),
+	options: dsl(z.array(FieldSelectOptionSchema)),
 	placeholder: z.string().optional(),
-	required: z.boolean().optional(),
+	required: dsl(z.boolean()).optional(),
 	error: z.string().optional(),
 });
 
 export const FieldTagsNodeSchema = baseNode.extend({
+	bind: z.string().optional(),
 	name: z.string().optional(),
 	label: z.string(),
 	description: z.string().optional(),
-	required: z.boolean().optional(),
+	required: dsl(z.boolean()).optional(),
 	error: z.string().optional(),
-	disabled: z.boolean().optional(),
-	value: z.array(z.string()),
+	disabled: dsl(z.boolean()).optional(),
 	placeholder: z.string().optional(),
-	maxTags: z.number().optional(),
-	allowDuplicates: z.boolean().default(false),
+	maxTags: dsl(z.number()).optional(),
+	allowDuplicates: dsl(z.boolean()).default(false),
 });
 
 export const FieldTextNodeSchema = baseNode.extend({
+	bind: z.string().optional(),
 	label: z.string(),
 	description: z.string().optional(),
-	value: z.string(),
-	readOnly: z.boolean().optional(),
-	required: z.boolean().optional(),
+	readOnly: dsl(z.boolean()).optional(),
+	required: dsl(z.boolean()).optional(),
 	error: z.string().optional(),
 });
 
 export const FieldTextareaNodeSchema = baseNode.extend({
+	bind: z.string().optional(),
 	label: z.string(),
 	description: z.string().optional(),
-	value: z.string(),
-	rows: z.number().optional(),
+	rows: dsl(z.number()).optional(),
 });
 
 export const FieldTimeNodeSchema = baseNode.extend({
+	bind: z.string().optional(),
 	label: z.string(),
 	description: z.string().optional(),
-	value: z.string().nullable(),
-	is12Hour: z.boolean().optional(),
-	minuteStep: z.number().optional(),
+	is12Hour: dsl(z.boolean()).optional(),
+	minuteStep: dsl(z.number()).optional(),
 	placeholder: z.string().optional(),
-	disabled: z.boolean().optional(),
-	required: z.boolean().optional(),
+	disabled: dsl(z.boolean()).optional(),
+	required: dsl(z.boolean()).optional(),
 	error: z.string().optional(),
 });
 
 export const FieldWrapperNodeSchema = baseNode.extend({
 	label: z.string(),
 	description: z.string().optional(),
-	required: z.boolean().optional(),
+	required: dsl(z.boolean()).optional(),
 	error: z.string().optional(),
-	children: z.union([z.array(z.unknown()).optional()]),
+	children: dsl(z.union([z.array(z.unknown()).optional()])),
 });
 
 export const FormNodeSchema = baseNode.extend({
-	fields: z.array(z.unknown()).optional(),
-	actions: z.array(z.unknown()).optional(),
-	initialData: z.record(z.string(), z.unknown()).optional(),
+	fields: dsl(z.array(z.unknown())).optional(),
+	actions: dsl(z.array(z.unknown())).optional(),
+	initialData: dsl(z.record(z.string(), z.unknown())).optional(),
 });
 
 export const TimePickerNodeSchema = baseNode.extend({
-	value: z.string().nullable(),
-	is12Hour: z.boolean().optional(),
-	minuteStep: z.number().optional(),
-	disabled: z.boolean().optional(),
+	bind: z.string().optional(),
+	is12Hour: dsl(z.boolean()).optional(),
+	minuteStep: dsl(z.number()).optional(),
+	disabled: dsl(z.boolean()).optional(),
 	placeholder: z.string().optional(),
-	open: z.boolean().optional(),
+	open: dsl(z.boolean()).optional(),
 });
 
 export const UnsavedBadgeNodeSchema = baseNode.extend({
-	hasChanges: z.boolean().optional(),
+	hasChanges: dsl(z.boolean()).optional(),
 });
 
 export const ActionBarNodeSchema = baseNode.extend({
-	items: z.array(z.unknown()).optional(),
+	items: dsl(z.array(z.unknown())).optional(),
 	className: z.string().optional(),
 });
 
 export const CardNodeSchema = baseNode.extend({
-	items: z.array(z.unknown()).optional(),
+	items: dsl(z.array(z.unknown())).optional(),
 	className: z.string().optional(),
-	padding: z.enum(['none', 'sm', 'md', 'lg']).optional(),
-	shadow: z.boolean().optional(),
-	border: z.boolean().optional(),
-	header: z.array(z.unknown()).optional(),
-	footer: z.array(z.unknown()).optional(),
+	padding: dsl(z.enum(['none', 'sm', 'md', 'lg'])).optional(),
+	shadow: dsl(z.boolean()).optional(),
+	border: dsl(z.boolean()).optional(),
+	header: dsl(z.array(z.unknown())).optional(),
+	footer: dsl(z.array(z.unknown())).optional(),
 });
 
 export const CardActionsNodeSchema = baseNode.extend({
-	items: z.array(z.unknown()).optional(),
+	items: dsl(z.array(z.unknown())).optional(),
 	className: z.string().optional(),
 });
 
 export const CollapsibleNodeSchema = baseNode.extend({
 	title: z.string(),
-	defaultOpen: z.boolean().optional(),
-	items: z.array(z.unknown()).optional(),
+	defaultOpen: dsl(z.boolean()).optional(),
+	items: dsl(z.array(z.unknown())).optional(),
 });
 
 export const DialogFooterNodeSchema = baseNode.extend({
-	items: z.array(z.unknown()).optional(),
+	items: dsl(z.array(z.unknown())).optional(),
 	className: z.string().optional(),
 });
 
 export const DividerNodeSchema = baseNode.extend({
-	orientation: z.enum(['horizontal', 'vertical']).optional(),
+	orientation: dsl(z.enum(['horizontal', 'vertical'])).optional(),
 	label: z.string().optional(),
 	className: z.string().optional(),
 });
 
 export const HorizontalStackNodeSchema = baseNode.extend({
-	gap: z.enum(['gap-0', 'gap-0.5', 'gap-1', 'gap-1.5', 'gap-2', 'gap-2.5', 'gap-3', 'gap-4', 'gap-5', 'gap-6', 'gap-7', 'gap-8', 'gap-9', 'gap-10', 'gap-12', 'gap-16']).optional(),
-	align: z.enum(['items-start', 'items-center', 'items-end', 'items-stretch', 'items-baseline']).optional(),
-	justify: z.enum(['justify-start', 'justify-center', 'justify-end', 'justify-between', 'justify-around', 'justify-evenly']).optional(),
-	items: z.array(z.unknown()).optional(),
-	itemSizes: z.array(z.enum(['fixed', 'flex']).optional()).optional(),
+	gap: dsl(z.enum(['gap-0', 'gap-0.5', 'gap-1', 'gap-1.5', 'gap-2', 'gap-2.5', 'gap-3', 'gap-4', 'gap-5', 'gap-6', 'gap-7', 'gap-8', 'gap-9', 'gap-10', 'gap-12', 'gap-16'])).optional(),
+	align: dsl(z.enum(['items-start', 'items-center', 'items-end', 'items-stretch', 'items-baseline'])).optional(),
+	justify: dsl(z.enum(['justify-start', 'justify-center', 'justify-end', 'justify-between', 'justify-around', 'justify-evenly'])).optional(),
+	items: dsl(z.array(z.unknown())).optional(),
+	itemSizes: dsl(z.array(z.enum(['fixed', 'flex']).optional())).optional(),
 });
 
 export const NavBarNodeSchema = baseNode.extend({
-	items: z.array(z.unknown()).optional(),
+	items: dsl(z.array(z.unknown())).optional(),
 	className: z.string().optional(),
 });
 
 export const PageContentNodeSchema = baseNode.extend({
-	sections: z.array(z.unknown()).optional(),
-	maxWidth: z.enum(['sm', 'md', 'lg', 'xl', '2xl', 'full']).default('xl'),
+	sections: dsl(z.array(z.unknown())).optional(),
+	maxWidth: dsl(z.enum(['sm', 'md', 'lg', 'xl', '2xl', 'full'])).default('xl'),
 });
 
 export const PageSectionNodeSchema = baseNode.extend({
 	title: z.string(),
-	actions: z.array(z.unknown()).optional(),
-	items: z.array(z.unknown()).optional(),
+	actions: dsl(z.array(z.unknown())).optional(),
+	items: dsl(z.array(z.unknown())).optional(),
 	className: z.string().optional(),
 });
 
 export const ScrollAreaNodeSchema = baseNode.extend({
-	items: z.array(z.unknown()).optional(),
-	scheme: z.enum(['auto', 'dark', 'light']).optional(),
-	axis: z.enum(['vertical', 'horizontal', 'both']).optional(),
+	items: dsl(z.array(z.unknown())).optional(),
+	scheme: dsl(z.enum(['auto', 'dark', 'light'])).optional(),
+	axis: dsl(z.enum(['vertical', 'horizontal', 'both'])).optional(),
 	className: z.string().optional(),
 });
 
 export const SectionNodeSchema = baseNode.extend({
 	title: z.string().optional(),
-	items: z.array(z.unknown()).optional(),
+	items: dsl(z.array(z.unknown())).optional(),
 });
 
 const StatTileTrendSchema = z.object({
@@ -573,29 +590,29 @@ const StatTileTrendSchema = z.object({
 
 export const StatTileNodeSchema = baseNode.extend({
 	label: z.string(),
-	value: z.union([z.string(), z.number()]),
-	trend: StatTileTrendSchema.optional(),
-	icon: z.array(z.unknown()).optional(),
-	loading: z.boolean().optional(),
+	value: dsl(z.union([z.string(), z.number()])),
+	trend: dsl(StatTileTrendSchema).optional(),
+	icon: dsl(z.array(z.unknown())).optional(),
+	loading: dsl(z.boolean()).optional(),
 	className: z.string().optional(),
 });
 
 export const TableRowActionsNodeSchema = baseNode.extend({
-	items: z.array(z.unknown()).optional(),
+	items: dsl(z.array(z.unknown())).optional(),
 	className: z.string().optional(),
 });
 
 export const ThemeScopeNodeSchema = baseNode.extend({
-	theme: z.enum(['light', 'dark']),
-	surface: z.enum(['page', 'panel', 'none']).optional(),
-	tokens: z.record(z.string(), z.string()).optional(),
+	theme: dsl(z.enum(['light', 'dark'])),
+	surface: dsl(z.enum(['page', 'panel', 'none'])).optional(),
+	tokens: dsl(z.record(z.string(), z.string())).optional(),
 	className: z.string().optional(),
-	items: z.array(z.unknown()).optional(),
+	items: dsl(z.array(z.unknown())).optional(),
 });
 
 export const VerticalStackNodeSchema = baseNode.extend({
-	gap: z.enum(['gap-0', 'gap-0.5', 'gap-1', 'gap-1.5', 'gap-2', 'gap-2.5', 'gap-3', 'gap-4', 'gap-5', 'gap-6', 'gap-7', 'gap-8', 'gap-9', 'gap-10', 'gap-12', 'gap-16']).optional(),
-	items: z.array(z.unknown()).optional(),
+	gap: dsl(z.enum(['gap-0', 'gap-0.5', 'gap-1', 'gap-1.5', 'gap-2', 'gap-2.5', 'gap-3', 'gap-4', 'gap-5', 'gap-6', 'gap-7', 'gap-8', 'gap-9', 'gap-10', 'gap-12', 'gap-16'])).optional(),
+	items: dsl(z.array(z.unknown())).optional(),
 });
 
 export const BackLinkNodeSchema = baseNode.extend({
@@ -610,16 +627,16 @@ export const BreadcrumbNodeSchema = baseNode.extend({
 export const ButtonLinkNodeSchema = baseNode.extend({
 	to: z.string(),
 	label: z.string(),
-	icon: z.array(z.unknown()).optional(),
-	variant: z.enum(['primary', 'secondary', 'danger', 'danger-outline', 'neutral', 'success']).optional(),
-	size: z.enum(['sm', 'md']).optional(),
+	icon: dsl(z.array(z.unknown())).optional(),
+	variant: dsl(z.enum(['primary', 'secondary', 'danger', 'danger-outline', 'neutral', 'success'])).optional(),
+	size: dsl(z.enum(['sm', 'md'])).optional(),
 });
 
 export const LinkNodeSchema = baseNode.extend({
 	href: z.string(),
 	label: z.string(),
-	external: z.boolean().optional(),
-	variant: z.enum(['default', 'muted', 'danger']).optional(),
+	external: dsl(z.boolean()).optional(),
+	variant: dsl(z.enum(['default', 'muted', 'danger'])).optional(),
 });
 
 const PageTabDefSchema = z.object({
@@ -629,7 +646,7 @@ const PageTabDefSchema = z.object({
 });
 
 export const PageTabsNodeSchema = baseNode.extend({
-	tabs: z.array(PageTabDefSchema),
+	tabs: dsl(z.array(PageTabDefSchema)),
 	activeTab: z.string(),
 });
 
@@ -640,7 +657,7 @@ const StepperStepSchema = z.object({
 });
 
 export const StepperNodeSchema = baseNode.extend({
-	steps: z.array(StepperStepSchema),
+	steps: dsl(z.array(StepperStepSchema)),
 	completedLabel: z.string().optional(),
 	className: z.string().optional(),
 });
@@ -652,7 +669,7 @@ const TabDefSchema = z.object({
 });
 
 export const TabsNodeSchema = baseNode.extend({
-	tabs: z.array(TabDefSchema),
+	tabs: dsl(z.array(TabDefSchema)),
 	defaultTab: z.string().optional(),
 	value: z.string().optional(),
 });
@@ -667,19 +684,19 @@ const TreeNodeSchema = z.object({
 });
 
 export const TreeViewNodeSchema = baseNode.extend({
-	nodes: z.array(TreeNodeSchema),
+	nodes: dsl(z.array(TreeNodeSchema)),
 	selectedId: z.string().optional(),
-	defaultExpandedIds: z.array(z.string()).optional(),
-	expandedIds: z.array(z.string()).optional(),
+	defaultExpandedIds: dsl(z.array(z.string())).optional(),
+	expandedIds: dsl(z.array(z.string())).optional(),
 	className: z.string().optional(),
 });
 
 export const ConfirmDialogNodeSchema = baseNode.extend({
-	open: z.boolean(),
+	open: dsl(z.boolean()),
 	title: z.string(),
-	message: z.array(z.unknown()).optional(),
+	message: dsl(z.array(z.unknown())).optional(),
 	confirmLabel: z.string().optional(),
-	confirmVariant: z.enum(['danger', 'primary']).optional(),
+	confirmVariant: dsl(z.enum(['danger', 'primary'])).optional(),
 });
 
 const ContextMenuItemSchema = z.object({
@@ -691,61 +708,61 @@ const ContextMenuItemSchema = z.object({
 });
 
 export const ContextMenuNodeSchema = baseNode.extend({
-	trigger: z.array(z.unknown()).optional(),
-	items: z.array(ContextMenuItemSchema),
-	side: z.enum(['top', 'right', 'bottom', 'left']).optional(),
-	align: z.enum(['start', 'center', 'end']).optional(),
-	open: z.boolean().optional(),
+	trigger: dsl(z.array(z.unknown())).optional(),
+	items: dsl(z.array(ContextMenuItemSchema)),
+	side: dsl(z.enum(['top', 'right', 'bottom', 'left'])).optional(),
+	align: dsl(z.enum(['start', 'center', 'end'])).optional(),
+	open: dsl(z.boolean()).optional(),
 });
 
 export const DialogNodeSchema = baseNode.extend({
 	title: z.string(),
-	trigger: z.array(z.unknown()).optional(),
-	open: z.boolean().optional(),
-	items: z.array(z.unknown()).optional(),
-	actions: z.array(z.unknown()).optional(),
-	size: z.enum(['sm', 'md', 'lg', 'xl']).optional(),
+	trigger: dsl(z.array(z.unknown())).optional(),
+	open: dsl(z.boolean()).optional(),
+	items: dsl(z.array(z.unknown())).optional(),
+	actions: dsl(z.array(z.unknown())).optional(),
+	size: dsl(z.enum(['sm', 'md', 'lg', 'xl'])).optional(),
 });
 
 export const DialogFormNodeSchema = baseNode.extend({
 	title: z.string(),
 	visible: z.unknown(),
-	initialData: z.record(z.string(), z.unknown()).nullable().optional(),
-	fields: z.array(z.unknown()).optional(),
-	size: z.enum(['sm', 'md', 'lg', 'xl']).optional(),
+	initialData: dsl(z.record(z.string(), z.unknown())).nullable().optional(),
+	fields: dsl(z.array(z.unknown())).optional(),
+	size: dsl(z.enum(['sm', 'md', 'lg', 'xl'])).optional(),
 });
 
 export const DrawerNodeSchema = baseNode.extend({
-	open: z.boolean(),
-	side: z.enum(['left', 'right', 'bottom']).optional(),
+	open: dsl(z.boolean()),
+	side: dsl(z.enum(['left', 'right', 'bottom'])).optional(),
 	title: z.string().optional(),
-	footer: z.array(z.unknown()).optional(),
-	items: z.array(z.unknown()).optional(),
-	size: z.enum(['sm', 'md', 'lg']).optional(),
-	hideCloseButton: z.boolean().optional(),
+	footer: dsl(z.array(z.unknown())).optional(),
+	items: dsl(z.array(z.unknown())).optional(),
+	size: dsl(z.enum(['sm', 'md', 'lg'])).optional(),
+	hideCloseButton: dsl(z.boolean()).optional(),
 });
 
 export const PopoverNodeSchema = baseNode.extend({
-	trigger: z.array(z.unknown()).optional(),
-	items: z.array(z.unknown()).optional(),
-	side: z.enum(['top', 'right', 'bottom', 'left']).optional(),
-	align: z.enum(['start', 'center', 'end']).optional(),
-	open: z.boolean().optional(),
+	trigger: dsl(z.array(z.unknown())).optional(),
+	items: dsl(z.array(z.unknown())).optional(),
+	side: dsl(z.enum(['top', 'right', 'bottom', 'left'])).optional(),
+	align: dsl(z.enum(['start', 'center', 'end'])).optional(),
+	open: dsl(z.boolean()).optional(),
 	className: z.string().optional(),
 });
 
 export const ToastProviderNodeSchema = baseNode.extend({
-	items: z.array(z.unknown()).optional(),
+	items: dsl(z.array(z.unknown())).optional(),
 });
 
 export const TooltipNodeSchema = baseNode.extend({
 	content: z.string(),
-	items: z.array(z.unknown()).optional(),
+	items: dsl(z.array(z.unknown())).optional(),
 });
 
 export const BulkActionsToolbarNodeSchema = baseNode.extend({
-	selectedCount: z.number(),
-	items: z.array(z.unknown()).optional(),
+	selectedCount: dsl(z.number()),
+	items: dsl(z.array(z.unknown())).optional(),
 });
 
 const ActionDefSchema = z.object({
@@ -771,29 +788,29 @@ const TableColumnSchema = z.object({
 });
 
 export const DataTableNodeSchema = baseNode.extend({
-	rows: z.array(z.unknown()),
-	columns: z.array(TableColumnSchema),
-	loading: z.boolean().optional(),
-	refreshing: z.boolean().optional(),
+	rows: dsl(z.array(z.unknown())),
+	columns: dsl(z.array(z.unknown())),
+	loading: dsl(z.boolean()).optional(),
+	refreshing: dsl(z.boolean()).optional(),
 	emptyMessage: z.string().optional(),
 	navigateTo: z.string().optional(),
-	filtersTop: z.array(z.unknown()).optional(),
-	filters: z.array(z.unknown()).optional(),
+	filtersTop: dsl(z.array(z.unknown())).optional(),
+	filters: dsl(z.array(z.unknown())).optional(),
 	id: z.string().optional(),
-	page: z.number().optional(),
+	page: dsl(z.number()).optional(),
 	sortCol: z.string().optional(),
-	sortDir: z.enum(['asc', 'desc']).optional(),
-	defaultFilters: z.record(z.string(), z.unknown()).optional(),
-	expansion: z.record(z.string(), z.unknown()).optional(),
-	selectable: z.boolean().optional(),
-	batchActions: z.array(z.object({
+	sortDir: dsl(z.enum(['asc', 'desc'])).optional(),
+	defaultFilters: dsl(z.record(z.string(), z.unknown())).optional(),
+	expansion: dsl(z.record(z.string(), z.unknown())).optional(),
+	selectable: dsl(z.boolean()).optional(),
+	batchActions: dsl(z.array(z.object({
 		label: z.string(),
 		action: z.string(),
 		variant: z.enum(['primary', 'danger', 'ghost', 'success']).optional(),
-	})).optional(),
-	batchActionsPosition: z.enum(['floating', 'bottom']).optional(),
+	}))).optional(),
+	batchActionsPosition: dsl(z.enum(['floating', 'bottom'])).optional(),
 	expansionCondition: z.string().optional(),
-	fontMono: z.boolean().optional(),
+	fontMono: dsl(z.boolean()).optional(),
 });
 
 const FilterBarFilterSchema = z.object({
@@ -806,7 +823,7 @@ const FilterBarFilterSchema = z.object({
 
 export const FilterBarNodeSchema = baseNode.extend({
 	search: z.string().optional(),
-	filters: z.array(FilterBarFilterSchema).optional(),
+	filters: dsl(z.array(FilterBarFilterSchema)).optional(),
 	placeholder: z.string().optional(),
 	className: z.string().optional(),
 });
@@ -819,33 +836,33 @@ const FilterChipOptionSchema = z.object({
 
 export const FilterChipsNodeSchema = baseNode.extend({
 	bind: z.string(),
-	options: z.array(FilterChipOptionSchema),
-	value: z.array(z.string()),
-	mode: z.enum(['multi', 'single']).optional(),
+	options: dsl(z.array(FilterChipOptionSchema)),
+	value: dsl(z.array(z.string())),
+	mode: dsl(z.enum(['multi', 'single'])).optional(),
 });
 
 export const PaginationNodeSchema = baseNode.extend({
 	urlParam: z.string().optional(),
-	page: z.number().optional(),
-	total: z.number(),
-	size: z.number(),
+	page: dsl(z.number()).optional(),
+	total: dsl(z.number()),
+	size: dsl(z.number()),
 });
 
 export const SearchBarNodeSchema = baseNode.extend({
 	urlParam: z.string().optional(),
-	resetUrlParams: z.array(z.string()).optional(),
+	resetUrlParams: dsl(z.array(z.string())).optional(),
 	value: z.string().optional(),
 	placeholder: z.string().optional(),
-	debounceMs: z.number().optional(),
-	focusExpand: z.boolean().optional(),
-	size: z.enum(['sm', 'md']).optional(),
+	debounceMs: dsl(z.number()).optional(),
+	focusExpand: dsl(z.boolean()).optional(),
+	size: dsl(z.enum(['sm', 'md'])).optional(),
 });
 
 export const ShownFetchedCounterNodeSchema = baseNode.extend({
-	raw: z.union([z.record(z.string(), z.unknown()), z.array(z.unknown())]).nullable().optional(),
+	raw: dsl(z.union([z.record(z.string(), z.unknown()), z.array(z.unknown())])).nullable().optional(),
 	entriesField: z.string().optional(),
 	totalField: z.string().optional(),
-	pushRight: z.boolean().optional(),
+	pushRight: dsl(z.boolean()).optional(),
 });
 
 const SortStateSchema = z.object({
@@ -856,14 +873,14 @@ const SortStateSchema = z.object({
 export const SortableColumnNodeSchema = baseNode.extend({
 	label: z.string(),
 	sortKey: z.string(),
-	currentSort: SortStateSchema.nullable(),
+	currentSort: dsl(SortStateSchema).nullable(),
 });
 
 export const StatusFilterNodeSchema = baseNode.extend({
 	field: z.string().optional(),
 	value: z.string(),
-	options: z.array(z.union([z.string(), z.object({
+	options: dsl(z.array(z.union([z.string(), z.object({
 		value: z.string(),
 		label: z.string(),
-	})])).optional(),
+	})]))).optional(),
 });

@@ -57,7 +57,88 @@ describe('generated node schemas vs the key the renderer reads', () => {
 	});
 
 	it('accepts a VerticalStack authored with `items` and exposes the real gap enum', () => {
-		expect(generated.VerticalStackNodeSchema.safeParse({ type: 'VerticalStack', items: [] }).success).toBe(true);
-		expect(generated.VerticalStackNodeSchema.safeParse({ type: 'VerticalStack', gap: 'gap-99' }).success).toBe(false);
+		expect(generated.VerticalStackNodeSchema.safeParse({ $type: 'VerticalStack', items: [] }).success).toBe(true);
+		expect(generated.VerticalStackNodeSchema.safeParse({ $type: 'VerticalStack', gap: 'gap-99' }).success).toBe(false);
+	});
+});
+
+// DslRenderer / dslCompiler call `entry.nodeSchema.safeParse(node)` on the node AS AUTHORED: `$type` instead of
+// `type`, `$`-directives, and `$expressions` where a literal is expected. These fixtures are shaped like the parsed
+// YAML of real pages (capability-framework books/logs/dashboard pages, queue History).
+describe('generated node schemas accept nodes as authored in YAML', () => {
+	const schemas = generated as unknown as Record<string, { safeParse: (v: unknown) => { success: boolean; error?: { issues: unknown[] } } }>;
+
+	function validateTree(node: unknown, path = '$', problems: string[] = []): string[] {
+		if (!node || typeof node !== 'object') return problems;
+		const record = node as Record<string, unknown>;
+		const type = record['$type'];
+		if (typeof type === 'string') {
+			const schema = schemas[`${type}NodeSchema`];
+			if (schema) {
+				const result = schema.safeParse(record);
+				if (!result.success) problems.push(`${path} ${type}: ${JSON.stringify(result.error?.issues)}`);
+			}
+		}
+		const items = record['items'];
+		if (Array.isArray(items)) items.forEach((child, i) => validateTree(child, `${path}.items[${i}]`, problems));
+		return problems;
+	}
+
+	const page = {
+		$type: 'VerticalStack',
+		$if: '$vars.showHistory',
+		$id: 'history',
+		gap: 'gap-4',
+		items: [
+			{ $type: 'SearchBar', urlParam: 'event', placeholder: 'Event', resetUrlParams: ['page'] },
+			{
+				$type: 'DataTable',
+				rows: '$sources.history.items',
+				loading: '$ctx.$initialLoading',
+				emptyMessage: 'No events',
+				columns: [
+					{ field: 'event', label: 'Event', truncate: true, width: 200 },
+					{ field: 'createdAt', label: 'When', format: 'datetime', nowrap: true },
+					{ type: 'actions', items: [{ label: 'Replay', action: 'replay', variant: 'danger-outline' }] },
+				],
+				onAction: '$onAction',
+			},
+			{
+				$type: 'Chart',
+				data: '$sources.activity.items',
+				xAxisKey: 'hour',
+				xAxisType: 'category',
+				yFormat: 'number',
+				variant: 'sparkline',
+				series: [{ key: 'count', name: 'Events', type: 'bar' }],
+			},
+			{ $type: 'ButtonAction', label: 'Save', action: 'save', type: 'submit' },
+			{ $type: 'CheckboxGroup', bind: 'tags', label: 'Tags', options: [{ value: 'a', label: 'A' }] },
+		],
+	};
+
+	it('accepts a realistic page: $type, $directives, $expressions, bound inputs and YAML column shapes', () => {
+		expect(validateTree(page)).toEqual([]);
+	});
+
+	it('still rejects a wrong literal prop type (the schemas are not vacuous)', () => {
+		const bad = { ...page, items: [{ $type: 'Chart', xAxisKey: 'hour', xAxisType: 'category', series: [], height: 'tall' }] };
+		expect(validateTree(bad)).toEqual([expect.stringContaining('Chart')]);
+		const badRows = { $type: 'DataTable', rows: 'not-an-expression', columns: [] };
+		expect(schemas['DataTableNodeSchema']!.safeParse(badRows).success).toBe(false);
+	});
+
+	it('rejects a node authored with `type:` instead of `$type:`', () => {
+		expect(schemas['VerticalStackNodeSchema']!.safeParse({ type: 'VerticalStack', items: [] }).success).toBe(false);
+	});
+
+	it('declares exactly the directives the renderer knows (KNOWN_DSL_KEYS in dsl-renderer)', async () => {
+		const dslKeysPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../dsl-renderer/dist/dslKeys.js');
+		if (!fs.existsSync(dslKeysPath)) {
+			throw new Error(`dsl-renderer is not built (${dslKeysPath} missing): run \`npm run build\` in packages/dsl-renderer first.`);
+		}
+		const { KNOWN_DSL_KEYS } = await import(/* @vite-ignore */ dslKeysPath);
+		const declared = Object.keys(generated.VerticalStackNodeSchema.shape).filter((k) => k.startsWith('$'));
+		expect(new Set(declared)).toEqual(new Set(KNOWN_DSL_KEYS));
 	});
 });
