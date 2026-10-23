@@ -66,21 +66,29 @@ describe('generated node schemas vs the key the renderer reads', () => {
 // `type`, `$`-directives, and `$expressions` where a literal is expected. These fixtures are shaped like the parsed
 // YAML of real pages (capability-framework books/logs/dashboard pages, queue History).
 describe('generated node schemas accept nodes as authored in YAML', () => {
+	// violations-suppress: ts/no-unsafe-type-cast the generated module is indexed by computed schema name
 	const schemas = generated as unknown as Record<string, { safeParse: (v: unknown) => { success: boolean; error?: { issues: unknown[] } } }>;
 
 	function validateTree(node: unknown, path = '$', problems: string[] = []): string[] {
-		if (!node || typeof node !== 'object') return problems;
+		if (!node || typeof node !== 'object') {
+			return problems;
+		}
+		// violations-suppress: ts/no-unsafe-type-cast the node was just narrowed to a non-null object; YAML nodes are open maps
 		const record = node as Record<string, unknown>;
 		const type = record['$type'];
 		if (typeof type === 'string') {
 			const schema = schemas[`${type}NodeSchema`];
 			if (schema) {
 				const result = schema.safeParse(record);
-				if (!result.success) problems.push(`${path} ${type}: ${JSON.stringify(result.error?.issues)}`);
+				if (!result.success) {
+					problems.push(`${path} ${type}: ${JSON.stringify(result.error?.issues)}`);
+				}
 			}
 		}
 		const items = record['items'];
-		if (Array.isArray(items)) items.forEach((child, i) => validateTree(child, `${path}.items[${i}]`, problems));
+		if (Array.isArray(items)) {
+			items.forEach((child, i) => validateTree(child, `${path}.items[${i}]`, problems));
+		}
 		return problems;
 	}
 

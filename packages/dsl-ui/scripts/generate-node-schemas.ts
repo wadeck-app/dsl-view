@@ -335,7 +335,9 @@ function bindConsumedProps(members: PropertySignature[], bindPattern: string[] |
 		consumed.add('onChange');
 		consumed.add('bind');
 		const names = members.map((m) => m.getName());
-		if (names.includes('checked') && !names.includes('value')) consumed.add('checked');
+		if (names.includes('checked') && !names.includes('value')) {
+			consumed.add('checked');
+		}
 	}
 	return consumed;
 }
@@ -347,11 +349,15 @@ function withExpression(zodExpr: string): string {
 	let suffix = '';
 	for (;;) {
 		const m = /(\.optional\(\)|\.nullable\(\))$/.exec(core);
-		if (!m) break;
+		if (!m) {
+			break;
+		}
 		suffix = m[1] + suffix;
 		core = core.slice(0, -m[1].length);
 	}
-	if (core === 'z.string()' || core === 'z.unknown()') return zodExpr;
+	if (core === 'z.string()' || core === 'z.unknown()') {
+		return zodExpr;
+	}
 	return `dsl(${core})${suffix}`;
 }
 
