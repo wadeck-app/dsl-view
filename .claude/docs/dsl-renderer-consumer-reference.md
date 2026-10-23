@@ -235,7 +235,7 @@ import { appRegistry } from './registry.js';
 - `{key}` in the action `url` is filled by dsl-renderer before the fetcher is called, from the clicked row, then route params, then URL search params. Values are percent-encoded. The fetcher receives the final URL (and still `{ id }` as `params` for hosts that read it).
 - A `{key}` with no value fails loudly: no request is sent, the error names the action, the placeholder and the row keys.
 - A failure (HTTP error, missing placeholder) is reported to the notifier (see below), to `onActionError` and to `console.error`, never as an unhandled rejection.
-- `$actions` handlers called from a Form (`$ctx.<name>`) are unchanged: they do not encode values, and a missing `{key}` becomes an empty string.
+- `$actions` handlers called from a Form (`$ctx.<name>`) are lenient by default: `{key}` values come from the route, the query string and the form data, are substituted as given (no encoding, so a value you already encoded is not encoded twice), and an empty or missing one becomes an empty string with a one-time `console.warn`. Add `strictParams: true` to the action to get the row-action behaviour instead: values are percent-encoded and an empty or missing placeholder fails before any request with a named error, shown by the notifier. Switch an action only after removing any manual encoding of its values.
 
 **Action feedback** (every `$actions` call that sent a request, and every failed `$brains` entry):
 - Success -> `{ kind: 'success', message }`, failure -> `{ kind: 'error', message, status? }`, both with `action` = the `$actions` name or brain id. The failure message is the fetcher's `Error.message` (put the actionable server text there); `status` is the Error's numeric `status` when present.
@@ -259,6 +259,7 @@ import { appRegistry } from './registry.js';
 | `successMessage` | Success text. Default `Done`. A `message` string in the JSON response overrides it. |
 | `errorPrefix` | Failure text becomes `<prefix>: <message>`. |
 | `notify: false` | No feedback for this action. Failures still reach `console.error` and `onActionError`. |
+| `strictParams: true` | Form handlers (`$ctx.<name>`) only: encode `{key}` values and fail on an empty or missing one (see above). |
 
 - A `$brains` entry accepts `$notify: false` to keep its failure out of the feedback (still published as `$brains.<id>.$error`).
 - Double submit: while an action runs, a repeated call of the same action (same row for row actions) is ignored with a console warning. `$ctx.$actionPending.<name>` is `true` while it runs, e.g. `disabled: $ctx.$actionPending.clearEntry` on a button. DataTable action buttons are not disabled automatically.

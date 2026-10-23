@@ -46,6 +46,8 @@ export function useActionHandlers(params: {
 	}, [searchParams]);
 
 	const [extras, setExtras] = useState<Record<string, unknown>>({});
+	// Lenient-mode (no strictParams) empty placeholders warn once per action+key, not on every click.
+	const lenientWarnedRef = useRef(new Set<string>());
 
 	const onActionErrorRef = useRef(onActionError);
 	useEffect(() => {
@@ -148,7 +150,28 @@ export function useActionHandlers(params: {
 								if (!(k in allParams) && v != null) allParams[k] = String(v);
 							}
 						}
-						const resolvedUrl = substituteUrlParams(spec.url, allParams);
+						const resolvedUrl = substituteUrlParams(spec.url, allParams, {
+								encode: spec.strictParams === true,
+								onMissing: key => {
+									if (spec.strictParams) {
+										throw new Error(
+											`[$ctx.${name}] URL placeholder {${key}} has no value in "${spec.url}" ` +
+												`(available: ${Object.keys(allParams).join(', ') || 'none'}). ` +
+												`Pass it in the form data, the route or the query string, or fix $actions.${name}.url`
+										);
+									}
+									// Lenient legacy mode: an empty value is still sent, but never silently.
+									const warnKey = `${name}:${key}`;
+									if (!lenientWarnedRef.current.has(warnKey)) {
+										lenientWarnedRef.current.add(warnKey);
+										console.warn(
+											`[GenericPageRunner] $actions.${name}: URL placeholder {${key}} has no value, substituting an empty string. ` +
+												`Set "strictParams: true" on the action to fail before the request instead.`
+										);
+									}
+									return '';
+								},
+							});
 						result = await fetcher(resolvedUrl, undefined, body, authHeaders);
 						notifySuccess(notifyRef.current, name, spec, result);
 						if (spec.resultKey && mountedRef.current) {

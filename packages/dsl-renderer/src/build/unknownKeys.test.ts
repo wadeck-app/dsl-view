@@ -26,7 +26,7 @@ describe('findUnknownKeys (manifest only, no registry, no React)', () => {
 		const diagnostics = findUnknownKeys(
 			{
 				$actions: {
-					ok: { url: 'POST /a', successMessage: 'Done', errorPrefix: 'Could not', notify: false, reloadSources: true, confirm: 'Sure?', resultKey: 'k' },
+					ok: { url: 'POST /a', successMessage: 'Done', errorPrefix: 'Could not', notify: false, reloadSources: true, confirm: 'Sure?', resultKey: 'k', strictParams: true },
 					typo: { url: 'POST /b', sucessMessage: 'x' },
 					shorthand: 'POST /c',
 				},

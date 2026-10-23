@@ -14,6 +14,12 @@ export interface ActionSpec {
 	errorPrefix?: string;
 	/** false = no success/failure feedback for this action (e.g. a silent background reload). Failures are still logged. */
 	notify?: boolean;
+	/**
+	 * true = the `{key}` placeholders of `url` are percent-encoded and an empty/missing one fails before any request
+	 * (named error, routed to the notifier), like row actions. Default false: values are substituted as given, because
+	 * existing pages pass already-encoded values (substituting them again would double-encode) and may rely on an empty one.
+	 */
+	strictParams?: boolean;
 }
 
 export type RawActionSpec = string | ActionSpec;
