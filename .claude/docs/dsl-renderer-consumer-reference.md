@@ -299,6 +299,7 @@ interface FieldSelectSourceProps {
 |-----------|--------------------------|
 | `React.ReactNode` (named prop) | `renderChildren(node['propName'], registry, ctx)` |
 | `children: React.ReactNode` | `renderChildren(node['items'], registry, ctx)` — DSL key is `items` |
+| `children: React.ReactNode \| ((…) => React.ReactNode)` (FieldWrapper) | Same as above: YAML can only author the node form. The label/ARIA props FieldWrapper clones onto its first child do not reach a nested DSL node's input, so wire labels on the field itself (`FieldText label:`) rather than through FieldWrapper in YAML. |
 | `(node, ctx) => React.ReactNode` | A closure re-entering `renderChildren` per call, merging the caller's own extra ctx |
 | `@registryBind formData onChange` | Wrapped with FormContext accessor |
 | Everything else | `resolveExpressionValue(node['propName'], ctx)` |

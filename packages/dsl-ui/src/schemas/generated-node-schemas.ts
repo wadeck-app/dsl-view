@@ -486,7 +486,7 @@ export const FieldWrapperNodeSchema = baseNode.extend({
 	description: z.string().optional(),
 	required: dsl(z.boolean()).optional(),
 	error: z.string().optional(),
-	children: dsl(z.union([z.array(z.unknown()).optional()])),
+	items: dsl(z.union([z.array(z.unknown()).optional()])),
 });
 
 export const FormNodeSchema = baseNode.extend({

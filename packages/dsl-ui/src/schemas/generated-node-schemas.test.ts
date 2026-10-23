@@ -51,9 +51,9 @@ describe('generated node schemas vs the key the renderer reads', () => {
 		expect(checked).toBeGreaterThan(5);
 	});
 
-	it('keeps `children` for FieldWrapper, whose `children` prop is not a plain ReactNode', () => {
-		expect(Object.keys(generated.FieldWrapperNodeSchema.shape)).toContain('children');
-		expect(Object.keys(generated.FieldWrapperNodeSchema.shape)).not.toContain('items');
+	it('keys FieldWrapper `children` (ReactNode | render function) as `items`: YAML can only author the node form', () => {
+		expect(Object.keys(generated.FieldWrapperNodeSchema.shape)).toContain('items');
+		expect(Object.keys(generated.FieldWrapperNodeSchema.shape)).not.toContain('children');
 	});
 
 	it('accepts a VerticalStack authored with `items` and exposes the real gap enum', () => {

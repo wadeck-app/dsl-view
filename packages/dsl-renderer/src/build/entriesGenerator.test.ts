@@ -7,7 +7,7 @@ import { Project } from 'ts-morph';
 
 import { createRegistry } from '../ComponentRegistry.js';
 import { compileDslDocument } from './dslCompiler.js';
-import { buildEntriesFile, extractAllowedChildren, extractItemKeys, extractKnownKeys, extractMapSlots } from './entriesGenerator.js';
+import { buildEntriesFile, extractAllowedChildren, extractItemKeys, extractKnownKeys, extractMapSlots, isReactNodeSlotType } from './entriesGenerator.js';
 
 describe('entriesGenerator @registryLazy', () => {
 	const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'entries-generator-test-'));
@@ -458,5 +458,48 @@ describe('render-node callback prop (registry must be destructured when the gene
 		const output = buildEntriesFile([entry('Plain')]);
 		expect(output).toContain('render: ({ node, ctx }: RegistryRenderProps)');
 		expect(output).not.toContain('registry');
+	});
+});
+
+describe('ReactNode | render-function children (FieldWrapper): the DSL can only author the node form', () => {
+	it('classifies a plain ReactNode and a ReactNode | function union as a node slot, nothing else', () => {
+		expect(isReactNodeSlotType('React.ReactNode')).toBe(true);
+		expect(isReactNodeSlotType('ReactNode')).toBe(true);
+		expect(isReactNodeSlotType('React.ReactNode | ((control: FieldControlProps) => React.ReactNode)')).toBe(true);
+		expect(isReactNodeSlotType('ReactNode | ((a: Record<string, unknown> | undefined) => ReactNode)')).toBe(true);
+		expect(isReactNodeSlotType('string')).toBe(false);
+		expect(isReactNodeSlotType('(node: unknown, ctx: Record<string, unknown>) => React.ReactNode')).toBe(false);
+		expect(isReactNodeSlotType('React.ReactNode | string')).toBe(false);
+	});
+
+	const source = [
+		'export interface WrapProps {',
+		'  label: string;',
+		'  /** @slot tag:atomic */',
+		'  children: React.ReactNode | ((control: { id: string }) => React.ReactNode);',
+		'}',
+		'export function Wrap(props: WrapProps) { return null }',
+	].join('\n');
+	const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wrap-slot-test-'));
+	const sourcePath = path.join(tmpDir, 'Wrap.tsx');
+	fs.writeFileSync(sourcePath, source);
+	afterAll(() => {
+		fs.rmSync(tmpDir, { recursive: true, force: true });
+	});
+	const project = new Project({ useInMemoryFileSystem: true, skipFileDependencyResolution: true });
+	const sourceFile = project.createSourceFile('Wrap.tsx', source);
+
+	it('keys allowedChildren and knownKeys by `items`', () => {
+		expect(extractAllowedChildren(sourceFile, 'Wrap')).toEqual({ items: ['atomic'] });
+		expect(extractKnownKeys(sourceFile, 'Wrap', null)).toEqual(['items', 'label']);
+	});
+
+	it('renders the nodes through renderChildren instead of passing the raw YAML array as React children', () => {
+		const output = buildEntriesFile([
+			{ name: 'Wrap', category: 'composite', tags: [], bindPattern: null, lazy: false, allowedChildren: {}, providesContext: [], requiresContext: [], sourcePath },
+		]);
+		expect(output).toContain("node['items']");
+		expect(output).toContain('renderChildren(items, registry, ctx)');
+		expect(output).not.toContain("resolveExpressionValue(node['children']");
 	});
 });

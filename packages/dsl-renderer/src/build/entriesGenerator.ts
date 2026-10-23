@@ -122,6 +122,32 @@ function findCallExpressionArgIdentifiers(fn: FunctionDeclaration, calleeName: s
 // 'children' is intentionally NOT here — it falls through to the hasChildren path.
 const GENERATED_RENDER_SKIP_PROPS = new Set(['className', 'style', 'ref', 'key']);
 
+/**
+ * A prop that holds nested DSL nodes: `React.ReactNode`, or a union of `ReactNode` and render functions
+ * (e.g. FieldWrapper's `ReactNode | ((control) => ReactNode)`). YAML cannot author a function, so for the DSL the prop
+ * is a plain node slot. Members are split on top-level `|` only, so a function type's own parameters do not interfere.
+ */
+export function isReactNodeSlotType(typeText: string): boolean {
+	const members: string[] = [];
+	let depth = 0;
+	let current = '';
+	for (const ch of typeText) {
+		if ('([{<'.includes(ch)) depth++;
+		else if (')]}>'.includes(ch) && !(ch === '>' && current.endsWith('='))) depth--;
+		if (ch === '|' && depth === 0) {
+			members.push(current.trim());
+			current = '';
+		} else {
+			current += ch;
+		}
+	}
+	members.push(current.trim());
+	const isNode = (member: string) => member === 'React.ReactNode' || member === 'ReactNode';
+	// A member wrapped in parentheses is a function type: `((control: X) => ReactNode)`.
+	const isRenderFunction = (member: string) => /^\(.*=>.*\)$/.test(member) || /^\(.*\)\s*=>/.test(member);
+	return members.some(isNode) && members.every(member => isNode(member) || isRenderFunction(member) || member === 'undefined' || member === 'null');
+}
+
 export function extractAllowedChildren(
 	sourceFile: ReturnType<InstanceType<typeof Project>['addSourceFileAtPath']>,
 	componentName: string
@@ -144,8 +170,7 @@ export function extractAllowedChildren(
 						// render (see generateSimpleEntry), so metadata must be keyed by `items`.
 						const propName = prop.getName();
 						const typeText = prop.getTypeNode()?.getText() ?? '';
-						const isReactNode = typeText === 'React.ReactNode' || typeText === 'ReactNode';
-						const dslKey = propName === 'children' && isReactNode ? 'items' : propName;
+						const dslKey = propName === 'children' && isReactNodeSlotType(typeText) ? 'items' : propName;
 						result[dslKey] = tags;
 					}
 				}
@@ -298,9 +323,9 @@ export function extractKnownKeys(
 		if (!/^[a-zA-Z][a-zA-Z0-9]*$/.test(name) && !name.startsWith('aria-')) continue;
 		if (GENERATED_RENDER_SKIP_PROPS.has(name)) continue;
 		const typeText = prop.getTypeNode()?.getText() ?? '';
-		const isReactNode = typeText === 'React.ReactNode' || typeText === 'ReactNode';
+		const isReactNode = isReactNodeSlotType(typeText);
 		// A (node, ctx) => ReactNode callback is wired by the generated render, never read from the YAML node.
-		if (typeText.includes('=>') && /=>\s*(React\.)?ReactNode\s*$/.test(typeText)) continue;
+		if (!isReactNode && typeText.includes('=>') && /=>\s*(React\.)?ReactNode\s*$/.test(typeText)) continue;
 		// A ReactNode `children` prop is read from the `items` DSL key (see generateSimpleEntry).
 		keys.add(name === 'children' && isReactNode ? 'items' : name);
 	}
@@ -524,7 +549,7 @@ function generateSimpleEntry(
 
 		const typeNode = prop.getTypeNode();
 		const typeText = typeNode?.getText() ?? '';
-		const isReactNode = typeText === 'React.ReactNode' || typeText === 'ReactNode';
+		const isReactNode = isReactNodeSlotType(typeText);
 		// A callback shaped (node, ctx) => ReactNode - the generic "recurse back into the DSL
 		// renderer for this one sub-node" slot, e.g. DataTable's `renderNode` (expansion rows,
 		// one per clicked row). Unlike a plain React.ReactNode slot it needs extra per-call ctx

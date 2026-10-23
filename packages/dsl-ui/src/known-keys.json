@@ -574,14 +574,14 @@
 	},
 	"FieldWrapper": {
 		"knownKeys": [
-			"children",
 			"description",
 			"error",
+			"items",
 			"label",
 			"required"
 		],
 		"allowedChildren": {
-			"children": [
+			"items": [
 				"atomic"
 			]
 		}

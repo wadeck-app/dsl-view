@@ -267,11 +267,33 @@ function readDefault(prop: PropertySignature): string | null {
 // Optional directives other than `$type` (required). Must equal KNOWN_DSL_KEYS minus `$type` in dsl-renderer.
 const BASE_NODE_DIRECTIVES = ['$if', '$source', '$context', '$route', '$extends', '$id', '$outputs'] as const;
 
+// Mirror of isReactNodeSlotType in dsl-renderer's entriesGenerator: `ReactNode`, or a union of `ReactNode` and render
+// functions (FieldWrapper). YAML cannot author a function, so for the DSL it is a plain node slot.
+// The consistency test in generated-node-schemas.test.ts compares the result with the registry's knownKeys.
+function isReactNodeSlot(typeText: string): boolean {
+	const members: string[] = [];
+	let depth = 0;
+	let current = '';
+	for (const ch of typeText) {
+		if ('([{<'.includes(ch)) depth++;
+		else if (')]}>'.includes(ch) && !(ch === '>' && current.endsWith('='))) depth--;
+		if (ch === '|' && depth === 0) {
+			members.push(current.trim());
+			current = '';
+		} else {
+			current += ch;
+		}
+	}
+	members.push(current.trim());
+	const isNode = (member: string) => member === 'React.ReactNode' || member === 'ReactNode';
+	const isRenderFunction = (member: string) => /^\(.*=>.*\)$/.test(member) || /^\(.*\)\s*=>/.test(member);
+	return members.some(isNode) && members.every(member => isNode(member) || isRenderFunction(member) || member === 'undefined' || member === 'null');
+}
+
 function dslKeyFor(prop: PropertySignature): string {
 	const name = prop.getName();
 	const typeText = prop.getTypeNode()?.getText() ?? '';
-	const isReactNode = typeText === 'React.ReactNode' || typeText === 'ReactNode';
-	return name === 'children' && isReactNode ? 'items' : name;
+	return name === 'children' && isReactNodeSlot(typeText) ? 'items' : name;
 }
 
 function propertyToZodField(prop: PropertySignature, indent: string): string | null {
