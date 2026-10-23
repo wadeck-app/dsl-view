@@ -7,6 +7,7 @@ declare const process: { env: Record<string, string | undefined> } | undefined;
 
 import type { ComponentRegistry } from '../ComponentRegistry.js';
 import { EXTENSION_SLOT_TYPE, KNOWN_DSL_KEYS, omitNavKeys } from '../dslKeys.js';
+import { warnUnknownNodeKeys } from './warnUnknownKeys.js';
 
 export interface RenderContext {
 	[key: string]: unknown;
@@ -71,6 +72,9 @@ export function DslRenderer({ node, registry, ctx = {} }: RendererProps): React.
 				);
 			}
 		}
+
+		// Unknown authored key (a non-$ key the component never reads): warn once, never change what renders.
+		warnUnknownNodeKeys(node, type, entry);
 
 		// $context.expose resolution check: warn if source ctx key is missing from current ctx
 		if (contextDirective?.expose) {
