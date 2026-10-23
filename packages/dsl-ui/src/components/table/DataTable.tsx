@@ -15,7 +15,7 @@
  *     because they are a universal web standard, not app-specific)
  *   - Formatting that encodes app state (e.g. "Auto-deletes in N days" is wdrive-specific)
  */
-import { ChevronDown, ChevronRight, ChevronUp, ChevronsUpDown } from 'lucide-react';
+import { ChevronDown, ChevronRight, ChevronUp, ChevronsUpDown, Loader2 } from 'lucide-react';
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 
 import { Button } from '../controls/_Button.js';
@@ -524,6 +524,12 @@ export interface DataTableProps<T extends Record<string, unknown>> {
 	 */
 	onBatchAction?: (actionName: string, rows: T[]) => void;
 	/**
+	 * Actions currently running, by action name. Defaults to the page's `$ctx.$actionPending`: while an action runs,
+	 * every row button and batch button of that action is disabled and busy (the state is per action name, not per row).
+	 * @ctxDefault $actionPending
+	 */
+	actionPending?: Record<string, boolean>;
+	/**
 	 * Where the batch-actions bar renders when rows are selected.
 	 * 'floating' (default): a fixed pill at the bottom of the viewport - never shifts the table.
 	 * 'bottom': static, below the table - rows above it never move either way.
@@ -562,6 +568,7 @@ export function DataTable<T extends Record<string, unknown>>({
 	selectable = false,
 	batchActions = [],
 	onBatchAction,
+	actionPending,
 	batchActionsPosition = 'floating',
 	expansionCondition,
 	fontMono = false,
@@ -710,6 +717,8 @@ export function DataTable<T extends Record<string, unknown>>({
 					type="button"
 					variant={action.variant ?? 'secondary'}
 					size="sm"
+					loading={actionPending?.[action.action] === true}
+					aria-busy={actionPending?.[action.action] === true || undefined}
 					onClick={() => {
 						const selectedRows = rows.filter(r =>
 							selectedIds.includes(String(r['id'] ?? ''))
@@ -935,6 +944,8 @@ export function DataTable<T extends Record<string, unknown>>({
 																				type="button"
 																				variant={item.variant ?? 'ghost'}
 																				size="sm"
+																				loading={actionPending?.[item.action] === true}
+																				aria-busy={actionPending?.[item.action] === true || undefined}
 																				onClick={() => onAction?.(item.action, row)}
 																				aria-label={item.label}
 																			>
@@ -945,10 +956,12 @@ export function DataTable<T extends Record<string, unknown>>({
 																	return (
 																		<IconButton
 																			key={ii}
-																			icon={item.icon}
+																			icon={actionPending?.[item.action] === true ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" /> : item.icon}
 																			aria-label={item.label}
 																			variant={item.variant ?? 'ghost'}
 																			size="icon-xs"
+																			disabled={actionPending?.[item.action] === true}
+																			aria-busy={actionPending?.[item.action] === true || undefined}
 																			onClick={() => onAction?.(item.action, row)}
 																		/>
 																	);

@@ -73,3 +73,23 @@ export const WithRefreshButton: Story = {
 		);
 	},
 };
+
+// While `clearEntry` runs, its row buttons are disabled and busy on every row (per action name); `keepEntry` stays usable.
+export const RowActionPending: Story = {
+	render: () => (
+		<DataTable
+			rows={ROWS}
+			columns={yamlColumns([
+				{ field: 'event', label: 'Event' },
+				{
+					type: 'actions',
+					items: [
+						{ label: 'Clear', action: 'clearEntry' },
+						{ label: 'Keep', action: 'keepEntry' },
+					],
+				},
+			])}
+			actionPending={{ clearEntry: true }}
+		/>
+	),
+};

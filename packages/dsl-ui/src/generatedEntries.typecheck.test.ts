@@ -27,6 +27,10 @@ describe('generated entries.tsx for the real dsl-ui components', () => {
 		const refreshing = content.split('\n').filter((line) => line.includes("node['refreshing']"));
 		expect(refreshing).toHaveLength(1);
 		expect(refreshing[0]).toContain("?? ctx['$refreshing']");
+		// DataTable row/batch buttons follow the page's running actions without any YAML.
+		const pending = content.split('\n').filter((line) => line.includes("node['actionPending']"));
+		expect(pending).toHaveLength(1);
+		expect(pending[0]).toContain("?? ctx['$actionPending']");
 		const refresh = content.split('\n').filter((line) => line.includes("node['onRefresh']"));
 		expect(refresh).toHaveLength(1);
 		expect(refresh[0]).toContain("?? ctx['$refresh']");
