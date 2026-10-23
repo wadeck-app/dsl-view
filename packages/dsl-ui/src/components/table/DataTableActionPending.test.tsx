@@ -43,6 +43,7 @@ const registry = createRegistry([
 				onAction={(resolveExpressionValue(node['onAction'], ctx) ?? ctx['onAction']) as (a: string, r: Row) => void}
 				onBatchAction={(resolveExpressionValue(node['onBatchAction'], ctx) ?? ctx['onBatchAction']) as (a: string, r: Row[]) => void}
 				actionPending={(resolveExpressionValue(node['actionPending'], ctx) ?? ctx['$actionPending']) as Record<string, boolean> | undefined}
+				actionPendingRows={(resolveExpressionValue(node['actionPendingRows'], ctx) ?? ctx['$actionPendingRows']) as Record<string, string[]> | undefined}
 			/>
 		),
 	},
@@ -93,7 +94,7 @@ describe('DataTable action buttons while their action runs (through a real Gener
 		vi.spyOn(window, 'confirm').mockReturnValue(true);
 	}
 
-	it('disables and marks busy the clicked action everywhere, leaves other actions alone, and re-enables when done', async () => {
+	it('disables and marks busy only the clicked row for that action, leaves other rows and actions alone, and re-enables when done', async () => {
 		quiet();
 		const call = deferred();
 		const fetcher = vi.fn().mockReturnValue(call.promise);
@@ -107,15 +108,38 @@ describe('DataTable action buttons while their action runs (through a real Gener
 
 		await waitFor(() => expect(clear()[0]).toBeDisabled());
 		expect(fetcher).toHaveBeenCalledTimes(1);
-		// Per action NAME, not per row: the other row's Clear is busy too, other actions are untouched.
-		expect(clear()[1]).toBeDisabled();
 		expect(clear()[0]).toHaveAttribute('aria-busy', 'true');
+		// Per ROW: the other row's Clear stays usable, other actions of the busy row are untouched.
+		expect(clear()[1]).toBeEnabled();
+		expect(clear()[1]).not.toHaveAttribute('aria-busy');
 		expect(keep()[0]).toBeEnabled();
 		expect(keep()[0]).not.toHaveAttribute('aria-busy');
 
 		call.resolve({});
 		await waitFor(() => expect(clear()[0]).toBeEnabled());
 		expect(clear()[0]).not.toHaveAttribute('aria-busy');
+	});
+
+	it('lets a second row run the same action while the first one is still running, each button re-enabling on its own', async () => {
+		quiet();
+		const first = deferred();
+		const second = deferred();
+		const fetcher = vi.fn().mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+		renderPage(fetcher);
+
+		const clear = () => screen.getAllByRole('button', { name: 'Clear' });
+		fireEvent.click(clear()[0]!);
+		await waitFor(() => expect(clear()[0]).toBeDisabled());
+		fireEvent.click(clear()[1]!);
+		await waitFor(() => expect(clear()[1]).toBeDisabled());
+		expect(fetcher).toHaveBeenCalledTimes(2);
+
+		first.resolve({});
+		await waitFor(() => expect(clear()[0]).toBeEnabled());
+		expect(clear()[1]).toBeDisabled();
+
+		second.resolve({});
+		await waitFor(() => expect(clear()[1]).toBeEnabled());
 	});
 
 	it('re-enables the button when the action fails (no stuck button)', async () => {
@@ -166,6 +190,28 @@ describe('DataTable actionPending prop', () => {
 		const batch = screen.getByRole('button', { name: /Clear all/ });
 		expect(batch).toBeDisabled();
 		expect(batch).toHaveAttribute('aria-busy', 'true');
+	});
+
+	it('busies only the listed rows when actionPendingRows lists the action, and every row for a batch key', () => {
+		vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const rows: Row[] = [{ id: 'a-1' }, { id: 'b-2' }];
+		const columns = [
+			{ key: 'id', label: 'Id', render: (r: Row) => String(r['id']) },
+			{ key: '_actions', label: '', isActions: true, actions: [{ label: 'Remove', action: 'remove', icon: <span /> }] },
+		] as unknown as TableColumn<Row>[];
+		const { rerender } = render(<DataTable rows={rows} columns={columns} actionPending={{ remove: true }} actionPendingRows={{ remove: ['b-2'] }} />);
+		const buttons = () => screen.getAllByRole('button', { name: 'Remove' });
+		expect(buttons()[0]).toBeEnabled();
+		expect(buttons()[1]).toBeDisabled();
+
+		rerender(<DataTable rows={rows} columns={columns} actionPending={{ remove: true }} actionPendingRows={{ remove: ['*'] }} />);
+		expect(buttons()[0]).toBeDisabled();
+		expect(buttons()[1]).toBeDisabled();
+
+		// A host that only knows the action name keeps the previous behaviour: every row of the action is busy.
+		rerender(<DataTable rows={rows} columns={columns} actionPending={{ remove: true }} />);
+		expect(buttons()[0]).toBeDisabled();
+		expect(buttons()[1]).toBeDisabled();
 	});
 
 	it('replaces the icon of an icon-only row button with a spinner and disables it', () => {

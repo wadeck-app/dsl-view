@@ -31,6 +31,10 @@ describe('generated entries.tsx for the real dsl-ui components', () => {
 		const pending = content.split('\n').filter((line) => line.includes("node['actionPending']"));
 		expect(pending).toHaveLength(1);
 		expect(pending[0]).toContain("?? ctx['$actionPending']");
+		// ... and only the row being processed is busy when the page reports which rows run.
+		const pendingRows = content.split('\n').filter((line) => line.includes("node['actionPendingRows']"));
+		expect(pendingRows).toHaveLength(1);
+		expect(pendingRows[0]).toContain("?? ctx['$actionPendingRows']");
 		const refresh = content.split('\n').filter((line) => line.includes("node['onRefresh']"));
 		expect(refresh).toHaveLength(1);
 		expect(refresh[0]).toContain("?? ctx['$refresh']");

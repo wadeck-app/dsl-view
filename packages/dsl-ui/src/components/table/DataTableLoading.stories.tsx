@@ -74,7 +74,7 @@ export const WithRefreshButton: Story = {
 	},
 };
 
-// While `clearEntry` runs, its row buttons are disabled and busy on every row (per action name); `keepEntry` stays usable.
+// While `clearEntry` runs for the first row only that row's Clear is disabled and busy; the other row and `keepEntry` stay usable.
 export const RowActionPending: Story = {
 	render: () => (
 		<DataTable
@@ -90,6 +90,7 @@ export const RowActionPending: Story = {
 				},
 			])}
 			actionPending={{ clearEntry: true }}
+			actionPendingRows={{ clearEntry: [String(ROWS[0]?.['id'] ?? '')] }}
 		/>
 	),
 };

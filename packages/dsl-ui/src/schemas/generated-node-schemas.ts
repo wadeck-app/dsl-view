@@ -809,6 +809,7 @@ export const DataTableNodeSchema = baseNode.extend({
 		variant: z.enum(['primary', 'danger', 'ghost', 'success']).optional(),
 	}))).optional(),
 	actionPending: dsl(z.record(z.string(), z.boolean())).optional(),
+	actionPendingRows: dsl(z.record(z.string(), z.array(z.string()))).optional(),
 	batchActionsPosition: dsl(z.enum(['floating', 'bottom'])).optional(),
 	expansionCondition: z.string().optional(),
 	fontMono: dsl(z.boolean()).optional(),

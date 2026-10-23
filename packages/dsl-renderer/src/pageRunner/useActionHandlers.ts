@@ -7,6 +7,9 @@ import type { Notify } from '../notifier.js';
 import { collectRowUrlParams, normalizeAction, notifyFailure, notifySuccess, resolveAuthHeaders, substituteUrlParams } from './pageRunnerUtils.js';
 import type { ActionErrorInfo, ActionSpec, Fetcher, PageSpec } from './pageRunnerUtils.js';
 
+// Row key recorded in `actionPendingRows` for a batch action: it covers every row.
+export const BATCH_ROW_KEY = '*';
+
 export function useActionHandlers(params: {
 	/** Where success/failure feedback goes: the host's notifier, or the runner's inline banner. */
 	notify: Notify;
@@ -33,6 +36,11 @@ export function useActionHandlers(params: {
 	extras: Record<string, unknown>;
 	/** `<actionName>: true` while at least one call of that action is in flight. Exposed to YAML as `$ctx.$actionPending.<name>`. */
 	actionPending: Record<string, boolean>;
+	/**
+	 * Row ids with a call in flight, by action name (a row action: its row id; a batch action: `*`, meaning every row).
+	 * Exposed to YAML as `$ctx.$actionPendingRows.<name>`; an action with no call in flight has no entry.
+	 */
+	actionPendingRows: Record<string, string[]>;
 } {
 	const { $actions, invalidateSourceCache, mountedRef, routeParams, searchParams, getToken, fetcher, loadSources, onActionError, notify } = params;
 
@@ -64,8 +72,9 @@ export function useActionHandlers(params: {
 	// rows can run in parallel but the same one cannot be fired twice.
 	const inFlightRef = useRef(new Set<string>());
 	const [pendingCounts, setPendingCounts] = useState<Record<string, number>>({});
+	const [pendingRows, setPendingRows] = useState<Record<string, string[]>>({});
 	const begin = useCallback(
-		(actionName: string, flightKey: string): boolean => {
+		(actionName: string, flightKey: string, rowKey?: string): boolean => {
 			if (inFlightRef.current.has(flightKey)) {
 				console.warn(`[GenericPageRunner] action "${actionName}" is already running - ignoring the repeated call`);
 				return false;
@@ -73,16 +82,32 @@ export function useActionHandlers(params: {
 			inFlightRef.current.add(flightKey);
 			if (mountedRef.current) {
 				setPendingCounts(prev => ({ ...prev, [actionName]: (prev[actionName] ?? 0) + 1 }));
+				if (rowKey !== undefined) {
+					setPendingRows(prev => ({ ...prev, [actionName]: [...(prev[actionName] ?? []), rowKey] }));
+				}
 			}
 			return true;
 		},
 		[mountedRef]
 	);
 	const end = useCallback(
-		(actionName: string, flightKey: string) => {
+		(actionName: string, flightKey: string, rowKey?: string) => {
 			inFlightRef.current.delete(flightKey);
 			if (mountedRef.current) {
 				setPendingCounts(prev => ({ ...prev, [actionName]: Math.max(0, (prev[actionName] ?? 1) - 1) }));
+				if (rowKey !== undefined) {
+					setPendingRows(prev => {
+						// Remove one occurrence only: the same key can be listed twice if two calls ever overlap.
+						const remaining = [...(prev[actionName] ?? [])];
+						const at = remaining.indexOf(rowKey);
+						if (at !== -1) {
+							remaining.splice(at, 1);
+						}
+						const others = { ...prev };
+						delete others[actionName];
+						return remaining.length > 0 ? { ...others, [actionName]: remaining } : others;
+					});
+				}
 			}
 		},
 		[mountedRef]
@@ -214,6 +239,7 @@ export function useActionHandlers(params: {
 		async (actionName: string, row: Record<string, unknown>) => {
 			let spec: ActionSpec | undefined;
 			let flightKey: string | undefined;
+			let rowKey: string | undefined;
 			try {
 				const rawSpec = $actions?.[actionName];
 				if (!rawSpec) {
@@ -229,10 +255,11 @@ export function useActionHandlers(params: {
 				}
 				const id = String(row['id'] ?? '');
 				flightKey = `${actionName}:${id}`;
-				if (!begin(actionName, flightKey)) {
+				if (!begin(actionName, flightKey, id)) {
 					flightKey = undefined;
 					return;
 				}
+				rowKey = id;
 				if (spec.confirm && !window.confirm(spec.confirm)) {
 					return;
 				}
@@ -268,7 +295,7 @@ export function useActionHandlers(params: {
 				reportActionError(actionName, 'row', error, spec);
 			} finally {
 				if (flightKey) {
-					end(actionName, flightKey);
+					end(actionName, flightKey, rowKey);
 				}
 			}
 		},
@@ -290,7 +317,7 @@ export function useActionHandlers(params: {
 					console.warn(`[GenericPageRunner] Batch action "${actionName}" has no url - skipping fetcher`);
 					return;
 				}
-				if (!begin(actionName, `${actionName}:batch`)) {
+				if (!begin(actionName, `${actionName}:batch`, BATCH_ROW_KEY)) {
 					return;
 				}
 				started = true;
@@ -305,12 +332,12 @@ export function useActionHandlers(params: {
 				reportActionError(actionName, 'batch', error, spec);
 			} finally {
 				if (started) {
-					end(actionName, `${actionName}:batch`);
+					end(actionName, `${actionName}:batch`, BATCH_ROW_KEY);
 				}
 			}
 		},
 		[$actions, fetcher, getToken, loadSources, reportActionError, begin, end]
 	);
 
-	return { namedHandlers, onAction, onBatchAction, extras, actionPending };
+	return { namedHandlers, onAction, onBatchAction, extras, actionPending, actionPendingRows: pendingRows };
 }

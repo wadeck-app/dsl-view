@@ -231,6 +231,7 @@
 	"DataTable": {
 		"knownKeys": [
 			"actionPending",
+			"actionPendingRows",
 			"batchActions",
 			"batchActionsPosition",
 			"columns",

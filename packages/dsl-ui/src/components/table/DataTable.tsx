@@ -205,6 +205,21 @@ type RawYamlColumn = Partial<DataTableColumnSpec> &
 
 // The memoised normalisation can re-run when the page re-resolves its props: report each distinct problem once.
 const reported = new Set<string>();
+// A row button is busy when its own row (or a batch call, `*`) is in flight for that action. Without per-row
+// information for the action (e.g. a host that only passes `actionPending`), every row of the action is busy.
+function isRowActionPending(
+	action: string,
+	row: Record<string, unknown>,
+	actionPending: Record<string, boolean> | undefined,
+	actionPendingRows: Record<string, string[]> | undefined
+): boolean {
+	const pendingRowIds = actionPendingRows?.[action];
+	if (pendingRowIds) {
+		return pendingRowIds.includes('*') || pendingRowIds.includes(String(row['id'] ?? ''));
+	}
+	return actionPending?.[action] === true;
+}
+
 function warnOnce(message: string): void {
 	if (reported.has(message)) {
 		return;
@@ -525,10 +540,17 @@ export interface DataTableProps<T extends Record<string, unknown>> {
 	onBatchAction?: (actionName: string, rows: T[]) => void;
 	/**
 	 * Actions currently running, by action name. Defaults to the page's `$ctx.$actionPending`: while an action runs,
-	 * every row button and batch button of that action is disabled and busy (the state is per action name, not per row).
+	 * its batch button is disabled and busy. Row buttons follow `actionPendingRows` when it lists the action, and fall
+	 * back to this flag (every row) when it does not.
 	 * @ctxDefault $actionPending
 	 */
 	actionPending?: Record<string, boolean>;
+	/**
+	 * Row ids with a call in flight, by action name (`*` = a batch call, which covers every row). Defaults to the page's
+	 * `$ctx.$actionPendingRows`: only the button of the row being processed is disabled and busy, the other rows stay usable.
+	 * @ctxDefault $actionPendingRows
+	 */
+	actionPendingRows?: Record<string, string[]>;
 	/**
 	 * Where the batch-actions bar renders when rows are selected.
 	 * 'floating' (default): a fixed pill at the bottom of the viewport - never shifts the table.
@@ -569,6 +591,7 @@ export function DataTable<T extends Record<string, unknown>>({
 	batchActions = [],
 	onBatchAction,
 	actionPending,
+	actionPendingRows,
 	batchActionsPosition = 'floating',
 	expansionCondition,
 	fontMono = false,
@@ -944,8 +967,8 @@ export function DataTable<T extends Record<string, unknown>>({
 																				type="button"
 																				variant={item.variant ?? 'ghost'}
 																				size="sm"
-																				loading={actionPending?.[item.action] === true}
-																				aria-busy={actionPending?.[item.action] === true || undefined}
+																				loading={isRowActionPending(item.action, row, actionPending, actionPendingRows)}
+																				aria-busy={isRowActionPending(item.action, row, actionPending, actionPendingRows) || undefined}
 																				onClick={() => onAction?.(item.action, row)}
 																				aria-label={item.label}
 																			>
@@ -956,12 +979,12 @@ export function DataTable<T extends Record<string, unknown>>({
 																	return (
 																		<IconButton
 																			key={ii}
-																			icon={actionPending?.[item.action] === true ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" /> : item.icon}
+																			icon={isRowActionPending(item.action, row, actionPending, actionPendingRows) ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" /> : item.icon}
 																			aria-label={item.label}
 																			variant={item.variant ?? 'ghost'}
 																			size="icon-xs"
-																			disabled={actionPending?.[item.action] === true}
-																			aria-busy={actionPending?.[item.action] === true || undefined}
+																			disabled={isRowActionPending(item.action, row, actionPending, actionPendingRows)}
+																			aria-busy={isRowActionPending(item.action, row, actionPending, actionPendingRows) || undefined}
 																			onClick={() => onAction?.(item.action, row)}
 																		/>
 																	);

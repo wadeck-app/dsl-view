@@ -146,7 +146,7 @@ function PageRunner({
 		onLoadError: error => notifyLoadFailure(notify, error),
 	});
 
-	const { namedHandlers, onAction, onBatchAction, extras, actionPending } = useActionHandlers({
+	const { namedHandlers, onAction, onBatchAction, extras, actionPending, actionPendingRows } = useActionHandlers({
 		notify,
 		$actions,
 		invalidateSourceCache,
@@ -196,6 +196,7 @@ function PageRunner({
 		onBatchAction,
 		...namedHandlers,
 		$actionPending: actionPending,
+		$actionPendingRows: actionPendingRows,
 		$vars: vars,
 		$outputs: outputs,
 		$publishOutput: publishOutput,
