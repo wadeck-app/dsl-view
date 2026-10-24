@@ -111,7 +111,11 @@ async function executeFrameworkOrRegistryBrain(
 
 	if (brainRef === '$brains.$ctx.navigate') {
 		const to = (params['to'] ?? params['route']) as string | undefined;
-		if (!to) return undefined;
+		if (!to) {
+			// Not an error shown to the user (an empty target can come from a var that is not set yet), but never silent.
+			console.warn(`[useBrains] ${brainRef} has no "to" (or "route"): there is nowhere to navigate to. Set one in the brain.`);
+			return undefined;
+		}
 		const allParams: Record<string, string> = { ...(routeParams ?? {}) };
 		for (const [k, v] of Object.entries(params)) {
 			if (k !== 'to' && k !== 'route' && k !== '_event' && v != null) {

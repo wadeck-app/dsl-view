@@ -60,11 +60,15 @@ describe('$brains.$ctx.navigate', () => {
 		await waitFor(() => expect(window.location.href).toBe('/via-to'));
 	});
 
-	it('does not navigate when neither `to` nor `route` is given', async () => {
+	it('does not navigate, and says why, when neither `to` nor `route` is given (or the value is empty)', async () => {
 		fakeLocation();
-		const { result } = setup({ go: { $brain: '$brains.$ctx.navigate' } });
-		await waitFor(() => expect(result.current.brainResults['go']).toEqual({ $pending: false, $error: null }));
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+		const { result } = setup({ go: { $brain: '$brains.$ctx.navigate' }, goEmpty: { $brain: '$brains.$ctx.navigate', to: '' } });
+		await waitFor(() => expect(result.current.brainResults['go']).toStrictEqual({ $pending: false, $error: null }));
+		await waitFor(() => expect(result.current.brainResults['goEmpty']).toStrictEqual({ $pending: false, $error: null }));
 		expect(window.location.href).toBe('unchanged');
+		const message = '[useBrains] $brains.$ctx.navigate has no "to" (or "route"): there is nowhere to navigate to. Set one in the brain.';
+		expect(warn.mock.calls.filter(call => call[0] === message)).toHaveLength(2);
 	});
 
 	it('warns about a placeholder without a value (a null param counts as missing) and still navigates', async () => {
