@@ -66,12 +66,14 @@ export function DatePicker({
 		}
 	}, [value, dateFormat]);
 
-	// Update display month when value changes
+	// Follow the value to its month when the value changes. This must depend on `value` only: depending on
+	// `displayMonth` too snapped the calendar back to the selected month right after every Previous/Next click
+	// and every arrow-key move past the month edge, so a calendar with a value could not be navigated.
 	useEffect(() => {
-		if (value && !isSameMonth(displayMonth, value)) {
-			setDisplayMonth(value);
+		if (value) {
+			setDisplayMonth(shown => (isSameMonth(shown, value) ? shown : value));
 		}
-	}, [value, displayMonth]);
+	}, [value]);
 
 	function isDisabledDate(date: Date): boolean {
 		if (isDateDisabled?.(date)) return true;
