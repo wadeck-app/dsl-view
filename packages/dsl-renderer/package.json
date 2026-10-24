@@ -42,6 +42,7 @@
 			"types": "./dist/build/adapters/ZodContractAdapter.d.ts"
 		}
 	},
+	"sideEffects": false,
 	"files": ["dist"],
 	"publishConfig": {
 		"registry": "https://npm.pkg.github.com",

@@ -59,8 +59,11 @@ describe('generated entries and node schemas', () => {
 		const out = generate('withSchemas', 'with-schemas');
 
 		expect(out).toMatch(/import \* as nodeSchemas0 from '.*withSchemas\/src\/schemas\/generated-node-schemas\.js'/);
-		expect(out).toContain("propSchema: pickPropSchema(nodeSchemas0 as Record<string, unknown>, 'Badge', isDevelopment()),");
-		expect(out).toMatch(/import \{[^}]*\bisDevelopment\b[^}]*\bpickPropSchema\b[^}]*\} from/);
+		// The condition must be the exact expression bundlers replace, and the schema a static member access of the namespace
+		// (not a helper call receiving the whole namespace): that is what lets a production build drop the schemas module.
+		expect(out).toContain("propSchema: process.env.NODE_ENV !== 'production' ? (nodeSchemas0 as Record<string, unknown>)['BadgeNodeSchema'] as ComponentRegistryEntry['propSchema'] : undefined,");
+		expect(out).toContain('declare const process: { env: { NODE_ENV?: string } }');
+		expect(out).not.toMatch(/pickPropSchema|isDevelopment|typeof process/);
 	});
 
 	it('adds no schema import, no propSchema and no unused helper import for a library without schemas', () => {
@@ -68,6 +71,7 @@ describe('generated entries and node schemas', () => {
 
 		expect(out).not.toContain('nodeSchemas0');
 		expect(out).not.toContain('propSchema');
+		expect(out).not.toContain('process');
 		expect(out).not.toContain('pickPropSchema');
 		expect(out).not.toContain('isDevelopment');
 	});

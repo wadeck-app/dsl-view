@@ -16,6 +16,9 @@
 		"./src/*": "./src/*",
 		"./dist/*": "./dist/*"
 	},
+	"sideEffects": [
+		"**/*.css"
+	],
 	"files": [
 		"dist",
 		"src",
