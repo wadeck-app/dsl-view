@@ -45,6 +45,133 @@ function renderBound(node: Record<string, unknown>, formData: Record<string, unk
 	return onChange;
 }
 
+// Outside a Form and outside a table row, a bound field edits the page variables: it reads ctx.$vars[bind] and writes
+// through ctx.$setVar(bind, value). Any enclosing scope (formData, row, onChange) keeps priority.
+describe('a bound field outside a Form is bound to the page variables', () => {
+	function renderOnPage(node: Record<string, unknown>, ctx: Record<string, unknown>) {
+		return render(<DslRenderer node={{ ...node, bind: 'payload' }} registry={registry} ctx={ctx} />);
+	}
+
+	it('FieldTextarea shows $vars[bind] and writes the edit through $setVar', () => {
+		const setVar = vi.fn();
+		renderOnPage({ $type: 'FieldTextarea', label: 'Payload' }, { $vars: { payload: '{"a":1}' }, $setVar: setVar });
+		const area = screen.getByRole('textbox', { name: 'Payload' });
+		expect(area).toHaveValue('{"a":1}');
+
+		fireEvent.change(area, { target: { value: '{"a":2}' } });
+
+		expect(setVar).toHaveBeenCalledExactlyOnceWith('payload', '{"a":2}');
+	});
+
+	it('every family reads the variable: text, number, select and tags', () => {
+		const vars = { payload: 'Ada' };
+		const { unmount } = renderOnPage({ $type: 'FieldText', label: 'Name' }, { $vars: vars, $setVar: vi.fn() });
+		expect(screen.getByRole('textbox', { name: 'Name' })).toHaveValue('Ada');
+		unmount();
+
+		const number = renderOnPage({ $type: 'FieldNumber', label: 'Count' }, { $vars: { payload: 7 }, $setVar: vi.fn() });
+		expect(screen.getByRole('spinbutton', { name: 'Count' })).toHaveValue(7);
+		number.unmount();
+
+		const select = renderOnPage(
+			{ $type: 'FieldSelect', label: 'Plan', options: [{ value: 'free', label: 'Free' }, { value: 'pro', label: 'Pro' }] },
+			{ $vars: { payload: 'pro' }, $setVar: vi.fn() }
+		);
+		expect(screen.getByRole('combobox', { name: 'Plan' })).toHaveValue('pro');
+		select.unmount();
+
+		renderOnPage({ $type: 'FieldTags', label: 'Keywords' }, { $vars: { payload: ['a', 'b'] }, $setVar: vi.fn() });
+		expect(screen.getByText('a')).toBeInTheDocument();
+		expect(screen.getByText('b')).toBeInTheDocument();
+	});
+
+	it('an unset variable is an empty field, not the text "undefined"', () => {
+		renderOnPage({ $type: 'FieldTextarea', label: 'Payload' }, { $vars: {}, $setVar: vi.fn() });
+		expect(screen.getByRole('textbox', { name: 'Payload' })).toHaveValue('');
+	});
+
+	it('without $vars and $setVar (a bare DslRenderer) the field is empty and typing does not throw', () => {
+		renderOnPage({ $type: 'FieldTextarea', label: 'Payload' }, {});
+		const area = screen.getByRole('textbox', { name: 'Payload' });
+		expect(area).toHaveValue('');
+		expect(() => fireEvent.change(area, { target: { value: 'x' } })).not.toThrow();
+	});
+
+	it('ctx.formData wins over $vars: a field in a Form keeps the form data', () => {
+		const setVar = vi.fn();
+		const onChange = vi.fn();
+		renderOnPage({ $type: 'FieldText', label: 'Name' }, { formData: { payload: 'from form' }, onChange, $vars: { payload: 'from vars' }, $setVar: setVar });
+		const input = screen.getByRole('textbox', { name: 'Name' });
+		expect(input).toHaveValue('from form');
+		fireEvent.change(input, { target: { value: 'edited' } });
+		expect(onChange).toHaveBeenCalledExactlyOnceWith('payload', 'edited');
+		expect(setVar).not.toHaveBeenCalled();
+	});
+
+	it('a table row wins over $vars: a field in a row reads the row', () => {
+		const setVar = vi.fn();
+		renderOnPage({ $type: 'FieldText', label: 'Name' }, { row: { payload: 'from row' }, $vars: { payload: 'from vars' }, $setVar: setVar });
+		expect(screen.getByRole('textbox', { name: 'Name' })).toHaveValue('from row');
+	});
+
+	it('an enclosing onChange alone (no formData) keeps priority too: the field does not silently switch to $vars', () => {
+		const setVar = vi.fn();
+		const onChange = vi.fn();
+		renderOnPage({ $type: 'FieldText', label: 'Name' }, { onChange, $vars: { payload: 'from vars' }, $setVar: setVar });
+		const input = screen.getByRole('textbox', { name: 'Name' });
+		expect(input).toHaveValue('');
+		fireEvent.change(input, { target: { value: 'x' } });
+		expect(onChange).toHaveBeenCalledExactlyOnceWith('payload', 'x');
+		expect(setVar).not.toHaveBeenCalled();
+	});
+});
+
+// A whole page: the runner provides $vars and $setVar, a `$vars` entry written as an expression is seeded from the
+// source once, and typing is not lost to a reload of that source.
+describe('a bound field on a page, seeded from a source', () => {
+	it('shows the source text, keeps the typed text across a reload, and the field element is never replaced', async () => {
+		const renderer = await import('../../dsl-renderer/dist/index.js');
+		const { MemoryRouter } = await import('react-router-dom');
+		const state = { exampleText: '{"a":1}' };
+		const fetcher = vi.fn(async () => ({ exampleText: state.exampleText }));
+		const yaml = `
+$vars:
+  payload: $sources.event.exampleText
+$sources:
+  event:
+    url: GET /api/event
+    poll: 1s
+$type: FieldTextarea
+label: Payload
+bind: payload
+mono: true
+`;
+		vi.useFakeTimers({ shouldAdvanceTime: true });
+		try {
+			render(
+				<MemoryRouter>
+					<renderer.GenericPageRunner yamlText={yaml} registry={registry} fetcher={fetcher} brainRegistry={{}} />
+				</MemoryRouter>
+			);
+			const area = await screen.findByRole('textbox', { name: 'Payload' });
+			await vi.waitFor(() => expect(area).toHaveValue('{"a":1}'));
+
+			fireEvent.change(area, { target: { value: 'my edit' } });
+			expect(area).toHaveValue('my edit');
+
+			state.exampleText = 'changed on the server';
+			const callsBefore = fetcher.mock.calls.length;
+			await vi.advanceTimersByTimeAsync(1500);
+			await vi.waitFor(() => expect(fetcher.mock.calls.length).toBeGreaterThan(callsBefore));
+
+			expect(screen.getByRole('textbox', { name: 'Payload' })).toBe(area);
+			expect(area).toHaveValue('my edit');
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+});
+
 // Each bound family reads its value from ctx.formData[bind] and reports edits as ctx.onChange(bind, value).
 describe('generated bind-pattern entries wire formData and onChange for every field family', () => {
 	it('FieldText shows the bound value and reports the typed string', () => {

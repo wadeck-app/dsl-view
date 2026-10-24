@@ -220,7 +220,8 @@ describe('generate-node-schemas on synthetic components', () => {
 		for (const key of ['$if', '$source', '$context', '$route', '$extends', '$id', '$outputs']) {
 			expect(output).toContain(`\t${key}: z.unknown().optional(),`);
 		}
-		expect(output).toContain("const expr = z.string().startsWith('$');");
+		// An expression starts with `$`, or is a negation (`!$x`, `!(…)`) of one; plain text starting with a bang is not.
+		expect(output).toContain('const expr = z.string().regex(/^\\s*(?:\\$|!+\\s*[$(])/);');
 		expect(output).toContain('const dsl = <T extends z.ZodType>(schema: T) => z.union([schema, expr]);');
 	});
 

@@ -15,8 +15,8 @@ const baseNode = z.object({
 	$outputs: z.unknown().optional(),
 });
 
-// A prop may hold an expression (`$sources.x`, `$vars.y`) resolved at render time, so it is accepted wherever the literal is.
-const expr = z.string().startsWith('$');
+// A prop may hold an expression (`$sources.x`, `!$vars.y`, `$a != $b`) resolved at render time, so it is accepted wherever the literal is.
+const expr = z.string().regex(/^\s*(?:\$|!+\s*[$(])/);
 const dsl = <T extends z.ZodType>(schema: T) => z.union([schema, expr]);
 
 export const ActionButtonNodeSchema = baseNode.extend({

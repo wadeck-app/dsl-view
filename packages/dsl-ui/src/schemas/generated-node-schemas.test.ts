@@ -150,3 +150,23 @@ describe('generated node schemas accept nodes as authored in YAML', () => {
 		expect(new Set(declared)).toEqual(new Set(KNOWN_DSL_KEYS));
 	});
 });
+
+describe('expressions in generated node schemas', () => {
+	const button = (disabled: unknown) => generated.ActionButtonNodeSchema.safeParse({ $type: 'ActionButton', action: 'push', label: 'Push', disabled });
+
+	it.each(['$vars.noSelection', '!$validation.valid', '!$validation.valid || $vars.payload != $validated.payload', '  !$a', '!!$a', '!($a == 1)'])(
+		'accepts %s where a boolean is expected',
+		(expression) => {
+			expect(button(expression).success).toBe(true);
+		}
+	);
+
+	it.each(['!important', 'yes', '!', '! text', '(a)'])('rejects the plain text %s where a boolean is expected', (text) => {
+		expect(button(text).success).toBe(false);
+	});
+
+	it('still accepts the boolean itself', () => {
+		expect(button(true).success).toBe(true);
+		expect(button(false).success).toBe(true);
+	});
+});
