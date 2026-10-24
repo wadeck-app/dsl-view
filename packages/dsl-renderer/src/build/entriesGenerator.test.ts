@@ -384,8 +384,8 @@ describe('@ctxDefault (a callback prop that defaults to the same-named ctx entry
 		const output = buildEntriesFile([
 			{ name: 'Grid', category: 'composite', tags: [], bindPattern: null, lazy: false, allowedChildren: {}, providesContext: [], requiresContext: [], sourcePath },
 		]);
-		expect(output).toContain(`const onAction = (resolveExpressionValue(node['onAction'], ctx) ?? ctx['onAction'])`);
-		expect(output).toContain(`const onRowClick = (resolveExpressionValue(node['onRowClick'], ctx))`);
+		expect(output).toContain(`const onAction = coerceProp(resolveExpressionValue(node['onAction'], ctx) ?? ctx['onAction'], 'Grid.onAction', 'function', false) as`);
+		expect(output).toContain(`const onRowClick = coerceProp(resolveExpressionValue(node['onRowClick'], ctx), 'Grid.onRowClick', 'function', false) as`);
 		expect(output).not.toContain(`ctx['onRowClick']`);
 	});
 
@@ -393,8 +393,79 @@ describe('@ctxDefault (a callback prop that defaults to the same-named ctx entry
 		const output = buildEntriesFile([
 			{ name: 'Grid', category: 'composite', tags: [], bindPattern: null, lazy: false, allowedChildren: {}, providesContext: [], requiresContext: [], sourcePath },
 		]);
-		expect(output).toContain(`const loading = (resolveExpressionValue(node['loading'], ctx) ?? ctx['$initialLoading'])`);
+		expect(output).toContain(`const loading = coerceProp(resolveExpressionValue(node['loading'], ctx) ?? ctx['$initialLoading'], 'Grid.loading', 'primitive', false) as`);
 		expect(output).not.toContain(`ctx['loading']`);
+	});
+});
+
+describe('prop coercion in the generated render (a wrong-shaped YAML value must not crash the page)', () => {
+	const source = [
+		'export interface KitchenProps {',
+		'  title: string;',
+		'  subtitle?: string;',
+		'  note: string | null;',
+		'  count?: number;',
+		'  tone: "a" | "b";',
+		'  rows: string[];',
+		'  tags?: string[];',
+		'  onPick?: (id: string) => void;',
+		'  when: Date;',
+		'  config: { a: number };',
+		'  anything: unknown;',
+		'  default?: number;',
+		'  class?: string;',
+		'}',
+		'export function Kitchen(props: KitchenProps) { return null }',
+	].join('\n');
+	const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'coerce-test-'));
+	const sourcePath = path.join(tmpDir, 'Kitchen.tsx');
+	fs.writeFileSync(sourcePath, source);
+	afterAll(() => {
+		fs.rmSync(tmpDir, { recursive: true, force: true });
+	});
+	const output = buildEntriesFile([
+		{ name: 'Kitchen', category: 'composite', tags: [], bindPattern: null, lazy: false, allowedChildren: {}, providesContext: [], requiresContext: [], sourcePath },
+	]);
+	const callFor = (prop: string) => output.split('\n').find((line) => line.includes(`const ${prop} =`)) ?? '';
+
+	it.each([
+		['title', "'Kitchen.title', 'string', true)"],
+		['subtitle', "'Kitchen.subtitle', 'string', false)"],
+		['note', "'Kitchen.note', 'string', true, true)"],
+		['count', "'Kitchen.count', 'primitive', false)"],
+		['tone', "'Kitchen.tone', 'primitive', true)"],
+		['rows', "'Kitchen.rows', 'array', true)"],
+		['tags', "'Kitchen.tags', 'array', false)"],
+		['onPick', "'Kitchen.onPick', 'function', false)"],
+		['config', "'Kitchen.config', 'object', true)"],
+	])('%s is checked with the kind, required and nullable flags of its type', (prop, args) => {
+		expect(callFor(prop)).toContain(`coerceProp(resolveExpressionValue(node['${prop}'], ctx), ${args}`);
+	});
+
+	// `const default = ...` is a syntax error: a prop named like a JavaScript keyword gets a suffixed variable.
+	it.each([
+		['default', 'defaultProp', "'Kitchen.default', 'primitive', false)"],
+		['class', 'classProp', "'Kitchen.class', 'string', false)"],
+	])('a prop named %s (a reserved word) is held in the variable %s and still read from its own key', (prop, variable, args) => {
+		const line = callFor(variable);
+		expect(line).toContain(`const ${variable} = coerceProp(resolveExpressionValue(node['${prop}'], ctx), ${args}`);
+		expect(output).toContain(`${prop}={${variable}}`);
+		expect(output).not.toContain(`const ${prop} =`);
+	});
+
+	it.each(['when', 'anything'])('%s (a Date, unknown) is passed through exactly as before', (prop) => {
+		expect(callFor(prop)).not.toContain('coerceProp');
+		expect(callFor(prop)).toContain(`const ${prop} = (resolveExpressionValue(node['${prop}'], ctx)) as`);
+	});
+
+	it('imports coerceProp from the renderer runtime, and only when a line uses it', () => {
+		expect(output).toMatch(/import \{ coerceProp, renderChildren, resolveExpressionValue \} from /);
+		const bareSource = path.join(tmpDir, 'Bare.tsx');
+		fs.writeFileSync(bareSource, 'export interface BareProps { anything: unknown }\nexport function Bare(props: BareProps) { return null }');
+		const bare = buildEntriesFile([
+			{ name: 'Bare', category: 'composite', tags: [], bindPattern: null, lazy: false, allowedChildren: {}, providesContext: [], requiresContext: [], sourcePath: bareSource },
+		]);
+		expect(bare).not.toContain('coerceProp');
 	});
 });
 

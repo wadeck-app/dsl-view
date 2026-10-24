@@ -17,6 +17,8 @@ export interface RendererProps {
 
 // Defined in a React-free module so Node tooling can share them; re-exported to keep this module's public surface.
 export { EXTENSION_SLOT_TYPE, KNOWN_DSL_KEYS, omitNavKeys };
+// The generated entries import their runtime helpers from this module (see buildEntriesFile).
+export { coerceProp, coerceStringList, coerceDate } from './coerceProp.js';
 
 /** True when a `$if` expression resolves to something falsy: the node renders nothing. */
 function isHiddenByIf(node: Record<string, unknown>, ctx: RenderContext): boolean {

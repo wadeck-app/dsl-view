@@ -16,7 +16,7 @@
 import fs from 'fs';
 import path from 'path';
 import { Node, Project, SyntaxKind } from 'ts-morph';
-import type { FunctionDeclaration } from 'ts-morph';
+import type { FunctionDeclaration, PropertySignature, Type } from 'ts-morph';
 import { fileURLToPath } from 'url';
 import type { Plugin } from 'vite';
 import { readDslConfig } from './dslConfig.js';
@@ -24,6 +24,7 @@ import type { DslConfig } from './dslConfig.js';
 import { isPathInside } from './pathUtils.js';
 import { buildKnownKeysManifest } from './unknownKeys.js';
 import type { DslKeysManifest } from './unknownKeys.js';
+import type { PropKind } from '../engine/coerceProp.js';
 import { EXTENSION_SLOT_TYPE } from '../dslKeys.js';
 import type { ItemKeysSpec, MapSlotSpec } from '../dslKeys.js';
 
@@ -112,6 +113,20 @@ function findCallExpressionArgIdentifiers(fn: FunctionDeclaration, calleeName: s
 // 'children' is intentionally NOT here — it falls through to the hasChildren path.
 const GENERATED_RENDER_SKIP_PROPS = new Set(['className', 'style', 'ref', 'key']);
 
+// JavaScript words that cannot name a variable: a prop called `default` (PageSizeSelect) must not generate `const default = ...`.
+const RESERVED_WORDS = new Set([
+	'await', 'break', 'case', 'catch', 'class', 'const', 'continue', 'debugger', 'default', 'delete', 'do', 'else', 'enum', 'export', 'extends',
+	'false', 'finally', 'for', 'function', 'if', 'implements', 'import', 'in', 'instanceof', 'interface', 'let', 'new', 'null', 'package',
+	'private', 'protected', 'public', 'return', 'static', 'super', 'switch', 'this', 'throw', 'true', 'try', 'typeof', 'var', 'void', 'while',
+	'with', 'yield',
+]);
+
+/** The variable that holds a prop's value in the generated render: camelCase for hyphenated names, suffixed for reserved words. */
+function propVariableName(name: string): string {
+	const camel = name.includes('-') ? name.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase()) : name;
+	return RESERVED_WORDS.has(camel) ? `${camel}Prop` : camel;
+}
+
 // ts-morph returns quoted names for hyphenated props (e.g. "'aria-label'" instead of "aria-label").
 function unquotePropName(name: string): string {
 	return name.replace(/^['"`]|['"`]$/g, '');
@@ -135,12 +150,8 @@ function isRenderNodeCallbackType(typeText: string): boolean {
 	return typeText.includes('=>') && /=>\s*(React\.)?ReactNode\s*$/.test(typeText);
 }
 
-/**
- * A prop that holds nested DSL nodes: `React.ReactNode`, or a union of `ReactNode` and render functions
- * (e.g. FieldWrapper's `ReactNode | ((control) => ReactNode)`). YAML cannot author a function, so for the DSL the prop
- * is a plain node slot. Members are split on top-level `|` only, so a function type's own parameters do not interfere.
- */
-export function isReactNodeSlotType(typeText: string): boolean {
+// Members of a union type text, split on top-level `|` only so a function type's own parameters do not interfere.
+function splitTopLevelUnion(typeText: string): string[] {
 	const members: string[] = [];
 	let depth = 0;
 	let current = '';
@@ -155,6 +166,72 @@ export function isReactNodeSlotType(typeText: string): boolean {
 		}
 	}
 	members.push(current.trim());
+	return members;
+}
+
+export interface PropCoercion {
+	kind: PropKind;
+	/** A list the component reads without checking (`options.map(...)`): a missing one becomes `[]`. */
+	required: boolean;
+	/** The type accepts `null` (`string | null`): a received null is kept instead of being treated as absent. */
+	nullable: boolean;
+}
+
+/** The trailing arguments of the generated `coerceProp(value, where, ...)` call. */
+function coerceArgs(coercion: PropCoercion): string {
+	return `'${coercion.kind}', ${coercion.required}${coercion.nullable ? ', true' : ''}`;
+}
+
+function isListType(type: Type): boolean {
+	return type.isArray() || type.getSymbol()?.getName() === 'ReadonlyArray';
+}
+
+// Objects a YAML map can stand for: records and interfaces of fields. Built-ins with their own behaviour (a Date, a Map...),
+// lists, callables and constructors are not.
+const BUILTIN_OBJECT_TYPES = new Set(['Date', 'RegExp', 'Map', 'Set', 'WeakMap', 'WeakSet', 'Promise', 'Error', 'Function', 'Array', 'ReadonlyArray']);
+function isPlainObjectType(type: Type): boolean {
+	if (!type.isObject() || isListType(type) || type.getCallSignatures().length > 0 || type.getConstructSignatures().length > 0) return false;
+	const name = type.getSymbol()?.getName();
+	return name === undefined || !BUILTIN_OBJECT_TYPES.has(name);
+}
+
+function isPrimitiveType(type: Type): boolean {
+	return type.isString() || type.isNumber() || type.isBoolean() || type.isStringLiteral() || type.isNumberLiteral() || type.isBooleanLiteral();
+}
+
+/**
+ * What the generated render must enforce on the YAML value of a plain prop, from the component's TypeScript type:
+ * a string / number / boolean prop never receives a map, a list prop never receives a non-list, a callback prop never
+ * receives data. `null` when the type says nothing checkable (objects, `unknown`, dates, unresolved imports, mixed
+ * unions): those props are passed through exactly as before. See `coerceProp` in the renderer for what is done.
+ */
+export function classifyPropCoercion(prop: PropertySignature): PropCoercion | null {
+	const type = prop.getType();
+	const members = type.isUnion() ? type.getUnionTypes() : [type];
+	const defined = members.filter(member => !member.isUndefined() && !member.isNull());
+	if (defined.length === 0) return null;
+	// The shared Project is not strict, so the checker erases `null` and `undefined` from unions: read them from the
+	// declared type text instead.
+	const declared = splitTopLevelUnion(prop.getTypeNode()?.getText() ?? '');
+	const required = !prop.hasQuestionToken() && !declared.includes('undefined');
+	const nullable = declared.includes('null');
+	// A plain `string` is read with string methods (`href.startsWith`, `path.replace`): a number from JSON is converted,
+	// not rejected. A union of literals or mixed primitives stays 'primitive' (no conversion).
+	if (defined.every(member => member.isString())) return { kind: 'string', required, nullable };
+	if (defined.every(isPrimitiveType)) return { kind: 'primitive', required, nullable };
+	if (defined.every(isListType)) return { kind: 'array', required, nullable };
+	if (defined.every(member => member.getCallSignatures().length > 0)) return { kind: 'function', required, nullable };
+	if (defined.every(isPlainObjectType)) return { kind: 'object', required, nullable };
+	return null;
+}
+
+/**
+ * A prop that holds nested DSL nodes: `React.ReactNode`, or a union of `ReactNode` and render functions
+ * (e.g. FieldWrapper's `ReactNode | ((control) => ReactNode)`). YAML cannot author a function, so for the DSL the prop
+ * is a plain node slot. Members are split on top-level `|` only, so a function type's own parameters do not interfere.
+ */
+export function isReactNodeSlotType(typeText: string): boolean {
+	const members = splitTopLevelUnion(typeText);
 	const isNode = (member: string) => member === 'React.ReactNode' || member === 'ReactNode';
 	// A member wrapped in parentheses is a function type: `((control: X) => ReactNode)`.
 	const isRenderFunction = (member: string) => /^\(.*=>.*\)$/.test(member) || /^\(.*\)\s*=>/.test(member);
@@ -591,14 +668,13 @@ function generateSimpleEntry(
 				hasChildren = true;
 			} else {
 				// Named slot: render as children array from node['propName']
-				declLines.push(`const ${name} = node['${name}'] as unknown[] | undefined`);
-				jsxAttrs.push(`${name}={${name} ? renderChildren(${name}, registry, ctx) : null}`);
+				const slotVar = propVariableName(name);
+				declLines.push(`const ${slotVar} = node['${name}'] as unknown[] | undefined`);
+				jsxAttrs.push(`${name}={${slotVar} ? renderChildren(${slotVar}, registry, ctx) : null}`);
 			}
 		} else if (isRenderNodeCallback) {
 			usesRegistry = true;
-			const varName = name.includes('-')
-				? name.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
-				: name;
+			const varName = propVariableName(name);
 			declLines.push(
 				`const ${varName} = (n: unknown, extraCtx: Record<string, unknown>) => renderChildren([n], registry, { ...ctx, ...extraCtx })[0] ?? null`
 			);
@@ -612,17 +688,23 @@ function generateSimpleEntry(
 			const renderedFields = nodeFields
 				.map(field => `${field}: Array.isArray(e['${field}']) ? renderChildren(e['${field}'] as unknown[], registry, ctx) : e['${field}']`)
 				.join(', ');
-			declLines.push(`const ${name}Raw = resolveExpressionValue(node['${name}'], ctx)`);
+			// The list itself is checked like any other list prop (a missing required one becomes [], a non-list is ignored).
+			const listVar = propVariableName(name);
+			const listCoercion = classifyPropCoercion(prop);
+			const rawValue = `resolveExpressionValue(node['${name}'], ctx)`;
 			declLines.push(
-				`const ${name} = (Array.isArray(${name}Raw) ? ${name}Raw.map((entry: unknown) => { if (entry === null || typeof entry !== 'object') return entry; const e = entry as Record<string, unknown>; return { ...e, ${renderedFields} } }) : ${name}Raw) as ${propType}`
+				listCoercion?.kind === 'array'
+					? `const ${listVar}Raw = coerceProp(${rawValue}, '${component.name}.${name}', ${coerceArgs(listCoercion)})`
+					: `const ${listVar}Raw = ${rawValue}`
 			);
-			jsxAttrs.push(`${name}={${name}}`);
+			declLines.push(
+				`const ${listVar} = (Array.isArray(${listVar}Raw) ? ${listVar}Raw.map((entry: unknown) => { if (entry === null || typeof entry !== 'object') return entry; const e = entry as Record<string, unknown>; return { ...e, ${renderedFields} } }) : ${listVar}Raw) as ${propType}`
+			);
+			jsxAttrs.push(`${name}={${listVar}}`);
 		} else {
 			// Plain prop - resolve reactive expression then cast.
 			// For hyphenated names (e.g. aria-label), use a camelCase JS variable.
-			const varName = name.includes('-')
-				? name.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
-				: name;
+			const varName = propVariableName(name);
 			const propType = `import('${importPath}').${component.name}Props${typeArgs}['${name}']`;
 			// @ctxDefault: when the YAML does not set this prop, fall back to the same-named ctx entry
 			// (e.g. DataTable.onAction -> ctx.onAction built by GenericPageRunner from $actions), so a
@@ -631,7 +713,14 @@ function generateSimpleEntry(
 			const ctxDefaultTag = prop.getJsDocs().flatMap(doc => doc.getTags()).find(tag => tag.getTagName() === 'ctxDefault');
 			const ctxDefaultKey = ctxDefaultTag ? (ctxDefaultTag.getCommentText()?.trim().split(/\s+/)[0] || name) : undefined;
 			const ctxFallback = ctxDefaultKey ? ` ?? ctx['${ctxDefaultKey}']` : '';
-			declLines.push(`const ${varName} = (resolveExpressionValue(node['${name}'], ctx)${ctxFallback}) as ${propType}`);
+			const resolved = `resolveExpressionValue(node['${name}'], ctx)${ctxFallback}`;
+			// A wrong-shaped value (a map for a string, no list for a list) is ignored with one named warning instead of
+			// crashing the page inside the component.
+			const coercion = classifyPropCoercion(prop);
+			const value = coercion
+				? `coerceProp(${resolved}, '${component.name}.${name}', ${coerceArgs(coercion)})`
+				: `(${resolved})`;
+			declLines.push(`const ${varName} = ${value} as ${propType}`);
 			jsxAttrs.push(`${name}={${varName}}`);
 		}
 	}
@@ -658,11 +747,11 @@ function generateSimpleEntry(
 			: isDateRangeValue
 				? `(formData?.[bind] as { from: Date | null; to: Date | null } | undefined) ?? { from: new Date(), to: null }`
 				: isDateValue
-					? `formData?.[bind] ? new Date(String(formData?.[bind])) : null`
+					? `coerceDate(formData?.[bind], '${component.name}.value')`
 					: isNumberValue
 						? `Number(formData?.[bind] ?? 0)`
 						: isArrayValue
-							? `(formData?.[bind] as string[] | undefined) ?? []`
+							? `coerceStringList(formData?.[bind], '${component.name}.value')`
 							: `String(formData?.[bind] ?? '')`;
 
 		const destructured = `{ node, ${usesRegistry ? 'registry, ' : ''}ctx }`;
@@ -881,10 +970,12 @@ function buildEntriesFileImpl(
 		}
 	}
 
-	const header = `// src/generated/entries.tsx - AUTO-GENERATED by entriesGenerator.ts at build/dev-server start. DO NOT EDIT MANUALLY.
+	// coerceProp is imported only when a generated line calls it, so a library without checkable props does not get
+	// an unused import (a noUnusedLocals error in the consumer).
+	const buildHeader = (coerceHelpers: string[]) => `// src/generated/entries.tsx - AUTO-GENERATED by entriesGenerator.ts at build/dev-server start. DO NOT EDIT MANUALLY.
 // All changes must be made in: packages/dsl-renderer/src/build/entriesGenerator.ts
 import React from 'react'
-import { renderChildren, resolveExpressionValue } from '${dslRendererImport}'
+import { ${[...coerceHelpers, 'renderChildren', 'resolveExpressionValue'].join(', ')} } from '${dslRendererImport}'
 import type { ComponentRegistryEntry, RegistryRenderProps } from '${dslRendererTypesImport}'
 ${importLines.join('\n')}
 `;
@@ -955,7 +1046,9 @@ ${metadataLines}
 		? '\n// ─── Stable wrapper components (module scope: one declared inside render would remount its field on every render) ───\n\n' + moduleLevelBlocks.join('\n\n') + '\n'
 		: '';
 
-	return header + moduleLevelText + '\n' + entriesBody + tail;
+	const generated = moduleLevelText + entriesBody;
+	const coerceHelpers = ['coerceDate', 'coerceProp', 'coerceStringList'].filter(helper => generated.includes(`${helper}(`));
+	return buildHeader(coerceHelpers) + moduleLevelText + '\n' + entriesBody + tail;
 }
 
 // ─── Vite plugin ──────────────────────────────────────────────────────────────

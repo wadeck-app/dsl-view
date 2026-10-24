@@ -347,7 +347,7 @@ describe('metadata block', () => {
 
 describe('generated render blocks', () => {
 	it('reads authorable props from the node: hyphenated names get a camelCase variable, internal props are skipped', () => {
-		expect(out).toContain("const ariaLabel = (resolveExpressionValue(node['aria-label'], ctx))");
+		expect(out).toContain("const ariaLabel = coerceProp(resolveExpressionValue(node['aria-label'], ctx), 'Plain.aria-label', 'string', false) as");
 		expect(out).toContain('<Plain title={title} aria-label={ariaLabel} />');
 		for (const skipped of ["node['data-x']", "node['not valid']", "node['ref']", "node['style']", "node['key']", "node['className']", "node['data-testid']"]) {
 			expect(out).not.toContain(skipped);
@@ -364,7 +364,7 @@ describe('generated render blocks', () => {
 
 	it('declares the generic type arguments of a generic Props interface', () => {
 		expect(out).toContain("TableProps<Record<string, unknown>>['rows']");
-		expect(out).toContain("(resolveExpressionValue(node['onAction'], ctx) ?? ctx['onAction'])");
+		expect(out).toContain("coerceProp(resolveExpressionValue(node['onAction'], ctx) ?? ctx['onAction'], 'Table.onAction', 'function', false)");
 		expect(out).toContain('const renderNode = (n: unknown, extraCtx: Record<string, unknown>) => renderChildren([n], registry, { ...ctx, ...extraCtx })[0] ?? null');
 		expect(out).toContain('<Table rows={rows} onAction={onAction} renderNode={renderNode} />');
 	});
@@ -419,8 +419,8 @@ describe('bind-pattern wrappers', () => {
 		['Both', "value={String(formData?.[bind] ?? '')}"],
 		['Switch', 'checked={Boolean(formData?.[bind])}'],
 		['NumberField', 'value={Number(formData?.[bind] ?? 0)}'],
-		['Tags', 'value={(formData?.[bind] as string[] | undefined) ?? []}'],
-		['DatePick', 'value={formData?.[bind] ? new Date(String(formData?.[bind])) : null}'],
+		['Tags', "value={coerceStringList(formData?.[bind], 'Tags.value')}"],
+		['DatePick', "value={coerceDate(formData?.[bind], 'DatePick.value')}"],
 		['RangePick', 'value={(formData?.[bind] as { from: Date | null; to: Date | null } | undefined) ?? { from: new Date(), to: null }}'],
 	])('%s binds its value with the expression for its type', (name, expected) => {
 		expect(wrapper(name)).toContain(expected);
@@ -433,7 +433,7 @@ describe('bind-pattern wrappers', () => {
 
 	it('treats a bound component that has both value and checked as a value field: checked stays an ordinary prop', () => {
 		const text = wrapper('Both');
-		expect(text).toContain("const checked = (resolveExpressionValue(node['checked'], ctx))");
+		expect(text).toContain("const checked = coerceProp(resolveExpressionValue(node['checked'], ctx), 'Both.checked', 'primitive', false) as");
 		expect(text).toContain("<Both checked={checked} value={String(formData?.[bind] ?? '')}");
 		expect(text).not.toContain('Boolean(formData');
 	});
@@ -452,14 +452,14 @@ describe('bind-pattern wrappers', () => {
 	});
 
 	it('lists the bound component other props before its bound value', () => {
-		expect(wrapper('FieldText')).toContain("const label = (resolveExpressionValue(node['label'], ctx)) as import('../../../../packages/dsl-ui/src/components/form/FieldText.js').FieldTextProps['label']");
+		expect(wrapper('FieldText')).toContain("const label = coerceProp(resolveExpressionValue(node['label'], ctx), 'FieldText.label', 'string', false) as import('../../../../packages/dsl-ui/src/components/form/FieldText.js').FieldTextProps['label']");
 	});
 });
 
 describe('imports', () => {
 	it('imports the renderer helpers and the registry types, and the form hook only when something is bound', () => {
 		expect(out).toContain("import React from 'react'");
-		expect(out).toContain("import { renderChildren, resolveExpressionValue } from '../../../dsl-renderer/src/engine/DslRenderer.js'");
+		expect(out).toContain("import { coerceDate, coerceProp, coerceStringList, renderChildren, resolveExpressionValue } from '../../../dsl-renderer/src/engine/DslRenderer.js'");
 		expect(out).toContain("import type { ComponentRegistryEntry, RegistryRenderProps } from '../../../dsl-renderer/src/ComponentRegistry.js'");
 		const plain = buildEntriesFile(appRoot, [{ pkg: 'x', absDir: path.join(componentsDir, 'display') }]);
 		expect(plain).not.toContain('useFormContext');
@@ -468,7 +468,7 @@ describe('imports', () => {
 	});
 
 	it('uses package names instead of monorepo-relative paths when running as an installed package', () => {
-		expect(packageOut).toContain("import { renderChildren, resolveExpressionValue } from '@wadeck-app/dsl-renderer'");
+		expect(packageOut).toContain("import { coerceDate, coerceProp, coerceStringList, renderChildren, resolveExpressionValue } from '@wadeck-app/dsl-renderer'");
 		expect(packageOut).toContain("import type { ComponentRegistryEntry, RegistryRenderProps } from '@wadeck-app/dsl-renderer'");
 		expect(packageOut).toContain("import { useFormContext } from '@wadeck-app/dsl-ui'");
 		expect(packageOut).toContain("import { LazyBoundary } from '@wadeck-app/dsl-renderer'");
