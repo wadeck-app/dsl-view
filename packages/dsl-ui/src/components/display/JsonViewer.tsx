@@ -15,7 +15,9 @@ export interface JsonViewerProps {
  * @registryTags json viewer code
  */
 export function JsonViewer({ row, field, maxHeight }: JsonViewerProps) {
-	const json = field ? String(row?.[field] ?? '') : '';
+	const value = field ? row?.[field] : undefined;
+	// A field already parsed by the API (object/array) is printed as JSON; String() would give "[object Object]".
+	const json = value !== null && typeof value === 'object' ? JSON.stringify(value) : String(value ?? '');
 	let formatted = json;
 	try {
 		formatted = JSON.stringify(JSON.parse(json), null, 2);

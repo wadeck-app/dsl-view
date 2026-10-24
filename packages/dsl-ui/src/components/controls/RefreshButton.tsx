@@ -37,13 +37,6 @@ export interface RefreshButtonProps {
  */
 export function RefreshButton({ onClick, loading = false, source, label = 'Refresh', onRefresh }: RefreshButtonProps) {
 	const [pending, setPending] = React.useState(false);
-	const mounted = React.useRef(true);
-	React.useEffect(() => {
-		mounted.current = true;
-		return () => {
-			mounted.current = false;
-		};
-	}, []);
 
 	const unwired = !onClick && !onRefresh;
 	React.useEffect(() => {
@@ -64,11 +57,8 @@ export function RefreshButton({ onClick, loading = false, source, label = 'Refre
 		}
 		setPending(true);
 		// onRefresh reports its own failures through the notifier; the finally only releases the button.
-		void onRefresh(source).finally(() => {
-			if (mounted.current) {
-				setPending(false);
-			}
-		});
+		// (Settling after an unmount is a no-op in React 18+, no mounted flag needed.)
+		void onRefresh(source).finally(() => setPending(false));
 	};
 
 	const busy = loading || pending;

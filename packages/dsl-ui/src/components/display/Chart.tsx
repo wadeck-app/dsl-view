@@ -103,8 +103,9 @@ export function Chart({
 	if (data === undefined) {
 		return (
 			<div
-				className="animate-pulse rounded-lg bg-bg-secondary"
+				className="animate-pulse motion-reduce:animate-none rounded-lg bg-bg-secondary"
 				style={{ height }}
+				role="status"
 				aria-busy="true"
 				aria-label="Loading chart"
 			/>

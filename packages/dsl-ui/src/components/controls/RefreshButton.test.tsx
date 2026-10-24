@@ -48,6 +48,35 @@ describe('RefreshButton', () => {
 		expect(onRefresh).toHaveBeenCalledWith(undefined);
 	});
 
+	it('stays quiet when the refresh settles after the button unmounted', async () => {
+		const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		const pending = deferred();
+		const view = render(<RefreshButton onRefresh={vi.fn().mockReturnValue(pending.promise)} />);
+		fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+		view.unmount();
+		await act(async () => {
+			pending.resolve();
+		});
+		expect(error).not.toHaveBeenCalled();
+	});
+
+	it('prefers onClick over onRefresh when both are given', () => {
+		const onClick = vi.fn();
+		const onRefresh = vi.fn().mockResolvedValue(undefined);
+		render(<RefreshButton onClick={onClick} onRefresh={onRefresh} />);
+		fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+		expect(onClick).toHaveBeenCalledTimes(1);
+		expect(onRefresh).not.toHaveBeenCalled();
+	});
+
+	it('spins only while busy', () => {
+		const { container, rerender } = render(<RefreshButton onClick={vi.fn()} />);
+		expect(container.querySelector('svg')!.getAttribute('class')).not.toMatch(/animate-spin/);
+		rerender(<RefreshButton onClick={vi.fn()} loading />);
+		expect(container.querySelector('svg')!.getAttribute('class')).toMatch(/animate-spin/);
+		expect(screen.getByRole('button', { name: 'Refresh' })).toHaveAttribute('aria-busy', 'true');
+	});
+
 	it('keeps the legacy onClick / loading contract', () => {
 		const onClick = vi.fn();
 		const { rerender } = render(<RefreshButton onClick={onClick} />);

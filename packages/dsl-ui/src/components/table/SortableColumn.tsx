@@ -44,11 +44,10 @@ export function SortableColumn({ label, sortKey, currentSort, onSort }: Sortable
 				onClick={() => onSort(sortKey)}
 				className={[
 					'inline-flex items-center gap-1 select-none',
-					'text-xs text-muted hover:text-content transition-colors',
-					isActive ? 'text-content' : '',
-				]
-					.filter(Boolean)
-					.join(' ')}
+					'text-xs transition-colors',
+					// One text colour, not both: two competing text-* utilities resolve by stylesheet order, not by intent.
+					isActive ? 'text-content' : 'text-muted hover:text-content',
+				].join(' ')}
 			>
 				{label}
 				<Icon

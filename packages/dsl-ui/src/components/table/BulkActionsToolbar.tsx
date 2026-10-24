@@ -21,6 +21,9 @@ export function BulkActionsToolbar({ selectedCount, onClearSelection, children }
 			role="toolbar"
 			aria-label="Bulk actions"
 			aria-hidden={visible ? undefined : 'true'}
+			// Hidden but still in the DOM (for the transition): inert keeps its buttons out of the tab order, so an
+			// aria-hidden region never holds focusable controls.
+			inert={visible ? undefined : true}
 			data-testid="bulk-actions-toolbar"
 			className={[
 				'flex items-center gap-3 px-3 py-2',

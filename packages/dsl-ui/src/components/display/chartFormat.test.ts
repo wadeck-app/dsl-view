@@ -9,6 +9,25 @@ describe('formatYTick', () => {
 		expect(formatYTick(3 * 1024 * 1024 * 1024)).toBe('3.0 GB');
 	});
 
+	it('switches unit exactly at each power-of-1024 boundary', () => {
+		expect(formatYTick(1023)).toBe('1023');
+		expect(formatYTick(1024)).toBe('1.0 KB');
+		expect(formatYTick(1024 * 1024 - 1024)).toBe('1023.0 KB');
+		expect(formatYTick(1024 * 1024)).toBe('1.0 MB');
+		expect(formatYTick(1024 * 1024 * 1024 - 1024 * 1024)).toBe('1023.0 MB');
+		expect(formatYTick(1024 * 1024 * 1024)).toBe('1.0 GB');
+	});
+
+	it('selects the tick format from yFormat', () => {
+		expect(formatYTick(2048, 'bytes')).toBe('2.0 KB');
+		expect(formatYTick(2048, 'number')).not.toMatch(/KB/);
+	});
+
+	it('does not append a unit when yUnit is empty or absent', () => {
+		expect(formatYTick(5, 'number', '')).toBe('5');
+		expect(formatYTick(5, 'number', undefined)).toBe('5');
+	});
+
 	it('formats counts compactly with yFormat number', () => {
 		const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 });
 		expect(formatYTick(950, 'number')).toBe('950');
@@ -50,6 +69,10 @@ describe('formatXTick', () => {
 describe('seriesColor', () => {
 	it('uses the explicit colour', () => {
 		expect(seriesColor(0, '#ff0000')).toBe('#ff0000');
+	});
+
+	it('treats an empty colour as no colour (an empty CSS colour would hide the series)', () => {
+		expect(seriesColor(2, '')).toBe(CHART_PALETTE[2]);
 	});
 
 	it('defaults to the theme accent, then cycles the palette', () => {

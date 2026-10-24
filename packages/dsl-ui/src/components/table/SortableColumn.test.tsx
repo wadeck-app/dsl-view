@@ -126,9 +126,39 @@ describe('SortableColumn', () => {
 				/>
 			</tr></thead></table>
 		);
-		// Active button should have text-content class
-		const button = container.querySelector('th button');
-		expect(button?.className).toContain('text-content');
+		// Exactly one text colour: the active one (two competing utilities would resolve by stylesheet order).
+		const tokens = container.querySelector('th button')!.className.split(/\s+/);
+		expect(tokens).toContain('text-content');
+		expect(tokens).not.toContain('text-muted');
+	});
+
+	it('uses the muted colour (content only on hover) when this column is not sorted', () => {
+		const { container } = render(
+			<table><thead><tr>
+				<SortableColumn label="Name" sortKey="name" currentSort={{ key: 'age', dir: 'asc' }} onSort={vi.fn()} />
+			</tr></thead></table>
+		);
+		const tokens = container.querySelector('th button')!.className.split(/\s+/);
+		expect(tokens).toContain('text-muted');
+		expect(tokens).toContain('hover:text-content');
+		expect(tokens).not.toContain('text-content');
+	});
+
+	it.each([
+		['unsorted', null, 'lucide-chevrons-up-down', true],
+		['another column sorted', { key: 'age', dir: 'asc' as const }, 'lucide-chevrons-up-down', true],
+		['ascending', { key: 'name', dir: 'asc' as const }, 'lucide-chevron-up', false],
+		['descending', { key: 'name', dir: 'desc' as const }, 'lucide-chevron-down', false],
+	])('shows the right icon, dimmed only when inactive (%s)', (_label, currentSort, iconClass, dimmed) => {
+		const { container } = render(
+			<table><thead><tr>
+				<SortableColumn label="Name" sortKey="name" currentSort={currentSort} onSort={vi.fn()} />
+			</tr></thead></table>
+		);
+		const icon = container.querySelector('th button svg')!;
+		expect(icon.getAttribute('class')).toContain(iconClass);
+		expect(icon).toHaveAttribute('aria-hidden', 'true');
+		expect(icon.getAttribute('class')!.split(/\s+/).includes('opacity-30')).toBe(dimmed);
 	});
 
 	it('renders a sort icon (svg) inside the button', () => {

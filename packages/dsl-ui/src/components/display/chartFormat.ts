@@ -13,8 +13,9 @@ export const CHART_PALETTE: readonly string[] = [
 	'var(--color-hue-orange-text)',
 ];
 
+// An empty `color:` (YAML `color: ""`) is "no colour": an empty CSS colour would draw an invisible series.
 export function seriesColor(index: number, color: string | undefined): string {
-	return color ?? CHART_PALETTE[index % CHART_PALETTE.length]!;
+	return color || CHART_PALETTE[index % CHART_PALETTE.length]!;
 }
 
 function formatBytes(n: number): string {

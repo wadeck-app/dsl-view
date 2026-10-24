@@ -19,6 +19,13 @@ describe('BulkActionsToolbar', () => {
 		expect(toolbar).toHaveAttribute('aria-hidden', 'true');
 	});
 
+	it('is inert while hidden (its buttons leave the tab order) and interactive when visible', () => {
+		const view = render(<BulkActionsToolbar selectedCount={0} onClearSelection={() => {}} />);
+		expect(screen.getByTestId('bulk-actions-toolbar')).toHaveAttribute('inert');
+		view.rerender(<BulkActionsToolbar selectedCount={2} onClearSelection={() => {}} />);
+		expect(screen.getByTestId('bulk-actions-toolbar')).not.toHaveAttribute('inert');
+	});
+
 	it('is not aria-hidden when selectedCount > 0', () => {
 		render(
 			<BulkActionsToolbar selectedCount={1} onClearSelection={vi.fn()} />
