@@ -23,13 +23,23 @@ export interface DialogFormProps {
 	size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
+function withoutOpenMarker(data: Record<string, unknown>): Record<string, unknown> {
+	if (!('_ts' in data)) {
+		return data;
+	}
+	const { _ts: _marker, ...rest } = data;
+	return rest;
+}
+
 /**
  * @registryCategory composite
  * @registryTags dialog form
  */
 export function DialogForm({ title, visible, initialData, onClose = () => undefined, onSubmit, onSubmitEdit, fields, size = 'md' }: DialogFormProps) {
 	const isOpen = Boolean(visible);
-	const prefill = initialData != null && typeof initialData === 'object' ? initialData : undefined;
+	// A `$actions` entry with a `resultKey` and no `url` (openCreate) stores `{ _ts }` as its "dialog is open" trigger: that
+	// marker is not form data and must not be prefilled or submitted.
+	const prefill = initialData != null && typeof initialData === 'object' ? withoutOpenMarker(initialData) : undefined;
 	// Edit mode needs a real id: `{ id: null }` (a "new item" template) is a create, not an edit of the item "null".
 	const editId = prefill?.['id'];
 	const isEdit = editId !== undefined && editId !== null;

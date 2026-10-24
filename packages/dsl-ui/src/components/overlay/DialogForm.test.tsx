@@ -92,6 +92,17 @@ describe('DialogForm', () => {
 			expect(onSubmitEdit).not.toHaveBeenCalled();
 		});
 
+		it('ignores the { _ts } marker a no-url $actions entry (openCreate) stores, so it never reaches the submitted data', async () => {
+			// resultKey without url: GenericPageRunner stores `{ _ts: Date.now() }` as the "dialog is open" trigger.
+			const { onSubmit } = renderDialog({ initialData: { _ts: 1730000000000 } });
+			expect(screen.getByLabelText('name')).toHaveValue('');
+			const user = userEvent.setup();
+			await user.type(screen.getByLabelText('name'), 'Ada');
+			await user.click(screen.getByRole('button', { name: 'Save' }));
+			await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+			expect(onSubmit.mock.calls[0]![0]).toStrictEqual({ name: 'Ada' });
+		});
+
 		it.each([[null], [undefined]])('an id of %s is create mode, not an edit of "null"/"undefined"', async idValue => {
 			const onSubmitEdit = vi.fn();
 			const { onSubmit } = renderDialog({ initialData: { id: idValue, name: 'Draft' } as never, onSubmitEdit });
