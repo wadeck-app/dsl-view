@@ -79,6 +79,14 @@ describe('formatXTick', () => {
 		expect(formatXTick('10:05', 'category', 'time')).toBe('10:05');
 	});
 
+	// A category label can look like a date or a number ("2026-10-24", "5", 12): it must not be reformatted as a time.
+	it.each(['2026-10-24', '2026-10-24T10:05:00Z', '5', 12, 1760000000000])('does not reformat a date-like category value: %s', value => {
+		for (const xFormat of ['date', 'time', 'datetime'] as const) {
+			expect(formatXTick(value, 'category', xFormat)).toBe(String(value));
+		}
+		expect(formatXTick(value, 'category')).toBe(String(value));
+	});
+
 	it('formats date, time and datetime in local time', () => {
 		expect(formatXTick(ts, 'time')).toBe(new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(ts));
 		const time = formatXTick(ts, 'time', 'time');

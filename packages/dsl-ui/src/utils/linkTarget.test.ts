@@ -30,6 +30,15 @@ describe('linkTargetProblem', () => {
 	it('rejects an external link that is an app path', () => {
 		expect(linkTargetProblem('/local', true)).toMatch(/http:, https: or mailto:/);
 	});
+
+	// Security: the allowed scheme must be the very start of the target. A row-provided value that merely CONTAINS
+	// "https:" later on (after a javascript: or data: scheme) must never become an anchor.
+	it.each(['javascript:alert(1)//https://example.com', 'data:text/html,mailto:a@b.c', ' https://example.com', 'x-https://a.b'])(
+		'rejects an external target that only contains an allowed scheme later on: %s',
+		href => {
+			expect(linkTargetProblem(href, true)).toMatch(/http:, https: or mailto:/);
+		}
+	);
 });
 
 describe('buildLinkPath', () => {
@@ -48,6 +57,12 @@ describe('buildLinkPath', () => {
 		expect(result.href).toBeUndefined();
 		expect(result.problem).toContain('{id}');
 		expect(result.problem).toContain('row keys: id, other');
+	});
+
+	// The row keys in the message help the page author: sorted, so the message does not depend on the field order.
+	it('lists the row keys in alphabetical order', () => {
+		const result = buildLinkPath('/runs/{id}', { zebra: 1, alpha: 2, id: undefined });
+		expect(result.problem).toContain('row keys: alpha, id, zebra');
 	});
 
 	it('reports the first missing placeholder only once', () => {
