@@ -1,7 +1,7 @@
 import { Search, X } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 
-import { useOptionalUrlParam } from '../../context/UrlParamContext.js';
+import { useOptionalUrlParam } from '@dsl-ui/context/UrlParamContext.js';
 import { Button } from '../controls/_Button.js';
 
 // @formatter:off
@@ -68,6 +68,16 @@ export function SearchBar({ urlParam, resetUrlParams, value: valueProp, onChange
 		setLocalValue(value);
 	}, [value]);
 
+	// A debounced change still pending when the bar unmounts (navigation) must not fire: with a urlParam it would
+	// write the stale text into the URL of the page the user just moved to.
+	useEffect(() => {
+		return () => {
+			if (timerRef.current !== null) {
+				clearTimeout(timerRef.current);
+			}
+		};
+	}, []);
+
 	function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
 		const next = e.target.value;
 		setLocalValue(next);
@@ -102,7 +112,7 @@ export function SearchBar({ urlParam, resetUrlParams, value: valueProp, onChange
 			{/* violations-suppress: react/no-raw-input SearchBar IS the atomic search-input wrapper - this is intentional, mirrors Button.tsx */}
 			<input
 				type="search"
-				aria-label={placeholder ?? 'Search'}
+				aria-label={placeholder || 'Search'}
 				placeholder={placeholder}
 				value={localValue}
 				onChange={handleChange}

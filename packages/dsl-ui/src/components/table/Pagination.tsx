@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import React from 'react';
 
-import { useOptionalUrlParam } from '../../context/UrlParamContext.js';
+import { useOptionalUrlParam } from '@dsl-ui/context/UrlParamContext.js';
 import { Button } from '../controls/_Button.js';
 
 export interface PaginationProps {
@@ -27,13 +27,17 @@ export interface PaginationProps {
 export function Pagination({ urlParam, page, onPageChange, total, size }: PaginationProps) {
 	const [urlPage, setUrlPage] = useOptionalUrlParam(urlParam);
 	// total/size come from `$sources`: while they are not loaded yet there is nothing to paginate (and "Page NaN / NaN" to avoid).
-	if (!Number.isFinite(total) || !Number.isFinite(size)) return null;
+	if (!Number.isFinite(total) || !Number.isFinite(size)) {
+		return null;
+	}
 	const totalPages = size > 0 ? Math.ceil(total / size) : 1;
 	const rawPage = urlParam ? Number(urlPage ?? 0) || 0 : page ?? 0;
 	const activePage = Math.min(Math.max(rawPage, 0), totalPages - 1);
 	const changePage = urlParam ? (next: number) => setUrlPage(String(Math.max(0, next))) : onPageChange;
 
-	if (totalPages <= 1 || !changePage) return null;
+	if (totalPages <= 1 || !changePage) {
+		return null;
+	}
 	return (
 		<div className="mt-3 flex items-center gap-2 text-sm text-muted">
 			<Button

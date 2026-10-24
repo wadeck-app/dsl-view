@@ -2,8 +2,8 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { UrlParamContext } from '../../context/UrlParamContext.js';
-import type { UrlParamService } from '../../context/UrlParamContext.js';
+import { UrlParamContext } from '@dsl-ui/context/UrlParamContext.js';
+import type { UrlParamService } from '@dsl-ui/context/UrlParamContext.js';
 import { Pagination } from './Pagination.js';
 
 describe('Pagination (controlled mode)', () => {
@@ -52,6 +52,33 @@ describe('Pagination (controlled mode)', () => {
 	it('returns null when neither urlParam nor onPageChange is supplied', () => {
 		const { container } = render(<Pagination total={50} size={10} />);
 		expect(container).toBeEmptyDOMElement();
+	});
+
+	it('renders nothing for a zero page size (a single page, no division by zero)', () => {
+		const { container } = render(<Pagination page={0} total={50} size={0} onPageChange={vi.fn()} />);
+		expect(container).toBeEmptyDOMElement();
+	});
+
+	it('renders nothing when there are no rows', () => {
+		const { container } = render(<Pagination page={0} total={0} size={10} onPageChange={vi.fn()} />);
+		expect(container).toBeEmptyDOMElement();
+	});
+
+	it('rounds the page count up: 31 rows of 10 are 4 pages', () => {
+		render(<Pagination page={0} total={31} size={10} onPageChange={vi.fn()} />);
+		expect(screen.getByText('Page 1 / 4')).toBeInTheDocument();
+	});
+
+	it('clamps a negative page up to the first page', () => {
+		render(<Pagination page={-5} total={30} size={10} onPageChange={vi.fn()} />);
+		expect(screen.getByText('Page 1 / 3')).toBeInTheDocument();
+		expect(screen.getByText('Prev')).toBeDisabled();
+	});
+
+	it('enables both buttons on a middle page', () => {
+		render(<Pagination page={1} total={30} size={10} onPageChange={vi.fn()} />);
+		expect(screen.getByText('Prev')).toBeEnabled();
+		expect(screen.getByText('Next')).toBeEnabled();
 	});
 });
 
@@ -108,6 +135,28 @@ describe('Pagination (urlParam mode)', () => {
 		);
 		fireEvent.click(screen.getByText('Next'));
 		expect(setSpy).toHaveBeenCalledWith('page', '1', { replace: true });
+	});
+
+	it('clicking Prev writes the decremented page', () => {
+		const service = withUrlParamService({ page: '3' });
+		const setSpy = vi.spyOn(service, 'set');
+		render(
+			<UrlParamContext.Provider value={service}>
+				<Pagination urlParam="page" total={50} size={10} />
+			</UrlParamContext.Provider>
+		);
+		fireEvent.click(screen.getByText('Prev'));
+		expect(setSpy).toHaveBeenCalledWith('page', '2', { replace: true });
+	});
+
+	it('treats a non-numeric page param as the first page', () => {
+		const service = withUrlParamService({ page: 'abc' });
+		render(
+			<UrlParamContext.Provider value={service}>
+				<Pagination urlParam="page" total={50} size={10} />
+			</UrlParamContext.Provider>
+		);
+		expect(screen.getByText('Page 1 / 5')).toBeInTheDocument();
 	});
 
 	it('throws when urlParam is set but no UrlParamContext is provided', () => {

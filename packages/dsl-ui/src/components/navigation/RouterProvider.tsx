@@ -13,10 +13,14 @@ export function RouterProvider({ children }: { children: React.ReactNode }) {
 	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
 
-	const routerService = {
-		navigate: (path: string) => navigate(path),
-		back: () => navigate(-1),
-	};
+	// Memoised so consumers of RouterContext do not re-render on every render of this provider.
+	const routerService = useMemo(
+		() => ({
+			navigate: (path: string) => navigate(path),
+			back: () => navigate(-1),
+		}),
+		[navigate]
+	);
 
 	const urlParamService: UrlParamService = useMemo(
 		() => ({
@@ -26,9 +30,9 @@ export function RouterProvider({ children }: { children: React.ReactNode }) {
 					prev => {
 						const next = new URLSearchParams(prev);
 						next.set(key, value);
-							for (const removed of opts?.remove ?? []) {
-								next.delete(removed);
-							}
+						for (const removed of opts?.remove ?? []) {
+							next.delete(removed);
+						}
 						return next;
 					},
 					{ replace: opts?.replace ?? false }
