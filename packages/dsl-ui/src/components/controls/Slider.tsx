@@ -43,7 +43,7 @@ export function Slider({ value, onChange, min = 0, max = 100, step = 1, disabled
                 <RadixSlider.Track className={TRACK_BG}>
                     <RadixSlider.Range className={RANGE_CLASS} />
                 </RadixSlider.Track>
-                <RadixSlider.Thumb className={THUMB_CLASS} />
+                <RadixSlider.Thumb className={THUMB_CLASS} aria-label={label} />
             </RadixSlider.Root>
         </div>
     );

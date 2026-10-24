@@ -49,18 +49,23 @@ export function FieldAutocomplete({
 		setInputValue(match ? match.label : value);
 	}, [value, options]);
 
-	const filteredOptions = options.filter(o =>
-		o.label.toLowerCase().includes(inputValue.toLowerCase()),
-	);
+	function matchingOptions(text: string): FieldAutocompleteOption[] {
+		return options.filter(o => o.label.toLowerCase().includes(text.toLowerCase()));
+	}
+
+	const filteredOptions = matchingOptions(inputValue);
 
 	function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
 		const text = e.target.value;
 		setInputValue(text);
-		setOpen(text.length > 0 && filteredOptions.length > 0);
+		// Decide from the NEW text: filteredOptions still reflects the previous keystroke.
+		setOpen(text.length > 0 && matchingOptions(text).length > 0);
 	}
 
 	function handleFocus() {
-		if (!isSelectingRef.current && filteredOptions.length > 0) setOpen(true);
+		if (!isSelectingRef.current && filteredOptions.length > 0) {
+			setOpen(true);
+		}
 	}
 
 	function handleSelect(opt: FieldAutocompleteOption) {
