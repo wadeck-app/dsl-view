@@ -199,15 +199,6 @@ export const FetchSpinnerNodeSchema = baseNode.extend({
 	loading: dsl(z.boolean()),
 });
 
-export const InlineEditNodeSchema = baseNode.extend({
-	value: z.string(),
-	placeholder: z.string().optional(),
-	disabled: dsl(z.boolean()).optional(),
-	multiline: dsl(z.boolean()).optional(),
-	className: z.string().optional(),
-	editClassName: z.string().optional(),
-});
-
 export const JsonViewerNodeSchema = baseNode.extend({
 	row: dsl(z.record(z.string(), z.unknown())).optional(),
 	field: z.string().optional(),

@@ -675,17 +675,6 @@
 			"size"
 		]
 	},
-	"InlineEdit": {
-		"knownKeys": [
-			"disabled",
-			"editClassName",
-			"multiline",
-			"onChange",
-			"placeholder",
-			"validate",
-			"value"
-		]
-	},
 	"JsonViewer": {
 		"knownKeys": [
 			"field",
