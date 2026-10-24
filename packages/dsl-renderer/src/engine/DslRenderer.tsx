@@ -3,10 +3,13 @@ import React from 'react';
 import type { ComponentRegistry } from '../ComponentRegistry.js';
 import { EXTENSION_SLOT_TYPE, KNOWN_DSL_KEYS, omitNavKeys } from '../dslKeys.js';
 import { evaluateOperatorExpression } from '../expression.js';
-import { isDevelopment } from './devMode.js';
 import { warnMissingCtxPrefix } from './warnCtxPrefix.js';
 import { warnInvalidNodeProps } from './warnInvalidNodeProps.js';
 import { warnInvalidChildren, warnUnknownNodeKeys } from './warnUnknownKeys.js';
+
+// Replaced statically by every bundler (and defined by Node); declared locally because the package does not load the
+// Node typings. A bundle that leaves it untouched has no `process` and fails here, like React itself.
+declare const process: { env: { NODE_ENV?: string } };
 
 export interface RenderContext {
 	[key: string]: unknown;
@@ -79,7 +82,9 @@ export function DslRenderer({ node, registry, ctx = {} }: RendererProps): React.
 		}
 	}
 
-	if (isDevelopment()) {
+	// The exact expression a bundler replaces, written inline: through a function call (`isDevelopment()`) the dead block
+	// below stays in a production bundle with everything it imports. Not a `typeof process` guard either, see devMode.ts.
+	if (process.env.NODE_ENV !== 'production') {
 		// Unknown $-key check
 		for (const key of Object.keys(node)) {
 			if (key.startsWith('$') && !KNOWN_DSL_KEYS.has(key)) {
@@ -244,7 +249,7 @@ function resolveExpressionPath(expr: string, ctx: RenderContext): unknown {
 		return current;
 	} else {
 		current = ctx[root ?? ''];
-		if (current === undefined) {
+		if (current === undefined && process.env.NODE_ENV !== 'production') {
 			warnMissingCtxPrefix(root, ctx);
 		}
 	}
@@ -263,7 +268,7 @@ export function renderChildren(
 	registry: ComponentRegistry,
 	ctx: RenderContext
 ): React.ReactElement[] {
-	if (isDevelopment()) {
+	if (process.env.NODE_ENV !== 'production') {
 		warnInvalidChildren(nodes);
 	}
 	if (!Array.isArray(nodes)) {
