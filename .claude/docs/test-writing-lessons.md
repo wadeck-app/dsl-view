@@ -19,6 +19,8 @@ What the 2026-10-24 mutation campaigns showed to be weak in our tests. Check eac
 13. **Generated code: typecheck AND run AND drift-test.** Strict + `noUnusedLocals/Parameters` typecheck of real generated entries (`generatedEntries.typecheck.test.ts`), runtime behaviour through the real generator, and a test that fails when the committed output is stale (`known-keys.test.ts`, `schemas/generatedNodeSchemas.drift.test.ts`).
 14. **Windows paths.** Feed `/`, `\` and drive-letter case. `build/pathUtils.test.ts` (`isPathInside`).
 15. **Assert semantics, not incidental CSS.** Prefer roles, `aria-*`, `inert`, disabled state, text, DOM order. `BulkActionsToolbar.test.tsx` checks `inert` (tab order), not a class; the `'bottom'` batch bar is checked with `compareDocumentPosition` (`DataTableBehavior.test.tsx`). Asserting a class is fine only when that class IS the contract (a token the theme guarantees), and then assert the specific token, not the whole string.
+16. **Restore every global you replace.** `window.location`, `navigator.clipboard`, timers, env: restore in `afterEach`, not at the end of the test (a failing test skips it). `pageRunner/useBrains.contract.test.ts` once left `window.location` replaced for the rest of the file. `vitest.config.ts` now sets `restoreMocks`, `unstubEnvs` and `unstubGlobals` centrally and `test-setup.ts` returns to real timers after each test; that covers `vi.spyOn`/`vi.stubGlobal`, not direct assignment.
+17. **A documented key needs a test on every entry path.** Row, batch and form actions each ignored a different key (`confirm`, `reloadSources`, `strictParams`) because only one path was tested. List the paths, test each one.
 
 ## Equivalent mutants
 
