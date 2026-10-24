@@ -1,5 +1,5 @@
 import { Check } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { Button } from '../controls/_Button.js';
 
@@ -36,22 +36,36 @@ export interface StepperProps {
  * @registryTags stepper wizard
  */
 export function Stepper({ steps, onComplete, onCancel, completedLabel = 'Finish', className }: StepperProps) {
-	const [currentStep, setCurrentStep] = useState(0);
+	const [requestedStep, setCurrentStep] = useState(0);
+	// The steps can change under a mounted stepper (a conditional step disappears): stay on a step that exists
+	// instead of showing a blank panel with a Next button that leads nowhere.
+	const currentStep = Math.max(0, Math.min(requestedStep, steps.length - 1));
 	const isFirst = currentStep === 0;
 	const isLast = currentStep === steps.length - 1;
+	const hasSteps = steps.length > 0;
+
+	useEffect(() => {
+		if (!hasSteps) {
+			console.warn('[Stepper] received no steps and renders nothing.');
+		}
+	}, [hasSteps]);
 
 	function handleNext() {
 		if (isLast) {
 			onComplete?.();
 		} else {
-			setCurrentStep(s => s + 1);
+			setCurrentStep(currentStep + 1);
 		}
 	}
 
 	function handlePrevious() {
 		if (!isFirst) {
-			setCurrentStep(s => s - 1);
+			setCurrentStep(currentStep - 1);
 		}
+	}
+
+	if (!hasSteps) {
+		return null;
 	}
 
 	return (
@@ -69,7 +83,10 @@ export function Stepper({ steps, onComplete, onCancel, completedLabel = 'Finish'
 									className={isCompleted ? stepCircleCompleted : isActive ? stepCircleActive : stepCircleInactive}
 								>
 									{isCompleted ? (
-										<Check className="h-3 w-3" aria-hidden="true" />
+										<>
+											<Check className="h-3 w-3" aria-hidden="true" />
+											<span className="sr-only">Completed</span>
+										</>
 									) : (
 										index + 1
 									)}
