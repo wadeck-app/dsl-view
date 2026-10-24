@@ -8,7 +8,9 @@ export function initialsOf(title: string): string {
 	if (first === undefined) {
 		return '?';
 	}
-	const letters = second === undefined ? first.slice(0, 2) : first.charAt(0) + second.charAt(0);
+	// By code point, not UTF-16 unit: slicing an emoji or a mathematical letter in the middle of a surrogate pair prints a replacement glyph.
+	const firstChars = Array.from(first);
+	const letters = second === undefined ? firstChars.slice(0, 2).join('') : firstChars[0]! + Array.from(second)[0]!;
 	return letters.toUpperCase();
 }
 

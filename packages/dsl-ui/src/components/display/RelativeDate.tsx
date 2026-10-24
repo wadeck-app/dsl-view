@@ -66,6 +66,13 @@ export function RelativeDate({
 		return () => clearInterval(id);
 	}, [dateObj.getTime(), live]);
 
+	// toISOString and the tooltip format both throw a RangeError on an invalid date, which would take the whole page
+	// down for one bad cell. Show the value as it came (visible, not hidden) and say so in the console.
+	if (Number.isNaN(dateObj.getTime())) {
+		console.warn(`[RelativeDate] "${String(date)}" is not a valid date; showing it as is.`);
+		return <span className={['text-content text-sm', className].filter(Boolean).join(' ')}>{String(date)}</span>;
+	}
+
 	// text-content ensures no ambient color (e.g. CSS variable leakage via inline-flex context) bleeds onto the number
 	const timeEl = (
 		<time dateTime={dateObj.toISOString()} className={['text-content text-sm', className].filter(Boolean).join(' ')}>

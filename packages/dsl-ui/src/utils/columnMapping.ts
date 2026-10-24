@@ -52,7 +52,7 @@ export function resolveColumn<T extends Record<string, unknown>>(
 	const options = { mono: dc.mono, muted: dc.muted, truncate: dc.truncate, width: dc.width, format: dc.format };
 	const key = dc.field as keyof T & string;
 
-	if (dc.format && dc.format in extraFormats) {
+	if (dc.format && Object.hasOwn(extraFormats, dc.format)) {
 		return extraFormats[dc.format]!(key, dc.label, options);
 	}
 

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { resolveColumn, resolveColumns } from './columnMapping.js';
 import type { TableColumn } from '../components/table/DataTable.js';
 
@@ -54,12 +54,45 @@ describe('resolveColumn', () => {
 	});
 
 	it('dispatches an unrecognized format via extraFormats before falling back to generic handling', () => {
-		const extraFormats = {
-			custom: (key: string, label: string) => ({ key, label, render: () => null }),
-		};
-		const col = resolveColumn({ field: 'x', label: 'X', format: 'custom' }, extraFormats);
-		expect(col.key).toBe('x');
-		expect(col.label).toBe('X');
+		const built = { key: 'x', label: 'X', render: () => null };
+		const custom = vi.fn(() => built);
+		const col = resolveColumn(
+			{ field: 'x', label: 'X', format: 'custom', mono: true, muted: true, truncate: true, width: 12, sortable: true },
+			{ custom }
+		);
+		expect(col).toBe(built);
+		expect(custom).toHaveBeenCalledExactlyOnceWith('x', 'X', { mono: true, muted: true, truncate: true, width: 12, format: 'custom' });
+	});
+
+	it('lets an extra format take over a built-in one of the same name', () => {
+		const built = { key: 'size', label: 'Size', render: () => 'custom' };
+		const col = resolveColumn({ field: 'size', label: 'Size', format: 'bytes' }, { bytes: () => built });
+		expect(col).toBe(built);
+	});
+
+	// `in` also sees Object.prototype: a YAML `format: constructor` must be an unknown format, not a call to Object().
+	it('does not take inherited object members for extra formats: they fall back to plain text', () => {
+		for (const format of ['constructor', 'toString', 'hasOwnProperty', '__proto__']) {
+			const col = resolveColumn({ field: 'x', label: 'X', format }, {});
+			expect(col.render({ x: 'v' })).toBe('v');
+		}
+	});
+
+	it('ignores the format entirely when extraFormats is empty and the format is unknown', () => {
+		const col = resolveColumn({ field: 'n', label: 'N', format: 'nope', sortable: true });
+		expect(col.render({ n: 3 })).toBe('3');
+		expect(col.sortable).toBe(true);
+	});
+
+	it('keeps falsy flags off the column instead of writing false onto it (date and ms branches)', () => {
+		const date = resolveColumn({ field: 'ts', label: 'T', format: 'date', mono: false, muted: false, truncate: false, sortable: false });
+		const ms = resolveColumn({ field: 'd', label: 'D', format: 'ms', mono: false, sortable: false });
+		for (const col of [date, ms]) {
+			expect('mono' in col).toBe(false);
+			expect('muted' in col).toBe(false);
+			expect('truncate' in col).toBe(false);
+			expect('sortable' in col).toBe(false);
+		}
 	});
 });
 

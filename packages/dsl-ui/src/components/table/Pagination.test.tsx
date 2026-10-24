@@ -75,6 +75,43 @@ describe('Pagination (controlled mode)', () => {
 		expect(screen.getByText('Prev')).toBeDisabled();
 	});
 
+	it('switches from one to two pages exactly when total exceeds size', () => {
+		const exact = render(<Pagination page={0} total={10} size={10} onPageChange={vi.fn()} />);
+		expect(exact.container).toBeEmptyDOMElement();
+		exact.unmount();
+		render(<Pagination page={0} total={11} size={10} onPageChange={vi.fn()} />);
+		expect(screen.getByText('Page 1 / 2')).toBeInTheDocument();
+	});
+
+	it('renders nothing for a negative page size', () => {
+		const { container } = render(<Pagination page={0} total={50} size={-10} onPageChange={vi.fn()} />);
+		expect(container).toBeEmptyDOMElement();
+	});
+
+	it('clamps a page beyond the end to the last page and navigates from the clamped page, not the raw one', () => {
+		const onPageChange = vi.fn();
+		render(<Pagination page={99} total={30} size={10} onPageChange={onPageChange} />);
+		expect(screen.getByText('Page 3 / 3')).toBeInTheDocument();
+		fireEvent.click(screen.getByText('Prev'));
+		expect(onPageChange).toHaveBeenCalledTimes(1);
+		expect(onPageChange).toHaveBeenCalledWith(1);
+	});
+
+	it('shows whole page numbers for a fractional page', () => {
+		render(<Pagination page={1.5} total={50} size={10} onPageChange={vi.fn()} />);
+		expect(screen.getByText('Page 2 / 5')).toBeInTheDocument();
+	});
+
+	it('does not call onPageChange from a disabled button', () => {
+		const onPageChange = vi.fn();
+		const { unmount } = render(<Pagination page={0} total={30} size={10} onPageChange={onPageChange} />);
+		fireEvent.click(screen.getByText('Prev'));
+		unmount();
+		render(<Pagination page={2} total={30} size={10} onPageChange={onPageChange} />);
+		fireEvent.click(screen.getByText('Next'));
+		expect(onPageChange).not.toHaveBeenCalled();
+	});
+
 	it('enables both buttons on a middle page', () => {
 		render(<Pagination page={1} total={30} size={10} onPageChange={vi.fn()} />);
 		expect(screen.getByText('Prev')).toBeEnabled();
@@ -147,6 +184,31 @@ describe('Pagination (urlParam mode)', () => {
 		);
 		fireEvent.click(screen.getByText('Prev'));
 		expect(setSpy).toHaveBeenCalledWith('page', '2', { replace: true });
+	});
+
+	it('navigates from the clamped page when the url holds a page beyond the end', () => {
+		const service = withUrlParamService({ page: '999' });
+		const setSpy = vi.spyOn(service, 'set');
+		render(
+			<UrlParamContext.Provider value={service}>
+				<Pagination urlParam="page" total={50} size={10} />
+			</UrlParamContext.Provider>
+		);
+		fireEvent.click(screen.getByText('Prev'));
+		expect(setSpy).toHaveBeenCalledTimes(1);
+		expect(setSpy).toHaveBeenCalledWith('page', '3', { replace: true });
+	});
+
+	it('treats negative, fractional and empty page params as whole page numbers within range', () => {
+		for (const [raw, label] of [['-3', 'Page 1 / 5'], ['1.5', 'Page 2 / 5'], ['', 'Page 1 / 5']] as const) {
+			const { unmount } = render(
+				<UrlParamContext.Provider value={withUrlParamService({ page: raw })}>
+					<Pagination urlParam="page" total={50} size={10} />
+				</UrlParamContext.Provider>
+			);
+			expect(screen.getByText(label)).toBeInTheDocument();
+			unmount();
+		}
 	});
 
 	it('treats a non-numeric page param as the first page', () => {

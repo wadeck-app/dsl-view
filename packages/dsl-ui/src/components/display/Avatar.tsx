@@ -34,7 +34,7 @@ export function Avatar({ src, alt, fallback, size = 'md' }: AvatarProps) {
                 delayMs={src ? 600 : 0}
                 className={FALLBACK_CLASS}
             >
-                {fallback ?? (alt ? alt.slice(0, 2) : '?')}
+                {fallback || (alt ? Array.from(alt).slice(0, 2).join('') : '?')}
             </RadixAvatar.Fallback>
         </RadixAvatar.Root>
     );

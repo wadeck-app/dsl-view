@@ -54,6 +54,78 @@ describe('Progress', () => {
     });
 });
 
+describe('Progress value handling', () => {
+    const widthOf = (container: HTMLElement) => (container.querySelector('[role="progressbar"] > *') as HTMLElement).style.width;
+
+    it('computes the fraction against a custom max', () => {
+        const { container } = render(<Progress value={5} max={20} showValue />);
+        expect(widthOf(container)).toBe('25%');
+        expect(screen.getByText('25%')).toBeInTheDocument();
+    });
+
+    it('clamps to the exact edges: 0 and max are 0% and 100%, just over max stays 100%', () => {
+        expect(widthOf(render(<Progress value={0} />).container)).toBe('0%');
+        expect(widthOf(render(<Progress value={100} />).container)).toBe('100%');
+        expect(widthOf(render(<Progress value={100.01} />).container)).toBe('100%');
+    });
+
+    it('rounds the shown percentage half up while the bar keeps the exact fraction', () => {
+        const { container } = render(<Progress value={49.5} showValue />);
+        expect(screen.getByText('50%')).toBeInTheDocument();
+        expect(widthOf(container)).toBe('49.5%');
+    });
+
+    // value / 0 and value / NaN are NaN: "NaN%" is not a width, so an unknown fraction draws as an empty bar.
+    it('draws an empty bar, never "NaN%", when max is 0 or the value is not a number', () => {
+        for (const props of [{ value: 5, max: 0 }, { value: NaN }, { value: undefined as unknown as number }]) {
+            const { container, unmount } = render(<Progress {...props} showValue />);
+            expect(widthOf(container)).toBe('0%');
+            expect(screen.getByText('0%')).toBeInTheDocument();
+            unmount();
+        }
+    });
+
+    it('exposes value and max to assistive technology', () => {
+        render(<Progress value={5} max={20} />);
+        const bar = screen.getByRole('progressbar');
+        expect(bar).toHaveAttribute('aria-valuenow', '5');
+        expect(bar).toHaveAttribute('aria-valuemax', '20');
+    });
+
+    it('stacked: shows the value without a label, and no header row when neither is asked for', () => {
+        const withValue = render(<Progress value={40} showValue />);
+        expect(screen.getByText('40%')).toBeInTheDocument();
+        withValue.unmount();
+        const bare = render(<Progress value={40} />);
+        expect(bare.container.firstElementChild!.children).toHaveLength(1);
+    });
+
+    it('inline: label and value are optional, and the text follows the bar size', () => {
+        const small = render(<Progress value={40} layout="inline" size="sm" label="up" showValue />);
+        expect(screen.getByText('up')).toHaveClass('text-xs');
+        expect(screen.getByText('40%')).toHaveClass('text-xs');
+        small.unmount();
+        const medium = render(<Progress value={40} layout="inline" label="up" showValue />);
+        expect(screen.getByText('up')).toHaveClass('text-sm');
+        medium.unmount();
+        const bare = render(<Progress value={40} layout="inline" />);
+        expect(bare.container.firstElementChild!.children).toHaveLength(1);
+    });
+
+    it('inline: a custom valueLabel replaces the percentage too', () => {
+        render(<Progress value={99.94} layout="inline" showValue valueLabel="99.94%" />);
+        expect(screen.getByText('99.94%')).toBeInTheDocument();
+    });
+
+    it('the size picks the track height', () => {
+        const small = render(<Progress value={10} size="sm" />);
+        expect(screen.getByRole('progressbar')).toHaveClass('h-1.5');
+        small.unmount();
+        render(<Progress value={10} />);
+        expect(screen.getByRole('progressbar')).toHaveClass('h-2.5');
+    });
+});
+
 // A consumer skipped this component entirely because it could not fit: w-full plus a label on
 // its own line does not go in a dense horizontal row, so a percentage stayed as bare text.
 // That is the component being fragile, not the consumer being lazy.

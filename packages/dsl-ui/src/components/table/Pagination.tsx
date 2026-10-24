@@ -32,7 +32,8 @@ export function Pagination({ urlParam, page, onPageChange, total, size }: Pagina
 	}
 	const totalPages = size > 0 ? Math.ceil(total / size) : 1;
 	const rawPage = urlParam ? Number(urlPage ?? 0) || 0 : page ?? 0;
-	const activePage = Math.min(Math.max(rawPage, 0), totalPages - 1);
+	// A fractional page (?page=1.5) would print "Page 2.5 / 5": pages are whole numbers.
+	const activePage = Math.min(Math.max(Math.floor(rawPage), 0), totalPages - 1);
 	const changePage = urlParam ? (next: number) => setUrlPage(String(Math.max(0, next))) : onPageChange;
 
 	if (totalPages <= 1 || !changePage) {

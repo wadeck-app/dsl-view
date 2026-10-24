@@ -3,7 +3,8 @@
  * (e.g. `/files/{id}` + `{ id: '42' }` -> `/files/42`). Missing keys resolve to an empty string
  * rather than throwing, since a template referencing a field absent on a given row is a
  * data/config mismatch, not a programming error worth crashing the render for.
+ * Only the row's own fields count: `{constructor}` must not splice a function's source into a path.
  */
 export function buildTemplatedPath(template: string, row: Record<string, unknown>): string {
-	return template.replace(/\{(\w+)\}/g, (_, key: string) => String(row[key] ?? ''));
+	return template.replace(/\{(\w+)\}/g, (_, key: string) => (Object.hasOwn(row, key) ? String(row[key] ?? '') : ''));
 }

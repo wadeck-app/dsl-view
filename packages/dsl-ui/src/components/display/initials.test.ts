@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { colorFromId, initialsOf } from './initials.js';
 
+// Built from a code point so the file holds no emoji literal.
+const ROCKET = String.fromCodePoint(0x1f680);
+
 describe('initialsOf', () => {
 	it('uses the first two letters of a single word, and the first letter of the first two words otherwise', () => {
 		expect(initialsOf('Queue')).toBe('QU');
@@ -16,6 +19,15 @@ describe('initialsOf', () => {
 
 	it('upper-cases', () => {
 		expect(initialsOf('queue')).toBe('QU');
+	});
+
+	it('never cuts a character in half: emoji and other astral characters count as one letter', () => {
+		expect(initialsOf(`${ROCKET} Launch`)).toBe(`${ROCKET}L`);
+		expect(initialsOf(ROCKET)).toBe(ROCKET);
+		expect(initialsOf(ROCKET.repeat(3))).toBe(ROCKET.repeat(2));
+		expect(initialsOf(`Launch ${ROCKET}`)).toBe(`L${ROCKET}`);
+		// A lower-case accented first letter comes back upper-case (written as escapes: the file holds no accented literal).
+		expect(initialsOf('\u00e9lan')).toBe('\u00c9L');
 	});
 
 	it('copes with a one-letter name, extra separators and an empty name', () => {

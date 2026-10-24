@@ -56,7 +56,9 @@ export function Progress({
     layout = 'stacked',
     valueLabel,
 }: ProgressProps) {
-    const pct = Math.min(100, Math.max(0, (value / max) * 100));
+    // A zero max or a non-numeric value would give NaN% (an invalid width): an unknown fraction draws as empty.
+    const rawPct = (value / max) * 100;
+    const pct = Number.isFinite(rawPct) ? Math.min(100, Math.max(0, rawPct)) : 0;
     const shownValue = valueLabel ?? `${Math.round(pct)}%`;
     const isInline = layout === 'inline';
 
