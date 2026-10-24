@@ -27,7 +27,7 @@ $sources:
     params:
       id: $route.id             # param resolved from ctx ($vars, $route, $urlParam, $source.*)
     poll: 10s                   # re-fetch every 10s
-    pollWhen: $vars.isLive      # only poll when this expression is truthy
+    pollWhen: $urlParam.live    # polls unless the param is absent, empty, 0 or false; other expressions are logged and ignored (it polls)
     cache: 30s                  # cache response for 30s ("30s", "5m", etc.)
 
 $actions:

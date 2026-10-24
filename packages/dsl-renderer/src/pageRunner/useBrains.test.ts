@@ -408,6 +408,27 @@ describe('useBrains', () => {
 	// -------------------------------------------------------------------------
 
 	describe('$reload: sources', () => {
+		it('the $brains.$ctx.reload built-in sends no request and only triggers its $reload list', async () => {
+			const invalidateSourceCache = vi.fn();
+			const loadSources = vi.fn().mockResolvedValue(undefined);
+			const fetcher = vi.fn().mockResolvedValue({});
+			const setVar = vi.fn();
+
+			const { result } = renderHook(() =>
+				useBrains(makeParams(
+					{ refresh: { $brain: '$brains.$ctx.reload', $reload: ['books', 'authors'] } },
+					makeCtx(),
+					{ fetcher, invalidateSourceCache, loadSources, setVar }
+				))
+			);
+
+			await waitFor(() => expect(loadSources).toHaveBeenCalled());
+			expect(invalidateSourceCache.mock.calls).toEqual([['books'], ['authors']]);
+			expect(fetcher).not.toHaveBeenCalled();
+			expect(setVar).not.toHaveBeenCalled();
+			expect(result.current.brainResults['refresh']).toStrictEqual({ $pending: false, $error: null });
+		});
+
 		it('calls invalidateSourceCache and loadSources after a successful brain', async () => {
 			const invalidateSourceCache = vi.fn();
 			const loadSources = vi.fn().mockResolvedValue(undefined);
