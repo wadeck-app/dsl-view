@@ -1,9 +1,15 @@
-// process is defined by Node.js, Webpack, Vite, and similar bundlers.
-// The runtime usage below is always guarded by `typeof process !== 'undefined'`.
-// This declaration prevents TS errors in browser-targeted consuming projects.
-declare const process: { env: Record<string, string | undefined> } | undefined;
+// `process` is absent in a browser. Bundlers (Vite in dev and in build, webpack, esbuild) replace the exact expression
+// `process.env.NODE_ENV` statically, also inside dependencies, so it must be read WITHOUT a `typeof process` guard:
+// a guard is not replaced and evaluates to false in a browser, which silently switched every dev diagnostic off in
+// `vite dev` (measured with a real dev server). When nothing replaced the expression and `process` does not exist, the
+// ReferenceError below is caught and the answer is "not development" (fail closed).
+declare const process: { env: { NODE_ENV?: string } };
 
 /** True outside production builds. Dev-only diagnostics (authoring mistakes shown or logged) are gated on it. */
 export function isDevelopment(): boolean {
-	return typeof process !== 'undefined' && process.env['NODE_ENV'] !== 'production';
+	try {
+		return process.env.NODE_ENV !== 'production';
+	} catch {
+		return false;
+	}
 }
