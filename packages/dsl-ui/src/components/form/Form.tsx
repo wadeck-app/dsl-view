@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { contentKey } from '@dsl-ui/utils/contentKey.js';
 
 export interface FormContextValue {
 	formData: Record<string, unknown>;
@@ -38,7 +39,7 @@ export function Form({ fields, actions, onSubmit, initialData }: FormProps) {
 
 	// A page that polls hands over a NEW object with the same content on every reload; keying on the
 	// content keeps the user's in-progress edits unless the server data really changed.
-	const initialKey = JSON.stringify(initialData ?? null);
+	const initialKey = contentKey(initialData);
 
 	// Sync formState when server data refreshes (skip initial mount to avoid resetting in-progress edits)
 	useEffect(() => {
@@ -82,7 +83,7 @@ export function Form({ fields, actions, onSubmit, initialData }: FormProps) {
 		}
 	}, [initialData]);
 
-	const hasChanges = JSON.stringify(formState) !== JSON.stringify(savedState);
+	const hasChanges = contentKey(formState) !== contentKey(savedState);
 
 	const onChange = useCallback((key: string, value: unknown) => {
 		setFormState(prev => ({ ...prev, [key]: value }));

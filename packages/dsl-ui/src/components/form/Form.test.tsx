@@ -74,6 +74,25 @@ describe('Form', () => {
 		expect(screen.getByTestId('form-data')).toHaveTextContent('{"x":1}');
 	});
 
+	it('renders when the initialData carries a DOM element (what a click handler passes along), without crashing the page', () => {
+		// The library "Create book" dialog crashed the whole page here: the clicked button reached the form as data and
+		// JSON.stringify choked on its circular React fiber.
+		const button = document.createElement('button');
+		(button as unknown as Record<string, unknown>)['__reactFiber$x'] = { stateNode: button };
+
+		render(
+			<Form
+				fields={<NameField />}
+				actions={<UnsavedBadge />}
+				onSubmit={vi.fn().mockResolvedValue(undefined)}
+				initialData={{ name: 'Dune', currentTarget: button }}
+			/>
+		);
+
+		expect(screen.getByLabelText('name')).toHaveValue('Dune');
+		expect(screen.queryByText('Unsaved changes')).toBeNull();
+	});
+
 	it('starts with empty formData when there is no initialData', () => {
 		render(<Form fields={<FormDataDisplay />} actions={<div />} onSubmit={vi.fn().mockResolvedValue(undefined)} />);
 		expect(screen.getByTestId('form-data')).toHaveTextContent('{}');
