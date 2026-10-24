@@ -46,6 +46,19 @@ describe('known-keys.json (shipped manifest for CLIs)', () => {
 	});
 });
 
+describe('known-keys.json DataTable props', () => {
+	it('accepts rowKey and rejects the removed page / onPageChange (DataTable never paginated: that is Pagination)', async () => {
+		if (!fs.existsSync(unknownKeysPath)) {
+			throw new Error(`dsl-renderer is not built (${unknownKeysPath} missing): run \`npm run build\` in packages/dsl-renderer first.`);
+		}
+		const { findUnknownKeys } = await import(/* @vite-ignore */ unknownKeysPath);
+		expect(findUnknownKeys({ $type: 'DataTable', rows: '$sources.rows', columns: [], rowKey: 'uuid', selectable: true }, manifest)).toEqual([]);
+		const diagnostics = findUnknownKeys({ $type: 'DataTable', rows: '$sources.rows', columns: [], page: 2, onPageChange: '$x' }, manifest);
+		expect(diagnostics.map((d: { message: string }) => d.message).join('\n')).toMatch(/"page"[\s\S]*"onPageChange"|"onPageChange"[\s\S]*"page"/);
+		expect(diagnostics).toHaveLength(2);
+	});
+});
+
 describe('known-keys.json DataTable columns', () => {
 	it('flags an ignored column key (and the `$type: actions` mistake) with only the JSON', async () => {
 		if (!fs.existsSync(unknownKeysPath)) {

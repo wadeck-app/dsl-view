@@ -669,11 +669,11 @@ export interface DataTableProps<T extends Record<string, unknown>> {
 	filters?: React.ReactNode;
 	id?: string;
 	/**
-	 * Not used: DataTable does not paginate (the `Pagination` component does). Kept so existing pages that pass them
-	 * keep compiling; neither prop changes what is rendered.
+	 * Row field that identifies a row for selection (and the batch action's rows). Default `id`. A row without a value
+	 * falls back to its position in `rows` and a warning explains it; two rows with the same value warn too (selecting
+	 * one would select both).
 	 */
-	page?: number;
-	onPageChange?: (page: number) => void;
+	rowKey?: string;
 	/** Sort column key. Empty string means unsorted. */
 	sortCol?: string;
 	onSortColChange?: (col: string) => void;
@@ -734,8 +734,7 @@ export function DataTable<T extends Record<string, unknown>>({
 	filtersTop,
 	filters,
 	id,
-	page,
-	onPageChange,
+	rowKey = 'id',
 	sortCol,
 	onSortColChange,
 	sortDir,
@@ -800,16 +799,6 @@ export function DataTable<T extends Record<string, unknown>>({
 	// DataTableState) - each falls back to its own local useState when the matching
 	// on*Change prop is absent, matching the mechanical urlBackedPair codegen's own per-pair
 	// controlled/uncontrolled convention.
-	const [internalPage, setInternalPage] = useState(0);
-	const _activePage = page ?? internalPage;
-	function handlePageChange(next: number) {
-		if (onPageChange) {
-			onPageChange(next);
-		} else {
-			setInternalPage(next);
-		}
-	}
-
 	const [internalSortCol, setInternalSortCol] = useState('');
 	const activeSortCol = sortCol ?? internalSortCol;
 	function handleSortColChange(next: string) {
@@ -878,6 +867,44 @@ export function DataTable<T extends Record<string, unknown>>({
 	// --- Selection state ----------------------------------------------------------
 	const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
+	// A row's selection identity: its `rowKey` value, else its position in `rows` (stable while `rows` is the same array,
+	// across sorting and filtering). Rows used to be keyed by `row.id ?? ''`, so every row without an id shared one
+	// key and toggled together.
+	const rowIds = useMemo(() => {
+		const ids = new Map<T, string>();
+		const seen = new Map<string, number>();
+		let missing = 0;
+		rows.forEach((row, index) => {
+			const raw = row[rowKey];
+			let rowId: string;
+			if (raw === undefined || raw === null || raw === '') {
+				missing += 1;
+				rowId = `#${index}`;
+			} else {
+				rowId = String(raw);
+			}
+			seen.set(rowId, (seen.get(rowId) ?? 0) + 1);
+			ids.set(row, rowId);
+		});
+		if (selectable) {
+			if (missing > 0) {
+				warnOnce(
+					`[DataTable] ${missing} row(s) have no "${rowKey}" value: their selection falls back to their position in the rows, ` +
+						`which changes when the rows are reloaded in another order. Give the rows a "${rowKey}" or set rowKey to a unique column.`
+				);
+			}
+			const duplicated = [...seen.entries()].filter(([, count]) => count > 1).map(([value]) => value);
+			if (duplicated.length > 0) {
+				warnOnce(
+					`[DataTable] rows share the same "${rowKey}" (${duplicated.slice(0, 5).join(', ')}): selecting one row selects all rows ` +
+						`with the same value. Use a unique column (rowKey).`
+				);
+			}
+		}
+		return ids;
+	}, [rows, rowKey, selectable]);
+	const idOf = (row: T): string => rowIds.get(row) ?? String(row[rowKey] ?? '');
+
 	const toggleRow = useCallback((id: string) => {
 		setSelectedIds(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
 	}, []);
@@ -889,7 +916,7 @@ export function DataTable<T extends Record<string, unknown>>({
 	const clearSelection = useCallback(() => setSelectedIds([]), []);
 
 	// Derive current page row IDs for select-all calculation
-	const currentPageIds = sortedRows.map(row => String(row['id'] ?? ''));
+	const currentPageIds = sortedRows.map(idOf);
 	const allSelected = currentPageIds.length > 0 && currentPageIds.every(id => selectedIds.includes(id));
 	const someSelected = selectedIds.length > 0 && !allSelected;
 
@@ -913,9 +940,7 @@ export function DataTable<T extends Record<string, unknown>>({
 					loading={actionPending?.[action.action] === true}
 					aria-busy={actionPending?.[action.action] === true || undefined}
 					onClick={() => {
-						const selectedRows = rows.filter(r =>
-							selectedIds.includes(String(r['id'] ?? ''))
-						);
+						const selectedRows = rows.filter(r => selectedIds.includes(idOf(r)));
 						onBatchAction?.(action.action, selectedRows);
 						clearSelection();
 					}}
@@ -1063,7 +1088,7 @@ export function DataTable<T extends Record<string, unknown>>({
 								</tr>
 							) : (
 								sortedRows.map((row, ri) => {
-									const stableKey = row['id'] ?? row['key'] ?? ri;
+									const stableKey = row[rowKey] ?? row['key'] ?? ri;
 									return (
 									<React.Fragment key={ri}>
 										<tr
@@ -1080,13 +1105,13 @@ export function DataTable<T extends Record<string, unknown>>({
 												<td className="w-8 px-3 py-1.5">
 													<div className="flex items-center justify-center">
 														<Checkbox
-															checked={selectedIds.includes(String(row['id'] ?? ''))}
+															checked={selectedIds.includes(idOf(row))}
 															onChange={e => {
 																e.stopPropagation();
-																toggleRow(String(row['id'] ?? ''));
+																toggleRow(idOf(row));
 															}}
 															onClick={e => e.stopPropagation()}
-															aria-label={`Select row ${String(row['id'] ?? ri)}`}
+															aria-label={`Select row ${String(row[rowKey] ?? ri)}`}
 															className="cursor-pointer"
 														/>
 													</div>

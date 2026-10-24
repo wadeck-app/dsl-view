@@ -816,7 +816,7 @@ export const DataTableNodeSchema = baseNode.extend({
 	filtersTop: dsl(z.array(z.unknown())).optional(),
 	filters: dsl(z.array(z.unknown())).optional(),
 	id: z.string().optional(),
-	page: dsl(z.number()).optional(),
+	rowKey: z.string().optional(),
 	sortCol: z.string().optional(),
 	sortDir: dsl(z.enum(['asc', 'desc'])).optional(),
 	defaultFilters: dsl(z.record(z.string(), z.unknown())).optional(),
