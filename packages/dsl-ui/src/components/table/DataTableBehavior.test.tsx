@@ -442,6 +442,30 @@ describe('DataTable expansion', () => {
 	});
 });
 
+describe('DataTable busy presentation', () => {
+	const cols = [ColumnHelpers.text<Row>('name', 'Name'), ColumnHelpers.text<Row>('status', 'Status')];
+	const dimmed = () => screen.getAllByRole('rowgroup')[1]!.className.includes('opacity-60');
+
+	it('dims the kept rows only for a refetch: not while idle, not behind the loading skeleton', () => {
+		const idle = render(<DataTable rows={rows} columns={cols} />);
+		expect(dimmed()).toBe(false);
+		idle.unmount();
+		const refreshing = render(<DataTable rows={rows} columns={cols} refreshing />);
+		expect(dimmed()).toBe(true);
+		refreshing.unmount();
+		// First load wins over a refetch flag: skeleton rows are not dimmed, they have their own look.
+		render(<DataTable rows={[]} columns={cols} loading refreshing />);
+		expect(dimmed()).toBe(false);
+	});
+
+	it('announces the loading state from the first cell of the first skeleton row, once', () => {
+		render(<DataTable rows={[]} columns={cols} loading />);
+		const status = screen.getByRole('status');
+		const firstCell = within(screen.getAllByRole('row')[1]!).getAllByRole('cell')[0]!;
+		expect(firstCell).toContainElement(status);
+	});
+});
+
 describe('DataTable row actions conditions', () => {
 	type T = { id: string; label: string; revoked: boolean };
 	const data: T[] = [

@@ -43,6 +43,7 @@ export interface ProbeProps {
 	arr2: Array<boolean>;
 	obj: { x: number; y?: string };
 	emptyObj: {};
+	untypedMember: { untyped; ok: number };
 	item: Item;
 	empty: Empty;
 	tree: Tree;
@@ -132,6 +133,34 @@ export interface FiltersProps { value: string[]; onChange: (v: string[]) => void
  */
 export function Filters(props: FiltersProps) { return null; }
 `,
+	// `children` is a node slot only when EVERY union member is a ReactNode, a render function, undefined or null.
+	'Mixed.tsx': `
+import React from 'react';
+
+export interface MixedProps { children: React.ReactNode | string }
+
+/**
+ * @registryCategory composite
+ */
+export function Mixed(props: MixedProps) { return null; }
+`,
+	'NullableSlot.tsx': `
+import React from 'react';
+
+export interface NullableSlotProps { children: React.ReactNode | null | undefined }
+
+/**
+ * @registryCategory composite
+ */
+export function NullableSlot(props: NullableSlotProps) { return null; }
+`,
+	// An anonymous default export has no name: skipped, not a crash.
+	'Anonymous.tsx': `
+/**
+ * @registryCategory atomic
+ */
+export default function () { return null; }
+`,
 	'Nothing.tsx': `
 export interface NothingProps {}
 
@@ -180,9 +209,9 @@ afterAll(() => {
 
 describe('generate-node-schemas on synthetic components', () => {
 	it('generates a schema only for exported, capitalised, @registryCategory components with a Props interface', () => {
-		expect(log).toMatch(/with 8 schemas/);
+		expect(log).toMatch(/with 10 schemas/);
 		const names = [...output.matchAll(/^export const (\w+)NodeSchema = /gm)].map(m => m[1]);
-		expect(names).toEqual(['Bound', 'Filters', 'Nothing', 'Probe', 'Slots', 'Toggle', 'Valued', 'Wrapper']);
+		expect(names).toEqual(['Bound', 'Filters', 'Mixed', 'Nothing', 'NullableSlot', 'Probe', 'Slots', 'Toggle', 'Valued', 'Wrapper']);
 	});
 
 	it('writes the shared header: baseNode with $type and every directive, the expression escape hatch', () => {
@@ -240,6 +269,7 @@ describe('generate-node-schemas on synthetic components', () => {
 			['a same-file type alias resolves to its enum', "\ttone: dsl(z.enum(['calm', 'loud'])),"],
 			['an unknown external type', '\twhen: z.unknown(),'],
 			['a property with no type annotation', '\tloose: z.unknown(),'],
+			['an object member with no type annotation', '\tuntypedMember: dsl(z.object({\n\t\tuntyped: z.unknown(),\n\t\tok: z.number(),\n\t})),'],
 		])('%s', (_name, line) => {
 			expect(schemaOf('Probe')).toContain(line);
 		});
@@ -277,6 +307,18 @@ describe('generate-node-schemas on synthetic components', () => {
 			expect(slots).toContain('\tfooter: dsl(z.array(z.unknown())).optional(),');
 			expect(slots).toContain('\titems: dsl(z.array(z.unknown())).optional(),');
 			expect(slots).not.toContain('children');
+		});
+
+		it('`children` is a node slot only when every union member is node-like: ReactNode | string keeps `children`', () => {
+			const mixed = schemaOf('Mixed');
+			expect(mixed).toContain('\tchildren: ');
+			expect(mixed).not.toContain('\titems:');
+		});
+
+		it('`children` typed ReactNode | null | undefined is still a node slot', () => {
+			const nullable = schemaOf('NullableSlot');
+			expect(nullable).toContain('\titems: ');
+			expect(nullable).not.toContain('children');
 		});
 
 		it('`children` typed ReactNode | render function is a node slot too (YAML cannot author a function)', () => {
