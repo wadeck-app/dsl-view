@@ -39,6 +39,35 @@ describe('useVars', () => {
 		expect(result.current.vars['count']).toBe(99);
 	});
 
+	it('setVar(key, undefined) keeps the key, with an undefined value', () => {
+		const { result } = renderHook(() => useVars({ count: 1 }));
+		act(() => {
+			result.current.setVar('count', undefined);
+		});
+		// toStrictEqual: toEqual would not tell a stored undefined from a removed key.
+		expect(result.current.vars).toStrictEqual({ count: undefined });
+	});
+
+	it('does not mutate the initial object it was given', () => {
+		const initial = { count: 0 };
+		const { result } = renderHook(() => useVars(initial));
+		act(() => {
+			result.current.setVar('count', 5);
+		});
+		expect(initial).toStrictEqual({ count: 0 });
+	});
+
+	it('reads the initial vars only once, at mount: a new default on a re-render does not reset anything', () => {
+		// This is why GenericPageRunner remounts the runner when the page document changes (pageKey):
+		// the vars of a new page must come from a fresh mount, never from a re-render.
+		const { result, rerender } = renderHook(({ initial }) => useVars(initial), { initialProps: { initial: { a: 1 } as Record<string, unknown> } });
+		act(() => {
+			result.current.setVar('a', 2);
+		});
+		rerender({ initial: { a: 100, b: 200 } });
+		expect(result.current.vars).toStrictEqual({ a: 2 });
+	});
+
 	it('setVar is referentially stable across renders', () => {
 		const { result, rerender } = renderHook(() => useVars({ count: 0 }));
 		const firstRef = result.current.setVar;

@@ -82,7 +82,10 @@ describe('useSourceLoader: unmount', () => {
 		await waitFor(() => expect(fetcher).toHaveBeenCalledWith('GET /api/a', undefined, undefined, undefined));
 		unmount();
 		await act(async () => a.resolve({ id: '9' }));
-		await Promise.resolve();
+		// One macrotask turn: the next level would have been requested by now.
+		await act(async () => {
+			await new Promise<void>(resolve => setTimeout(resolve, 0));
+		});
 		expect(fetcher).toHaveBeenCalledTimes(1);
 	});
 });
@@ -242,7 +245,10 @@ describe('useSourceLoader: url-param refetch', () => {
 		});
 		await waitFor(() => expect(result.current.loading).toBe(false));
 		rerender({ q: 'b' });
-		await Promise.resolve();
+		// One macrotask turn: a (wrong) refetch would have started by now; a single microtask tick proves nothing.
+		await act(async () => {
+			await new Promise<void>(resolve => setTimeout(resolve, 0));
+		});
 		expect(fetcher).toHaveBeenCalledTimes(1);
 	});
 });

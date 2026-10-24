@@ -47,6 +47,41 @@ describe('useOutputs', () => {
 		expect(typeof stored?.$tick).toBe('number');
 	});
 
+	it.each([null, 0, '', false])('stores the falsy value %j as is: only undefined becomes a tick', value => {
+		const { result } = renderHook(() => useOutputs());
+		act(() => {
+			result.current.publishOutput('btn', 'value', value);
+		});
+		expect(result.current.outputs['btn']?.['value']).toBe(value);
+	});
+
+	it('republishing a real value after an undefined (tick) one replaces the tick', () => {
+		const { result } = renderHook(() => useOutputs());
+		act(() => {
+			result.current.publishOutput('btn', 'onClick', undefined);
+		});
+		act(() => {
+			result.current.publishOutput('btn', 'onClick', 'clicked');
+		});
+		expect(result.current.outputs['btn']).toStrictEqual({ onClick: 'clicked' });
+	});
+
+	it('ticks stay distinct across different outputs and hook instances (one monotone counter)', () => {
+		const first = renderHook(() => useOutputs());
+		const second = renderHook(() => useOutputs());
+		act(() => {
+			first.result.current.publishOutput('a', 'x', undefined);
+			second.result.current.publishOutput('a', 'x', undefined);
+			first.result.current.publishOutput('b', 'y', undefined);
+		});
+		const ticks = [
+			(first.result.current.outputs['a']?.['x'] as { $tick: number }).$tick,
+			(second.result.current.outputs['a']?.['x'] as { $tick: number }).$tick,
+			(first.result.current.outputs['b']?.['y'] as { $tick: number }).$tick,
+		];
+		expect(new Set(ticks).size).toBe(3);
+	});
+
 	it('two successive undefined publishes produce different tick values', () => {
 		const { result } = renderHook(() => useOutputs());
 		act(() => {

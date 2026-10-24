@@ -164,7 +164,10 @@ describe('useSourceLoader: unsupported pollWhen', () => {
 		const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 		const { fetcher } = manualFetcher();
 		renderHook(() => useSourceLoader(params(fetcher, SOURCES_POLL_WHEN_URL)));
-		await Promise.resolve();
+		// One macrotask turn: the load and its effects have all run, so a (wrong) error would be logged by now.
+		await act(async () => {
+			await new Promise<void>(resolve => setTimeout(resolve, 0));
+		});
 		expect(error.mock.calls.map(c => String(c[0])).filter(m => m.includes('pollWhen'))).toHaveLength(0);
 		error.mockRestore();
 	});

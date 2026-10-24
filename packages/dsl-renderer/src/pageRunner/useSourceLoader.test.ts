@@ -11,14 +11,6 @@ const SOURCES_BOOKS: Record<string, RawSourceSpec> = { books: 'GET /api/books/' 
 const SOURCES_BOOKS_WITH_CACHE: Record<string, RawSourceSpec> = {
 	books: { url: 'GET /api/books/', cache: '10s' },
 };
-// parsePollMs only accepts "Ns" / "Nm" format - "100ms" would throw at runtime.
-// Use "1s" + real timers: waitFor uses setTimeout internally and breaks with fake timers.
-const SOURCES_BOOKS_POLL_1S: Record<string, RawSourceSpec> = {
-	books: { url: 'GET /api/books/', poll: '1s' },
-};
-const SOURCES_BOOKS_POLL_WHEN_1S: Record<string, RawSourceSpec> = {
-	books: { url: 'GET /api/books/', poll: '1s', pollWhen: '$urlParam.live' },
-};
 const SOURCES_ITEM_ROUTE_PARAM: Record<string, RawSourceSpec> = {
 	item: { url: 'GET /api/items/{id}', params: { id: '$route.itemId' } },
 };
@@ -211,8 +203,10 @@ describe('useSourceLoader', () => {
 				undefined,
 				undefined
 			);
-			// Give any extra, unwanted fetch a chance to land before asserting it didn't.
-			await new Promise(r => setTimeout(r, 50));
+			// One macrotask turn: any extra, unwanted fetch would have landed by now.
+			await act(async () => {
+				await new Promise<void>(r => setTimeout(r, 0));
+			});
 			expect(fetcher).toHaveBeenCalledTimes(2);
 		});
 
@@ -331,80 +325,8 @@ describe('useSourceLoader', () => {
 		});
 	});
 
-	// ---------------------------------------------------------------------------
-	// Polling
-	// Tests use real timers. Poll interval is "1s" (shortest valid format).
-	// waitFor retries on real time; fake timers break waitFor's internal setTimeout.
-	// ---------------------------------------------------------------------------
-
-	describe('polling', () => {
-		it('fetcher called again after poll interval', async () => {
-			const fetcher = vi.fn().mockResolvedValue([]);
-
-			const { result } = renderHook(() =>
-				useSourceLoader({
-					$sources: SOURCES_BOOKS_POLL_1S,
-					searchParams: new URLSearchParams(),
-					fetcher,
-				})
-			);
-
-			await waitFor(() => expect(result.current.loading).toBe(false));
-			const countAfterMount = fetcher.mock.calls.length;
-			expect(countAfterMount).toBeGreaterThanOrEqual(1);
-
-			// Wait for at least one 1s poll tick to fire (timeout 3s)
-			await waitFor(
-				() => expect(fetcher.mock.calls.length).toBeGreaterThan(countAfterMount),
-				{ timeout: 3000 }
-			);
-		}, 5000);
-
-		it('pollWhen: false skips polling when the urlParam is absent', async () => {
-			const fetcher = vi.fn().mockResolvedValue([]);
-			const searchParams = new URLSearchParams(); // 'live' is absent
-
-			const { result } = renderHook(() =>
-				useSourceLoader({
-					$sources: SOURCES_BOOKS_POLL_WHEN_1S,
-					searchParams,
-					fetcher,
-				})
-			);
-
-			await waitFor(() => expect(result.current.loading).toBe(false));
-			const countAfterMount = fetcher.mock.calls.length;
-
-			// Wait 1.5s - if polling were active the count would increase
-			await new Promise(resolve => setTimeout(resolve, 1500));
-
-			expect(fetcher.mock.calls.length).toBe(countAfterMount);
-		}, 5000);
-
-		it('polls when pollWhen urlParam is truthy', async () => {
-			const fetcher = vi.fn().mockResolvedValue([]);
-			// 'live=1' is truthy - polling should be enabled
-			const searchParams = new URLSearchParams('live=1');
-
-			const { result } = renderHook(() =>
-				useSourceLoader({
-					$sources: SOURCES_BOOKS_POLL_WHEN_1S,
-					searchParams,
-					fetcher,
-				})
-			);
-
-			await waitFor(() => expect(result.current.loading).toBe(false));
-			const countAfterMount = fetcher.mock.calls.length;
-			expect(countAfterMount).toBeGreaterThanOrEqual(1);
-
-			// Wait for at least one 1s poll tick (timeout 3s)
-			await waitFor(
-				() => expect(fetcher.mock.calls.length).toBeGreaterThan(countAfterMount),
-				{ timeout: 3000 }
-			);
-		}, 5000);
-	});
+	// Polling (interval, pollWhen, stop on unmount) is covered with a fake clock in useSourceLoader.behaviour.test.ts:
+	// real-timer polling tests cost seconds each and could only assert "called again", never how many times.
 
 	// ---------------------------------------------------------------------------
 	// isRefreshing

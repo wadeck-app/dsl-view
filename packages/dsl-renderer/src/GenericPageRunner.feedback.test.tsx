@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import React from 'react';
@@ -132,7 +132,7 @@ describe('action feedback: default inline banner (no host notifier)', () => {
 		await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
 		fireEvent.click(screen.getByText('row'));
 		await waitFor(() => expect(onActionError).toHaveBeenCalledTimes(1));
-		expect(consoleError).toHaveBeenCalled();
+		expect(consoleError).toHaveBeenCalledWith(expect.stringContaining('row action "clearEntry" failed: boom'));
 		expect(screen.queryByRole('status')).toBeNull();
 		expect(screen.queryByRole('alert')).toBeNull();
 	});
@@ -141,7 +141,9 @@ describe('action feedback: default inline banner (no host notifier)', () => {
 		vi.spyOn(window, 'confirm').mockReturnValue(false);
 		const { fetcher } = renderPage(PAGE('    confirm: "Sure?"'));
 		fireEvent.click(screen.getByText('row'));
-		await new Promise(resolve => setTimeout(resolve, 20));
+		await act(async () => {
+			await new Promise<void>(resolve => setTimeout(resolve, 0));
+		});
 		expect(fetcher).not.toHaveBeenCalled();
 		expect(screen.queryByRole('status')).toBeNull();
 	});
@@ -202,7 +204,7 @@ $type: Actions
 action: clearEntry
 `;
 
-	it('shows a failed brain, unless the brain sets $notify: false', async () => {
+	it('shows a failed brain as an alert carrying the brain error message', async () => {
 		vi.spyOn(console, 'error').mockImplementation(() => undefined);
 		const failing = vi.fn().mockRejectedValue(failure('Brain exploded', 502));
 		renderPage(BRAIN_PAGE(''), { brainRegistry: { failing } });
@@ -213,7 +215,11 @@ action: clearEntry
 		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 		const failing = vi.fn().mockRejectedValue(failure('Brain exploded', 502));
 		renderPage(BRAIN_PAGE('    $notify: false'), { brainRegistry: { failing } });
-		await waitFor(() => expect(consoleError).toHaveBeenCalled());
+		await waitFor(() => expect(consoleError).toHaveBeenCalledWith('[useBrains] brain "saveThing" failed:', 'Brain exploded'));
+		// One macrotask turn: a banner for this failure would be on screen by now.
+		await act(async () => {
+			await new Promise<void>(resolve => setTimeout(resolve, 0));
+		});
 		expect(screen.queryByRole('alert')).toBeNull();
 	});
 

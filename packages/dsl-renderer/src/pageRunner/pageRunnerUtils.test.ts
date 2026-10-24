@@ -5,7 +5,6 @@ import {
 	substituteUrlParams,
 	topoSortSources,
 	topoLevels,
-	parsePollMs,
 	SourceManager,
 } from './pageRunnerUtils.js';
 
@@ -184,20 +183,6 @@ describe('topoLevels', () => {
 	});
 });
 
-describe('parsePollMs', () => {
-	it('"10s" returns 10000', () => {
-		expect(parsePollMs('10s')).toBe(10000);
-	});
-
-	it('"2m" returns 120000', () => {
-		expect(parsePollMs('2m')).toBe(120000);
-	});
-
-	it('"bad" throws', () => {
-		expect(() => parsePollMs('bad')).toThrow();
-	});
-});
-
 describe('SourceManager', () => {
 	it('get returns null initially', () => {
 		const mgr = new SourceManager();
@@ -210,22 +195,6 @@ describe('SourceManager', () => {
 		expect(mgr.get('myKey')).toEqual({ data: 42 });
 	});
 
-	it('set with TTL 1ms, after 2ms get returns null (expired)', async () => {
-		const mgr = new SourceManager();
-		mgr.set('expKey', 'value', 1);
-		await new Promise(resolve => setTimeout(resolve, 5));
-		expect(mgr.get('expKey')).toBeNull();
-	});
-
-	it('invalidateSource removes all keys with that prefix', () => {
-		const mgr = new SourceManager();
-		mgr.set('books:/api/books', ['a', 'b'], 60_000);
-		mgr.set('books:/api/books?page=2', ['c'], 60_000);
-		mgr.set('authors:/api/authors', ['d'], 60_000);
-		mgr.invalidateSource('books');
-		expect(mgr.get('books:/api/books')).toBeNull();
-		expect(mgr.get('books:/api/books?page=2')).toBeNull();
-		// authors should be unaffected
-		expect(mgr.get('authors:/api/authors')).toEqual(['d']);
-	});
+	// TTL expiry (on a fake clock, with the exact boundary) and invalidateSource (including the
+	// "booksExtra" prefix boundary) are tested in pageRunnerUtils.units.test.ts.
 });

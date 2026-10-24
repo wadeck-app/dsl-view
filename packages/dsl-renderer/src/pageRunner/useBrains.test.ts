@@ -454,9 +454,9 @@ describe('useBrains', () => {
 				))
 			);
 
-			// Give async brain time to settle
+			// One macrotask turn: every promise continuation of the failed brain has run by the time it ends.
 			await act(async () => {
-				await new Promise(r => setTimeout(r, 50));
+				await new Promise(r => setTimeout(r, 0));
 			});
 
 			expect(invalidateSourceCache).not.toHaveBeenCalled();
@@ -616,9 +616,9 @@ describe('useBrains', () => {
 				))
 			);
 
-			// Give the chain time to attempt step1 and catch the error
+			// One macrotask turn: step1 has failed and its error handling has finished by the time it ends.
 			await act(async () => {
-				await new Promise(r => setTimeout(r, 50));
+				await new Promise(r => setTimeout(r, 0));
 			});
 
 			// step2 must not have been called
