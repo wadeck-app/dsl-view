@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { FieldDateTime } from './FieldDateTime.js';
 
@@ -137,18 +137,155 @@ describe('the time half', () => {
 	});
 });
 
+describe('a fixed clock for the Now shortcut', () => {
+	beforeEach(() => {
+		vi.useFakeTimers({ toFake: ['Date'] });
+		vi.setSystemTime(new Date(2026, 8, 19, 14, 5, 30));
+	});
+
+	it('Now on an existing value sets exactly the current hour and minute and keeps the day', () => {
+		const onChange = vi.fn();
+		render(<FieldDateTime label="Run at" value={AT_0930} onChange={onChange} open />);
+
+		fireEvent.click(screen.getByText('Now'));
+
+		const next = onChange.mock.calls[0]![0] as Date;
+		expect([next.getFullYear(), next.getMonth(), next.getDate()]).toEqual([2026, 8, 19]);
+		expect([next.getHours(), next.getMinutes(), next.getSeconds(), next.getMilliseconds()]).toEqual([14, 5, 0, 0]);
+	});
+
+	it('a time held before any date lands exactly on the picked day', () => {
+		const onChange = vi.fn();
+		render(<FieldDateTime label="Run at" value={null} onChange={onChange} open />);
+
+		fireEvent.click(screen.getByText('Now'));
+		expect(screen.getByRole('button', { expanded: true })).toHaveTextContent('14:05');
+		fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Sep 25, 2026' } });
+
+		const next = onChange.mock.calls[0]![0] as Date;
+		expect([next.getDate(), next.getHours(), next.getMinutes()]).toEqual([25, 14, 5]);
+	});
+});
+
+describe('holding the time across a cleared date', () => {
+	function Host({ initial }: { initial: Date | null }) {
+		const [value, setValue] = React.useState<Date | null>(initial);
+		return (
+			<>
+				<FieldDateTime label="Run at" value={value} onChange={setValue} />
+				<button onClick={() => setValue(null)}>External reset</button>
+				<output data-testid="emitted">{value ? value.toISOString() : 'null'}</output>
+			</>
+		);
+	}
+
+	it('clearing the date keeps the time shown, and picking a day again restores the moment with that time', () => {
+		render(<Host initial={AT_0930} />);
+
+		fireEvent.change(screen.getByRole('textbox'), { target: { value: '' } });
+		expect(screen.getByTestId('emitted')).toHaveTextContent('null');
+		expect(screen.getByRole('button', { name: /09:30/ })).toBeInTheDocument();
+
+		fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Sep 25, 2026' } });
+		expect(screen.getByTestId('emitted')).toHaveTextContent(new Date(2026, 8, 25, 9, 30).toISOString());
+	});
+
+	it('once a value exists the held time is gone: an external reset shows an empty time', () => {
+		render(<Host initial={AT_0930} />);
+		fireEvent.click(screen.getByText('External reset'));
+		expect(screen.getByRole('button', { name: 'Select a time...' })).toBeInTheDocument();
+	});
+});
+
 describe('minDate and maxDate', () => {
-	it('are passed to the date half', () => {
+	function typeDay(text: string) {
+		fireEvent.change(screen.getByRole('textbox'), { target: { value: text } });
+	}
+
+	function renderBounded(onChange = vi.fn()) {
 		render(
 			<FieldDateTime
 				label="Run at"
-				value={AT_0930}
-				onChange={noop}
+				value={null}
+				onChange={onChange}
 				minDate={new Date(2026, 8, 1)}
 				maxDate={new Date(2026, 8, 30)}
 			/>,
 		);
-		// Rendering with bounds must not throw and must keep the current value visible.
-		expect(screen.getByRole('textbox')).toHaveValue('Sep 19, 2026');
+		return onChange;
+	}
+
+	it('a day before minDate is not emitted, the minDate day itself is', () => {
+		const onChange = renderBounded();
+		typeDay('Aug 31, 2026');
+		expect(onChange).not.toHaveBeenCalled();
+		typeDay('Sep 1, 2026');
+		expect(onChange).toHaveBeenCalledTimes(1);
+	});
+
+	it('a day after maxDate is not emitted, the maxDate day itself is', () => {
+		const onChange = renderBounded();
+		typeDay('Oct 1, 2026');
+		expect(onChange).not.toHaveBeenCalled();
+		typeDay('Sep 30, 2026');
+		expect(onChange).toHaveBeenCalledTimes(1);
+	});
+
+	it('isDateDisabled vetoes a day the same way', () => {
+		const onChange = vi.fn();
+		render(<FieldDateTime label="Run at" value={null} onChange={onChange} isDateDisabled={d => d.getDate() === 25} />);
+		typeDay('Sep 25, 2026');
+		expect(onChange).not.toHaveBeenCalled();
+		typeDay('Sep 26, 2026');
+		expect(onChange).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe('options passed to the halves', () => {
+	it('dateFormat shapes what is shown and what is parsed', () => {
+		const onChange = vi.fn();
+		render(<FieldDateTime label="Run at" value={AT_0930} onChange={onChange} dateFormat="yyyy-MM-dd" />);
+		expect(screen.getByRole('textbox')).toHaveValue('2026-09-19');
+		fireEvent.change(screen.getByRole('textbox'), { target: { value: '2026-09-25' } });
+		expect((onChange.mock.calls[0]![0] as Date).getDate()).toBe(25);
+	});
+
+	it('is12Hour shows the time with its period', () => {
+		render(<FieldDateTime label="Run at" value={AT_0930} onChange={noop} is12Hour />);
+		expect(screen.getByRole('button')).toHaveTextContent('09:30 AM');
+	});
+
+	it('minuteStep moves the minutes along the step grid', () => {
+		const onChange = vi.fn();
+		render(<FieldDateTime label="Run at" value={AT_0930} onChange={onChange} minuteStep={15} open />);
+		fireEvent.click(screen.getByRole('button', { name: 'Increment minutes' }));
+		const next = onChange.mock.calls[0]![0] as Date;
+		expect([next.getHours(), next.getMinutes()]).toEqual([9, 45]);
+	});
+
+	it('both placeholders are used while empty', () => {
+		render(<FieldDateTime label="Run at" value={null} onChange={noop} datePlaceholder="Pick a day" timePlaceholder="Pick an hour" />);
+		expect(screen.getByPlaceholderText('Pick a day')).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Pick an hour' })).toBeInTheDocument();
+	});
+
+	it('the controlled open state reaches the time half in both directions', () => {
+		const onOpenChange = vi.fn();
+		const { rerender } = render(<FieldDateTime label="Run at" value={AT_0930} onChange={noop} open={false} onOpenChange={onOpenChange} />);
+		expect(screen.queryByRole('spinbutton', { name: 'Minutes' })).toBeNull();
+		fireEvent.click(screen.getByRole('button'));
+		expect(onOpenChange).toHaveBeenCalledWith(true);
+		rerender(<FieldDateTime label="Run at" value={AT_0930} onChange={noop} open onOpenChange={onOpenChange} />);
+		expect(screen.getByRole('spinbutton', { name: 'Minutes' })).toBeInTheDocument();
+	});
+});
+
+describe('an invalid Date value', () => {
+	it('is shown as empty with a warning instead of crashing the form', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		render(<FieldDateTime label="Run at" value={new Date('not a date')} onChange={noop} />);
+		expect(screen.getByRole('textbox')).toHaveValue('');
+		expect(screen.getByRole('button')).toHaveTextContent('Select a time...');
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('[FieldDateTime]'));
 	});
 });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { DatePicker } from './DatePicker.js';
 import { TimePicker } from './TimePicker.js';
@@ -86,7 +86,7 @@ function combine(day: Date, time: string | null): Date {
 export function FieldDateTime({
 	label,
 	description,
-	value,
+	value: rawValue,
 	onChange,
 	isDateDisabled,
 	minDate,
@@ -102,6 +102,16 @@ export function FieldDateTime({
 	open,
 	onOpenChange,
 }: FieldDateTimeProps) {
+	// An Invalid Date (a failed `new Date(text)` upstream) cannot be formatted: the date picker would throw a
+	// RangeError and take the whole form down. Show it as empty and say why.
+	const invalid = rawValue !== null && Number.isNaN(rawValue.getTime());
+	useEffect(() => {
+		if (invalid) {
+			console.warn(`[FieldDateTime] "${label}" received an invalid Date and shows it as empty.`);
+		}
+	}, [invalid, label]);
+	const value = invalid ? null : rawValue;
+
 	// The time the user has chosen while there is still no date to attach it to. Null once a value
 	// exists, since the value itself then carries the time.
 	const [pendingTime, setPendingTime] = useState<string | null>(null);
