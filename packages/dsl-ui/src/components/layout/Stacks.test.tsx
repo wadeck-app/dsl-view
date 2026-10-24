@@ -9,6 +9,10 @@ afterEach(() => {
 	vi.restoreAllMocks();
 });
 
+function spyWarn() {
+	return vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+}
+
 describe('VerticalStack', () => {
 	it('stacks its children in a column with the default gap, or the gap it is given', () => {
 		const { container, rerender } = render(
@@ -24,6 +28,44 @@ describe('VerticalStack', () => {
 		rerender(<VerticalStack gap="gap-8">x</VerticalStack>);
 		expect(container.firstElementChild).toHaveClass('flex-col', 'gap-8');
 		expect(container.firstElementChild).not.toHaveClass('gap-4');
+	});
+
+	it('says nothing for the default or a known gap', () => {
+		const warn = spyWarn();
+
+		render(
+			<VerticalStack gap="gap-12">
+				<span>a</span>
+			</VerticalStack>
+		);
+		render(
+			<VerticalStack>
+				<span>b</span>
+			</VerticalStack>
+		);
+
+		expect(warn).not.toHaveBeenCalled();
+	});
+
+	it('an unknown gap is reported once with the allowed values, and still applied as written', () => {
+		const warn = spyWarn();
+		const { rerender } = render(
+			<VerticalStack gap={'gap-lots' as never}>
+				<span>a</span>
+			</VerticalStack>
+		);
+		rerender(
+			<VerticalStack gap={'gap-lots' as never}>
+				<span>a</span>
+			</VerticalStack>
+		);
+
+		expect(screen.getByText('a').parentElement).toHaveClass('gap-lots');
+		expect(warn).toHaveBeenCalledTimes(1);
+		const message = String(warn.mock.calls[0]![0]);
+		expect(message).toContain('[VerticalStack] unknown gap "gap-lots"');
+		expect(message).toContain('Allowed values: gap-0, gap-0.5, gap-1,');
+		expect(message).toContain('gap-16.');
 	});
 });
 
@@ -86,6 +128,85 @@ describe('HorizontalStack', () => {
 		const [first, second] = Array.from(container.firstElementChild!.children) as HTMLElement[];
 		expect(first!.tagName).toBe('DIV');
 		expect(second!.tagName).toBe('SPAN');
+	});
+
+	it('says nothing when every choice is known', () => {
+		const warn = spyWarn();
+
+		render(
+			<HorizontalStack gap="gap-2" align="items-end" justify="justify-between" itemSizes={['fixed', 'flex']}>
+				<span>a</span>
+				<span>b</span>
+			</HorizontalStack>
+		);
+
+		expect(warn).not.toHaveBeenCalled();
+	});
+
+	it('an unknown gap is reported once with the allowed values, and still applied as written', () => {
+		const warn = spyWarn();
+		const { rerender } = render(
+			<HorizontalStack gap={'gap-99' as never}>
+				<span>a</span>
+			</HorizontalStack>
+		);
+		rerender(
+			<HorizontalStack gap={'gap-99' as never}>
+				<span>a</span>
+			</HorizontalStack>
+		);
+
+		expect(screen.getByText('a').parentElement).toHaveClass('gap-99');
+		expect(warn).toHaveBeenCalledTimes(1);
+		const message = String(warn.mock.calls[0]![0]);
+		expect(message).toContain('[HorizontalStack] unknown gap "gap-99"');
+		expect(message).toContain('Allowed values: gap-0, gap-0.5, gap-1,');
+		expect(message).toContain('gap-16.');
+	});
+
+	it('reports an unknown align and an unknown justify, each by its own name', () => {
+		const warn = spyWarn();
+		render(
+			<HorizontalStack align={'items-middle' as never} justify={'justify-spread' as never}>
+				<span>a</span>
+			</HorizontalStack>
+		);
+
+		const messages = warn.mock.calls.map(call => String(call[0]));
+		expect(messages).toHaveLength(2);
+		expect(messages[0]).toContain('unknown align "items-middle"');
+		expect(messages[0]).toContain('items-start, items-center, items-end, items-stretch, items-baseline');
+		expect(messages[1]).toContain('unknown justify "justify-spread"');
+	});
+
+	it('an unknown item size is reported with fixed and flex, and its wrapper is rendered without a class', () => {
+		const warn = spyWarn();
+		render(
+			<HorizontalStack itemSizes={['huge' as never, 'flex', undefined]}>
+				<span>a</span>
+				<span>b</span>
+				<span>c</span>
+			</HorizontalStack>
+		);
+
+		expect(warn).toHaveBeenCalledTimes(1);
+		expect(String(warn.mock.calls[0]![0])).toContain('[HorizontalStack] unknown itemSizes "huge"');
+		expect(String(warn.mock.calls[0]![0])).toContain('Allowed values: fixed, flex.');
+		expect(screen.getByText('a').parentElement).not.toHaveAttribute('class');
+		expect(screen.getByText('b').parentElement).toHaveClass('flex-1', 'min-w-0');
+		// An entry left undefined renders its child unwrapped, as before.
+		expect(screen.getByText('c').parentElement).toHaveClass('flex');
+	});
+
+	it('a value that is a prototype property name is not mistaken for a known choice', () => {
+		const warn = spyWarn();
+		render(
+			<HorizontalStack gap={'constructor' as never}>
+				<span>a</span>
+			</HorizontalStack>
+		);
+
+		expect(String(warn.mock.calls[0]![0])).toContain('unknown gap "constructor"');
 	});
 });
 
