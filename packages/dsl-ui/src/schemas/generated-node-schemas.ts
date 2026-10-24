@@ -818,6 +818,8 @@ export const DataTableNodeSchema = baseNode.extend({
 	actionPendingRows: dsl(z.record(z.string(), z.array(z.string()))).optional(),
 	batchActionsPosition: dsl(z.enum(['floating', 'bottom'])).optional(),
 	expansionCondition: z.string().optional(),
+	expandLabel: z.string().optional(),
+	collapseLabel: z.string().optional(),
 	fontMono: dsl(z.boolean()).optional(),
 });
 

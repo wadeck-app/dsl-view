@@ -17,7 +17,7 @@
  *   - Formatting that encodes app state (e.g. "Auto-deletes in N days" is wdrive-specific)
  */
 import { ChevronDown, ChevronRight, ChevronUp, ChevronsUpDown, Loader2 } from 'lucide-react';
-import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useId, useMemo, useRef, useState } from 'react';
 
 import { Button } from '../controls/_Button.js';
 import { IconButton } from '../controls/IconButton.js';
@@ -702,6 +702,10 @@ export interface DataTableProps<T extends Record<string, unknown>> {
 	 */
 	batchActionsPosition?: 'floating' | 'bottom';
 	expansionCondition?: string;
+	/** Accessible name of a collapsed row's expansion toggle (default "Expand row"); set it to translate the table. */
+	expandLabel?: string;
+	/** Accessible name of an expanded row's expansion toggle (default "Collapse row"). */
+	collapseLabel?: string;
 	/** When true, applies font-mono to the entire table area. */
 	fontMono?: boolean;
 }
@@ -737,8 +741,12 @@ export function DataTable<T extends Record<string, unknown>>({
 	actionPendingRows,
 	batchActionsPosition = 'floating',
 	expansionCondition,
+	expandLabel = 'Expand row',
+	collapseLabel = 'Collapse row',
 	fontMono = false,
 }: DataTableProps<T>) {
+	// Ties each expansion toggle (aria-controls) to the panel row it opens.
+	const expansionIdBase = `${useId()}-expansion`;
 	// Normalize columns: accept either proper TableColumn[] (from ColumnHelpers) or raw YAML
 	// column defs (from DSL entriesGenerator). This allows declarative YAML to drive DataTable
 	// without requiring ColumnHelpers in every call site.
@@ -1112,6 +1120,9 @@ export function DataTable<T extends Record<string, unknown>>({
 															type="button"
 															variant="ghost"
 															size="icon-xs"
+															aria-label={expandedRow === stableKey ? collapseLabel : expandLabel}
+															aria-expanded={expandedRow === stableKey}
+															aria-controls={expandedRow === stableKey ? `${expansionIdBase}-${ri}` : undefined}
 															onClick={e => {
 																e.stopPropagation();
 																setExpandedRow(expandedRow === stableKey ? null : stableKey);
@@ -1231,7 +1242,7 @@ export function DataTable<T extends Record<string, unknown>>({
 										{expansion && expandedRow === stableKey && renderNode && (
 											<tr className="bg-bg-secondary">
 												{/* Spans the expansion toggle column (always present here) and the selection column when shown. */}
-												<td colSpan={normalizedColumns.length + 1 + (selectable ? 1 : 0)} className="px-3 py-2">
+												<td id={`${expansionIdBase}-${ri}`} colSpan={normalizedColumns.length + 1 + (selectable ? 1 : 0)} className="px-3 py-2">
 													{renderNode(expansion, { row })}
 												</td>
 											</tr>

@@ -86,6 +86,28 @@ export const LinkColumns: Story = {
 	),
 };
 
+// The expansion chevron and a `position: start` link side by side, as on the flow executions page: the chevron comes
+// first, the icon-only link right after it, then the data columns. The chevron is a named button (`Expand row` /
+// `Collapse row`, aria-expanded, aria-controls the opened panel); `expandLabel` / `collapseLabel` translate it.
+export const ExpansionWithStartLink: Story = {
+	render: () => (
+		<MemoryRouter>
+			<Narrow>
+				<DataTable
+					rows={ROWS}
+					columns={yamlColumns([
+						{ type: 'link', to: '/modules/flow/executions/{id}', icon: 'external-link', label: 'Open details', position: 'start' },
+						{ field: 'event', label: 'Event', mono: true, truncate: true },
+						{ field: 'state', label: 'State', nowrap: true, badge: { completed: 'success', failed: 'danger', pending: 'warning' } },
+					])}
+					expansion={{ $type: 'Detail' }}
+					renderNode={(_node, ctx) => <p>{`Details of ${String((ctx['row'] as Row)['event'])}`}</p>}
+				/>
+			</Narrow>
+		</MemoryRouter>
+	),
+};
+
 // Icon-only row actions authored in YAML (`icon: <name>` on an `actions` item, the label stays the accessible name and
 // tooltip) next to a `title` tooltip template on a data column (hover the "At" cells).
 export const IconActionsAndTooltips: Story = {
