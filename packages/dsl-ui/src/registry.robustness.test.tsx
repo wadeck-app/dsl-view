@@ -6,6 +6,8 @@ import React, { Suspense } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
+import { resetCoercionWarnings } from '../../dsl-renderer/dist/engine/coerceProp.js';
+import { resetInvalidPropWarnings } from '../../dsl-renderer/dist/engine/warnInvalidNodeProps.js';
 import { RouterProvider } from '@dsl-ui/components/navigation/RouterProvider.js';
 import * as nodeSchemas from '@dsl-ui/schemas/generated-node-schemas.js';
 import { ToastProvider } from '@dsl-ui/components/overlay/Toast.js';
@@ -189,6 +191,10 @@ describe('every registry component survives odd values for each prop it declares
 		const intendedSeen = new Set<string>();
 		const cases = casesFor(type);
 		for (const { label, prop, node, formData } of cases) {
+			// Each case must warn on its own: the renderer reports a mistake once, so without this a case would look
+			// silent only because an earlier one with the same mistake already printed it.
+			resetInvalidPropWarnings();
+			resetCoercionWarnings();
 			const logsBefore = errorSpy.mock.calls.length + warnSpy.mock.calls.length;
 			const escaped = renderOnce(node, formData);
 			if (escaped === undefined) {
@@ -215,5 +221,12 @@ describe('every registry component survives odd values for each prop it declares
 		expect(stale, 'INTENDED_ERRORS entries that no longer throw: remove them').toEqual([]);
 		// Joined into one string so the failure message lists every crash instead of an array summary.
 		expect(crashes.join('\n')).toBe('');
+		// A value the schema rejects must never degrade silently: the generated entry (coerceProp) or DslRenderer
+		// (warnInvalidNodeProps) says so once. `null` is the one by-design exception: it means "no value" for every prop
+		// (a YAML `key:` with nothing, a source field that is null), so it is treated like an absent prop.
+		expect(
+			silent.filter((label) => !label.endsWith(' = null')).join('\n'),
+			'schema-invalid values that rendered with no console output at all',
+		).toBe('');
 	}, 120_000);
 });
