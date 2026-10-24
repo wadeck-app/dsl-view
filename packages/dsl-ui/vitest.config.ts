@@ -47,6 +47,26 @@ export default defineConfig({
 		globals: true,
 		setupFiles: ['./src/test-setup.ts'],
 		testTimeout: 30000,
+		coverage: {
+			provider: 'v8',
+			reporter: ['text-summary', 'json-summary', 'lcov'],
+			reportsDirectory: './coverage',
+			include: ['src/**/*.ts', 'src/**/*.tsx'],
+			// Not logic: tests and their setup, stories (covered by the Storybook build and typecheck), test
+			// doubles, type declarations, and the generated schemas / known-keys manifest (their drift
+			// tests guard them, not line coverage).
+			exclude: [
+				'src/**/*.test.ts',
+				'src/**/*.test.tsx',
+				'src/**/*.stories.tsx',
+				'src/test-setup.ts',
+				// Render helpers used only by tests.
+				'src/test-utils.tsx',
+				'src/__mocks__/**',
+				'src/**/*.d.ts',
+				'src/schemas/generated-node-schemas.ts',
+			],
+		},
 		server: {
 			deps: {
 				// Inline the Radix Popover chain so Vite processes their imports.

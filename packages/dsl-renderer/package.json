@@ -52,6 +52,7 @@
 		"typecheck:tests": "tsc --noEmit -p tsconfig.tests.json",
 		"clean": "rimraf dist",
 		"test": "vitest run",
+		"test:coverage": "vitest run --coverage",
 		"test:watch": "vitest"
 	},
 	"dependencies": {

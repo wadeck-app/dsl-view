@@ -31,6 +31,7 @@
 		"typecheck:tests": "tsc --noEmit -p tsconfig.tests.json",
 		"clean": "rimraf dist",
 		"test": "vitest run",
+		"test:coverage": "vitest run --coverage",
 		"test:watch": "vitest",
 		"storybook": "storybook dev -p 6006 --no-open",
 		"build-storybook": "storybook build",
