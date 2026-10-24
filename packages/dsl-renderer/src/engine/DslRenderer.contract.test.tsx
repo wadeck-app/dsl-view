@@ -51,7 +51,7 @@ describe('$context.expose', () => {
 	it('renders normally (no alert) when every source key exists, even if its value is undefined', () => {
 		render(<DslRenderer node={{ $type: 'Probe', $context: { expose: { a: null } } }} registry={registry} ctx={{ a: undefined }} />);
 		expect(screen.queryByRole('alert')).toBeNull();
-		expect(screen.getByTestId('probe')).toBeTruthy();
+		expect(screen.getByTestId('probe')).toBeInTheDocument();
 	});
 });
 
@@ -72,7 +72,7 @@ describe('dev-mode schema alerts', () => {
 
 	it('renders the component when the node matches its schema', () => {
 		render(<DslRenderer node={{ $type: 'Strict', count: 2 }} registry={registry} ctx={{}} />);
-		expect(screen.getByTestId('strict')).toBeTruthy();
+		expect(screen.getByTestId('strict')).toBeInTheDocument();
 		expect(screen.queryByRole('alert')).toBeNull();
 	});
 
@@ -90,9 +90,25 @@ describe('$if', () => {
 		const { rerender } = render(<DslRenderer node={{ $type: 'Probe', $if: '$ctx.hide' }} registry={registry} ctx={ctx} />);
 		expect(screen.queryByTestId('probe')).toBeNull();
 		rerender(<DslRenderer node={{ $type: 'Probe', $if: '$ctx.show' }} registry={registry} ctx={ctx} />);
-		expect(screen.getByTestId('probe')).toBeTruthy();
+		expect(screen.getByTestId('probe')).toBeInTheDocument();
 		rerender(<DslRenderer node={{ $type: 'Probe' }} registry={registry} ctx={ctx} />);
-		expect(screen.getByTestId('probe')).toBeTruthy();
+		expect(screen.getByTestId('probe')).toBeInTheDocument();
+	});
+
+	// "falsy" in the docs means JavaScript falsiness: an empty array or object still shows the node.
+	it.each([false, 0, '', null, undefined])('hides the node when $if resolves to %j', value => {
+		render(<DslRenderer node={{ $type: 'Probe', $if: '$ctx.flag' }} registry={registry} ctx={{ flag: value }} />);
+		expect(screen.queryByTestId('probe')).toBeNull();
+	});
+
+	it.each([true, 1, 'text', [], {}])('shows the node when $if resolves to %j', value => {
+		render(<DslRenderer node={{ $type: 'Probe', $if: '$ctx.flag' }} registry={registry} ctx={{ flag: value }} />);
+		expect(screen.getByTestId('probe')).toBeInTheDocument();
+	});
+
+	it('hides the node when the $if path does not exist at all', () => {
+		render(<DslRenderer node={{ $type: 'Probe', $if: '$vars.nothing.here' }} registry={registry} ctx={{ $vars: {} }} />);
+		expect(screen.queryByTestId('probe')).toBeNull();
 	});
 
 	it('hides an unknown component type behind nothing: an unknown type is reported even if $if would hide it', () => {

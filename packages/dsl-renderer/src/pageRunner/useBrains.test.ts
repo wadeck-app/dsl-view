@@ -96,8 +96,10 @@ describe('useBrains', () => {
 
 			// Re-render with the same ctx - snapshot unchanged, brain must NOT fire again
 			rerender();
-			// Small wait to ensure no additional calls happen
-			await act(async () => {});
+			// One macrotask turn: a (wrong) second run would have called setVar by now.
+			await act(async () => {
+				await new Promise(resolve => setTimeout(resolve, 0));
+			});
 			expect(setVar).toHaveBeenCalledTimes(1);
 		});
 	});
@@ -203,7 +205,10 @@ describe('useBrains', () => {
 			ctx = makeCtx({ loading: true });
 			rerender({ currentCtx: ctx });
 
-			await act(async () => {});
+			// One macrotask turn: a (wrong) second run would have called setVar by now.
+			await act(async () => {
+				await new Promise(resolve => setTimeout(resolve, 0));
+			});
 			// Should still be 1 - no reactive param changed
 			expect(setVar).toHaveBeenCalledTimes(1);
 		});
@@ -774,36 +779,8 @@ describe('useBrains', () => {
 		});
 	});
 
-	// -------------------------------------------------------------------------
-	// Group: $brains.$ctx.navigate
-	// -------------------------------------------------------------------------
-
-	describe('$brains.$ctx.navigate', () => {
-		it('$brains.$ctx.navigate sets window.location.href', async () => {
-			// Replace window.location with a plain object so jsdom does not throw
-			// on href assignment (jsdom's default location object is non-writable).
-			delete (window as unknown as Record<string, unknown>)['location'];
-			(window as unknown as Record<string, unknown>)['location'] = { href: '' };
-
-			const ctx = makeCtx();
-
-			renderHook(() =>
-				useBrains(makeParams(
-					{
-						brain1: {
-							$brain: '$brains.$ctx.navigate',
-							route: '/dashboard',
-						},
-					},
-					ctx
-				))
-			);
-
-			await waitFor(() => {
-				expect(window.location.href).toBe('/dashboard');
-			});
-		});
-	});
+	// $brains.$ctx.navigate is tested in useBrains.contract.test.ts, which restores window.location
+	// after every test (replacing it here without restoring leaked into the later tests of this file).
 
 	// -------------------------------------------------------------------------
 	// Group: auth headers via getToken

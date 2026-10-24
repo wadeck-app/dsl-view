@@ -112,6 +112,13 @@ describe('DslRenderer: unknown authored keys at runtime (development)', () => {
 		expect(warnings()).toEqual([]);
 	});
 
+	it('is silent in production: no check runs and the node renders as before', () => {
+		vi.stubEnv('NODE_ENV', 'production');
+		render(<DslRenderer node={{ $type: 'Stack', children: [], txt: 'x', items: [{ $type: 'Label', text: 'shown' }] }} registry={registry} />);
+		expect(screen.getByTestId('stack').textContent).toBe('shown');
+		expect(warnings()).toEqual([]);
+	});
+
 	it('reports the same unknown key as the compile-time check', () => {
 		const doc = { $type: 'Stack', children: [] };
 		const compiled = findUnknownKeys(doc, registry).filter(d => d.code === 'unknown-key');

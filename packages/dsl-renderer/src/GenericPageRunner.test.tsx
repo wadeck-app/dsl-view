@@ -178,7 +178,7 @@ describe('GenericPageRunner integration', () => {
 	// Test 1: $sources populates ctx and value is accessible from component
 	// -------------------------------------------------------------------------
 
-	it('Test 1: $sources data is accessible in component via expression', async () => {
+	it('$sources data is accessible in component via expression', async () => {
 		const fetcher = vi.fn().mockResolvedValue([{ title: 'Book A' }]);
 
 		renderRunner(
@@ -202,7 +202,7 @@ value: $sources.books.0.title
 	// Test 2a: $vars initialise correctly
 	// -------------------------------------------------------------------------
 
-	it('Test 2a: $vars initial value is rendered by VarDisplay', async () => {
+	it('$vars initial value is rendered by VarDisplay', async () => {
 		renderRunner(`
 $vars:
   greeting: hello
@@ -219,7 +219,7 @@ varName: greeting
 	// Test 2b: $brains.$ctx.setVar updates a var (static value, runs at init)
 	// -------------------------------------------------------------------------
 
-	it('Test 2b: $brains.$ctx.setVar with static value updates var immediately', async () => {
+	it('$brains.$ctx.setVar with static value updates var immediately', async () => {
 		renderRunner(`
 $vars:
   count: 0
@@ -239,55 +239,11 @@ varName: count
 	});
 
 	// -------------------------------------------------------------------------
-	// Test 3: $publishOutput is in ctx and observable via a reactive brain
-	// -------------------------------------------------------------------------
-	// This test explicitly verifies that ctx['$publishOutput'] is wired up and
-	// actually stores output - not just that no error was thrown.
-	// A VarDisplay driven by $outputs.myBtn.onClick confirms the full reactive path.
-
-	it('Test 3: $publishOutput is in ctx and can be called via button click', async () => {
-		renderRunner(`
-$vars:
-  clicked: false
-$brains:
-  onClickBrain:
-    $brain: $brains.$ctx.setVar
-    varName: clicked
-    value: $outputs.myBtn.onClick
-$type: Sections
-sections:
-  - $type: Button
-    $id: myBtn
-    label: Click me
-  - $type: VarDisplay
-    varName: clicked
-`);
-
-		// Initial state: brain does NOT fire at mount when $outputs.myBtn.onClick is
-		// undefined (output not yet published) - clicked stays at its initial value 'false'.
-		await waitFor(() => {
-			expect(screen.getByTestId('var-display')).toHaveTextContent('false');
-		});
-
-		// Click - publishOutput fires, brain updates var with {$tick: N} object
-		const btn = screen.getByTestId('btn-myBtn');
-		fireEvent.click(btn);
-
-		// After click: VarDisplay must show a non-null value - the $tick object
-		// serialised as "[object Object]", proving $publishOutput is wired and the brain reacted
-		await waitFor(() => {
-			const display = screen.getByTestId('var-display');
-			expect(display).not.toHaveTextContent('null');
-			expect(display).not.toHaveTextContent('false');
-		});
-	});
-
-	// -------------------------------------------------------------------------
-	// Test 4: $brains.$http.get calls fetcher with correct URL
+	// $brains.$http.get calls the fetcher and publishes the captured fields
 	// -------------------------------------------------------------------------
 
-	it('Test 4: $brains.$http.get calls fetcher and exposes results via $brains ctx', async () => {
-		const fetcher = vi.fn().mockResolvedValue({ items: [1, 2, 3] });
+	it('$brains.$http.get calls the fetcher and exposes the captured $outputs fields as $brains.<id>.<field>', async () => {
+		const fetcher = vi.fn().mockResolvedValue({ items: [1, 2, 3], ignored: 'x' });
 
 		renderRunner(
 			`
@@ -298,6 +254,7 @@ $brains:
     $outputs: [items]
 $type: Label
 label: done
+value: $brains.load.items
 `,
 			fetcher
 		);
@@ -305,13 +262,17 @@ label: done
 		await waitFor(() => {
 			expect(fetcher).toHaveBeenCalledWith('GET /api/books/', undefined, undefined, undefined);
 		});
+		await waitFor(() => {
+			expect(screen.getByTestId('label')).toHaveAttribute('data-value', '1,2,3');
+		});
+		expect(fetcher).toHaveBeenCalledTimes(1);
 	});
 
 	// -------------------------------------------------------------------------
 	// Test 5a: $route params are exposed in ctx and resolvable via expression
 	// -------------------------------------------------------------------------
 
-	it('Test 5a: $route.itemId is exposed in ctx and readable in Label value', async () => {
+	it('$route.itemId is exposed in ctx and readable in Label value', async () => {
 		// LabelEntry's resolveExpr handles root = 'route' to read ctx['$route']
 		renderRunnerWithRoute(
 			`
@@ -333,7 +294,7 @@ value: $route.itemId
 	// Test 5: Full reactive loop - button click -> publishOutput -> brain -> setVar -> re-render
 	// -------------------------------------------------------------------------
 
-	it('Test 5: reactive loop - click triggers brain which updates var display', async () => {
+	it('reactive loop - click triggers brain which updates var display', async () => {
 		renderRunner(`
 $vars:
   selectedItem: null
@@ -361,13 +322,9 @@ sections:
 		fireEvent.click(btn);
 
 		// Step 3: brain detects $outputs.selectBtn.onClick changed -> setVar -> re-render.
-		// VarDisplay JSON.stringifies objects, so the $tick value appears as {"$tick":N}.
-		// This rules out both "null" and "[object Object]" string corruption.
+		// VarDisplay JSON.stringifies objects: the stored value is exactly the published {$tick: <number>} object.
 		await waitFor(() => {
-			const display = screen.getByTestId('var-display');
-			expect(display).not.toHaveTextContent('null');
-			expect(display).not.toHaveTextContent('[object Object]');
-			expect(display).toHaveTextContent('$tick');
+			expect(screen.getByTestId('var-display').textContent).toMatch(/^\{"\$tick":\d+\}$/);
 		});
 	});
 
@@ -409,6 +366,7 @@ sections:
 		await waitFor(() => {
 			expect(screen.getByTestId('lazy-loaded')).toBeInTheDocument();
 		});
+		expect(screen.queryByTestId('loading-fallback')).toBeNull();
 	});
 
 	it('warns when suspenseFallback is not passed and a lazy component is pending', async () => {
@@ -443,6 +401,8 @@ sections:
 
 		resolveImport();
 		await waitFor(() => expect(screen.getByTestId('lazy-loaded')).toBeInTheDocument());
+		// Documented as "warns once": the page re-renders after the chunk loads without warning again.
+		expect(warnSpy.mock.calls.filter(call => String(call[0]).includes('suspenseFallback'))).toHaveLength(1);
 		warnSpy.mockRestore();
 	});
 

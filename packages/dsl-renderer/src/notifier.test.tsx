@@ -127,6 +127,10 @@ describe('ActionBanner', () => {
 	it('renders every item inside the banner container', () => {
 		render(<ActionBanner items={[item({ id: 1, message: 'a', kind: 'error' }), item({ id: 2, message: 'b', kind: 'error' })]} onDismiss={vi.fn()} />);
 		const banner = screen.getByTestId('action-banner');
-		expect(banner.querySelectorAll('[data-action-feedback]')).toHaveLength(2);
+		// Which items, in which order (oldest first), not just how many.
+		expect(Array.from(banner.querySelectorAll('[data-action-feedback]')).map(el => el.textContent)).toEqual([
+			expect.stringContaining('a'),
+			expect.stringContaining('b'),
+		]);
 	});
 });
