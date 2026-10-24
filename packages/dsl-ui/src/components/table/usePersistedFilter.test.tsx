@@ -80,6 +80,26 @@ describe('usePersistedFilter persist()', () => {
 		expect(new URLSearchParams(t.search()!).get('t1_status')).toBe('failed,done');
 	});
 
+	it('a single value that contains a comma stays one value through the URL and back (it used to come back as a list)', () => {
+		const written = setup();
+		written.persist('Smith, John');
+		const url = written.search()!;
+		expect(new URLSearchParams(url).get('t1_status')).toBe('Smith%2C John');
+
+		const restored = setup({ search: url });
+
+		expect(restored.setFilter).toHaveBeenCalledWith('status', 'Smith, John');
+	});
+
+	it('a list whose items contain commas or percent signs round-trips item by item', () => {
+		const written = setup();
+		written.persist(['a,b', '50%', 'c']);
+
+		const restored = setup({ search: written.search()! });
+
+		expect(restored.setFilter).toHaveBeenCalledWith('status', ['a,b', '50%', 'c']);
+	});
+
 	it.each([[null], [undefined], ['all'], [[]]])('removes the param when the value is the "cleared" value %j', cleared => {
 		const t = setup({ search: '?t1_status=failed&q=abc' });
 

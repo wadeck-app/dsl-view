@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import { useDataTableFilter } from './DataTable.js';
+import { decodeFilterValue, encodeFilterValue } from './persistedFilterCodec.js';
 
 /**
  * Self-seeds a DataTable filter key from a `${tableId}_${filterKey}` URL search param on mount,
@@ -30,8 +31,7 @@ export function usePersistedFilter(
 		if (!tableId) return;
 		const raw = paramsRef.current.get(`${tableId}_${filterKey}`);
 		if (raw !== null) {
-			const restored = raw.includes(',') ? raw.split(',').filter(Boolean) : raw;
-			filterCtxRef.current?.setFilter(filterKey, restored);
+			filterCtxRef.current?.setFilter(filterKey, decodeFilterValue(raw));
 		} else {
 			filterCtxRef.current?.setFilter(filterKey, valueRef.current);
 		}
@@ -46,7 +46,7 @@ export function usePersistedFilter(
 				const isCleared =
 					value === null || value === undefined || value === 'all' || (Array.isArray(value) && value.length === 0);
 				if (isCleared) next.delete(`${tableId}_${filterKey}`);
-				else next.set(`${tableId}_${filterKey}`, Array.isArray(value) ? value.join(',') : String(value));
+				else next.set(`${tableId}_${filterKey}`, encodeFilterValue(value));
 				return next;
 			},
 			{ replace: true }
