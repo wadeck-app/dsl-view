@@ -82,12 +82,47 @@ describe('TimePicker minute arithmetic', () => {
 		['00:00', 1, '23:59'], // wraps through midnight
 		['10:00', 15, '09:45'],
 		['10:15', 15, '10:00'], // a step that fits in the minutes does not borrow an hour
+		['10:10', 15, '10:00'], // off the grid: snaps down to its own line instead of borrowing the hour (was 09:45)
 	])('decrementing the minutes of %s by step %i gives %s', (start, step, expected) => {
 		const onChange = renderOpen(start, { minuteStep: step });
 
 		fireEvent.click(screen.getByRole('button', { name: 'Decrement minutes' }));
 
 		expect(onChange).toHaveBeenCalledWith(expected);
+	});
+
+	it.each([
+		['10:10', 15, '10:15'], // off the grid: the next line (was 10:25)
+		['10:50', 15, '11:00'],
+		['10:00', 1, '10:01'],
+	])('incrementing the minutes of %s by step %i gives %s', (start, step, expected) => {
+		const onChange = renderOpen(start, { minuteStep: step });
+
+		fireEvent.click(screen.getByRole('button', { name: 'Increment minutes' }));
+
+		expect(onChange).toHaveBeenCalledWith(expected);
+	});
+
+	it('the keyboard arrows on the minutes follow the same grid as the buttons', () => {
+		const onChange = renderOpen('10:10', { minuteStep: 15 });
+		const minutes = screen.getByRole('spinbutton', { name: 'Minutes' });
+
+		fireEvent.keyDown(minutes, { key: 'ArrowUp' });
+		fireEvent.keyDown(minutes, { key: 'ArrowDown' });
+
+		expect(onChange).toHaveBeenNthCalledWith(1, '10:15');
+		expect(onChange).toHaveBeenNthCalledWith(2, '10:00');
+	});
+
+	it('an unusable minuteStep is reported and the buttons step by 1 instead of doing nothing', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+		const onChange = renderOpen('10:10', { minuteStep: 0 });
+
+		fireEvent.click(screen.getByRole('button', { name: 'Increment minutes' }));
+
+		expect(onChange).toHaveBeenCalledWith('10:11');
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('minuteStep must be a whole number of minutes (1 or more), got 0'));
+		warn.mockRestore();
 	});
 
 	it('incrementing past the end of the hour carries into the hour, and 23:45 + 15 wraps to 00:00', () => {

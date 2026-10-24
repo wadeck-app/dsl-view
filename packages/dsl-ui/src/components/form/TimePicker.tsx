@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { ChevronDown, ChevronUp, Clock } from 'lucide-react';
 import type { FieldControlProps } from './FieldWrapper.js';
+import { normalizeMinuteStep, stepMinutesDown, stepMinutesUp } from './timeStep.js';
 
 const triggerClass =
 	'block w-full rounded border border-border bg-surface text-content px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed text-left';
@@ -75,6 +76,7 @@ export function TimePicker({
 	}
 	const minuteSpinRef = useRef<HTMLDivElement>(null);
 
+	const step = normalizeMinuteStep(minuteStep);
 	const parsed = parseTime(value);
 	const hours = parsed?.hours ?? 0;
 	const minutes = parsed?.minutes ?? 0;
@@ -115,21 +117,13 @@ export function TimePicker({
 	}
 
 	function incrementMinutes() {
-		const nextM = minutes + minuteStep;
-		if (nextM >= 60) {
-			emit((hours + 1) % 24, 0);
-		} else {
-			emit(hours, nextM);
-		}
+		const next = stepMinutesUp({ hours, minutes }, step);
+		emit(next.hours, next.minutes);
 	}
 
 	function decrementMinutes() {
-		const prevM = minutes - minuteStep;
-		if (prevM < 0) {
-			emit((hours - 1 + 24) % 24, 60 - minuteStep);
-		} else {
-			emit(hours, prevM);
-		}
+		const prev = stepMinutesDown({ hours, minutes }, step);
+		emit(prev.hours, prev.minutes);
 	}
 
 	function togglePeriod() {
@@ -144,7 +138,7 @@ export function TimePicker({
 		const now = new Date();
 		let h = now.getHours();
 		const rawM = now.getMinutes();
-		let m = minuteStep > 1 ? Math.round(rawM / minuteStep) * minuteStep : rawM;
+		let m = step > 1 ? Math.round(rawM / step) * step : rawM;
 		if (m >= 60) {
 			m = 0;
 			h = (h + 1) % 24;
