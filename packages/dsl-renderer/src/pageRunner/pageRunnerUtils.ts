@@ -321,6 +321,19 @@ export function topoLevels(keys: string[], deps: Record<string, string[]>): stri
 	return levels;
 }
 
+/**
+ * The data a named action receives from its caller: a plain object (form data, a selected row). A button wired
+ * as `onClick: $ctx.<action>` hands over the React click event instead; an Event, a DOM node, an array or a
+ * primitive is not data, and sending it would serialise a cycle or fill URL placeholders from `event.type`.
+ */
+export function plainActionPayload(value: unknown): Record<string, unknown> | undefined {
+	if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+		return undefined;
+	}
+	const prototype = Object.getPrototypeOf(value) as unknown;
+	return prototype === Object.prototype || prototype === null ? (value as Record<string, unknown>) : undefined;
+}
+
 /** Success feedback for a request that went out. The server may override the message with a `message` string in its JSON response. */
 export function notifySuccess(notify: Notify, actionName: string, spec: ActionSpec, result: unknown): void {
 	if (spec.notify === false) {

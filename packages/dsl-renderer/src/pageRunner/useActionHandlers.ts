@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { KNOWN_ACTION_KEYS } from '../dslKeys.js';
 import { getErrorMessage } from '../errors.js';
 import type { Notify } from '../notifier.js';
-import { collectRowUrlParams, normalizeAction, notifyFailure, notifySuccess, resolveAuthHeaders, substituteUrlParams } from './pageRunnerUtils.js';
+import { collectRowUrlParams, normalizeAction, notifyFailure, notifySuccess, plainActionPayload, resolveAuthHeaders, substituteUrlParams } from './pageRunnerUtils.js';
 import type { ActionErrorInfo, ActionSpec, Fetcher, PageSpec } from './pageRunnerUtils.js';
 
 // Row key recorded in `actionPendingRows` for a batch action: it covers every row.
@@ -30,7 +30,7 @@ export function useActionHandlers(params: {
 		currentSearchParams?: URLSearchParams
 	) => Promise<void>;
 }): {
-	namedHandlers: Record<string, (extraBody?: Record<string, unknown>) => Promise<unknown>>;
+	namedHandlers: Record<string, (payload?: unknown) => Promise<unknown>>;
 	onAction: (actionName: string, row: Record<string, unknown>) => Promise<void>;
 	onBatchAction: (actionName: string, rows: Record<string, unknown>[]) => Promise<void>;
 	extras: Record<string, unknown>;
@@ -166,10 +166,12 @@ export function useActionHandlers(params: {
 	);
 
 	const namedHandlers = useMemo(() => {
-		const handlers: Record<string, (extraBody?: Record<string, unknown>) => Promise<unknown>> = {};
+		const handlers: Record<string, (payload?: unknown) => Promise<unknown>> = {};
 		for (const [name, rawSpec] of Object.entries($actions ?? {})) {
 			const spec = normalizeAction(rawSpec);
-			handlers[name] = async (extraBody?: Record<string, unknown>) => {
+			handlers[name] = async (payload?: unknown) => {
+				// A button click hands over its event: only a plain object counts as data.
+				const extraBody = plainActionPayload(payload);
 				if (!begin(name, name)) {
 					return undefined;
 				}
