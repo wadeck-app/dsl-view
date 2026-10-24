@@ -19,6 +19,7 @@ $navOrder: 1                    # optional nav ordering
 
 $vars:
   myVar: defaultValue           # local reactive state, mutable via $ctx.setVar brain
+  draft: $sources.item.text     # an expression seeds the var once, when the source value first arrives (see "Editable payload")
 
 $sources:
   items: GET /api/items/        # shorthand: method + URL
@@ -35,6 +36,7 @@ $actions:
   update:                       # object form
     url: PATCH /api/items/{id}
     resultKey: updatedItem      # store response in ctx under this key
+    requestKey: sentItem        # store the body of the last SUCCESSFUL call under this key (cleared after a failure)
     reloadSources: true         # reload all sources after action; or [name1, name2]
     confirm: Delete this item?  # window.confirm text before executing
 
@@ -102,6 +104,19 @@ Any string starting with `$` in a node prop is resolved at render time.
 | `$props.key` | From `ctx['$props']` |
 
 Inside `$sources.params`, `$source.name.field.sub[0]` (singular, dot-path + array index) resolves a nested field from another source's response.
+
+**Operators.** An expression may combine `$paths` and literals (`'text'`, `"text"`, numbers, `true`, `false`, `null`) with `!`, `==`, `!=`, `&&`, `||` and parentheses; a negation may start the string (`!$validation.valid`).
+
+| Rule | Detail |
+|---|---|
+| Precedence, loosest first | `\|\|`, `&&`, `==` / `!=`, `!` |
+| Equality | strict: `'1'` is not `1`; two unresolved paths are equal (both `undefined`) |
+| `&&` / `\|\|` | return the operand that decided, like JavaScript (`$a \|\| 'none'` is a fallback) and skip the right side when the left decides |
+| Not an expression | a string that does not parse (`!important`, `$a ==`, an unclosed quote) keeps its old meaning: a plain path, or the literal text |
+
+```yaml
+disabled: "!$validation.valid || $vars.payload != $validated.payload"   # quote it: YAML reads a leading ! as a tag
+```
 
 ---
 
@@ -240,10 +255,62 @@ import { appRegistry } from './registry.js';
 **A button outside a table row** (`ActionButton`): `{ $type: ActionButton, action: pushTest, params: { name: $sources.event.name }, icon: rocket, label: Push test event }` runs the `$actions.pushTest` entry like a row action: same `confirm`, `reloadSources`, feedback and percent-encoded `{name}` in the url, filled from `params` (each value may be an expression), then route params, then URL search params.
 - `body: { payload: $vars.payload }` is sent as the request body (each value may be an expression); without it no body is sent, as for a row action.
 - `resultKey` on the action also works for a url action: the response is readable as `$<resultKey>` (e.g. `$validation.valid`). A failed call (HTTP error, missing placeholder) replaces it by `{ error, status }`, so a stale success is never left next to an error; the notifier still shows the message.
-- Enabled by default; `disabled`, `disabledReason`, `variant`, `size` as on `ButtonAction`. `disabled` takes a plain boolean or a single `$expression` (`disabled: $vars.noSelection`); there are no comparison operators in expressions. `iconOnly: true` shows only the icon (`icon` is a name from the icon vocabulary) and keeps `label` as accessible name and tooltip.
+- Enabled by default; `disabled`, `disabledReason`, `variant`, `size` as on `ButtonAction`. `disabled` takes a boolean or an expression, operators included (`disabled: $vars.noSelection`, `disabled: "!$validation.valid"`). `iconOnly: true` shows only the icon (`icon` is a name from the icon vocabulary) and keeps `label` as accessible name and tooltip.
 - While the action runs the button is disabled and `aria-busy`; the flag is per action name, so two buttons of one action share it.
 - A missing `params` value, an unknown `action` (the error lists the page's actions) and an action with neither `url` nor `resultKey` (a one-time `console.warn`) send nothing. Use it, not a `Form` with `fields: []` (its save button stays disabled until the form is dirty).
 - A prop tagged `@resolveDeep` in a component resolves the expressions inside a map or list (today only `ActionButton.params`).
+
+### Editable payload: edit, validate, then push
+
+A bound field (`bind: payload`) with no `Form` and no table row around it edits the page variable `$vars.payload`. A `$vars` entry written as an expression is seeded once, when the expression first resolves (a source arrives after the first render); it is never re-seeded or overwritten once the page, a brain or the user has set the variable, so a poll cannot erase an edit. `requestKey` echoes the body the server accepted, which lets the page tell that the text changed since the last successful validation. `ctx.$setVar(key, value)` is what bound fields call to write a variable.
+
+```yaml
+$vars:
+  payload: $sources.event.exampleText
+$sources:
+  event: GET /api/events/ping
+$actions:
+  validatePayload:
+    url: POST /api/events/ping/validate-payload
+    resultKey: validation        # the answer: { valid, errors }
+    requestKey: validated        # the body of the last successful validation
+    successMessage: Validation answered
+  pushTest:
+    url: POST /api/events/ping/push-test
+    successMessage: Test event pushed
+$type: VerticalStack
+items:
+  - $type: FieldTextarea
+    label: Example payload
+    bind: payload
+    mono: true
+    rows: 8
+  - $type: ActionButton
+    label: Validate
+    action: validatePayload
+    body:
+      payload: $vars.payload
+  - $type: ActionButton
+    label: Push test event
+    action: pushTest
+    icon: rocket
+    iconOnly: true
+    disabled: "!$validation.valid || $vars.payload != $validated.payload"
+    disabledReason: Validate the payload first
+    body:
+      payload: $vars.payload
+  - $type: Badge
+    $if: $validation.valid
+    label: Valid
+    variant: success
+  - $type: JsonViewer
+    $if: $validation.errors
+    row: $validation
+    field: errors
+```
+
+- Push is disabled before any validation, after `valid: false`, after a failed call (the failure clears `requestKey` and replaces `validation` by `{ error, status }`), and after any edit that differs from the validated text.
+- `generatedEntries.payloadPage.test.tsx` in dsl-ui runs this exact page with the real components.
 
 **Action feedback** (every `$actions` call that sent a request, and every failed `$brains` entry):
 - Success -> `{ kind: 'success', message }`, failure -> `{ kind: 'error', message, status? }`, both with `action` = the `$actions` name or brain id. The failure message is the fetcher's `Error.message` (put the actionable server text there); `status` is the Error's numeric `status` when present.
@@ -683,8 +750,9 @@ First published version containing the change (`dsl-ui` and `dsl-renderer` share
 | `2026.10.24-236` | In development `DslRenderer` warns once per component, prop and kind of mistake when the RESOLVED value of an authored prop is rejected by the component's schema (`[DslRenderer] Box.gap expects one of "gap-1", "gap-2" but received string`), or when a required prop is not set; rendering never changes. Needs regenerated `entries.tsx` (entries now carry `propSchema` when the library ships `schemas/generated-node-schemas`; full dev-server restart); an entry without it is simply not checked. `null` and expressions that do not resolve yet (a source still loading) are not judged. A number given to a text prop now shows as its text, a text given to a number prop is reported. On wdrive, library, agent-fleet, queue, task, orchestrator and the app-core test modules (84 pages) it reports one defect: `FetchSpinner` without `loading` in wdrive `logs.yaml`. |
 | `2026.10.24-239` | URL writes made in the same tick compose (a page writing `date` and `size` on open no longer loses a `live=true` written right after; before, the last write erased the others). In development, `$initialLoading` without `$ctx.` (it reads ctx `initialLoading`, which does not exist) warns once and names `$ctx.$initialLoading`. |
 | `2026.10.24-240` | New `ActionButton` node: runs a `$actions` entry from anywhere on a page, with `params` for the url placeholders and `body` for the request body (see "A button outside a table row"). `resultKey` now also stores a url action's response (and `{ error, status }` on failure). A row action on an unknown name now lists the page's actions; an action with neither `url` nor `resultKey` warns once. Regenerate `entries.tsx` (full dev-server restart). |
-| Unreleased | `FieldTextarea` takes `mono: true` for monospace text. |
+| `2026.10.24-247` | `FieldTextarea` takes `mono: true` for monospace text. |
 | `2026.10.24-245` | **Dev diagnostics now run in the browser under `vite dev`**: `isDevelopment()` guarded on `typeof process`, which no bundler replaces, so it was false in a browser and every dev-only check (unknown `$` directive alert, unknown-key and prop-value warnings) stayed silent; it now reads `process.env.NODE_ENV` directly. Expect new console warnings and `[Type] unknown DSL directive` alerts in dev. Generated entries no longer ship prop schemas (and zod) in production: main chunk of an app using every component was +111 KB raw / +29 KB gzip with the schema check, now +1.6 KB / +54 B over the build without it. This needs both **regenerated `entries.tsx`** (entries from before still import the schemas unconditionally) and the new `sideEffects` fields of `dsl-ui` / `dsl-renderer`; restart the dev server fully. The compiler (`compileDslDocument`, `findUnknownKeys` on a registry with schemas) now reports a literal prop value the component's schema rejects as `invalid-prop-value` (error) and a required prop the node does not set as `missing-required-prop` (warning); `$expressions` are never judged. A generated registry loaded under `NODE_ENV=production` carries no schemas: the compiler says so with an `unchecked-props` warning, run it with `NODE_ENV=development`. |
+| `2026.10.24-249` | Expressions take operators (`!`, `==`, `!=`, `&&`, `\|\|`, parentheses); a string that does not parse is read as before, and no page in capability-framework, app-core, queue, task, flow or orchestrator contained an operator string. A `$vars` entry whose value is an expression (`payload: $sources.event.exampleText`) is now seeded when it first resolves and starts undefined (before, it held the expression text as a literal string; no repo declared one). A bound field with no Form, table row or `onChange` around it reads and writes `$vars` through `ctx.$setVar` (before, it showed `''` and dropped edits). `$actions.<name>.requestKey` is a new action key. The generated node schemas accept a `!` expression wherever a `$` one was accepted. Regenerate `entries.tsx` (full dev-server restart) for the bound-field change. |
 
 ## Pitfalls
 
