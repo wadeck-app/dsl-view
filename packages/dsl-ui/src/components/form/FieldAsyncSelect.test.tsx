@@ -722,3 +722,132 @@ describe('FieldAsyncSelect — focus, blur and keyboard details', () => {
 		expect(container.querySelector('input[type="hidden"]')).toBeNull();
 	});
 });
+
+// Label of a value the user did not pick here (saved form, external change of `value`).
+
+describe('FieldAsyncSelect - label of a pre-selected value', () => {
+	const flush = () => act(async () => { await Promise.resolve(); });
+
+	function renderWith(value: string | null, loadSelected?: (v: string) => Promise<FieldAsyncSelectOption | null>) {
+		const ui = (v: string | null, ls = loadSelected) => (
+			<FieldAsyncSelect label="Country" value={v} onChange={vi.fn()} loadOptions={makeLoad()} loadSelected={ls} debounceMs={0} />
+		);
+		const view = render(ui(value));
+		return { ...view, again: (v: string | null, ls = loadSelected) => view.rerender(ui(v, ls)) };
+	}
+
+	it('shows the raw value, never an empty-looking input, when nothing can resolve its label', () => {
+		renderWith('us');
+		expect(screen.getByRole('combobox')).toHaveValue('us');
+	});
+
+	it('asks loadSelected once for the value and shows the label it returns', async () => {
+		const loadSelected = vi.fn().mockResolvedValue({ value: 'us', label: 'United States' });
+		renderWith('us', loadSelected);
+		expect(screen.getByRole('combobox')).toHaveValue('us');
+		await flush();
+		expect(loadSelected).toHaveBeenCalledExactlyOnceWith('us');
+		expect(screen.getByRole('combobox')).toHaveValue('United States');
+	});
+
+	it('an external change to another value replaces the previous label', async () => {
+		const loadSelected = vi.fn(async (v: string) => ({ value: v, label: v === 'us' ? 'United States' : 'Canada' }));
+		const { again } = renderWith('us', loadSelected);
+		await flush();
+		again('ca');
+		expect(screen.getByRole('combobox')).toHaveValue('ca');
+		await flush();
+		expect(screen.getByRole('combobox')).toHaveValue('Canada');
+		expect(loadSelected.mock.calls.map(c => c[0])).toEqual(['us', 'ca']);
+	});
+
+	it('a value listed in the options already loaded needs no extra request', async () => {
+		const loadSelected = vi.fn().mockResolvedValue(null);
+		const { again } = renderWith(null, loadSelected);
+		fireEvent.change(screen.getByRole('combobox'), { target: { value: 'u' } });
+		await advanceAndFlush(0);
+		again('uk');
+		expect(loadSelected).not.toHaveBeenCalled();
+		fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Escape' });
+		expect(screen.getByRole('combobox')).toHaveValue('United Kingdom');
+	});
+
+	it('options arriving after a provisional value supply its label', async () => {
+		renderWith('ca');
+		expect(screen.getByRole('combobox')).toHaveValue('ca');
+		fireEvent.change(screen.getByRole('combobox'), { target: { value: 'c' } });
+		await advanceAndFlush(0);
+		fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Escape' });
+		expect(screen.getByRole('combobox')).toHaveValue('Canada');
+	});
+
+	it('an option chosen in the list is never overwritten by a late loadSelected answer', async () => {
+		let resolveSelected!: (o: FieldAsyncSelectOption | null) => void;
+		const loadSelected = vi.fn(() => new Promise<FieldAsyncSelectOption | null>(r => { resolveSelected = r; }));
+		const onChange = vi.fn();
+		const { rerender } = render(
+			<FieldAsyncSelect label="Country" value="us" onChange={onChange} loadOptions={makeLoad()} loadSelected={loadSelected} debounceMs={0} />,
+		);
+		fireEvent.change(screen.getByRole('combobox'), { target: { value: 'c' } });
+		await advanceAndFlush(0);
+		fireEvent.click(screen.getByRole('button', { name: 'Canada' }));
+		rerender(
+			<FieldAsyncSelect label="Country" value="ca" onChange={onChange} loadOptions={makeLoad()} loadSelected={loadSelected} debounceMs={0} />,
+		);
+		await act(async () => { resolveSelected({ value: 'us', label: 'United States' }); });
+		expect(screen.getByRole('combobox')).toHaveValue('Canada');
+	});
+
+	it('an answer for a value that is no longer selected is ignored', async () => {
+		let resolveSelected!: (o: FieldAsyncSelectOption | null) => void;
+		const loadSelected = vi.fn(() => new Promise<FieldAsyncSelectOption | null>(r => { resolveSelected = r; }));
+		const { again } = renderWith('us', loadSelected);
+		again(null);
+		await act(async () => { resolveSelected({ value: 'us', label: 'United States' }); });
+		expect(screen.getByRole('combobox')).toHaveValue('');
+	});
+
+	it('an answer describing another value is ignored', async () => {
+		const loadSelected = vi.fn().mockResolvedValue({ value: 'ca', label: 'Canada' });
+		renderWith('us', loadSelected);
+		await flush();
+		expect(screen.getByRole('combobox')).toHaveValue('us');
+	});
+
+	it('a missing option keeps the raw value without any error', async () => {
+		const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+		renderWith('us', vi.fn().mockResolvedValue(null));
+		await flush();
+		expect(screen.getByRole('combobox')).toHaveValue('us');
+		expect(error).not.toHaveBeenCalled();
+		error.mockRestore();
+	});
+
+	it('a failing loadSelected is logged with the value and the cause, and the raw value stays', async () => {
+		const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const cause = new Error('boom');
+		renderWith('us', vi.fn().mockRejectedValue(cause));
+		await flush();
+		expect(error).toHaveBeenCalledExactlyOnceWith('[FieldAsyncSelect] loadSelected("us") failed; showing the raw value:', cause);
+		expect(screen.getByRole('combobox')).toHaveValue('us');
+		error.mockRestore();
+	});
+
+	it('the label arriving while the user types does not replace their text; closing restores it', async () => {
+		let resolveSelected!: (o: FieldAsyncSelectOption | null) => void;
+		const loadSelected = vi.fn(() => new Promise<FieldAsyncSelectOption | null>(r => { resolveSelected = r; }));
+		renderWith('us', loadSelected);
+		const input = screen.getByRole('combobox');
+		fireEvent.change(input, { target: { value: 'xyz' } });
+		await act(async () => { resolveSelected({ value: 'us', label: 'United States' }); });
+		expect(input).toHaveValue('xyz');
+		fireEvent.keyDown(input, { key: 'Escape' });
+		expect(input).toHaveValue('United States');
+	});
+
+	it('clearing the value empties the input even before the label arrived', async () => {
+		const { again } = renderWith('us', vi.fn(() => new Promise<FieldAsyncSelectOption | null>(() => {})));
+		again(null);
+		expect(screen.getByRole('combobox')).toHaveValue('');
+	});
+});

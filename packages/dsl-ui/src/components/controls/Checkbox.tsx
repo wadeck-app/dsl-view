@@ -21,7 +21,9 @@ export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(functi
 			{...rest}
 		/>
 	);
-	if (!label) return input;
+	if (!label) {
+		return input;
+	}
 	return (
 		<label className="inline-flex items-center gap-2 cursor-pointer">
 			{input}

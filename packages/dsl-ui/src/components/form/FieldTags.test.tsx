@@ -176,12 +176,86 @@ describe('FieldTags', () => {
 			expect(input()).toHaveValue('');
 		});
 
-		it('a comma only commits when it is the last character', () => {
+		it('a comma commits what precedes it and keeps the text after it for the next tag', () => {
 			const onChange = vi.fn();
 			render(<FieldTags label="Keywords" value={[]} onChange={onChange} />);
 			fireEvent.change(input(), { target: { value: 'a,b' } });
+			expect(onChange).toHaveBeenCalledExactlyOnceWith(['a']);
+			expect(input()).toHaveValue('b');
+		});
+
+		it('several commas in one change commit every complete part in a single onChange call', () => {
+			const onChange = vi.fn();
+			render(<FieldTags label="Keywords" value={['x']} onChange={onChange} />);
+			fireEvent.change(input(), { target: { value: 'a, b ,,c,' } });
+			expect(onChange).toHaveBeenCalledExactlyOnceWith(['x', 'a', 'b', 'c']);
+			expect(input()).toHaveValue('');
+		});
+
+		it('pasting comma separated text adds each tag, trimmed, and inserts nothing in the input', () => {
+			const onChange = vi.fn();
+			render(<FieldTags label="Keywords" value={[]} onChange={onChange} />);
+			const notPrevented = fireEvent.paste(input(), { clipboardData: { getData: () => ' red , green,blue ' } });
+			expect(notPrevented).toBe(false);
+			expect(onChange).toHaveBeenCalledExactlyOnceWith(['red', 'green', 'blue']);
+			expect(input()).toHaveValue('');
+		});
+
+		it('pasting text without a comma is left to the browser: one tag is added with Enter as usual', () => {
+			const onChange = vi.fn();
+			render(<FieldTags label="Keywords" value={[]} onChange={onChange} />);
+			expect(fireEvent.paste(input(), { clipboardData: { getData: () => 'single tag' } })).toBe(true);
 			expect(onChange).not.toHaveBeenCalled();
-			expect(input()).toHaveValue('a,b');
+		});
+
+		it('a paste keeps the duplicates and the overflow out, and says which', () => {
+			const onChange = vi.fn();
+			render(<FieldTags label="Keywords" value={['a']} maxTags={3} onChange={onChange} />);
+			fireEvent.paste(input(), { clipboardData: { getData: () => 'a,b,b,c,d' } });
+			expect(onChange).toHaveBeenCalledExactlyOnceWith(['a', 'b', 'c']);
+			expect(screen.getByRole('status')).toHaveTextContent('Already added: a, b. Limit of 3 tags reached, 1 not added');
+		});
+
+		it('a duplicate is announced in a live region tied to the input, and nothing is added', () => {
+			const onChange = vi.fn();
+			render(<FieldTags label="Keywords" value={['a']} onChange={onChange} />);
+			expect(screen.getByRole('status')).toBeEmptyDOMElement();
+			fireEvent.change(input(), { target: { value: 'a' } });
+			fireEvent.keyDown(input(), { key: 'Enter' });
+			expect(onChange).not.toHaveBeenCalled();
+			const status = screen.getByRole('status');
+			expect(status).toHaveTextContent('Already added: a');
+			expect(input().getAttribute('aria-describedby')).toBe(status.id);
+		});
+
+		it('the message goes away when the user types again, and after a successful add', () => {
+			render(<FieldTags label="Keywords" value={['a']} onChange={vi.fn()} />);
+			fireEvent.change(input(), { target: { value: 'a' } });
+			fireEvent.keyDown(input(), { key: 'Enter' });
+			expect(screen.getByRole('status')).toHaveTextContent('Already added: a');
+			fireEvent.change(input(), { target: { value: 'ab' } });
+			expect(screen.getByRole('status')).toBeEmptyDOMElement();
+			fireEvent.change(input(), { target: { value: 'a' } });
+			fireEvent.keyDown(input(), { key: 'Enter' });
+			fireEvent.change(input(), { target: { value: 'zz,' } });
+			expect(screen.getByRole('status')).toBeEmptyDOMElement();
+			expect(input()).not.toHaveAttribute('aria-describedby');
+		});
+
+		it('removing a tag clears a stale message', () => {
+			render(<FieldTags label="Keywords" value={['a']} onChange={vi.fn()} />);
+			fireEvent.change(input(), { target: { value: 'a' } });
+			fireEvent.keyDown(input(), { key: 'Enter' });
+			fireEvent.click(screen.getByRole('button', { name: 'Remove a' }));
+			expect(screen.getByRole('status')).toBeEmptyDOMElement();
+		});
+
+		it('the duplicate message and the validation error are both referenced by the input', () => {
+			render(<FieldTags label="Keywords" error="Required" value={['a']} onChange={vi.fn()} />);
+			fireEvent.change(input(), { target: { value: 'a' } });
+			fireEvent.keyDown(input(), { key: 'Enter' });
+			const ids = input().getAttribute('aria-describedby')!.split(' ');
+			expect(ids).toEqual([screen.getByRole('alert').id, screen.getByRole('status').id]);
 		});
 
 		it('Backspace on an empty input with no tags does nothing', () => {

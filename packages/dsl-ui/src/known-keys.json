@@ -429,6 +429,7 @@
 			"label",
 			"loadOptions",
 			"name",
+			"loadSelected",
 			"noOptionsMessage",
 			"placeholder",
 			"required"
@@ -538,6 +539,7 @@
 			"bind",
 			"description",
 			"error",
+			"disabled",
 			"label",
 			"options",
 			"placeholder",
@@ -573,7 +575,12 @@
 			"bind",
 			"description",
 			"label",
+			"disabled",
+			"error",
 			"rows"
+			"placeholder",
+			"readOnly",
+			"required",
 		]
 	},
 	"FieldTime": {

@@ -34,6 +34,11 @@ export function Form({ fields, actions, onSubmit, initialData }: FormProps) {
 	const [savedState, setSavedState] = useState<Record<string, unknown>>(initialData ?? {});
 	const [isPending, setIsPending] = useState(false);
 	const isFirstRender = useRef(true);
+	const isSubmittingRef = useRef(false);
+
+	// A page that polls hands over a NEW object with the same content on every reload; keying on the
+	// content keeps the user's in-progress edits unless the server data really changed.
+	const initialKey = JSON.stringify(initialData ?? null);
 
 	// Sync formState when server data refreshes (skip initial mount to avoid resetting in-progress edits)
 	useEffect(() => {
@@ -45,7 +50,9 @@ export function Form({ fields, actions, onSubmit, initialData }: FormProps) {
 			setFormState(initialData);
 			setSavedState(initialData);
 		}
-	}, [initialData]);
+		// initialKey is the content of initialData: the effect must not re-run for a new identity alone.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [initialKey]);
 
 	const hasChanges = JSON.stringify(formState) !== JSON.stringify(savedState);
 
@@ -55,11 +62,22 @@ export function Form({ fields, actions, onSubmit, initialData }: FormProps) {
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
+		// A second Enter or click while the first save is running must not send the data twice.
+		if (isSubmittingRef.current) {
+			return;
+		}
+		isSubmittingRef.current = true;
 		setIsPending(true);
 		try {
 			await onSubmit(formState);
 			setSavedState(formState);
+		} catch (submitError) {
+			// The handler reports the failure to the user (the page notifier) and rejects so the form keeps
+			// its values and stays unsaved. Swallowing it here avoids an unhandled rejection; the log keeps
+			// the cause for a handler that rejected without telling the user.
+			console.error('[Form] onSubmit failed; the form keeps its values and stays unsaved:', submitError);
 		} finally {
+			isSubmittingRef.current = false;
 			setIsPending(false);
 		}
 	}

@@ -57,6 +57,49 @@ describe('FieldSelect', () => {
 		expect(container.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
 	});
 
+	it('lists the options in the order given, after the placeholder', () => {
+		render(<FieldSelect label="Kind" value="" onChange={vi.fn()} options={options} placeholder="Pick one" />);
+
+		expect(screen.getAllByRole('option').map(o => o.textContent)).toEqual(['Pick one', 'Alpha', 'Beta']);
+	});
+
+	it('with an empty value and a placeholder, the placeholder is the selected option and reports an empty value', () => {
+		const onChange = vi.fn();
+		render(<FieldSelect label="Kind" value="b" onChange={onChange} options={options} placeholder="Pick one" />);
+
+		fireEvent.change(screen.getByLabelText('Kind'), { target: { value: '' } });
+
+		expect(onChange).toHaveBeenCalledExactlyOnceWith('');
+	});
+
+	it('shows the placeholder, and no empty option, when a value is selected without placeholder', () => {
+		render(<FieldSelect label="Kind" value="a" onChange={vi.fn()} options={options} />);
+
+		expect(screen.getAllByRole('option').map(o => o.textContent)).toEqual(['Alpha', 'Beta']);
+	});
+
+	it('stays controlled: without a new value from the parent the select keeps showing the old one', () => {
+		render(<FieldSelect label="Kind" value="a" onChange={vi.fn()} options={options} />);
+
+		fireEvent.change(screen.getByLabelText('Kind'), { target: { value: 'b' } });
+
+		expect(screen.getByLabelText('Kind')).toHaveValue('a');
+	});
+
+	it('disabled blocks the select', () => {
+		render(<FieldSelect label="Kind" value="a" onChange={vi.fn()} options={options} disabled />);
+
+		expect(screen.getByLabelText('Kind')).toBeDisabled();
+	});
+
+	it('without an error the select carries no invalid or describedby attribute', () => {
+		render(<FieldSelect label="Kind" value="a" onChange={vi.fn()} options={options} />);
+
+		const select = screen.getByLabelText('Kind');
+		expect(select).not.toHaveAttribute('aria-invalid');
+		expect(select).not.toHaveAttribute('aria-describedby');
+	});
+
 	it('carries the label and validation wiring of every field', () => {
 		render(<FieldSelect label="Kind" value="" onChange={vi.fn()} options={options} required error="Pick a kind" />);
 

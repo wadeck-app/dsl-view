@@ -43,48 +43,96 @@ export function FieldTags({
 	allowDuplicates = false,
 }: FieldTagsProps) {
 	const [inputValue, setInputValue] = useState('');
+	/** Why the last attempt added nothing or less than asked; announced politely, cleared by the next success. */
+	const [feedback, setFeedback] = useState('');
 	const inputRef = useRef<HTMLInputElement>(null);
 	const id = useId();
 	const errorId = `${id}-error`;
+	const feedbackId = `${id}-feedback`;
 
 	const canAdd = maxTags === undefined || value.length < maxTags;
 
-	function addTag(raw: string) {
-		const tag = raw.trim();
-		if (!tag) {
-			return;
+	/**
+	 * Adds the non-empty, trimmed tags in one onChange call. Tags that cannot be added (duplicates,
+	 * beyond maxTags) are reported to the user in the status line instead of being dropped silently.
+	 * Returns true when at least one tag was added.
+	 */
+	function addTags(raws: string[]): boolean {
+		const next = [...value];
+		const duplicates: string[] = [];
+		let overLimit = 0;
+		for (const raw of raws) {
+			const tag = raw.trim();
+			if (!tag) {
+				continue;
+			}
+			if (!allowDuplicates && next.includes(tag)) {
+				duplicates.push(tag);
+				continue;
+			}
+			if (maxTags !== undefined && next.length >= maxTags) {
+				overLimit += 1;
+				continue;
+			}
+			next.push(tag);
 		}
-		if (!allowDuplicates && value.includes(tag)) {
-			return;
+		const problems: string[] = [];
+		if (duplicates.length > 0) {
+			problems.push(`Already added: ${duplicates.join(', ')}`);
 		}
-		if (!canAdd) {
-			return;
+		if (overLimit > 0) {
+			problems.push(`Limit of ${maxTags} tags reached, ${overLimit} not added`);
 		}
-		onChange([...value, tag]);
-		setInputValue('');
+		setFeedback(problems.join('. '));
+		if (next.length === value.length) {
+			return false;
+		}
+		onChange(next);
+		return true;
 	}
 
 	function removeTag(index: number) {
+		setFeedback('');
 		onChange(value.filter((_, i) => i !== index));
 	}
 
 	function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
 		if (e.key === 'Enter') {
 			e.preventDefault();
-			addTag(inputValue);
+			if (addTags([inputValue])) {
+				setInputValue('');
+			}
 		} else if (e.key === 'Backspace' && inputValue === '' && value.length > 0) {
 			removeTag(value.length - 1);
 		}
 	}
 
+	// A comma commits what precedes it; the text after the last comma stays in the input.
 	function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
 		const raw = e.target.value;
-		if (raw.endsWith(',')) {
-			addTag(raw.slice(0, -1));
-		} else {
+		if (!raw.includes(',')) {
 			setInputValue(raw);
+			// The message was about the previous attempt; the user is typing something else now.
+			setFeedback('');
+			return;
 		}
+		const parts = raw.split(',');
+		const rest = parts.pop() ?? '';
+		addTags(parts);
+		setInputValue(rest);
 	}
+
+	// Pasting "a, b, c" adds three tags; a paste without a comma is inserted as usual.
+	function handlePaste(e: React.ClipboardEvent<HTMLInputElement>) {
+		const text = e.clipboardData.getData('text');
+		if (!text.includes(',')) {
+			return;
+		}
+		e.preventDefault();
+		addTags(text.split(','));
+	}
+
+	const describedBy = [error ? errorId : null, feedback ? feedbackId : null].filter(Boolean).join(' ') || undefined;
 
 	const borderClass = error ? 'border-danger' : 'border-border focus-within:border-primary';
 
@@ -131,15 +179,19 @@ export function FieldTags({
 					value={inputValue}
 					onChange={handleChange}
 					onKeyDown={handleKeyDown}
+					onPaste={handlePaste}
 					disabled={disabled || !canAdd}
 					placeholder={canAdd && !disabled ? placeholder : ''}
 					className={INPUT_CLASS}
 					autoComplete="off"
 					aria-required={required}
 					aria-invalid={error ? true : undefined}
-					aria-describedby={error ? errorId : undefined}
+					aria-describedby={describedBy}
 				/>
 			</div>
+
+			{/* Always rendered: a live region must exist before its text changes to be announced. */}
+			<p id={feedbackId} role="status" className={feedback ? 'mt-1 text-xs text-muted' : 'sr-only'}>{feedback}</p>
 
 			{error && (
 				<p id={errorId} className="mt-1 text-xs text-danger" role="alert">

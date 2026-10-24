@@ -111,4 +111,69 @@ describe('FieldNumber label and validation wiring', () => {
 
 		expect(screen.getByRole('spinbutton')).toHaveAttribute('aria-required', 'true');
 	});
+
+	describe('value and bounds', () => {
+		it('reports exactly what the input holds, as a string: a cleared input is "" and not 0', () => {
+			const onChange = vi.fn();
+			render(<FieldNumber label="Count" value={5} onChange={onChange} />);
+			fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '' } });
+			expect(onChange).toHaveBeenCalledExactlyOnceWith('');
+		});
+
+		it('passes min and max to the input', () => {
+			render(<FieldNumber label="Count" value={5} onChange={vi.fn()} min={1} max={9} />);
+			expect(screen.getByRole('spinbutton')).toHaveAttribute('min', '1');
+			expect(screen.getByRole('spinbutton')).toHaveAttribute('max', '9');
+		});
+
+		it('a value of 0 is shown as 0, not as an empty field', () => {
+			render(<FieldNumber label="Count" value={0} onChange={vi.fn()} />);
+			expect(screen.getByRole('spinbutton')).toHaveValue(0);
+		});
+
+		it('an empty string value shows an empty input', () => {
+			render(<FieldNumber label="Count" value="" onChange={vi.fn()} />);
+			expect(screen.getByRole('spinbutton')).toHaveValue(null);
+		});
+
+		it('stays controlled: without a new value from the parent the input keeps the old one', () => {
+			render(<FieldNumber label="Count" value={5} onChange={vi.fn()} />);
+			fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '10' } });
+			expect(screen.getByRole('spinbutton')).toHaveValue(5);
+		});
+	});
+
+	describe('disabled and unlimited', () => {
+		it('disabled blocks the number input', () => {
+			render(<FieldNumber label="Count" value={5} onChange={vi.fn()} disabled />);
+			expect(screen.getByRole('spinbutton')).toBeDisabled();
+		});
+
+		it('the Unlimited checkbox disables the number input while it is checked', () => {
+			const { rerender } = render(<FieldNumber label="Count" value="" onChange={vi.fn()} unlimited="Unlimited" unlimitedValue={false} />);
+			expect(screen.getByRole('spinbutton')).toBeEnabled();
+			rerender(<FieldNumber label="Count" value="" onChange={vi.fn()} unlimited="Unlimited" unlimitedValue />);
+			expect(screen.getByRole('spinbutton')).toBeDisabled();
+			expect(screen.getByRole('checkbox', { name: 'Unlimited' })).toBeChecked();
+		});
+
+		it('there is no Unlimited checkbox without the unlimited prop', () => {
+			render(<FieldNumber label="Count" value={5} onChange={vi.fn()} />);
+			expect(screen.queryByRole('checkbox')).toBeNull();
+		});
+
+		it('checking Unlimited without a handler still clears the number and does not throw', () => {
+			const onChange = vi.fn();
+			render(<FieldNumber label="Count" value={5} onChange={onChange} unlimited="Unlimited" />);
+			fireEvent.click(screen.getByRole('checkbox'));
+			expect(onChange).toHaveBeenCalledExactlyOnceWith('');
+		});
+
+		it('unchecking Unlimited does not touch the number', () => {
+			const onChange = vi.fn();
+			render(<FieldNumber label="Count" value="" onChange={onChange} unlimited="Unlimited" unlimitedValue onUnlimitedChange={vi.fn()} />);
+			fireEvent.click(screen.getByRole('checkbox'));
+			expect(onChange).not.toHaveBeenCalled();
+		});
+	});
 });

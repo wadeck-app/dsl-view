@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 
 export interface SectionProps {
 	title?: string;
@@ -11,9 +11,11 @@ export interface SectionProps {
  * @registryTags content
  */
 export function Section({ title, children }: SectionProps) {
+	const titleId = useId();
 	return (
-		<section className="space-y-6">
-			{title && <h2 className="text-base font-medium text-content">{title}</h2>}
+		// A titled section is a named region for assistive technology; an untitled one stays a plain group.
+		<section className="space-y-6" aria-labelledby={title ? titleId : undefined}>
+			{title && <h2 id={titleId} className="text-base font-medium text-content">{title}</h2>}
 			{children}
 		</section>
 	);

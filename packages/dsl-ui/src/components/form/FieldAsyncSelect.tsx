@@ -26,6 +26,12 @@ export interface FieldAsyncSelectProps {
 	value: string | null;
 	onChange: (value: string | null) => void;
 	loadOptions: (query: string) => Promise<FieldAsyncSelectOption[]>;
+	/**
+	 * Resolves the option of a value the user did not pick in this session (a saved form, an
+	 * external change of `value`), so the input shows its label instead of the raw value.
+	 * Without it the raw value is shown until an option is chosen.
+	 */
+	loadSelected?: (value: string) => Promise<FieldAsyncSelectOption | null>;
 	placeholder?: string;
 	/** Debounce delay in milliseconds before calling loadOptions. Default: 300 */
 	debounceMs?: number;
@@ -48,6 +54,7 @@ export function FieldAsyncSelect({
 	value,
 	onChange,
 	loadOptions,
+	loadSelected,
 	placeholder = 'Search...',
 	debounceMs = 300,
 	noOptionsMessage = 'No options',
@@ -56,7 +63,8 @@ export function FieldAsyncSelect({
 	const listboxId = `${id}-listbox`;
 
 	const [inputValue, setInputValue] = useState('');
-	const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
+	/** The label shown for the selected value; a ref because only the "list closed" effect reads it. */
+	const selectedLabelRef = useRef<string | null>(null);
 	const [options, setOptions] = useState<FieldAsyncSelectOption[]>([]);
 	const [isLoading, setIsLoading] = useState(false);
 	const [isOpen, setIsOpen] = useState(false);
@@ -80,25 +88,92 @@ export function FieldAsyncSelect({
 		};
 	}, []);
 
-	// When value is cleared externally, reset display state
+	/** The value `selectedLabel` belongs to: a different `value` means the label is stale. */
+	const labelledValueRef = useRef<string | null>(null);
+	/** True while `selectedLabel` is only the raw value, waiting for a real label. */
+	const provisionalLabelRef = useRef(false);
+	const optionsRef = useRef(options);
+	optionsRef.current = options;
+	const valueRef = useRef(value);
+	valueRef.current = value;
+
+	function showSelectedLabel(forValue: string, shown: string, provisional: boolean) {
+		labelledValueRef.current = forValue;
+		provisionalLabelRef.current = provisional;
+		selectedLabelRef.current = shown;
+		// A user who is typing a query keeps their text: closing the list restores the label.
+		if (!isOpenRef.current) {
+			setInputValue(shown);
+		}
+	}
+
+	const isOpenRef = useRef(isOpen);
+	isOpenRef.current = isOpen;
+
+	// Keep the shown label in step with `value`: cleared, chosen here, or changed from outside.
 	useEffect(() => {
 		if (value === null) {
-			setSelectedLabel(null);
+			labelledValueRef.current = null;
+			provisionalLabelRef.current = false;
+			selectedLabelRef.current = null;
 			setInputValue('');
+			return;
 		}
-	}, [value]);
+		if (labelledValueRef.current === value) {
+			return;
+		}
+		const known = optionsRef.current.find(o => o.value === value);
+		if (known) {
+			showSelectedLabel(value, known.label, false);
+			return;
+		}
+		// Until the real label is known, the raw value beats an input that looks empty.
+		showSelectedLabel(value, value, true);
+		if (!loadSelected) {
+			return;
+		}
+		// Not cancelled by the effect cleanup: StrictMode runs the effect twice and the second run
+		// returns early above, so a cleanup flag would drop the only answer. A late answer is
+		// ignored instead when `value` moved on or the user already chose something.
+		const stillWanted = () => valueRef.current === value && labelledValueRef.current === value && provisionalLabelRef.current;
+		loadSelected(value).then(
+			resolved => {
+				if (stillWanted() && resolved && resolved.value === value) {
+					showSelectedLabel(value, resolved.label, false);
+				}
+			},
+			(loadError: unknown) => {
+				if (stillWanted()) {
+					console.error(`[FieldAsyncSelect] loadSelected("${value}") failed; showing the raw value:`, loadError);
+				}
+			},
+		);
+		// showSelectedLabel only touches refs and state setters.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [value, loadSelected]);
+
+	// Options loaded after the value was set can supply the label of a provisional one.
+	useEffect(() => {
+		if (value === null || !provisionalLabelRef.current) {
+			return;
+		}
+		const known = options.find(o => o.value === value);
+		if (known) {
+			showSelectedLabel(value, known.label, false);
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [options]);
 
 	// When dropdown closes, revert input to show the selected label (or empty)
 	// and reset search state for the next open.
 	useEffect(() => {
 		if (!isOpen) {
-			setInputValue(selectedLabel ?? '');
+			setInputValue(selectedLabelRef.current ?? '');
 			setActiveIndex(-1);
 			setHasSearched(false);
 			setLoadFailed(false);
 		}
-		// Intentionally omitting selectedLabel from deps:
-		// we only want to revert inputValue when isOpen transitions to false.
+		// The label is read from a ref and isOpen is the only trigger: revert the input when the list closes.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [isOpen]);
 
@@ -155,7 +230,9 @@ export function FieldAsyncSelect({
 	}
 
 	function handleSelect(opt: FieldAsyncSelectOption) {
-		setSelectedLabel(opt.label);
+		labelledValueRef.current = opt.value;
+		provisionalLabelRef.current = false;
+		selectedLabelRef.current = opt.label;
 		setInputValue(opt.label);
 		onChange(opt.value);
 		setIsOpen(false);
@@ -164,7 +241,9 @@ export function FieldAsyncSelect({
 
 	function handleClear(e: React.MouseEvent) {
 		e.stopPropagation();
-		setSelectedLabel(null);
+		labelledValueRef.current = null;
+		provisionalLabelRef.current = false;
+		selectedLabelRef.current = null;
 		setInputValue('');
 		setOptions([]);
 		setIsOpen(false);

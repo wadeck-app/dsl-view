@@ -20,4 +20,25 @@ describe('ButtonCancel', () => {
 		fireEvent.click(screen.getByRole('button'));
 		expect(onCancel).toHaveBeenCalledOnce();
 	});
+
+	it('disabled blocks the click', () => {
+		const onCancel = vi.fn();
+		render(<ButtonCancel onCancel={onCancel} disabled />);
+		expect(screen.getByRole('button')).toBeDisabled();
+		fireEvent.click(screen.getByRole('button'));
+		expect(onCancel).not.toHaveBeenCalled();
+	});
+
+	// A bare <button> inside a <form> submits it: Cancel in a form would save the form.
+	it('is a plain button, so it never submits the form it sits in', () => {
+		const onSubmit = vi.fn((e: React.FormEvent) => e.preventDefault());
+		render(
+			<form onSubmit={onSubmit}>
+				<ButtonCancel onCancel={vi.fn()} />
+			</form>,
+		);
+		expect(screen.getByRole('button')).toHaveAttribute('type', 'button');
+		fireEvent.click(screen.getByRole('button'));
+		expect(onSubmit).not.toHaveBeenCalled();
+	});
 });

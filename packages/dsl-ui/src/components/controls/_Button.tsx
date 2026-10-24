@@ -117,6 +117,9 @@ export function Button({
 		// violations-suppress: react/no-raw-button Button IS the atomic wrapper - this is intentional
 		<button
 			{...props}
+			// A button without a type submits the form it sits in. Cancel, copy, tab and every other
+			// action button must not; ButtonSave opts in with an explicit type="submit".
+			type={props.type ?? 'button'}
 			disabled={isDisabled}
 			className={[BASE, !isStack && VARIANT_CLASSES[resolvedVariant], !isStack && SIZE_CLASSES[resolvedSize], SHAPE_CLASSES[shape], className]
 				.filter(Boolean)

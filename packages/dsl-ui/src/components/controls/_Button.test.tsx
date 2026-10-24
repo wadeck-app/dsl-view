@@ -1,6 +1,6 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { Button } from './_Button.js';
 import { ButtonContext } from './buttonContext.js';
 
@@ -8,6 +8,42 @@ describe('Button', () => {
 	it('renders children', () => {
 		render(<Button>Click me</Button>);
 		expect(screen.getByRole('button', { name: 'Click me' })).toBeInTheDocument();
+	});
+
+	// A bare <button> in a form submits it, so every action button (Cancel, copy, tabs...) would save the form.
+	it('is a plain button by default, so it does not submit the form it sits in', () => {
+		const onSubmit = vi.fn((e: React.FormEvent) => e.preventDefault());
+		render(<form onSubmit={onSubmit}><Button>Cancel</Button></form>);
+		expect(screen.getByRole('button')).toHaveAttribute('type', 'button');
+		fireEvent.click(screen.getByRole('button'));
+		expect(onSubmit).not.toHaveBeenCalled();
+	});
+
+	it('an explicit type="submit" is kept and does submit', () => {
+		const onSubmit = vi.fn((e: React.FormEvent) => e.preventDefault());
+		render(<form onSubmit={onSubmit}><Button type="submit">Save</Button></form>);
+		fireEvent.click(screen.getByRole('button'));
+		expect(onSubmit).toHaveBeenCalledTimes(1);
+	});
+
+	it('loading disables the button, shows a spinner and swallows the click', () => {
+		const onClick = vi.fn();
+		render(<Button loading onClick={onClick}>Go</Button>);
+		const button = screen.getByRole('button', { name: 'Go' });
+		expect(button).toBeDisabled();
+		expect(button.querySelector('svg')).not.toBeNull();
+		fireEvent.click(button);
+		expect(onClick).not.toHaveBeenCalled();
+	});
+
+	it('a disabled button with a reason exposes the reason as a tooltip', () => {
+		render(<Button disabled disabledReason="Nothing to save">Save</Button>);
+		expect(screen.getByRole('tooltip')).toHaveTextContent('Nothing to save');
+	});
+
+	it('a reason without a disabled state adds no tooltip', () => {
+		render(<Button disabledReason="Nothing to save">Save</Button>);
+		expect(screen.queryByRole('tooltip')).toBeNull();
 	});
 
 	it('applies icon size classes', () => {

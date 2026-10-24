@@ -7,7 +7,7 @@ import { FieldWrapper } from './FieldWrapper.js';
 // so symmetric px-3 left the glyph flush against the border; the arrow is suppressed with
 // appearance-none and drawn here instead, inset like every other trailing affordance.
 // @formatter:off
-const selectClass  = 'mt-1 block w-full appearance-none rounded border border-border bg-surface text-content pl-3 pr-9 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer';
+const selectClass  = 'mt-1 block w-full appearance-none rounded border border-border bg-surface text-content pl-3 pr-9 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed';
 const chevronClass = 'pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted';
 // @formatter:on
 
@@ -23,6 +23,7 @@ export interface FieldSelectProps {
 	onChange: (v: string) => void;
 	options: FieldSelectOption[];
 	placeholder?: string;
+	disabled?: boolean;
 	/** Marks the field required. Handled by FieldWrapper. */
 	required?: boolean;
 	/** Validation message. Handled by FieldWrapper. */
@@ -34,7 +35,7 @@ export interface FieldSelectProps {
  * @registryTags field select
  * @registryBind formData onChange
  */
-export function FieldSelect({ label, description, value, onChange, options, placeholder, required, error }: FieldSelectProps) {
+export function FieldSelect({ label, description, value, onChange, options, placeholder, disabled, required, error }: FieldSelectProps) {
 	return (
 		// Function form: the control is nested inside the positioning wrapper the chevron
 		// needs, so FieldWrapper cannot reach it by cloning its first child.
@@ -44,6 +45,7 @@ export function FieldSelect({ label, description, value, onChange, options, plac
 					<select
 						value={value}
 						onChange={e => onChange(e.target.value)}
+						disabled={disabled}
 						className={selectClass}
 						{...control}
 					>

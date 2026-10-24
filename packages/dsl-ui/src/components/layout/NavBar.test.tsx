@@ -46,6 +46,23 @@ describe('NavBar', () => {
 		expect(result.current).toEqual({ size: 'sm', defaultVariant: 'ghost' });
 	});
 
+	it('a Button child without a variant renders as the ghost variant at the small size', () => {
+		render(<NavBar><Button>Home</Button></NavBar>);
+		const btn = screen.getByRole('button', { name: 'Home' });
+		expect(btn).toHaveClass('text-muted', 'py-1');
+		expect(btn).not.toHaveClass('bg-[var(--color-primary-solid)]');
+	});
+
+	it('an explicit variant on a child wins over the ghost default', () => {
+		render(<NavBar><Button variant="danger">Delete</Button></NavBar>);
+		expect(screen.getByRole('button', { name: 'Delete' })).toHaveClass('bg-danger');
+	});
+
+	it('keeps the base layout classes when a custom className is added', () => {
+		const { container } = render(<NavBar className="ml-4"><span>x</span></NavBar>);
+		expect(container.firstChild).toHaveClass('flex', 'items-center', 'gap-2', 'ml-4');
+	});
+
 	it('applies custom className', () => {
 		const { container } = render(<NavBar className="custom-class"><span>x</span></NavBar>);
 		expect(container.firstChild).toHaveClass('custom-class');

@@ -445,6 +445,7 @@ export const FieldSelectNodeSchema = baseNode.extend({
 	description: z.string().optional(),
 	options: dsl(z.array(FieldSelectOptionSchema)),
 	placeholder: z.string().optional(),
+	disabled: dsl(z.boolean()).optional(),
 	required: dsl(z.boolean()).optional(),
 	error: z.string().optional(),
 });
@@ -476,6 +477,11 @@ export const FieldTextareaNodeSchema = baseNode.extend({
 	label: z.string(),
 	description: z.string().optional(),
 	rows: dsl(z.number()).optional(),
+	placeholder: z.string().optional(),
+	readOnly: dsl(z.boolean()).optional(),
+	disabled: dsl(z.boolean()).optional(),
+	required: dsl(z.boolean()).optional(),
+	error: z.string().optional(),
 });
 
 export const FieldTimeNodeSchema = baseNode.extend({
