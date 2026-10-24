@@ -8,6 +8,7 @@ declare global {
 }
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+const RELOAD_DELAY_MS = 10_000;
 
 export function useVersionPoller(versionEndpoint = '/api/version'): void {
 	const toast = useToast();
@@ -15,6 +16,7 @@ export function useVersionPoller(versionEndpoint = '/api/version'): void {
 
 	useEffect(() => {
 		const currentVersion = window.__APP_VERSION__ ?? 'dev';
+		let reloadTimer: ReturnType<typeof setTimeout> | undefined;
 
 		async function checkVersion(): Promise<void> {
 			if (toastShownRef.current) return;
@@ -27,7 +29,7 @@ export function useVersionPoller(versionEndpoint = '/api/version'): void {
 				if (data.version !== currentVersion) {
 					toastShownRef.current = true;
 					toast.info('A new version is available - reload to update');
-					setTimeout(() => window.location.reload(), 10_000);
+					reloadTimer = setTimeout(() => window.location.reload(), RELOAD_DELAY_MS);
 				}
 			} catch {
 				// Network errors during polling are non-fatal - ignore silently
@@ -36,6 +38,11 @@ export function useVersionPoller(versionEndpoint = '/api/version'): void {
 
 		void checkVersion();
 		const id = setInterval(() => void checkVersion(), POLL_INTERVAL_MS);
-		return () => clearInterval(id);
+		return () => {
+			clearInterval(id);
+			// The scheduled reload belongs to the page that announced it: once that page is gone, reloading
+			// whatever the user is looking at now would be a surprise.
+			clearTimeout(reloadTimer);
+		};
 	}, [toast, versionEndpoint]);
 }
