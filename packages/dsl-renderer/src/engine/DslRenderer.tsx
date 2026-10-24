@@ -3,6 +3,7 @@ import React from 'react';
 import type { ComponentRegistry } from '../ComponentRegistry.js';
 import { EXTENSION_SLOT_TYPE, KNOWN_DSL_KEYS, omitNavKeys } from '../dslKeys.js';
 import { isDevelopment } from './devMode.js';
+import { warnMissingCtxPrefix } from './warnCtxPrefix.js';
 import { warnInvalidNodeProps } from './warnInvalidNodeProps.js';
 import { warnInvalidChildren, warnUnknownNodeKeys } from './warnUnknownKeys.js';
 
@@ -210,6 +211,9 @@ export function resolveExpressionValue(expr: unknown, ctx: RenderContext): unkno
 		return current;
 	} else {
 		current = ctx[root ?? ''];
+		if (current === undefined) {
+			warnMissingCtxPrefix(root, ctx);
+		}
 	}
 
 	for (const key of rest) {

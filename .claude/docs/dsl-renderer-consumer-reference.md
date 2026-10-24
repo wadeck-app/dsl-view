@@ -613,12 +613,13 @@ A component must not say "empty" before its data has arrived. No YAML is needed:
 
 | Page state | ctx | `DataTable` / `StatTile` / `Pagination` |
 |---|---|---|
-| First load pending | `$initialLoading: true` | `DataTable`: skeleton rows with the table's own columns (header stays, one `role="status"` "Loading...", `aria-busy`). `StatTile`: skeleton. `Pagination`: renders nothing (no "Page NaN"). |
-| Refetch (filter, page, poll, `RefreshButton`, action reload) | `$refreshing: true` | Rows stay. `DataTable` sets `aria-busy` and dims the rows slightly after 300 ms (a fast poll never flashes). |
+| First load pending | `$ctx.$initialLoading` is `true` | `DataTable`: skeleton rows with the table's own columns (header stays, one `role="status"` "Loading...", `aria-busy`). `StatTile`: skeleton. `Pagination`: renders nothing (no "Page NaN"). |
+| Refetch (filter, page, poll, `RefreshButton`, action reload) | `$ctx.$refreshing` is `true` | Rows stay. `DataTable` sets `aria-busy` and dims the rows slightly after 300 ms (a fast poll never flashes). |
 | Loaded, nothing returned | both `false` | `emptyMessage`. |
-| Load failed | `$initialLoading` goes `false` | The failure is reported through the notifier (`Could not load the data: <message>`, with `status`); a poll that keeps failing with the same message is reported once. The table then shows its `emptyMessage`: read the notification, not the table. |
+| Load failed | `$ctx.$initialLoading` goes `false` | The failure is reported through the notifier (`Could not load the data: <message>`, with `status`); a poll that keeps failing with the same message is reported once. The table then shows its `emptyMessage`: read the notification, not the table. |
 
-- Defaults come from `@ctxDefault`: `DataTable.loading` and `StatTile.loading` read `$initialLoading`, `DataTable.refreshing` reads `$refreshing`. An explicit `loading:` / `refreshing:` in the YAML wins. `@ctxDefault <key>` names a differently-spelled ctx entry.
+- Defaults come from `@ctxDefault`: `DataTable.loading` and `StatTile.loading` read the ctx entry `$initialLoading`, `DataTable.refreshing` reads `$refreshing`. An explicit `loading:` / `refreshing:` in the YAML wins. `@ctxDefault <key>` names a differently-spelled ctx entry.
+- Page state keys start with `$`, and `$name` in an expression reads ctx `name` without it: write `loading: $ctx.$initialLoading`, never `loading: $initialLoading` (that resolves to `undefined`; development logs one warning naming the working form). Same for `$ctx.$refreshing`, `$ctx.$actionPending.<name>`, `$ctx.$actionPendingRows.<name>`.
 - `ctx.loading` (true on any non-polled load, including `reloadSources` actions) is unchanged; bind it only if you want a skeleton on action reloads.
 - `Skeleton` takes `decorative` (no status role, for a parent that announces once) and honours `prefers-reduced-motion`.
 
