@@ -22,6 +22,8 @@ What the 2026-10-24 mutation campaigns showed to be weak in our tests. Check eac
 16. **Restore every global you replace.** `window.location`, `navigator.clipboard`, timers, env: restore in `afterEach`, not at the end of the test (a failing test skips it). `pageRunner/useBrains.contract.test.ts` once left `window.location` replaced for the rest of the file. `vitest.config.ts` now sets `restoreMocks`, `unstubEnvs` and `unstubGlobals` centrally and `test-setup.ts` returns to real timers after each test; that covers `vi.spyOn`/`vi.stubGlobal`, not direct assignment.
 17. **A documented key needs a test on every entry path.** Row, batch and form actions each ignored a different key (`confirm`, `reloadSources`, `strictParams`) because only one path was tested. List the paths, test each one.
 
+18. **Before changing an implicit or documented behaviour, find who relies on it.** Grep the sibling repos (capability-framework, app-core, queue, task, flow, orchestrator) for consumers, then list the change in "Behaviour changes by version" of `dsl-renderer-consumer-reference.md`. `Form` ignoring a re-sent `initialData` with the same content fixed one bug and stopped task's add forms from clearing after a save (fixed in `969b5b8`): the repo's own tests could not see it, a grep of `taskViews.ts` could.
+
 ## Equivalent mutants
 
 Do not write tests for them; classify with a one-line reason in the PR or report:
