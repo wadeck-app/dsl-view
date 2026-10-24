@@ -859,6 +859,27 @@ export function findNodeSchemaModule(sourcePath: string): string | null {
 	}
 }
 
+/**
+ * The `<Name>NodeSchema` names a node schemas module exports, read from its source (`export const XNodeSchema` and
+ * `export { ... as XNodeSchema }`). A schema is exported only for components the schema generator could map.
+ */
+export function readExportedNodeSchemas(schemaModule: string): Set<string> {
+	const source = fs.readFileSync(schemaModule, 'utf-8');
+	const names = new Set<string>();
+	for (const match of source.matchAll(/export\s+(?:const|let|var|function)\s+([A-Za-z0-9_$]+NodeSchema)\b/g)) {
+		names.add(match[1]!);
+	}
+	for (const match of source.matchAll(/export\s*\{([^}]*)\}/g)) {
+		for (const part of match[1]!.split(',')) {
+			const exportedName = part.trim().split(/\s+as\s+/).pop()?.trim();
+			if (exportedName && exportedName.endsWith('NodeSchema')) {
+				names.add(exportedName);
+			}
+		}
+	}
+	return names;
+}
+
 // ─── YAML $type guard-rail ────────────────────────────────────────────────────
 
 // Component names written as `$type: Name` (optionally quoted) in the pages, several per line allowed (flow style).
@@ -1003,11 +1024,22 @@ function buildEntriesFileImpl(
 		}
 	}
 
-	// One namespace import per library that ships node schemas; a component without a schema export simply gets none.
+	// One namespace import per library that ships node schemas; a component whose schema the module does not export
+	// (no Props interface, only HTML attributes...) gets none: referencing a missing export makes every consumer's
+	// bundler warn "is not exported by" at build time.
 	const schemaAliases = new Map<string, string>();
+	const schemaExports = new Map<string, Set<string>>();
 	const schemaAliasOf = (component: DiscoveredComponent): string | null => {
 		const schemaModule = findNodeSchemaModule(component.sourcePath);
 		if (!schemaModule) {
+			return null;
+		}
+		let exported = schemaExports.get(schemaModule);
+		if (!exported) {
+			exported = readExportedNodeSchemas(schemaModule);
+			schemaExports.set(schemaModule, exported);
+		}
+		if (!exported.has(`${component.name}NodeSchema`)) {
 			return null;
 		}
 		let alias = schemaAliases.get(schemaModule);

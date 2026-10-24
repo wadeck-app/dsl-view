@@ -66,6 +66,37 @@ describe('generated entries and node schemas', () => {
 		expect(out).not.toMatch(/pickPropSchema|isDevelopment|typeof process/);
 	});
 
+	it('references only the schemas the module really exports, so no bundler warns about a missing export', () => {
+		write(path.join(root, 'partial/package.json'), '{"name":"partial"}');
+		write(path.join(root, 'partial/src/components/Mapped.tsx'), component('Mapped'));
+		write(path.join(root, 'partial/src/components/Unmapped.tsx'), component('Unmapped'));
+		write(path.join(root, 'partial/src/components/Aliased.tsx'), component('Aliased'));
+		write(
+			path.join(root, 'partial/src/schemas/generated-node-schemas.ts'),
+			'export const MappedNodeSchema = null;\nconst other = null;\nexport { other as AliasedNodeSchema };\n',
+		);
+
+		const out = generate('partial', 'partial');
+
+		expect(out).toContain("['MappedNodeSchema']");
+		expect(out).toContain("['AliasedNodeSchema']");
+		expect(out).not.toContain('UnmappedNodeSchema');
+		// The unmapped component still gets its entry, just without a propSchema line.
+		const unmappedEntry = out.slice(out.indexOf('export const UnmappedEntry'), out.indexOf('export const', out.indexOf('export const UnmappedEntry') + 10));
+		expect(unmappedEntry).not.toContain('propSchema');
+	});
+
+	it('imports no schemas namespace when no component of the library has an exported schema (no unused import)', () => {
+		write(path.join(root, 'noneMapped/package.json'), '{"name":"none-mapped"}');
+		write(path.join(root, 'noneMapped/src/components/Orphan.tsx'), component('Orphan'));
+		write(path.join(root, 'noneMapped/src/schemas/generated-node-schemas.ts'), 'export const SomethingElse = null;\n');
+
+		const out = generate('noneMapped', 'none-mapped');
+
+		expect(out).not.toContain('nodeSchemas0');
+		expect(out).not.toContain('propSchema');
+	});
+
 	it('adds no schema import, no propSchema and no unused helper import for a library without schemas', () => {
 		const out = generate('plain', 'plain');
 
