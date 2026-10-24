@@ -1,8 +1,13 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Stepper } from './Stepper.js';
 import type { StepperStep } from './Stepper.js';
+
+// dsl-ui has no central restoreMocks: a console spy left by one test would hand its call history to the next.
+afterEach(() => {
+	vi.restoreAllMocks();
+});
 
 const steps: StepperStep[] = [
 	{ label: 'Step One', items: <p>Content of step one</p> },
@@ -237,5 +242,36 @@ describe('Stepper when the steps change', () => {
 		const { container } = render(<Stepper steps={[]} />);
 		expect(container).toBeEmptyDOMElement();
 		expect(warn).toHaveBeenCalledWith(expect.stringContaining('[Stepper]'));
+	});
+});
+
+describe('Stepper when `steps` is not an array (YAML authoring mistakes)', () => {
+	// A YAML node without `steps:` or with a scalar/map there reaches the component as undefined, null, a string
+	// or an object: the page must not crash, it must render nothing and name what was received.
+	const cases: Array<[string, unknown, string]> = [
+		['undefined (key missing)', undefined, 'undefined'],
+		['null (empty key)', null, 'null'],
+		['a string', 'Step one', 'string'],
+		['a map', { label: 'Step one' }, 'object'],
+	];
+
+	it.each(cases)('renders nothing and warns once with the received type for %s', (_name, value, typeName) => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const { container } = render(<Stepper steps={value as StepperStep[]} />);
+		expect(container).toBeEmptyDOMElement();
+		expect(warn).toHaveBeenCalledTimes(1);
+		const message = String(warn.mock.calls[0]?.[0]);
+		expect(message).toContain('[Stepper]');
+		expect(message).toContain('"steps"');
+		expect(message).toContain(`received ${typeName}`);
+	});
+
+	it('recovers when valid steps arrive later and does not warn again for them', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const { rerender } = render(<Stepper steps={undefined as unknown as StepperStep[]} />);
+		expect(warn).toHaveBeenCalledTimes(1);
+		rerender(<Stepper steps={steps} />);
+		expect(screen.getByText('Content of step one')).toBeInTheDocument();
+		expect(warn).toHaveBeenCalledTimes(1);
 	});
 });

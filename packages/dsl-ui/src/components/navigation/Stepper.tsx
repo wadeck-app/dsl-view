@@ -31,24 +31,38 @@ export interface StepperProps {
 	className?: string;
 }
 
+// typeof reports null as 'object': name it, the two need different fixes in the YAML (empty key vs a map).
+function describeReceived(value: unknown): string {
+	return value === null ? 'null' : typeof value;
+}
+
 /**
  * @registryCategory disposition
  * @registryTags stepper wizard
  */
-export function Stepper({ steps, onComplete, onCancel, completedLabel = 'Finish', className }: StepperProps) {
+export function Stepper({ steps: stepsProp, onComplete, onCancel, completedLabel = 'Finish', className }: StepperProps) {
 	const [requestedStep, setCurrentStep] = useState(0);
+	// A YAML node without `steps:` (or with a scalar or a map there) reaches the component as a non-array: render
+	// nothing and say what was received, instead of crashing the page on `steps.length`.
+	const received: unknown = stepsProp;
+	const steps: StepperStep[] = Array.isArray(received) ? (received as StepperStep[]) : [];
 	// The steps can change under a mounted stepper (a conditional step disappears): stay on a step that exists
 	// instead of showing a blank panel with a Next button that leads nowhere.
 	const currentStep = Math.max(0, Math.min(requestedStep, steps.length - 1));
 	const isFirst = currentStep === 0;
 	const isLast = currentStep === steps.length - 1;
 	const hasSteps = steps.length > 0;
+	const problem = Array.isArray(received)
+		? hasSteps
+			? null
+			: '[Stepper] received no steps and renders nothing.'
+		: `[Stepper] expected "steps" to be an array of { label, items } but received ${describeReceived(received)}; rendering nothing.`;
 
 	useEffect(() => {
-		if (!hasSteps) {
-			console.warn('[Stepper] received no steps and renders nothing.');
+		if (problem) {
+			console.warn(problem);
 		}
-	}, [hasSteps]);
+	}, [problem]);
 
 	function handleNext() {
 		if (isLast) {
