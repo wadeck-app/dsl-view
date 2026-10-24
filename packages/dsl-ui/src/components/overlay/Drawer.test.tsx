@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { Drawer } from './Drawer.js';
+import { Drawer, useDrawerClose } from './Drawer.js';
 
 function renderDrawer(props: Partial<React.ComponentProps<typeof Drawer>> = {}) {
 	const defaultProps = {
@@ -282,6 +282,134 @@ describe('Drawer', () => {
 			const notCancelled = fireEvent.keyDown(document, { key: 'Tab' });
 			expect(notCancelled).toBe(true);
 			expect(document.activeElement).toBe(middle);
+		});
+	});
+
+	describe('disabled controls are not focus stops', () => {
+		it('Tab on the last ENABLED control wraps to the first even when a disabled button follows it', () => {
+			render(
+				<Drawer open={true} onClose={vi.fn()} title="Trap" hideCloseButton>
+					<button>First</button>
+					<button>Second</button>
+					<button disabled>Disabled last</button>
+				</Drawer>
+			);
+			const second = screen.getByText('Second');
+			act(() => second.focus());
+			const notCancelled = fireEvent.keyDown(document, { key: 'Tab' });
+			expect(notCancelled).toBe(false);
+			expect(document.activeElement).toBe(screen.getByText('First'));
+		});
+
+		it('Shift+Tab on the first ENABLED control wraps to the last enabled one even when a disabled button leads', () => {
+			render(
+				<Drawer open={true} onClose={vi.fn()} title="Trap" hideCloseButton>
+					<button disabled>Disabled first</button>
+					<button>First</button>
+					<button>Last</button>
+				</Drawer>
+			);
+			act(() => screen.getByText('First').focus());
+			const notCancelled = fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+			expect(notCancelled).toBe(false);
+			expect(document.activeElement).toBe(screen.getByText('Last'));
+		});
+
+		it('with nothing focusable inside, Tab is left alone (default not prevented)', () => {
+			render(
+				<Drawer open={true} onClose={vi.fn()} title="Trap" hideCloseButton>
+					<p>Read only</p>
+				</Drawer>
+			);
+			expect(fireEvent.keyDown(document, { key: 'Tab' })).toBe(true);
+			expect(fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })).toBe(true);
+		});
+
+		it('Shift+Tab from a middle control is left to the browser (no wrap, default not prevented)', () => {
+			render(
+				<Drawer open={true} onClose={vi.fn()} title="Trap" hideCloseButton>
+					<button>First</button>
+					<button>Middle</button>
+					<button>Last</button>
+				</Drawer>
+			);
+			const middle = screen.getByText('Middle');
+			act(() => middle.focus());
+			expect(fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })).toBe(true);
+			expect(document.activeElement).toBe(middle);
+		});
+
+		it('a hidden input is not a focus stop either', () => {
+			render(
+				<Drawer open={true} onClose={vi.fn()} title="Trap" hideCloseButton>
+					<button>Only</button>
+					<input type="hidden" name="token" defaultValue="x" />
+				</Drawer>
+			);
+			act(() => screen.getByText('Only').focus());
+			expect(fireEvent.keyDown(document, { key: 'Tab' })).toBe(false);
+			expect(document.activeElement).toBe(screen.getByText('Only'));
+		});
+
+		it('the initial focus skips a disabled first control', async () => {
+			render(
+				<Drawer open={true} onClose={vi.fn()} title="Trap" hideCloseButton>
+					<button disabled>Disabled first</button>
+					<input aria-label="Name" />
+				</Drawer>
+			);
+			await waitFor(() => {
+				expect(document.activeElement).toBe(screen.getByLabelText('Name'));
+			});
+		});
+	});
+
+	describe('naming', () => {
+		it('with a title the dialog is labelled by it and has no fallback aria-label', () => {
+			renderDrawer({ open: true, title: 'Settings' });
+			const dialog = screen.getByRole('dialog', { name: 'Settings' });
+			expect(dialog).not.toHaveAttribute('aria-label');
+		});
+
+		it('without a title the dialog still has an accessible name, and no aria-labelledby', () => {
+			renderDrawer({ open: true, title: undefined });
+			const dialog = screen.getByRole('dialog', { name: 'Drawer' });
+			expect(dialog).not.toHaveAttribute('aria-labelledby');
+			expect(dialog.querySelector('h2')).toBeNull();
+		});
+	});
+
+	describe('useDrawerClose', () => {
+		function CloseFromInside() {
+			const close = useDrawerClose();
+			return <button onClick={() => close?.()}>Close from inside</button>;
+		}
+
+		it('hands the drawer content the close callback of the drawer', () => {
+			const onClose = vi.fn();
+			renderDrawer({ open: true, onClose, children: <CloseFromInside /> });
+			fireEvent.click(screen.getByText('Close from inside'));
+			expect(onClose).toHaveBeenCalledTimes(1);
+		});
+
+		it('is null outside any drawer', () => {
+			let seen: unknown = 'unset';
+			function Probe() {
+				seen = useDrawerClose();
+				return null;
+			}
+			render(<Probe />);
+			expect(seen).toBeNull();
+		});
+	});
+
+	describe('lifecycle', () => {
+		it('stops listening to the keyboard when unmounted while open', () => {
+			const onClose = vi.fn();
+			const { unmount } = renderDrawer({ open: true, onClose });
+			unmount();
+			expect(fireEvent.keyDown(document, { key: 'Escape' })).toBe(true);
+			expect(onClose).not.toHaveBeenCalled();
 		});
 	});
 

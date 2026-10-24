@@ -35,6 +35,17 @@ const SIDE_HEIGHT_CLASSES: Record<'sm' | 'md' | 'lg', string> = {
 };
 // @formatter:on
 
+// Disabled controls and hidden inputs cannot take focus: counting them as the first or last stop made the Tab
+// wrap miss (focus then left the modal) and left the initial focus on <body> when the first control was disabled.
+const FOCUSABLE_SELECTOR = [
+	'button:not([disabled])',
+	'[href]',
+	'input:not([disabled]):not([type="hidden"])',
+	'select:not([disabled])',
+	'textarea:not([disabled])',
+	'[tabindex]:not([tabindex="-1"])',
+].join(', ');
+
 function getPanelPositionClasses(side: 'left' | 'right' | 'bottom', size: 'sm' | 'md' | 'lg'): string {
 	if (side === 'right') {
 		return `top-0 right-0 h-full ${SIDE_WIDTH_CLASSES[size]}`;
@@ -81,10 +92,6 @@ export function Drawer({
 		onCloseRef.current = onClose;
 	}, [open, onClose]);
 
-	function handleBackdropClick(e: React.MouseEvent<HTMLDivElement>) {
-		if (e.target === e.currentTarget) onClose();
-	}
-
 	// ESC + focus trap via stable callback
 	const handleKeyDown = useCallback((e: KeyboardEvent) => {
 		if (!isOpenRef.current) return;
@@ -96,9 +103,7 @@ export function Drawer({
 		if (e.key === 'Tab') {
 			const drawer = drawerRef.current;
 			if (!drawer) return;
-			const focusable = drawer.querySelectorAll<HTMLElement>(
-				'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-			);
+			const focusable = drawer.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
 			const first = focusable[0];
 			const last = focusable[focusable.length - 1];
 			if (!first) return;
@@ -128,10 +133,7 @@ export function Drawer({
 			requestAnimationFrame(() => {
 				const drawer = drawerRef.current;
 				if (!drawer) return;
-				const focusable = drawer.querySelector<HTMLElement>(
-					'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-				);
-				focusable?.focus();
+				drawer.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)?.focus();
 			});
 		} else {
 			if (previousFocusRef.current instanceof HTMLElement) {
