@@ -8,6 +8,7 @@ import {
 	DATA_TABLE_ACTION_ITEM_KEYS,
 	DATA_TABLE_ACTIONS_COLUMN_KEYS,
 	DATA_TABLE_COLUMN_KEYS,
+	DATA_TABLE_LINK_COLUMN_KEYS,
 	DataTable,
 } from './DataTable.js';
 import type { TableColumn } from './DataTable.js';
@@ -161,6 +162,7 @@ describe('DATA_TABLE_*_KEYS vs the build tooling', () => {
 		const spec = manifest['DataTable'].itemKeys.columns;
 		expect([...spec.keys].sort()).toEqual([...DATA_TABLE_COLUMN_KEYS].sort());
 		expect([...spec.byType.actions.keys].sort()).toEqual([...DATA_TABLE_ACTIONS_COLUMN_KEYS].sort());
+		expect([...spec.byType.link.keys].sort()).toEqual([...DATA_TABLE_LINK_COLUMN_KEYS].sort());
 		expect([...spec.byType.actions.arrays.items.keys].sort()).toEqual([...DATA_TABLE_ACTION_ITEM_KEYS].sort());
 		// ts-morph parses every component under ../ : give slower CI machines room.
 	}, 120_000);

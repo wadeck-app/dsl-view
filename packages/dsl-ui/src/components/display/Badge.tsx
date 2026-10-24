@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { AppLink, usableLinkTarget } from '../navigation/AppLink.js';
+
 export type BadgeVariant = 'default' | 'primary' | 'success' | 'warning' | 'danger' | 'info';
 
 export interface BadgeProps {
@@ -16,6 +18,14 @@ export interface BadgeProps {
      */
     tone?: 'solid' | 'subtle';
     size?: 'sm' | 'md';
+    /**
+     * Makes the badge a link: an app path such as `/modules/queue/webhooks`, navigated through the router without a
+     * page load. Ignored, with an error in the console, when it is not an absolute app path (or an http(s)/mailto URL
+     * with `external`).
+     */
+    href?: string;
+    /** Opens `href` as an external URL in a new tab. */
+    external?: boolean;
 }
 
 // @formatter:off
@@ -45,15 +55,24 @@ const SIZE_CLASSES: Record<NonNullable<BadgeProps['size']>, string> = {
 };
 // @formatter:on
 
+// A link badge keeps the badge's look; hover and keyboard focus are the only additions.
+const LINK_CLASSES =
+    'no-underline transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[var(--color-primary-solid)]';
+
 /**
  * @registryCategory atomic
  * @registryTags badge status
  */
-export function Badge({ label, variant = 'default', tone = 'solid', size = 'sm' }: BadgeProps) {
+export function Badge({ label, variant = 'default', tone = 'solid', size = 'sm', href, external = false }: BadgeProps) {
     const variantClasses = tone === 'subtle' ? SUBTLE_CLASSES[variant] : SOLID_CLASSES[variant];
-    return (
-        <span className={`inline-flex items-center rounded-full font-medium ${variantClasses} ${SIZE_CLASSES[size]}`}>
-            {label}
-        </span>
-    );
+    const classes = `inline-flex items-center rounded-full font-medium ${variantClasses} ${SIZE_CLASSES[size]}`;
+    const target = usableLinkTarget(href, external, 'Badge');
+    if (target) {
+        return (
+            <AppLink href={target} external={external} aria-label={label} className={`${classes} ${LINK_CLASSES}`}>
+                {label}
+            </AppLink>
+        );
+    }
+    return <span className={classes}>{label}</span>;
 }

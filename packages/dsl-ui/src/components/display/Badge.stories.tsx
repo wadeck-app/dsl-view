@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
+import { MemoryRouter } from 'react-router-dom';
 import { Badge } from './Badge.js';
 
 const meta: Meta<typeof Badge> = {
@@ -20,6 +21,18 @@ export const Warning: Story = { args: { label: 'Pending', variant: 'warning' } }
 export const Danger: Story = { args: { label: 'Error', variant: 'danger' } };
 export const Info: Story = { args: { label: 'Info', variant: 'info' } };
 export const SizeMd: Story = { args: { label: 'Medium', variant: 'primary', size: 'md' } };
+
+// The whole badge is the link, with the same look plus hover and focus states. MemoryRouter keeps the click inside the story.
+export const AsLink: Story = {
+    decorators: [
+        (Story) => (
+            <MemoryRouter>
+                <Story />
+            </MemoryRouter>
+        ),
+    ],
+    args: { label: 'Relay connected', variant: 'success', tone: 'subtle', href: '/modules/queue/webhooks' },
+};
 
 export const AllVariants: Story = {
     render: () => (

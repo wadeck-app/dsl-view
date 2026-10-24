@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
+import { MemoryRouter } from 'react-router-dom';
 
 import { ThemeScope } from '../layout/ThemeScope.js';
 import { DataTable } from './DataTable.js';
@@ -63,6 +64,25 @@ export const NoMidWordBreaks: Story = {
 				])}
 			/>
 		</Narrow>
+	),
+};
+
+// Rows stay non-clickable; an icon-only `type: link` column right after the expansion chevron opens the detail page, and a
+// data column with `href` turns its value into a link. MemoryRouter keeps the clicks inside the story.
+export const LinkColumns: Story = {
+	render: () => (
+		<MemoryRouter>
+			<Narrow>
+				<DataTable
+					rows={ROWS}
+					columns={yamlColumns([
+						{ type: 'link', to: '/modules/flow/executions/{id}', icon: 'external-link', label: 'Open details', position: 'start' },
+						{ field: 'event', label: 'Event', mono: true, truncate: true, href: '/modules/queue/history?event={event}' },
+						{ field: 'state', label: 'State', nowrap: true, badge: { completed: 'success', failed: 'danger', pending: 'warning' } },
+					])}
+				/>
+			</Narrow>
+		</MemoryRouter>
 	),
 };
 

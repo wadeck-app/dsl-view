@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import React from 'react';
 import { DollarSign, TrendingDown, ShoppingCart, Users } from 'lucide-react';
+import { MemoryRouter } from 'react-router-dom';
 import { StatTile } from './StatTile.js';
 
 const meta: Meta<typeof StatTile> = {
@@ -32,6 +33,23 @@ export const WithTrendDown: Story = {
         label: 'Refund Rate',
         value: '3.2%',
         trend: { value: 8, direction: 'down', label: 'vs last month' },
+    },
+};
+
+// The whole tile is the link (drill-down from the number). MemoryRouter keeps the click inside the story.
+export const AsLink: Story = {
+    decorators: [
+        (Story) => (
+            <MemoryRouter>
+                <Story />
+            </MemoryRouter>
+        ),
+    ],
+    args: {
+        label: 'Failed (24h)',
+        value: '17',
+        trend: { value: 4, direction: 'up', label: 'vs yesterday' },
+        href: '/modules/queue/history?status=failed',
     },
 };
 

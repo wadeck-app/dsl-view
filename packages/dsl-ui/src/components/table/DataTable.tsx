@@ -26,7 +26,10 @@ import { Badge } from '../display/Badge.js';
 import { Skeleton } from '../display/Skeleton.js';
 import type { BadgeVariant } from '../display/Badge.js';
 import { HttpStatusBadge } from '../display/HttpStatusBadge.js';
+import { iconByName } from '../display/iconByName.js';
+import { AppLink } from '../navigation/AppLink.js';
 import { formatBytes } from '@dsl-ui/utils/formatBytes.js';
+import { buildLinkPath } from '@dsl-ui/utils/linkTarget.js';
 import { RouterContext } from '@dsl-ui/RouterContext.js';
 import { buildTemplatedPath } from '@dsl-ui/utils/templatedPath.js';
 
@@ -177,6 +180,32 @@ export interface DataTableColumnSpec {
 	format?: string;
 	/** Shows the value as a Badge: map of cell value to badge variant (default | primary | success | warning | danger | info). Values not in the map stay plain text. */
 	badge?: Record<string, string>;
+	/**
+	 * Makes the cell value a link to this template, `{field}` filled from the row and percent-encoded
+	 * (`/modules/queue/history?event={event}`). A row whose placeholder has no value shows the plain value and an error is logged once.
+	 */
+	href?: string;
+	/** `href` is a full http(s)/mailto URL opened in a new tab (placeholders are still encoded). */
+	external?: boolean;
+}
+
+/**
+ * An icon-only link column authored in YAML (`type: link`): the way to open a detail page without making the whole row
+ * clickable. It stays a real anchor (middle-click, new tab, copy link) and goes through the router without a page load.
+ */
+export interface DataTableLinkColumnSpec {
+	type: 'link';
+	/** Target template, `{field}` filled from the row and percent-encoded (`/modules/flow/executions/{executionId}`). */
+	to: string;
+	/** Accessible name and tooltip of the icon-only link. */
+	label?: string;
+	/** Icon name: arrow-right | chevron-right | external-link (default) | eye | file-text | info | link | list | search. */
+	icon?: string;
+	/** `start` puts the link right after the expansion chevron (before the data columns), `end` (default) keeps its place in the list. */
+	position?: 'start' | 'end';
+	/** `to` is a full http(s)/mailto URL opened in a new tab. */
+	external?: boolean;
+	width?: number;
 }
 
 /** One button of an actions column authored in YAML. */
@@ -200,12 +229,14 @@ const NON_YAML_COLUMN_KEYS = ['render', 'isActions', 'actions'];
 
 // MUST list the same keys as DataTableColumnSpec / DataTableActionsColumnSpec / DataTableActionItemSpec: a test
 // compares them with what the build tooling extracts from those interfaces.
-export const DATA_TABLE_COLUMN_KEYS = ['field', 'key', 'label', 'width', 'truncate', 'nowrap', 'mono', 'muted', 'sortable', 'format', 'badge'] as const;
+export const DATA_TABLE_COLUMN_KEYS = ['field', 'key', 'label', 'width', 'truncate', 'nowrap', 'mono', 'muted', 'sortable', 'format', 'badge', 'href', 'external'] as const;
 export const DATA_TABLE_ACTIONS_COLUMN_KEYS = ['type', 'items', 'width'] as const;
+export const DATA_TABLE_LINK_COLUMN_KEYS = ['type', 'to', 'label', 'icon', 'position', 'external', 'width'] as const;
 export const DATA_TABLE_ACTION_ITEM_KEYS = ['label', 'action', 'variant', 'condition'] as const;
 
 type RawYamlColumn = Partial<DataTableColumnSpec> &
-	Partial<DataTableActionsColumnSpec> & {
+	Partial<Omit<DataTableActionsColumnSpec, 'type'>> &
+	Partial<Omit<DataTableLinkColumnSpec, 'type'>> & {
 		type?: string;
 		render?: (row: Record<string, unknown>) => React.ReactNode;
 		isActions?: boolean;
@@ -244,7 +275,8 @@ function describeKeys(keys: readonly string[]): string {
 // A key DataTable ignores is an authoring mistake: say so once per column definition, naming the column.
 function warnUnsupportedColumnKeys(col: Record<string, unknown>, index: number): void {
 	const isActions = col['type'] === 'actions' || col['isActions'];
-	const allowed: readonly string[] = isActions ? DATA_TABLE_ACTIONS_COLUMN_KEYS : DATA_TABLE_COLUMN_KEYS;
+	const isLink = col['type'] === 'link';
+	const allowed: readonly string[] = isLink ? DATA_TABLE_LINK_COLUMN_KEYS : isActions ? DATA_TABLE_ACTIONS_COLUMN_KEYS : DATA_TABLE_COLUMN_KEYS;
 	const where = typeof col['field'] === 'string' ? `"${col['field']}"` : `#${index}`;
 	for (const key of Object.keys(col)) {
 		if (allowed.includes(key) || NON_YAML_COLUMN_KEYS.includes(key)) {
@@ -252,7 +284,7 @@ function warnUnsupportedColumnKeys(col: Record<string, unknown>, index: number):
 		}
 		const hint = key === '$type' && col[key] === 'actions' ? ' Actions columns are written `type: actions` (no `$`).' : '';
 		warnOnce(
-			`[DataTable] column ${where}: unknown key "${key}" is ignored.${hint} Supported keys for ${isActions ? 'an actions' : 'a data'} column: ${describeKeys(allowed)}.`
+			`[DataTable] column ${where}: unknown key "${key}" is ignored.${hint} Supported keys for ${isLink ? 'a link' : isActions ? 'an actions' : 'a data'} column: ${describeKeys(allowed)}.`
 		);
 	}
 	if (isActions && Array.isArray(col['items'])) {
@@ -283,6 +315,56 @@ function badgeVariantFor(value: unknown, map: Record<string, string>, where: str
 	return variant as BadgeVariant;
 }
 
+// A data cell that is a link reads as one without shouting in a dense table.
+const DATA_LINK_CLASSES =
+	'text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-solid)] rounded-sm';
+const ICON_LINK_CLASSES =
+	'inline-flex h-6 w-6 items-center justify-center rounded text-muted transition-colors hover:bg-bg-secondary hover:text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-solid)]';
+
+// `type: link` column: an icon-only anchor per row. The accessible name is the label (also the tooltip).
+function normalizeLinkColumn<T extends Record<string, unknown>>(col: RawYamlColumn, index: number): TableColumn<T> {
+	const where = `link column #${index}`;
+	const template = col.to;
+	if (typeof template !== 'string' || template === '') {
+		warnOnce(`[DataTable] ${where}: a link column needs \`to\` (a path template such as /modules/flow/executions/{executionId}).`);
+	}
+	if (col.label === undefined || col.label === '') {
+		warnOnce(`[DataTable] ${where}: a link column needs a \`label\`, it is the accessible name of the icon-only link. Using "Open".`);
+	}
+	const label = col.label || 'Open';
+	const external = col.external === true;
+	const icon = iconByName(col.icon, `DataTable ${where}`);
+	return {
+		key: `_link_${index}`,
+		label,
+		width: col.width,
+		isLink: true,
+		linkPosition: col.position === 'start' ? 'start' : 'end',
+		render: row => {
+			if (typeof template !== 'string' || template === '') {
+				return null;
+			}
+			const link = buildLinkPath(template, row, external);
+			if (!link.href) {
+				warnOnce(`[DataTable] ${where}: link not rendered: ${link.problem}.`);
+				return null;
+			}
+			return (
+				<AppLink
+					href={link.href}
+					external={external}
+					aria-label={label}
+					title={label}
+					className={ICON_LINK_CLASSES}
+					onClick={e => e.stopPropagation()}
+				>
+					{icon}
+				</AppLink>
+			);
+		},
+	};
+}
+
 function normalizeColumn<T extends Record<string, unknown>>(col: RawYamlColumn, index = 0): TableColumn<T> {
 	// Already a proper TableColumn (has render function)
 	if (typeof col.render === 'function') {
@@ -308,6 +390,10 @@ function normalizeColumn<T extends Record<string, unknown>>(col: RawYamlColumn, 
 			render: () => null,
 		};
 	}
+	// Icon-only link column
+	if (col.type === 'link') {
+		return normalizeLinkColumn<T>(col, index);
+	}
 	// Plain field column
 	const field = col.field ?? col.key ?? '';
 	const where = `"${field || index}"`;
@@ -320,7 +406,7 @@ function normalizeColumn<T extends Record<string, unknown>>(col: RawYamlColumn, 
 		}
 	}
 	const badge = col.badge;
-	const render = (row: T): React.ReactNode => {
+	const renderValue = (row: T): React.ReactNode => {
 		const value = row[field];
 		if (badge) {
 			const variant = badgeVariantFor(value, badge, where);
@@ -339,6 +425,25 @@ function normalizeColumn<T extends Record<string, unknown>>(col: RawYamlColumn, 
 			return formatValue(value, format as ColumnValueFormat);
 		}
 		return String(value ?? '');
+	};
+	const hrefTemplate = col.href;
+	const external = col.external === true;
+	const render = (row: T): React.ReactNode => {
+		const content = renderValue(row);
+		if (hrefTemplate === undefined) {
+			return content;
+		}
+		const link = buildLinkPath(hrefTemplate, row, external);
+		if (!link.href) {
+			// A link that cannot be built shows the plain value: a dead anchor would hide the authoring mistake.
+			warnOnce(`[DataTable] column ${where}: href ignored: ${link.problem}.`);
+			return content;
+		}
+		return (
+			<AppLink href={link.href} external={external} className={DATA_LINK_CLASSES} onClick={e => e.stopPropagation()}>
+				{content}
+			</AppLink>
+		);
 	};
 	return {
 		key: field,
@@ -383,6 +488,10 @@ export interface TableColumn<T extends Record<string, unknown>> {
 	sortable?: boolean;
 	isActions?: boolean;
 	actions?: ActionDef<T>[];
+	/** An icon-only link column (`type: link`): no header text, narrow cell. */
+	isLink?: boolean;
+	/** Where a link column sits: `start` moves it right after the expansion chevron. */
+	linkPosition?: 'start' | 'end';
 }
 
 interface TextOptions {
@@ -496,7 +605,7 @@ export interface DataTableProps<T extends Record<string, unknown>> {
 	rows: T[];
 	/**
 	 * Columns: proper TableColumn objects (ColumnHelpers) or YAML column maps.
-	 * @itemKeys DataTableColumnSpec, DataTableActionsColumnSpec
+	 * @itemKeys DataTableColumnSpec, DataTableActionsColumnSpec, DataTableLinkColumnSpec
 	 */
 	columns: TableColumn<T>[];
 	/**
@@ -622,7 +731,11 @@ export function DataTable<T extends Record<string, unknown>>({
 	// column defs (from DSL entriesGenerator). This allows declarative YAML to drive DataTable
 	// without requiring ColumnHelpers in every call site.
 	const normalizedColumns = useMemo(
-		() => (columns ?? []).map((col, index) => normalizeColumn<T>(col as unknown as RawYamlColumn, index)),
+		() => {
+			const normalized = (columns ?? []).map((col, index) => normalizeColumn<T>(col as unknown as RawYamlColumn, index));
+			// `position: start` links come first (right after the expansion chevron); the order of the others is kept.
+			return [...normalized.filter(c => c.linkPosition === 'start'), ...normalized.filter(c => c.linkPosition !== 'start')];
+		},
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 		[columns]
 	);
@@ -825,6 +938,14 @@ export function DataTable<T extends Record<string, unknown>>({
 								)}
 								{expansion && <th className="w-8" />}
 								{normalizedColumns.map(col => {
+									if (col.isLink) {
+										// Icon-only column: no visible header, but the name stays available to assistive tech.
+										return (
+											<th key={col.key} className="w-8 px-1 py-2" style={col.width ? { width: `${col.width * 4}px` } : undefined}>
+												<span className="sr-only">{col.label}</span>
+											</th>
+										);
+									}
 									if (col.sortable) {
 										const isActive = sort?.key === col.key;
 										const SortIcon = isActive
@@ -962,6 +1083,17 @@ export function DataTable<T extends Record<string, unknown>>({
 												</td>
 											)}
 											{normalizedColumns.map(col => {
+												if (col.isLink) {
+													return (
+														<td
+															key={col.key}
+															className="w-8 px-1 py-1.5 text-center"
+															style={col.width ? { width: `${col.width * 4}px` } : undefined}
+														>
+															{col.render(row)}
+														</td>
+													);
+												}
 												if (col.isActions && col.actions) {
 													return (
 														<td

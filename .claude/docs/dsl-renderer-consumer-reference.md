@@ -556,14 +556,32 @@ columns:
   - { field: at, label: At, format: datetime }                          # datetime | date | time | bytes | ms | httpMethod | httpStatus
   - { field: tries, label: Tries, width: 12, sortable: true }           # width in Tailwind units (12 = 3rem)
   - { type: actions, items: [{ label: Clear, action: clearEntry, variant: danger-outline, condition: "!locked" }] }
+  - { type: link, to: "/modules/flow/executions/{executionId}", icon: external-link,
+      label: Open details, position: start }                              # icon-only link, rows stay non-clickable
+  - { field: event, label: Event, href: "/modules/queue/history?event={event}" }  # the cell value is a link
 ```
 
-- Column keys: `field` (alias `key`), `label`, `width`, `truncate`, `nowrap`, `mono`, `muted`, `sortable`, `format`, `badge`. Actions column: `type`, `items`, `width`; item keys: `label`, `action`, `variant`, `condition`.
+- Column keys: `field` (alias `key`), `label`, `width`, `truncate`, `nowrap`, `mono`, `muted`, `sortable`, `format`, `badge`, `href`, `external`. Actions column: `type`, `items`, `width`; item keys: `label`, `action`, `variant`, `condition`. Link column: `type`, `to`, `label`, `icon`, `position`, `external`, `width`.
 - Any other column key is an error: `compileDslDocument` / `findUnknownKeys` report it with the column path, and `DataTable` logs it once with `console.error`. Earlier versions dropped everything but `field`/`label` silently, so `width`, `truncate`, `mono`, `muted`, `format` and `sortable` start taking effect on pages that already declared them.
 - An actions column is `type: actions`. `$type: actions` (older wdrive pages) was never recognised: the column rendered as an empty data column; it is now reported.
 - Default wrapping is unchanged: a plain column breaks anywhere (`break-all`). In a narrow container use `nowrap` (never wraps, the column widens), `truncate`, or `width`.
 - `badge`: values missing from the map stay plain text; a variant other than `default | primary | success | warning | danger | info` logs an error and shows the neutral variant.
 - `format` renders in the viewer's locale and local time zone.
+
+## Links: `StatTile`, `Badge`, `DataTable`
+
+```yaml
+- { $type: StatTile, label: Failed (24h), value: $sources.stats.failed, href: "/modules/queue/history?status=failed" }
+- { $type: Badge, label: Relay connected, variant: success, href: /modules/queue/webhooks }
+```
+
+- `href` makes the whole tile or badge a real `<a>`: router navigation without a page load, middle-click, new tab and copy link work. The `aria-label` is `label: value` (tile) or the badge label. Without `href` nothing changes.
+- An internal target must be an absolute app path with a single leading `/`. `external: true` opens an `http:`, `https:` or `mailto:` URL in a new tab with `rel="noopener noreferrer"`.
+- A target that breaks these rules (`javascript:`, `data:`, `//host`, a relative path) is ignored: the non-link form renders and an error is logged once naming the component.
+- Table templates (`to`, column `href`) fill `{field}` from the row, percent-encoded. A row whose placeholder is missing or empty gets no link (plain value, or no icon) and an error is logged once with the row's keys; there is never an empty path segment. With `external: true`, a template that is just `{url}` takes the whole URL from the row (still scheme-checked).
+- Link column `icon` names: `arrow-right`, `chevron-right`, `external-link` (default), `eye`, `file-text`, `info`, `link`, `list`, `search`. An unknown name logs an error listing them and shows `external-link`. `label` is required (accessible name and tooltip; "Open" is used with a warning when missing).
+- `position: start` places the link right after the expansion chevron; link clicks do not trigger row clicks.
+- Registries generated before this version do not know the new keys: regenerate `entries.tsx` and restart the dev server fully.
 
 ## Loading, refreshing and failed loads
 

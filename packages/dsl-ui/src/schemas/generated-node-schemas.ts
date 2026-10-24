@@ -175,6 +175,8 @@ export const BadgeNodeSchema = baseNode.extend({
 	variant: dsl(z.enum(['default', 'primary', 'success', 'warning', 'danger', 'info'])).optional(),
 	tone: dsl(z.enum(['solid', 'subtle'])).optional(),
 	size: dsl(z.enum(['sm', 'md'])).optional(),
+	href: z.string().optional(),
+	external: dsl(z.boolean()).optional(),
 });
 
 const ChartSeriesConfigSchema = z.object({
@@ -595,6 +597,8 @@ export const StatTileNodeSchema = baseNode.extend({
 	icon: dsl(z.array(z.unknown())).optional(),
 	loading: dsl(z.boolean()).optional(),
 	className: z.string().optional(),
+	href: z.string().optional(),
+	external: dsl(z.boolean()).optional(),
 });
 
 export const TableRowActionsNodeSchema = baseNode.extend({
@@ -785,6 +789,8 @@ const TableColumnSchema = z.object({
 	sortable: z.boolean().optional(),
 	isActions: z.boolean().optional(),
 	actions: z.array(ActionDefSchema).optional(),
+	isLink: z.boolean().optional(),
+	linkPosition: z.enum(['start', 'end']).optional(),
 });
 
 export const DataTableNodeSchema = baseNode.extend({

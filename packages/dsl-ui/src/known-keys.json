@@ -43,6 +43,8 @@
 	},
 	"Badge": {
 		"knownKeys": [
+			"external",
+			"href",
 			"label",
 			"size",
 			"tone",
@@ -279,7 +281,9 @@
 					"muted",
 					"sortable",
 					"format",
-					"badge"
+					"badge",
+					"href",
+					"external"
 				],
 				"byType": {
 					"actions": {
@@ -298,6 +302,17 @@
 								]
 							}
 						}
+					},
+					"link": {
+						"keys": [
+							"type",
+							"to",
+							"label",
+							"icon",
+							"position",
+							"external",
+							"width"
+						]
 					}
 				}
 			}
@@ -915,6 +930,8 @@
 	},
 	"StatTile": {
 		"knownKeys": [
+			"external",
+			"href",
 			"icon",
 			"label",
 			"loading",
