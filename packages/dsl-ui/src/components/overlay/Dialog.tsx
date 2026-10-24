@@ -2,6 +2,8 @@ import { X } from 'lucide-react';
 import React, { createContext, useCallback, useContext, useEffect, useId, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 
+import { focusFirstIn, trapTab } from '@dsl-ui/utils/focusTrap.js';
+
 import { Button } from '../controls/_Button.js';
 
 export const DialogCloseContext = createContext<(() => void) | null>(null);
@@ -94,23 +96,7 @@ export function Dialog({
 		if (e.key === 'Tab') {
 			const dialog = dialogRef.current;
 			if (!dialog) return;
-			const focusable = dialog.querySelectorAll<HTMLElement>(
-				'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-			);
-			const first = focusable[0];
-			const last = focusable[focusable.length - 1];
-			if (!first) return;
-			if (e.shiftKey) {
-				if (document.activeElement === first) {
-					e.preventDefault();
-					last?.focus();
-				}
-			} else {
-				if (document.activeElement === last) {
-					e.preventDefault();
-					first?.focus();
-				}
-			}
+			trapTab(dialog, e);
 		}
 	}, []);
 
@@ -127,10 +113,7 @@ export function Dialog({
 			requestAnimationFrame(() => {
 				const dialog = dialogRef.current;
 				if (!dialog) return;
-				const focusable = dialog.querySelector<HTMLElement>(
-					'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-				);
-				focusable?.focus();
+				focusFirstIn(dialog);
 			});
 		} else {
 			// Restore focus to the element that was focused before opening
@@ -153,8 +136,10 @@ export function Dialog({
 						ref={dialogRef}
 						role="dialog"
 						aria-modal="true"
+						// Programmatic focus target when the dialog has nothing focusable: Tab then stays on it.
+						tabIndex={-1}
 						aria-labelledby={titleId}
-						className={['relative w-full rounded-lg bg-surface shadow-xl', sizeClass].join(
+						className={['relative w-full rounded-lg bg-surface shadow-xl focus:outline-none', sizeClass].join(
 							' '
 						)}
 						onClick={e => e.stopPropagation()}

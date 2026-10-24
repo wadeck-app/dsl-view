@@ -315,14 +315,17 @@ describe('Drawer', () => {
 			expect(document.activeElement).toBe(screen.getByText('Last'));
 		});
 
-		it('with nothing focusable inside, Tab is left alone (default not prevented)', () => {
+		it('with nothing focusable inside, Tab cannot leave the modal: it is cancelled and focus rests on the panel', () => {
 			render(
 				<Drawer open={true} onClose={vi.fn()} title="Trap" hideCloseButton>
 					<p>Read only</p>
 				</Drawer>
 			);
-			expect(fireEvent.keyDown(document, { key: 'Tab' })).toBe(true);
-			expect(fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })).toBe(true);
+			const panel = screen.getByTestId('drawer-panel');
+			expect(fireEvent.keyDown(document, { key: 'Tab' })).toBe(false);
+			expect(document.activeElement).toBe(panel);
+			expect(fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })).toBe(false);
+			expect(document.activeElement).toBe(panel);
 		});
 
 		it('Shift+Tab from a middle control is left to the browser (no wrap, default not prevented)', () => {
@@ -361,6 +364,74 @@ describe('Drawer', () => {
 			await waitFor(() => {
 				expect(document.activeElement).toBe(screen.getByLabelText('Name'));
 			});
+		});
+	});
+
+	describe('focus that is outside the open drawer', () => {
+		function renderWithOutsideControl() {
+			return render(
+				<>
+					<button>Outside before</button>
+					<Drawer open={true} onClose={vi.fn()} title="Trap" hideCloseButton>
+						<button>First</button>
+						<button>Last</button>
+					</Drawer>
+					<button>Outside after</button>
+				</>
+			);
+		}
+
+		it('Tab from a control outside the drawer pulls focus onto the first control inside', () => {
+			renderWithOutsideControl();
+			act(() => screen.getByText('Outside after').focus());
+			expect(fireEvent.keyDown(document, { key: 'Tab' })).toBe(false);
+			expect(document.activeElement).toBe(screen.getByText('First'));
+		});
+
+		it('Shift+Tab from a control outside the drawer pulls focus onto the LAST control inside', () => {
+			renderWithOutsideControl();
+			act(() => screen.getByText('Outside before').focus());
+			expect(fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })).toBe(false);
+			expect(document.activeElement).toBe(screen.getByText('Last'));
+		});
+
+		it('Tab with focus lost on <body> (nothing focused) enters the drawer', () => {
+			renderWithOutsideControl();
+			act(() => (document.activeElement as HTMLElement | null)?.blur());
+			expect(document.activeElement).toBe(document.body);
+			expect(fireEvent.keyDown(document, { key: 'Tab' })).toBe(false);
+			expect(document.activeElement).toBe(screen.getByText('First'));
+		});
+
+		it('Shift+Tab on the panel itself (it can hold focus programmatically) goes to the last control', () => {
+			renderWithOutsideControl();
+			const panel = screen.getByTestId('drawer-panel');
+			act(() => panel.focus());
+			// Precondition: the panel really holds focus (it has tabindex="-1"), otherwise the case is not exercised.
+			expect(document.activeElement).toBe(panel);
+			expect(fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })).toBe(false);
+			expect(document.activeElement).toBe(screen.getByText('Last'));
+		});
+
+		it('leaves Tab alone while focus sits in another overlay layer (a portaled listbox of a field inside the drawer)', () => {
+			render(
+				<Drawer open={true} onClose={vi.fn()} title="Trap" hideCloseButton>
+					<button>First</button>
+				</Drawer>
+			);
+			const layer = document.createElement('div');
+			layer.setAttribute('role', 'listbox');
+			const option = document.createElement('button');
+			option.textContent = 'Portaled option';
+			layer.appendChild(option);
+			document.body.appendChild(layer);
+			try {
+				act(() => option.focus());
+				expect(fireEvent.keyDown(document, { key: 'Tab' })).toBe(true);
+				expect(document.activeElement).toBe(option);
+			} finally {
+				layer.remove();
+			}
 		});
 	});
 

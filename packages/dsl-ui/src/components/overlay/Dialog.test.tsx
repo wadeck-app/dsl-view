@@ -1,5 +1,6 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Dialog } from './Dialog.js';
@@ -267,6 +268,85 @@ describe('Dialog', () => {
 		expect(document.activeElement).toBe(confirm);
 		await user.tab();
 		expect(document.activeElement).toBe(close);
+	});
+
+	describe('focus trap edge cases', () => {
+		function renderOpen(actions?: React.ReactNode, children: React.ReactNode = <button>Inside</button>) {
+			return render(
+				<>
+					<button>Outside before</button>
+					<Dialog title="T" open={true} onOpenChange={vi.fn()} actions={actions}>
+						{children}
+					</Dialog>
+					<button>Outside after</button>
+				</>
+			);
+		}
+
+		it('Tab from a control outside the dialog pulls focus onto the first control inside', () => {
+			renderOpen();
+			act(() => screen.getByText('Outside after').focus());
+			expect(fireEvent.keyDown(document, { key: 'Tab' })).toBe(false);
+			expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Close dialog' }));
+		});
+
+		it('Shift+Tab from a control outside the dialog pulls focus onto the LAST control inside', () => {
+			renderOpen(<button>Confirm</button>);
+			act(() => screen.getByText('Outside before').focus());
+			expect(fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })).toBe(false);
+			expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Confirm' }));
+		});
+
+		it('a disabled last button is not a focus stop: Tab on the last enabled one wraps to the first', () => {
+			renderOpen(
+				<>
+					<button>Confirm</button>
+					<button disabled>Disabled last</button>
+				</>
+			);
+			act(() => screen.getByRole('button', { name: 'Confirm' }).focus());
+			expect(fireEvent.keyDown(document, { key: 'Tab' })).toBe(false);
+			expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Close dialog' }));
+		});
+
+		it('a hidden input is not a focus stop either', () => {
+			renderOpen(undefined, (
+				<>
+					<button>Only</button>
+					<input type="hidden" name="token" defaultValue="x" />
+				</>
+			));
+			act(() => screen.getByRole('button', { name: 'Close dialog' }).focus());
+			act(() => screen.getByText('Only').focus());
+			// Close dialog, Only: Only is the last real stop.
+			expect(fireEvent.keyDown(document, { key: 'Tab' })).toBe(false);
+			expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Close dialog' }));
+		});
+
+		it('Tab with focus lost on <body> enters the dialog', () => {
+			renderOpen();
+			act(() => (document.activeElement as HTMLElement | null)?.blur());
+			expect(document.activeElement).toBe(document.body);
+			expect(fireEvent.keyDown(document, { key: 'Tab' })).toBe(false);
+			expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Close dialog' }));
+		});
+
+		it('leaves Tab alone while focus sits in another overlay layer (a portaled listbox of a field inside the dialog)', () => {
+			renderOpen();
+			const layer = document.createElement('div');
+			layer.setAttribute('role', 'listbox');
+			const option = document.createElement('button');
+			option.textContent = 'Portaled option';
+			layer.appendChild(option);
+			document.body.appendChild(layer);
+			try {
+				act(() => option.focus());
+				expect(fireEvent.keyDown(document, { key: 'Tab' })).toBe(true);
+				expect(document.activeElement).toBe(option);
+			} finally {
+				layer.remove();
+			}
+		});
 	});
 
 	it('works in controlled mode: open prop shows the dialog without a trigger', () => {

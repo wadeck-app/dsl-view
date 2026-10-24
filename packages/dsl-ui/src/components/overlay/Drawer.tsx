@@ -2,6 +2,8 @@ import { X } from 'lucide-react';
 import React, { createContext, useCallback, useContext, useEffect, useId, useRef } from 'react';
 import ReactDOM from 'react-dom';
 
+import { focusFirstIn, trapTab } from '@dsl-ui/utils/focusTrap.js';
+
 import { Button } from '../controls/_Button.js';
 
 export const DrawerCloseContext = createContext<(() => void) | null>(null);
@@ -34,17 +36,6 @@ const SIDE_HEIGHT_CLASSES: Record<'sm' | 'md' | 'lg', string> = {
 	lg: 'h-[32rem]',
 };
 // @formatter:on
-
-// Disabled controls and hidden inputs cannot take focus: counting them as the first or last stop made the Tab
-// wrap miss (focus then left the modal) and left the initial focus on <body> when the first control was disabled.
-const FOCUSABLE_SELECTOR = [
-	'button:not([disabled])',
-	'[href]',
-	'input:not([disabled]):not([type="hidden"])',
-	'select:not([disabled])',
-	'textarea:not([disabled])',
-	'[tabindex]:not([tabindex="-1"])',
-].join(', ');
 
 function getPanelPositionClasses(side: 'left' | 'right' | 'bottom', size: 'sm' | 'md' | 'lg'): string {
 	if (side === 'right') {
@@ -103,21 +94,7 @@ export function Drawer({
 		if (e.key === 'Tab') {
 			const drawer = drawerRef.current;
 			if (!drawer) return;
-			const focusable = drawer.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
-			const first = focusable[0];
-			const last = focusable[focusable.length - 1];
-			if (!first) return;
-			if (e.shiftKey) {
-				if (document.activeElement === first) {
-					e.preventDefault();
-					last?.focus();
-				}
-			} else {
-				if (document.activeElement === last) {
-					e.preventDefault();
-					first?.focus();
-				}
-			}
+			trapTab(drawer, e);
 		}
 	}, []);
 
@@ -133,7 +110,7 @@ export function Drawer({
 			requestAnimationFrame(() => {
 				const drawer = drawerRef.current;
 				if (!drawer) return;
-				drawer.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)?.focus();
+				focusFirstIn(drawer);
 			});
 		} else {
 			if (previousFocusRef.current instanceof HTMLElement) {
@@ -162,13 +139,15 @@ export function Drawer({
 				ref={drawerRef}
 				role="dialog"
 				aria-modal="true"
+				// Programmatic focus target when the drawer has nothing focusable: Tab then stays on the panel.
+				tabIndex={-1}
 				// Closed, the panel stays mounted for the slide animation: inert keeps it out of the tab order
 				// and the accessibility tree instead of leaving an invisible modal dialog on the page.
 				inert={!open}
 				aria-labelledby={title ? titleId : undefined}
 				aria-label={!title ? 'Drawer' : undefined}
 				className={[
-					'fixed z-50 flex flex-col bg-surface shadow-2xl',
+					'fixed z-50 flex flex-col bg-surface shadow-2xl focus:outline-none',
 					'transition-transform duration-300 ease-in-out',
 					positionClasses,
 					translateClass,
