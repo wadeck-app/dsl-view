@@ -53,6 +53,13 @@ describe('resolveColumn', () => {
 		expect(col.actions).toEqual([{ label: 'Delete', icon: undefined, variant: 'danger', action: 'delete', condition: undefined }]);
 	});
 
+	it('keeps the declared width of an actions column, and leaves it unset when none is declared', () => {
+		const items = [{ label: 'Delete', action: 'delete' }];
+		expect(resolveColumn({ type: 'actions', items, width: 24 }).width).toBe(24);
+		expect(resolveColumn({ type: 'actions', items, width: 0 }).width).toBe(0);
+		expect(resolveColumn({ type: 'actions', items })).not.toHaveProperty('width');
+	});
+
 	it('dispatches an unrecognized format via extraFormats before falling back to generic handling', () => {
 		const built = { key: 'x', label: 'X', render: () => null };
 		const custom = vi.fn(() => built);

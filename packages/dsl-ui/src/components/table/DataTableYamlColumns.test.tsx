@@ -37,6 +37,16 @@ describe('DataTable YAML column options', () => {
 		expect(td.className).not.toContain('break-all');
 	});
 
+	it('applies the width of an actions column to its header and to its cells', () => {
+		render(<DataTable rows={rows} columns={yamlColumns([{ field: 'state', label: 'State' }, { type: 'actions', width: 24, items: [{ label: 'Clear', action: 'clear' }] }])} />);
+		const actionCell = screen.getByRole('button', { name: 'Clear' }).closest('td') as HTMLElement;
+		expect(actionCell.style.width).toBe('96px');
+		const headers = screen.getAllByRole('columnheader');
+		expect(headers.at(-1)!.style.width).toBe('96px');
+		// the data column next to it keeps its natural width
+		expect(headers[0]!.style.width).toBe('');
+	});
+
 	it('nowrap keeps the cell on one line instead of breaking mid-word', () => {
 		render(<DataTable rows={rows} columns={yamlColumns([{ field: 'state', label: 'State', nowrap: true }])} />);
 		const td = cell('completed');

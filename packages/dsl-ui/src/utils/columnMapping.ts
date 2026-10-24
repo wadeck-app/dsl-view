@@ -19,9 +19,10 @@ export interface YamlDataColumn {
 	width?: number;
 }
 
+// Same keys as the DataTable runtime accepts for an actions column (DATA_TABLE_ACTIONS_COLUMN_KEYS):
+// there is no `label`, the column header is blank, and DataTable reports a `label` here as an unknown key.
 export interface YamlActionsColumn {
 	type: 'actions';
-	label?: string;
 	width?: number;
 	items: Array<{ label: string; variant?: 'primary' | 'danger' | 'danger-outline' | 'ghost' | 'success'; action: string; condition?: string }>;
 }
@@ -44,9 +45,12 @@ export function resolveColumn<T extends Record<string, unknown>>(
 	if ((col as YamlActionsColumn).type === 'actions') {
 		const ac = col as YamlActionsColumn;
 		// YAML has no way to express a ReactNode icon yet - icon stays undefined for YAML-authored actions.
-		return ColumnHelpers.actions(
+		const built = ColumnHelpers.actions<T>(
 			ac.items.map(item => ({ label: item.label, icon: undefined, variant: item.variant, action: item.action, condition: item.condition }))
 		);
+		// `width` is a declared key of the actions column: it must not be dropped on the way to the TableColumn.
+		if (ac.width !== undefined) built.width = ac.width;
+		return built;
 	}
 	const dc = col as YamlDataColumn;
 	const options = { mono: dc.mono, muted: dc.muted, truncate: dc.truncate, width: dc.width, format: dc.format };
