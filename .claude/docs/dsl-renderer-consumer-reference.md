@@ -630,6 +630,27 @@ A component must not say "empty" before its data has arrived. No YAML is needed:
 - Outside a `GenericPageRunner` it logs an error and stays disabled. The legacy `onClick` / `loading` props still work (wdrive's `$outputs: onClick`).
 - Needs dsl-ui and dsl-renderer from the same release; with an older generated registry the button has nothing to call (the error above).
 
+## Behaviour changes by version
+
+First published version containing the change (`dsl-ui` and `dsl-renderer` share the version number). Regenerate `entries.tsx` and restart the dev server fully after upgrading.
+
+| Version | Change a consumer can notice |
+|---|---|
+| `2026.10.19-113` | Row actions interpolate `{key}` from the row into the URL (percent-encoded); a missing value fails before any request. |
+| `2026.10.19-114` | Every action reports through the Notifier; inline banner without a provider. |
+| `2026.10.19-122` | `DataTable` columns honour `width`, `truncate`, `nowrap`, `mono`, `muted`, `sortable`, `format`, `badge`; unknown column keys are reported. |
+| `2026.10.22-127` | `DataTable` / `StatTile` show skeleton rows while the first load runs (`$initialLoading`), never the empty message. |
+| `2026.10.22-128` | `GenericPageRunner` remounts when the page document changes, not only on route params. |
+| `2026.10.23-131` | `$actions.<name>.strictParams: true` opts a form action into encoding and the missing-placeholder error. |
+| `2026.10.23-135` | `DataTable` action buttons are disabled and busy while their action runs. |
+| `2026.10.23-136` | That busy state is per row (`$ctx.$actionPendingRows`). |
+| `2026.10.24-137` | Bound form fields no longer remount on re-render (module-level `WithContext` wrappers in `entries.tsx`). |
+| `2026.10.24-153` | `href` / `external` on `StatTile` and `Badge`; `DataTable` `type: link` column and column `href`. |
+| `2026.10.24-158` | `Tabs` and `PageTabs` expose `tablist` / `tab` / `tabpanel` with arrow, Home and End keys: the tab buttons' role is `tab`, no longer `button` (update `getByRole('button', ...)` selectors). A closed `Drawer` is `inert`; `Drawer` / `Dialog` Escape calls the latest `onClose`. |
+| `2026.10.24-161` | `Markdown` node (lazy, no raw HTML, images off by default). |
+| `2026.10.24-165` | `DeleteButton` always renders `danger` / `sm`: a node's `variant` / `size` no longer win. A disabled `FieldMultiSelect` ignores keyboard and pill edits. |
+| `2026.10.24-168` | `FieldAsyncSelect` shows "Could not load options" and logs the cause on a failed load. |
+
 ## Pitfalls
 
 - `@registryCategory` missing -> component silently excluded from registry.
