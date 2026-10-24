@@ -171,6 +171,24 @@ function renderExtensionSlot(
 	return <>{renderChildren(items, registry, ctx)}</>;
 }
 
+/**
+ * `resolveExpressionValue` for a value that CARRIES expressions: every string inside a map or a list is resolved
+ * (`{ name: $sources.event.name }`). Only props tagged `@resolveDeep` use it: a plain prop keeps literal strings that
+ * happen to start with `$` (a price, a template) untouched.
+ */
+export function resolveExpressionsDeep(value: unknown, ctx: RenderContext): unknown {
+	if (typeof value === 'string') {
+		return resolveExpressionValue(value, ctx);
+	}
+	if (Array.isArray(value)) {
+		return value.map(item => resolveExpressionsDeep(item, ctx));
+	}
+	if (value !== null && typeof value === 'object') {
+		return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, resolveExpressionsDeep(item, ctx)]));
+	}
+	return value;
+}
+
 export function resolveExpressionValue(expr: unknown, ctx: RenderContext): unknown {
 	if (typeof expr !== 'string') {
 		return expr;

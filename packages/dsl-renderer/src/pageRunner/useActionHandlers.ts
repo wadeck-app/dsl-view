@@ -31,7 +31,8 @@ export function useActionHandlers(params: {
 	) => Promise<void>;
 }): {
 	namedHandlers: Record<string, (payload?: unknown) => Promise<unknown>>;
-	onAction: (actionName: string, row: Record<string, unknown>) => Promise<void>;
+	/** `options.body` is the request body (a page-level button sends page state; a table row sends none). */
+	onAction: (actionName: string, row: Record<string, unknown>, options?: { body?: unknown }) => Promise<void>;
 	onBatchAction: (actionName: string, rows: Record<string, unknown>[]) => Promise<void>;
 	extras: Record<string, unknown>;
 	/** `<actionName>: true` while at least one call of that action is in flight. Exposed to YAML as `$ctx.$actionPending.<name>`. */
@@ -253,20 +254,32 @@ export function useActionHandlers(params: {
 	}, [$actions, fetcher, getToken, reloadAfterAction, mountedRef, begin, end]);
 
 	const onAction = useCallback(
-		async (actionName: string, row: Record<string, unknown>) => {
+		async (actionName: string, row: Record<string, unknown>, options?: { body?: unknown }) => {
 			let spec: ActionSpec | undefined;
 			let flightKey: string | undefined;
 			let rowKey: string | undefined;
 			try {
 				const rawSpec = $actions?.[actionName];
 				if (!rawSpec) {
-					throw new Error(`[onAction] No action spec found for "${actionName}" - check $actions in YAML`);
+					throw new Error(
+						`[onAction] No action spec found for "${actionName}" - check $actions in YAML (available: ${Object.keys($actions ?? {}).join(', ') || 'none'})`
+					);
 				}
 				spec = normalizeAction(rawSpec);
 				if (!spec.url) {
 					// No-URL row action: store the row under resultKey (e.g. openEdit stores the selected row)
 					if (spec.resultKey && mountedRef.current) {
 						setExtras(prev => ({ ...prev, [spec!.resultKey!]: row }));
+					} else if (!spec.resultKey) {
+						// Existing pages may rely on such an action being inert (no UI feedback), so it is a console
+						// warning, once per action, rather than an error in the user's face.
+						const warnKey = `${actionName}:inert`;
+						if (!lenientWarnedRef.current.has(warnKey)) {
+							lenientWarnedRef.current.add(warnKey);
+							console.warn(
+								`[GenericPageRunner] $actions.${actionName} has neither a url nor a resultKey: running it does nothing. Fix $actions.${actionName}`
+							);
+						}
 					}
 					return;
 				}
@@ -294,10 +307,20 @@ export function useActionHandlers(params: {
 					},
 				});
 				const authHeaders = await resolveAuthHeaders(getToken);
-				const result = await fetcher(resolvedUrl, { id }, undefined, authHeaders);
+				const result = await fetcher(resolvedUrl, { id }, options?.body, authHeaders);
+				// `resultKey` also works for a url action: the response becomes readable as `$<resultKey>` (like a form action's).
+				if (spec.resultKey && mountedRef.current) {
+					setExtras(prev => ({ ...prev, [spec!.resultKey!]: (result as Record<string, unknown> | undefined)?.[spec!.resultKey!] ?? result }));
+				}
 				notifySuccess(notifyRef.current, actionName, spec, result);
 				await reloadAfterAction(spec.reloadSources, true);
 			} catch (error) {
+				// A failed call must not leave the previous result readable (a stale `valid: true` next to an error):
+				// the key holds `{ error, status }` instead, and the notifier still shows the message.
+				if (spec?.resultKey && mountedRef.current) {
+					const failure = error instanceof Error ? error : new Error(String(error));
+					setExtras(prev => ({ ...prev, [spec!.resultKey!]: { error: getErrorMessage(failure), status: (failure as { status?: number }).status } }));
+				}
 				reportActionError(actionName, 'row', error, spec);
 			} finally {
 				if (flightKey) {

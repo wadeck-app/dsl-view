@@ -19,6 +19,20 @@ const baseNode = z.object({
 const expr = z.string().startsWith('$');
 const dsl = <T extends z.ZodType>(schema: T) => z.union([schema, expr]);
 
+export const ActionButtonNodeSchema = baseNode.extend({
+	action: z.string(),
+	label: z.string(),
+	params: dsl(z.record(z.string(), z.unknown())).optional(),
+	body: dsl(z.record(z.string(), z.unknown())).optional(),
+	icon: z.string().optional(),
+	iconOnly: dsl(z.boolean()).optional(),
+	variant: dsl(z.enum(['primary', 'secondary', 'danger', 'danger-outline', 'success', 'neutral', 'ghost'])).optional(),
+	size: dsl(z.enum(['sm', 'md'])).optional(),
+	disabled: dsl(z.boolean()).optional(),
+	disabledReason: z.string().optional(),
+	actionPending: dsl(z.record(z.string(), z.boolean())).optional(),
+});
+
 export const ButtonActionNodeSchema = baseNode.extend({
 	label: z.string(),
 	variant: dsl(z.enum(['primary', 'secondary', 'danger', 'danger-outline', 'success'])).optional(),

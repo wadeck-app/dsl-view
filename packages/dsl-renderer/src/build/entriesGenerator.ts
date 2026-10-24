@@ -713,7 +713,11 @@ function generateSimpleEntry(
 			const ctxDefaultTag = prop.getJsDocs().flatMap(doc => doc.getTags()).find(tag => tag.getTagName() === 'ctxDefault');
 			const ctxDefaultKey = ctxDefaultTag ? (ctxDefaultTag.getCommentText()?.trim().split(/\s+/)[0] || name) : undefined;
 			const ctxFallback = ctxDefaultKey ? ` ?? ctx['${ctxDefaultKey}']` : '';
-			const resolved = `resolveExpressionValue(node['${name}'], ctx)${ctxFallback}`;
+			// @resolveDeep: the value is a map/list that carries expressions (ActionButton.params), so every string inside
+			// is resolved, not only the value itself.
+			const resolveDeep = prop.getJsDocs().flatMap(doc => doc.getTags()).some(tag => tag.getTagName() === 'resolveDeep');
+			const resolver = resolveDeep ? 'resolveExpressionsDeep' : 'resolveExpressionValue';
+			const resolved = `${resolver}(node['${name}'], ctx)${ctxFallback}`;
 			// A wrong-shaped value (a map for a string, no list for a list) is ignored with one named warning instead of
 			// crashing the page inside the component.
 			const coercion = classifyPropCoercion(prop);
@@ -1086,7 +1090,7 @@ ${metadataLines}
 		: '';
 
 	const generated = moduleLevelText + entriesBody;
-	const coerceHelpers = ['coerceDate', 'coerceProp', 'coerceStringList', 'isDevelopment', 'pickPropSchema'].filter(helper => generated.includes(`${helper}(`));
+	const coerceHelpers = ['coerceDate', 'coerceProp', 'coerceStringList', 'isDevelopment', 'pickPropSchema', 'resolveExpressionsDeep'].filter(helper => generated.includes(`${helper}(`));
 	return buildHeader(coerceHelpers) + moduleLevelText + '\n' + entriesBody + tail;
 }
 

@@ -29,8 +29,11 @@ describe('generated entries.tsx for the real dsl-ui components', () => {
 		expect(refreshing[0]).toContain("?? ctx['$refreshing']");
 		// DataTable row/batch buttons follow the page's running actions without any YAML.
 		const pending = content.split('\n').filter((line) => line.includes("node['actionPending']"));
-		expect(pending).toHaveLength(1);
-		expect(pending[0]).toContain("?? ctx['$actionPending']");
+		// DataTable and the page-level ActionButton: each follows the page's running actions, nothing else does.
+		expect(pending.map((line) => line.match(/'(\w+)\.actionPending'/)?.[1]).sort()).toStrictEqual(['ActionButton', 'DataTable']);
+		for (const line of pending) {
+			expect(line).toContain("?? ctx['$actionPending']");
+		}
 		// ... and only the row being processed is busy when the page reports which rows run.
 		const pendingRows = content.split('\n').filter((line) => line.includes("node['actionPendingRows']"));
 		expect(pendingRows).toHaveLength(1);

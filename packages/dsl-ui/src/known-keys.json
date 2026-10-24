@@ -27,6 +27,22 @@
 			]
 		}
 	},
+	"ActionButton": {
+		"knownKeys": [
+			"action",
+			"actionPending",
+			"body",
+			"disabled",
+			"disabledReason",
+			"icon",
+			"iconOnly",
+			"label",
+			"onAction",
+			"params",
+			"size",
+			"variant"
+		]
+	},
 	"Avatar": {
 		"knownKeys": [
 			"alt",

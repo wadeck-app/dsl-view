@@ -429,8 +429,24 @@ describe('row actions: authoring mistakes and local rows', () => {
 		const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 		renderPage(`$type: Probe\nhandler: none\n`);
 		fireEvent.click(screen.getByText('row-unknown'));
-		await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('[onAction] No action spec found for "nope" - check $actions in YAML'));
+		await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('[onAction] No action spec found for "nope" - check $actions in YAML (available: none)'));
 		expect(error).toHaveBeenCalledWith(expect.stringContaining('row action "nope" failed'));
+	});
+
+	it('an unknown action name lists the actions the page does have, so a typo is easy to spot', async () => {
+		vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		const { fetcher } = renderPage(`
+$actions:
+  pushTest:
+    url: "POST /api/a"
+  giveUp:
+    url: "POST /api/b"
+$type: Probe
+handler: none
+`);
+		fireEvent.click(screen.getByText('row-unknown'));
+		await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('"nope" - check $actions in YAML (available: pushTest, giveUp)'));
+		expect(fetcher).not.toHaveBeenCalled();
 	});
 
 	it('a url-less row action stores the clicked row under resultKey, without a request', async () => {
@@ -449,7 +465,8 @@ row: {id: "r9", name: "Nine"}
 		expect(fetcher).not.toHaveBeenCalled();
 	});
 
-	it('a url-less row action without resultKey does nothing and shows no feedback', async () => {
+	it('a url-less row action without resultKey does nothing in the UI, and warns once in the console', async () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 		const { fetcher } = renderPage(`
 $actions:
   noop:
@@ -460,10 +477,14 @@ action: noop
 `);
 		fireEvent.click(screen.getByText('row'));
 		await settle();
+		fireEvent.click(screen.getByText('row'));
+		await settle();
 		expect(fetcher).not.toHaveBeenCalled();
 		expect(screen.queryByRole('alert')).toBeNull();
 		expect(screen.queryByRole('status')).toBeNull();
 		expect(screen.getByTestId('has-undefined-key').textContent).toBe('false');
+		const inertWarnings = warn.mock.calls.filter(call => String(call[0]).includes('has neither a url nor a resultKey'));
+		expect(inertWarnings).toEqual([['[GenericPageRunner] $actions.noop has neither a url nor a resultKey: running it does nothing. Fix $actions.noop']]);
 	});
 
 	it('asks for the configured confirmation and proceeds only when accepted', async () => {
