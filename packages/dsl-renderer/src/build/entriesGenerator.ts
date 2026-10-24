@@ -120,10 +120,9 @@ function unquotePropName(name: string): string {
 /**
  * Whether the generated render reads this prop from the YAML node at all. The single filter behind both
  * `extractKnownKeys` (what the compiler accepts) and `generateSimpleEntry` (what the render reads): they must never disagree.
- * data-* and non-identifier names are never authored; aria-* is valid JSX and therefore authorable.
+ * Only identifiers are authored (data-*, other hyphenated and underscored names never are); aria-* is valid JSX and therefore authorable.
  */
 function isAuthorablePropName(name: string): boolean {
-	if (name.startsWith('data-')) return false;
 	if (!/^[a-zA-Z][a-zA-Z0-9]*$/.test(name) && !name.startsWith('aria-')) return false;
 	return !GENERATED_RENDER_SKIP_PROPS.has(name);
 }
@@ -612,7 +611,6 @@ function generateSimpleEntry(
 		const componentDeclaresBindProp = allProperties.some(p => p.getName() === 'bind');
 		const bindAttr = componentDeclaresBindProp ? ' bind={bind}' : '';
 		const valueProp       = allProperties.find(p => p.getName() === 'value');
-		const checkedProp     = allProperties.find(p => p.getName() === 'checked');
 		const isToggle        = hasCheckedProp && !hasValueProp;
 		const isArrayValue    = valueProp?.getType().isArray() ?? false;
 		const isNumberValue   = valueProp?.getType().isNumber() ?? false;
@@ -929,8 +927,13 @@ ${metadataLines}
 
 // ─── Vite plugin ──────────────────────────────────────────────────────────────
 
+// Walk up from this file to find the monorepo root.
+// In the dsl-view source: build/ -> src/ -> dsl-renderer/ -> packages/ -> root (4 levels up).
+// When installed as npm package: dist/build/ -> dist/ -> @wadeck-app/dsl-renderer/ -> @wadeck-app/ -> node_modules/ -> ... (not a monorepo root).
+export const DEFAULT_MONOREPO_ROOT = path.resolve(__dirname, '../../../..');
+
 export interface EntriesGeneratorOptions {
-	/** Root scanned for `packages/<name>/src/components` before the app's own workspace. Defaults to four levels above this file. */
+	/** Root scanned for `packages/<name>/src/components` before the app's own workspace. Defaults to DEFAULT_MONOREPO_ROOT. */
 	monorepoRoot?: string;
 }
 
@@ -940,10 +943,7 @@ export function entriesGenerator(options: EntriesGeneratorOptions = {}): Plugin 
 	let watchDirs: Array<{ pkg: string; absDir: string }> = [];
 	let buildOptions: BuildEntriesOptions = {};
 
-	// Walk up from this file to find the monorepo root.
-	// In the dsl-view source: build/ -> src/ -> dsl-renderer/ -> packages/ -> root (4 levels up).
-	// When installed as npm package: dist/build/ -> dist/ -> @wadeck-app/dsl-renderer/ -> @wadeck-app/ -> node_modules/ -> ... (not a monorepo root).
-	const monorepoRoot = options.monorepoRoot ?? path.resolve(__dirname, '../../../..');
+	const monorepoRoot = options.monorepoRoot ?? DEFAULT_MONOREPO_ROOT;
 	// Detect whether we are running inside the dsl-view source tree or as an installed npm package.
 	const isInMonorepo = fs.existsSync(path.resolve(monorepoRoot, 'packages/dsl-renderer'));
 

@@ -4,6 +4,7 @@ import path from 'path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import {
+	DEFAULT_MONOREPO_ROOT,
 	buildEntriesFile,
 	collectYamlTypeReferences,
 	entriesGenerator,
@@ -59,6 +60,18 @@ export interface SwitchProps {
  * @registryBind formData onChange
  */
 export function Switch(props: SwitchProps) { return null }
+`,
+	'form/Both.tsx': `
+export interface BothProps {
+	value: string;
+	checked?: boolean;
+	onChange: (v: string) => void;
+}
+/**
+ * @registryCategory form
+ * @registryBind formData onChange
+ */
+export function Both(props: BothProps) { return null }
 `,
 	'form/NumberField.tsx': `
 export interface NumberFieldProps {
@@ -268,7 +281,7 @@ describe('component discovery', () => {
 		const names = [...out.matchAll(/^export const (\w+)Entry: ComponentRegistryEntry/gm)].map((m) => m[1]);
 		expect(names.sort()).toEqual(
 			[
-				'BoundWithBind', 'BoundWithSlot', 'Card', 'DatePick', 'DirectConsumer', 'Empty', 'FieldText', 'Heavy',
+				'Both', 'BoundWithBind', 'BoundWithSlot', 'Card', 'DatePick', 'DirectConsumer', 'Empty', 'FieldText', 'Heavy',
 				'MemberWrappedConsumer', 'NoProps', 'NumberField', 'Plain', 'RangePick', 'Switch', 'Table', 'Tags', 'ThemeProviderThing', 'WrappedConsumer',
 			].sort()
 		);
@@ -328,7 +341,7 @@ describe('metadata block', () => {
 		});
 		expect(manifest['Empty']).toEqual({ knownKeys: [] });
 		expect(manifest['FieldText']).toEqual({ knownKeys: ['bind', 'label'] });
-		expect(Object.keys(manifest)).toHaveLength(18);
+		expect(Object.keys(manifest)).toHaveLength(19);
 	});
 });
 
@@ -403,6 +416,7 @@ describe('bind-pattern wrappers', () => {
 
 	it.each([
 		['FieldText', "value={String(formData?.[bind] ?? '')}"],
+		['Both', "value={String(formData?.[bind] ?? '')}"],
 		['Switch', 'checked={Boolean(formData?.[bind])}'],
 		['NumberField', 'value={Number(formData?.[bind] ?? 0)}'],
 		['Tags', 'value={(formData?.[bind] as string[] | undefined) ?? []}'],
@@ -415,6 +429,13 @@ describe('bind-pattern wrappers', () => {
 	it('does not pass a bound prop that is not a value to a toggle, and passes `checked` instead of `value`', () => {
 		expect(wrapper('Switch')).not.toContain(' value=');
 		expect(wrapper('FieldText')).not.toContain(' checked=');
+	});
+
+	it('treats a bound component that has both value and checked as a value field: checked stays an ordinary prop', () => {
+		const text = wrapper('Both');
+		expect(text).toContain("const checked = (resolveExpressionValue(node['checked'], ctx))");
+		expect(text).toContain("<Both checked={checked} value={String(formData?.[bind] ?? '')}");
+		expect(text).not.toContain('Boolean(formData');
 	});
 
 	it('passes bind={bind} only to a component that declares a bind prop', () => {
@@ -621,6 +642,14 @@ describe('package directory resolution', () => {
 			expect(resolvePackageComponentsDir('my-ui', monorepo, app)).toBe(path.join(root, 'res1/ws/packages/my-ui/src/components'));
 		});
 
+		it('prefers the app workspace over an installed copy of the same package', () => {
+			const monorepo = make('res5/mono');
+			const app = make('res5/ws/apps/app');
+			const wsComponents = make('res5/ws/packages/my-ui/src/components');
+			make('res5/ws/node_modules/@wadeck-app/my-ui/src/components');
+			expect(resolvePackageComponentsDir('my-ui', monorepo, app)).toBe(wsComponents);
+		});
+
 		it('derives the short and the scoped npm name from either spelling', () => {
 			const monorepo = make('res2/mono');
 			const app = make('res2/ws/apps/app');
@@ -651,6 +680,13 @@ describe('package directory resolution', () => {
 			expect(dirs[0]!.absDir).toBe(path.join(root, 'res4', 'ws', 'packages', 'dsl-ui', 'src', 'components'));
 			expect(resolveWatchDirs({}, monorepo, app).map((d) => d.pkg)).toEqual(['dsl-ui']);
 		});
+	});
+});
+
+describe('DEFAULT_MONOREPO_ROOT', () => {
+	it('is the dsl-view repository root when running from source (four levels above build/)', () => {
+		expect(fs.existsSync(path.join(DEFAULT_MONOREPO_ROOT, 'packages', 'dsl-renderer', 'package.json'))).toBe(true);
+		expect(fs.existsSync(path.join(DEFAULT_MONOREPO_ROOT, 'packages', 'dsl-ui', 'package.json'))).toBe(true);
 	});
 });
 
