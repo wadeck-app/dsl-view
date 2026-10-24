@@ -146,7 +146,7 @@ describe('page-level $actions', () => {
 				nodePath: '$actions.save',
 				code: 'unknown-action-key',
 				message:
-					'[$actions.save] unknown action key "zzzzzzzz" - it has no effect. Known keys: url, resultKey, reloadSources, confirm, successMessage, errorPrefix, notify, strictParams',
+					'[$actions.save] unknown action key "zzzzzzzz" - it has no effect. Known keys: url, resultKey, requestKey, reloadSources, confirm, successMessage, errorPrefix, notify, strictParams',
 			},
 		]);
 	});

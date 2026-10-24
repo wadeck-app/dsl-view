@@ -765,8 +765,12 @@ function generateSimpleEntry(
 		moduleLevel.push(`function ${component.name}WithContext(${destructured}: RegistryRenderProps) {
 ${fullDecl}
 		const formCtx = useFormContext()
-		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		const scopedData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const scopedChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		// No Form and no table row around the field: it is bound to the page variables ($vars), written through $setVar.
+		const pageVars = scopedData === undefined && scopedChange === undefined
+		const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData
+		const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange
 		return (
 			<${component.name}${bindAttr}${attrsText} ${boundAttr}={${valueExpr}} onChange={(v) => onChange?.(bind, v)} />
 		)

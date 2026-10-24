@@ -232,6 +232,9 @@ export function useActionHandlers(params: {
 								[spec.resultKey!]: (result as Record<string, unknown>)?.[spec.resultKey!] ?? result,
 							}));
 						}
+						if (spec.requestKey && mountedRef.current) {
+							setExtras(prev => ({ ...prev, [spec.requestKey!]: body }));
+						}
 					} else if (spec.resultKey) {
 						// No-URL action: store extraBody (or a timestamp sentinel) in extras under resultKey
 						result = extraBody ?? { _ts: Date.now() };
@@ -242,6 +245,9 @@ export function useActionHandlers(params: {
 					await reloadAfterAction(spec.reloadSources, false);
 					return result;
 				} catch (error) {
+					if (spec.requestKey && mountedRef.current) {
+						setExtras(prev => ({ ...prev, [spec.requestKey!]: undefined }));
+					}
 					// Rethrown: a form keeps its values and a caller can still react to the rejection.
 					notifyFailure(notifyRef.current, name, spec, error);
 					throw error;
@@ -312,6 +318,11 @@ export function useActionHandlers(params: {
 				if (spec.resultKey && mountedRef.current) {
 					setExtras(prev => ({ ...prev, [spec!.resultKey!]: (result as Record<string, unknown> | undefined)?.[spec!.resultKey!] ?? result }));
 				}
+				// `requestKey`: the body that produced this SUCCESSFUL answer, so a page can tell whether the data it holds
+				// now is still the data the server accepted (compare it with the current value).
+				if (spec.requestKey && mountedRef.current) {
+					setExtras(prev => ({ ...prev, [spec!.requestKey!]: options?.body }));
+				}
 				notifySuccess(notifyRef.current, actionName, spec, result);
 				await reloadAfterAction(spec.reloadSources, true);
 			} catch (error) {
@@ -320,6 +331,10 @@ export function useActionHandlers(params: {
 				if (spec?.resultKey && mountedRef.current) {
 					const failure = error instanceof Error ? error : new Error(String(error));
 					setExtras(prev => ({ ...prev, [spec!.resultKey!]: { error: getErrorMessage(failure), status: (failure as { status?: number }).status } }));
+				}
+				// Same for the echoed request: after a failure nothing is known to be accepted.
+				if (spec?.requestKey && mountedRef.current) {
+					setExtras(prev => ({ ...prev, [spec!.requestKey!]: undefined }));
 				}
 				reportActionError(actionName, 'row', error, spec);
 			} finally {

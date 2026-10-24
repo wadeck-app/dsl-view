@@ -1,4 +1,5 @@
 import { describeReceived } from './engine/propWarnings.js';
+import { isExpressionString } from './expression.js';
 
 // Isomorphic and React-free on purpose: the runtime dev check (engine/warnInvalidNodeProps) and the build-time walk
 // (build/unknownKeys) both ask the same question of a node: "which of its props does the component's generated schema
@@ -124,7 +125,7 @@ export function findInvalidNodeProps(
 		}
 		const present = Object.prototype.hasOwnProperty.call(node, key) && node[key] !== undefined;
 		const raw = node[key];
-		const value = typeof raw === 'string' && raw.startsWith('$') ? resolve(raw, ctx) : raw;
+		const value = typeof raw === 'string' && isExpressionString(raw) ? resolve(raw, ctx) : raw;
 		if (present && value === undefined) {
 			continue;
 		}

@@ -164,7 +164,7 @@ describe('$actions', () => {
 		const [diagnostic] = findUnknownKeys({ $actions: { go: { url: 'POST /x', qqqqqqqqqq: 1 } }, $type: 'Label', label: 'a' }, manifest);
 		expect(diagnostic).toMatchObject({ severity: 'error', type: '$actions', nodePath: '$actions.go', code: 'unknown-action-key' });
 		expect(diagnostic!.message).toBe(
-			'[$actions.go] unknown action key "qqqqqqqqqq" - it has no effect. Known keys: url, resultKey, reloadSources, confirm, successMessage, errorPrefix, notify, strictParams'
+			'[$actions.go] unknown action key "qqqqqqqqqq" - it has no effect. Known keys: url, resultKey, requestKey, reloadSources, confirm, successMessage, errorPrefix, notify, strictParams'
 		);
 	});
 });

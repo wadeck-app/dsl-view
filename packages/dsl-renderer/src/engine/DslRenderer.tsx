@@ -2,6 +2,7 @@ import React from 'react';
 
 import type { ComponentRegistry } from '../ComponentRegistry.js';
 import { EXTENSION_SLOT_TYPE, KNOWN_DSL_KEYS, omitNavKeys } from '../dslKeys.js';
+import { evaluateOperatorExpression } from '../expression.js';
 import { isDevelopment } from './devMode.js';
 import { warnMissingCtxPrefix } from './warnCtxPrefix.js';
 import { warnInvalidNodeProps } from './warnInvalidNodeProps.js';
@@ -189,14 +190,28 @@ export function resolveExpressionsDeep(value: unknown, ctx: RenderContext): unkn
 	return value;
 }
 
+/**
+ * Resolves an authored value: a `$path` reads the page, an operator expression (`!$a || $b != 'x'`, see expression.ts)
+ * combines paths, anything else is returned untouched.
+ */
 export function resolveExpressionValue(expr: unknown, ctx: RenderContext): unknown {
 	if (typeof expr !== 'string') {
 		return expr;
 	}
+	if (!expr.startsWith('$') && !expr.trimStart().startsWith('!')) {
+		return expr;
+	}
+	const operator = evaluateOperatorExpression(expr, path => resolveExpressionPath(path, ctx));
+	if (operator.matched) {
+		return operator.value;
+	}
 	if (!expr.startsWith('$')) {
 		return expr;
 	}
+	return resolveExpressionPath(expr, ctx);
+}
 
+function resolveExpressionPath(expr: string, ctx: RenderContext): unknown {
 	const path = expr.slice(1).split('.');
 	const root = path[0];
 	const rest = path.slice(1);

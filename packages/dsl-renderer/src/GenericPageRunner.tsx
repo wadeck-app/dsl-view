@@ -1,11 +1,11 @@
 import { load as parseYaml } from 'js-yaml';
-import React, { useContext, useMemo } from 'react';
+import React, { useContext, useEffect, useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 
 import type { CompiledDslArtifact } from './compiledDslArtifact.js';
 import { COMPILED_DSL_FORMAT_VERSION } from './compiledDslArtifact.js';
 import type { ComponentRegistry } from './ComponentRegistry.js';
-import { DslRenderer, omitNavKeys } from './engine/DslRenderer.js';
+import { DslRenderer, omitNavKeys, resolveExpressionValue } from './engine/DslRenderer.js';
 import { ActionBanner } from './ActionBanner.js';
 import { NotifierContext, useBannerNotifier } from './notifier.js';
 import type { BrainRegistry } from './pageRunner/brainsTypes.js';
@@ -142,7 +142,7 @@ function PageRunner({
 	const banner = useBannerNotifier();
 	const notify = hostNotify ?? banner.notify;
 
-	const { vars, setVar } = useVars(varsDecl as Record<string, unknown> | undefined);
+	const { vars, setVar, seedFrom } = useVars(varsDecl as Record<string, unknown> | undefined);
 	const { outputs, publishOutput } = useOutputs();
 
 	const { sourceData, loading, initialLoading, isRefreshing, loadSources, mountedRef, invalidateSourceCache } = useSourceLoader({
@@ -207,10 +207,18 @@ function PageRunner({
 		$actionPending: actionPending,
 		$actionPendingRows: actionPendingRows,
 		$vars: vars,
+		// Writes a page variable: bound fields placed outside a Form edit $vars through it (see the generated bind wrapper).
+		$setVar: setVar,
 		$outputs: outputs,
 		$publishOutput: publishOutput,
 		$route: routeParams,
 	};
+
+	// `$vars: { payload: $sources.event.exampleText }`: a variable declared with an expression is seeded once, as soon as
+	// the expression has a value (see useVars). Runs after every render; it does nothing once everything is seeded.
+	useEffect(() => {
+		seedFrom(expression => resolveExpressionValue(expression, baseCtx));
+	});
 
 	const { brainResults } = useBrains({
 		$brains: brainsDecl,

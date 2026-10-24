@@ -405,12 +405,16 @@ describe('bind-pattern wrappers', () => {
 		expect(out).toContain("import { useFormContext } from '../../../dsl-ui/src/components/form/Form.js'");
 	});
 
-	it('reads the form data from the form context, then from the page context', () => {
+	it('reads the form data from the form context, then from the page context, then from the page variables', () => {
 		const text = wrapper('FieldText');
 		expect(text).toContain("const bind = node['bind'] as string");
 		expect(text).toContain('const formCtx = useFormContext()');
-		expect(text).toContain("const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined");
-		expect(text).toContain("const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined");
+		expect(text).toContain("const scopedData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined");
+		expect(text).toContain("const scopedChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined");
+		// Neither a Form nor a table row around the field: it edits ctx.$vars through ctx.$setVar.
+		expect(text).toContain('const pageVars = scopedData === undefined && scopedChange === undefined');
+		expect(text).toContain("const formData = pageVars ? ctx['$vars'] as Record<string, unknown> | undefined : scopedData");
+		expect(text).toContain("const onChange = pageVars ? ctx['$setVar'] as ((key: string, v: unknown) => void) | undefined : scopedChange");
 		expect(text).toContain('onChange={(v) => onChange?.(bind, v)}');
 	});
 

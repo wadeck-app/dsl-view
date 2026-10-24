@@ -10,7 +10,7 @@ import { resetCoercionWarnings } from './coerceProp.js';
 import { resetInvalidPropWarnings } from './warnInvalidNodeProps.js';
 
 // The shape the generator produces: every prop accepts its literal or an expression, as in generated-node-schemas.ts.
-const expr = z.string().startsWith('$');
+const expr = z.string().regex(/^\s*(?:\$|!+\s*[$(])/);
 const dsl = <T extends z.ZodType>(schema: T) => z.union([schema, expr]);
 const PropSchema = z.object({
 	$type: z.string(),
@@ -97,6 +97,19 @@ describe('warnInvalidNodeProps', () => {
 		show({ rows: '$sources.rows', gap: '$vars.gap' }, { rows: { not: 'a list' }, $vars: { gap: 'gap-2' } });
 
 		expect(schemaMessages()).toEqual([expect.stringContaining('Box.rows expects a list but received a map')]);
+	});
+
+	it('judges the RESOLVED value of an operator expression too, and a "!" expression is not a literal', () => {
+		show({ count: '$vars.a == $vars.b', visible: '!$vars.flag' }, { $vars: { a: 1, b: 1, flag: false } });
+
+		// A comparison resolves to a boolean, which a number prop does not accept; `visible` is untyped.
+		expect(schemaMessages()).toEqual([expect.stringContaining('Box.count expects a number but received boolean')]);
+	});
+
+	it('a text that merely starts with a bang is a literal and is judged as one', () => {
+		show({ gap: '!important' });
+
+		expect(schemaMessages()).toEqual([expect.stringContaining('Box.gap expects one of "gap-1", "gap-2" but received string')]);
 	});
 
 	it('does not judge an expression that does not resolve yet (a source still loading), nor null', () => {

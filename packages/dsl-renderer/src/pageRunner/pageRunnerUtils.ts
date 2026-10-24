@@ -6,6 +6,12 @@ export interface ActionSpec {
 	resultKey?: string;
 	/** true = reload all sources; string[] = reload only the named sources (also invalidates their cache entries) */
 	reloadSources?: boolean | string[];
+	/**
+	 * Name under which the body this action SENT is stored (readable as `$<requestKey>`), only after a successful answer and
+	 * cleared (undefined) after a failure. With `resultKey` it lets a page express "the data I hold is still the data the
+	 * server accepted": `disabled: $vars.payload != $validated.payload`.
+	 */
+	requestKey?: string;
 	/** If set, shows a window.confirm dialog with this message before executing the action. */
 	confirm?: string;
 	/** Shown on success when the server response carries no `message` string. Default: "Done". */
