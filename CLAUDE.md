@@ -55,3 +55,4 @@ The `packages/dsl-renderer/` and `packages/dsl-ui/` directories still physically
 | `.claude/out-of-scope.md` | What this project explicitly does not cover |
 | `.claude/product-vision.md` | Roadmap: JSON Schema direction, pluggable ContractAdapter |
 | `.claude/threat-model.md` | Silent failure risks and guardrail threats |
+| `.claude/docs/test-writing-lessons.md` | Pre-commit checklist for tests, from the mutation-testing campaigns (read before writing tests) |
