@@ -64,6 +64,13 @@ export function Dialog({
 		onOpenChange?.(next);
 	}
 
+	// The key handler is registered once: it must call the latest setOpen (latest onOpenChange and
+	// controlled flag), not the one of the first render.
+	const setOpenRef = useRef(setOpen);
+	useEffect(() => {
+		setOpenRef.current = setOpen;
+	});
+
 	function handleTriggerClick() {
 		setOpen(true);
 	}
@@ -81,7 +88,7 @@ export function Dialog({
 		if (!isOpenRef.current) return;
 		if (e.key === 'Escape') {
 			e.preventDefault();
-			setOpen(false);
+			setOpenRef.current(false);
 			return;
 		}
 		if (e.key === 'Tab') {

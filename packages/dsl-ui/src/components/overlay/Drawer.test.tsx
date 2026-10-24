@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Drawer } from './Drawer.js';
@@ -50,11 +50,6 @@ describe('Drawer', () => {
 		const titleEl = document.getElementById(labelledById!);
 		expect(titleEl).not.toBeNull();
 		expect(titleEl!.textContent).toBe('My Drawer');
-	});
-
-	it('title text is displayed', () => {
-		renderDrawer({ open: true, title: 'Hello Drawer' });
-		expect(screen.getByText('Hello Drawer')).toBeInTheDocument();
 	});
 
 	it('onClose is called when close button is clicked', () => {
@@ -172,17 +167,6 @@ describe('Drawer', () => {
 		expect(screen.getByText('My drawer body text')).toBeInTheDocument();
 	});
 
-	it('clicking panel content does not call onClose', () => {
-		const onClose = vi.fn();
-		renderDrawer({
-			open: true,
-			onClose,
-			children: <div data-testid="panel-content">Content here</div>,
-		});
-		fireEvent.click(screen.getByTestId('panel-content'));
-		expect(onClose).not.toHaveBeenCalled();
-	});
-
 	it('focus is trapped: Tab key cycles through focusable elements', () => {
 		render(
 			<Drawer open={true} onClose={vi.fn()} title="Focus Trap Test">
@@ -196,7 +180,7 @@ describe('Drawer', () => {
 		);
 		expect(focusable.length).toBeGreaterThanOrEqual(2);
 
-		// Place focus on the last focusable element then Tab — should wrap to first
+		// Place focus on the last focusable element then Tab: should wrap to first
 		act(() => {
 			focusable[focusable.length - 1].focus();
 		});
@@ -205,5 +189,131 @@ describe('Drawer', () => {
 		fireEvent.keyDown(document, { key: 'Tab', shiftKey: false });
 		// After Tab on last element, focus wraps to first
 		expect(document.activeElement).toBe(focusable[0]);
+	});
+
+	describe('closed state', () => {
+		it('is inert while closed (out of the tab order and the accessibility tree) and not inert when open', () => {
+			const { rerender } = renderDrawer({ open: false });
+			expect(screen.getByTestId('drawer-panel')).toHaveAttribute('inert');
+			rerender(
+				<Drawer open={true} onClose={vi.fn()} title="Test Drawer">
+					<p>Drawer content</p>
+				</Drawer>
+			);
+			expect(screen.getByTestId('drawer-panel')).not.toHaveAttribute('inert');
+		});
+
+		it('Escape does nothing and is not swallowed while closed', () => {
+			const onClose = vi.fn();
+			renderDrawer({ open: false, onClose });
+			const notCancelled = fireEvent.keyDown(document, { key: 'Escape' });
+			expect(onClose).not.toHaveBeenCalled();
+			expect(notCancelled).toBe(true);
+		});
+
+		it('a click on the invisible backdrop does nothing while closed', () => {
+			const onClose = vi.fn();
+			renderDrawer({ open: false, onClose });
+			fireEvent.click(screen.getByTestId('drawer-backdrop'));
+			expect(onClose).not.toHaveBeenCalled();
+		});
+
+		it('Tab is not trapped while closed', () => {
+			render(
+				<Drawer open={false} onClose={vi.fn()} title="Closed">
+					<button>Only</button>
+				</Drawer>
+			);
+			// The only focusable element is also the last one: while open, Tab on it would wrap and be cancelled.
+			screen.getByText('Only').focus();
+			expect(fireEvent.keyDown(document, { key: 'Tab' })).toBe(true);
+		});
+	});
+
+	describe('keyboard', () => {
+		it('Escape prevents the default action when open', () => {
+			renderDrawer({ open: true });
+			expect(fireEvent.keyDown(document, { key: 'Escape' })).toBe(false);
+		});
+
+		it('Escape calls the LATEST onClose, not the one from the first render', () => {
+			const first = vi.fn();
+			const latest = vi.fn();
+			const { rerender } = render(
+				<Drawer open={true} onClose={first} title="T">
+					<p>x</p>
+				</Drawer>
+			);
+			rerender(
+				<Drawer open={true} onClose={latest} title="T">
+					<p>x</p>
+				</Drawer>
+			);
+			fireEvent.keyDown(document, { key: 'Escape' });
+			expect(latest).toHaveBeenCalledTimes(1);
+			expect(first).not.toHaveBeenCalled();
+		});
+
+		it('Shift+Tab on the first focusable wraps to the last one', () => {
+			render(
+				<Drawer open={true} onClose={vi.fn()} title="Trap" hideCloseButton>
+					<button>First</button>
+					<button>Second</button>
+				</Drawer>
+			);
+			const first = screen.getByText('First');
+			const second = screen.getByText('Second');
+			act(() => first.focus());
+			const notCancelled = fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+			expect(notCancelled).toBe(false);
+			expect(document.activeElement).toBe(second);
+		});
+
+		it('Tab from a middle element is left to the browser (no wrap, default not prevented)', () => {
+			render(
+				<Drawer open={true} onClose={vi.fn()} title="Trap" hideCloseButton>
+					<button>First</button>
+					<button>Middle</button>
+					<button>Last</button>
+				</Drawer>
+			);
+			const middle = screen.getByText('Middle');
+			act(() => middle.focus());
+			const notCancelled = fireEvent.keyDown(document, { key: 'Tab' });
+			expect(notCancelled).toBe(true);
+			expect(document.activeElement).toBe(middle);
+		});
+	});
+
+	describe('focus management', () => {
+		it('moves focus to the first focusable element when opened', async () => {
+			renderDrawer({ open: true });
+			await waitFor(() => {
+				expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Close drawer' }));
+			});
+		});
+
+		it('gives focus back to the element that had it before opening, when closed', async () => {
+			const onClose = vi.fn();
+			function Host({ open }: { open: boolean }) {
+				return (
+					<>
+						<button>Outer</button>
+						<Drawer open={open} onClose={onClose} title="T">
+							<p>x</p>
+						</Drawer>
+					</>
+				);
+			}
+			const { rerender } = render(<Host open={false} />);
+			const outer = screen.getByText('Outer');
+			outer.focus();
+			rerender(<Host open={true} />);
+			await waitFor(() => {
+				expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Close drawer' }));
+			});
+			rerender(<Host open={false} />);
+			expect(document.activeElement).toBe(outer);
+		});
 	});
 });

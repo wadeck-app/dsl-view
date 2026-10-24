@@ -72,10 +72,14 @@ export function Drawer({
 	const drawerRef = useRef<HTMLDivElement>(null);
 	const previousFocusRef = useRef<Element | null>(null);
 	const isOpenRef = useRef(open);
+	// The key handler is registered once, so it must read the latest onClose through a ref,
+	// otherwise Escape keeps calling the callback of the first render.
+	const onCloseRef = useRef(onClose);
 
 	useEffect(() => {
 		isOpenRef.current = open;
-	}, [open]);
+		onCloseRef.current = onClose;
+	}, [open, onClose]);
 
 	function handleBackdropClick(e: React.MouseEvent<HTMLDivElement>) {
 		if (e.target === e.currentTarget) onClose();
@@ -86,7 +90,7 @@ export function Drawer({
 		if (!isOpenRef.current) return;
 		if (e.key === 'Escape') {
 			e.preventDefault();
-			onClose();
+			onCloseRef.current();
 			return;
 		}
 		if (e.key === 'Tab') {
@@ -110,8 +114,6 @@ export function Drawer({
 				}
 			}
 		}
-	// onClose is intentionally excluded — isOpenRef guards stale closure, onClose identity doesn't matter
-	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	useEffect(() => {
@@ -158,6 +160,9 @@ export function Drawer({
 				ref={drawerRef}
 				role="dialog"
 				aria-modal="true"
+				// Closed, the panel stays mounted for the slide animation: inert keeps it out of the tab order
+				// and the accessibility tree instead of leaving an invisible modal dialog on the page.
+				inert={!open}
 				aria-labelledby={title ? titleId : undefined}
 				aria-label={!title ? 'Drawer' : undefined}
 				className={[

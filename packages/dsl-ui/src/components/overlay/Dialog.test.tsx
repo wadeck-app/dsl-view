@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -142,6 +142,131 @@ describe('Dialog', () => {
 		expect(screen.getByRole('dialog')).toBeInTheDocument();
 		await user.keyboard('{Escape}');
 		expect(onOpenChange).toHaveBeenCalledWith(false);
+	});
+
+	it('Escape calls the LATEST onOpenChange, not the one from the first render', () => {
+		const first = vi.fn();
+		const latest = vi.fn();
+		const { rerender } = render(
+			<Dialog title="T" open={true} onOpenChange={first}>
+				<p>body</p>
+			</Dialog>
+		);
+		rerender(
+			<Dialog title="T" open={true} onOpenChange={latest}>
+				<p>body</p>
+			</Dialog>
+		);
+		fireEvent.keyDown(document, { key: 'Escape' });
+		expect(latest).toHaveBeenCalledExactlyOnceWith(false);
+		expect(first).not.toHaveBeenCalled();
+	});
+
+	it('Escape on a closed controlled dialog does nothing and is not swallowed', () => {
+		const onOpenChange = vi.fn();
+		render(
+			<Dialog title="T" open={false} onOpenChange={onOpenChange}>
+				<p>body</p>
+			</Dialog>
+		);
+		expect(fireEvent.keyDown(document, { key: 'Escape' })).toBe(true);
+		expect(onOpenChange).not.toHaveBeenCalled();
+	});
+
+	it('a controlled dialog stays open until the parent says otherwise', async () => {
+		const user = userEvent.setup();
+		const onOpenChange = vi.fn();
+		render(
+			<Dialog title="T" open={true} onOpenChange={onOpenChange}>
+				<p>body</p>
+			</Dialog>
+		);
+		await user.keyboard('{Escape}');
+		await user.click(screen.getByRole('button', { name: 'Close dialog' }));
+		expect(onOpenChange).toHaveBeenCalledTimes(2);
+		expect(screen.getByRole('dialog')).toBeInTheDocument();
+	});
+
+	it('the trigger reports open=true through onOpenChange', async () => {
+		const user = userEvent.setup();
+		const onOpenChange = vi.fn();
+		render(
+			<Dialog title="T" trigger={<button>Open</button>} onOpenChange={onOpenChange}>
+				<p>body</p>
+			</Dialog>
+		);
+		await user.click(screen.getByRole('button', { name: 'Open' }));
+		expect(onOpenChange).toHaveBeenCalledExactlyOnceWith(true);
+	});
+
+	it('the close button closes the dialog', async () => {
+		const user = userEvent.setup();
+		render(
+			<Dialog title="T" trigger={<button>Open</button>}>
+				<p>body</p>
+			</Dialog>
+		);
+		await user.click(screen.getByRole('button', { name: 'Open' }));
+		await user.click(screen.getByRole('button', { name: 'Close dialog' }));
+		expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+	});
+
+	it('clicking inside the panel does not close it', async () => {
+		const user = userEvent.setup();
+		render(
+			<Dialog title="T" trigger={<button>Open</button>}>
+				<p>body text</p>
+			</Dialog>
+		);
+		await user.click(screen.getByRole('button', { name: 'Open' }));
+		await user.click(screen.getByText('body text'));
+		await user.click(screen.getByText('T'));
+		expect(screen.getByRole('dialog')).toBeInTheDocument();
+	});
+
+	it('is named by its title (aria-labelledby points at the heading)', async () => {
+		const user = userEvent.setup();
+		render(
+			<Dialog title="Rename file" trigger={<button>Open</button>}>
+				<p>body</p>
+			</Dialog>
+		);
+		await user.click(screen.getByRole('button', { name: 'Open' }));
+		expect(screen.getByRole('dialog', { name: 'Rename file' })).toBeInTheDocument();
+	});
+
+	it('moves focus into the dialog on open and gives it back to the trigger on close', async () => {
+		const user = userEvent.setup();
+		render(
+			<Dialog title="T" trigger={<button>Open</button>}>
+				<p>body</p>
+			</Dialog>
+		);
+		const trigger = screen.getByRole('button', { name: 'Open' });
+		await user.click(trigger);
+		await waitFor(() => {
+			expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Close dialog' }));
+		});
+		await user.keyboard('{Escape}');
+		expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+		expect(document.activeElement).toBe(trigger);
+	});
+
+	it('Shift+Tab on the first focusable wraps to the last, Tab on the last wraps to the first', async () => {
+		const user = userEvent.setup();
+		render(
+			<Dialog title="T" trigger={<button>Open</button>} actions={<button>Confirm</button>}>
+				<p>body</p>
+			</Dialog>
+		);
+		await user.click(screen.getByRole('button', { name: 'Open' }));
+		const close = screen.getByRole('button', { name: 'Close dialog' });
+		const confirm = screen.getByRole('button', { name: 'Confirm' });
+		await waitFor(() => expect(document.activeElement).toBe(close));
+		await user.tab({ shift: true });
+		expect(document.activeElement).toBe(confirm);
+		await user.tab();
+		expect(document.activeElement).toBe(close);
 	});
 
 	it('works in controlled mode: open prop shows the dialog without a trigger', () => {
