@@ -1,6 +1,8 @@
 import * as RadixPopover from '@radix-ui/react-popover';
 import React, { useRef, useState } from 'react';
 
+import { usePopupTrigger } from './usePopupTrigger.js';
+
 export interface ContextMenuItem {
 	label: string;
 	icon?: React.ReactNode;
@@ -42,6 +44,7 @@ export function ContextMenu({ trigger, items, side = 'bottom', align = 'start', 
 	const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
 	const open = isControlled ? controlledOpen : uncontrolledOpen;
 	const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+	const popupTrigger = usePopupTrigger(open, 'menu');
 
 	// Indices of items that can receive keyboard focus (non-separator, non-disabled)
 	const focusableIndices = items
@@ -94,7 +97,9 @@ export function ContextMenu({ trigger, items, side = 'bottom', align = 'start', 
 		<RadixPopover.Root open={open} onOpenChange={handleOpenChange}>
 			<RadixPopover.Trigger asChild>
 				{/* Radix anchors the menu to this element's rect; `display: contents` has no box and pinned it to the page origin. */}
-				<span style={{ display: 'inline-flex' }}>{trigger}</span>
+				<span ref={popupTrigger.ref} style={{ display: 'inline-flex' }} aria-haspopup="menu">
+					{trigger}
+				</span>
 			</RadixPopover.Trigger>
 			<RadixPopover.Portal>
 				<RadixPopover.Content
@@ -102,6 +107,8 @@ export function ContextMenu({ trigger, items, side = 'bottom', align = 'start', 
 					align={align}
 					sideOffset={4}
 					onKeyDown={handleKeyDown}
+					// Radix would focus its Trigger, the wrapper span, which cannot take focus: the user lands on <body>.
+					onCloseAutoFocus={popupTrigger.onCloseAutoFocus}
 					onOpenAutoFocus={e => {
 						e.preventDefault();
 						// Focus the first focusable item when the menu opens

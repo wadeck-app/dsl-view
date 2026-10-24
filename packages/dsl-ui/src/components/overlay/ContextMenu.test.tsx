@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ContextMenu } from './ContextMenu.js';
@@ -151,6 +151,42 @@ describe('ContextMenu', () => {
 		expect(screen.getByTestId('context-menu-content')).toBeInTheDocument();
 		fireEvent.keyDown(document.activeElement || document.body, { key: 'Escape' });
 		expect(onOpenChange).toHaveBeenCalledWith(false);
+	});
+
+	// A real browser showed focus falling back to <body> after Escape: Radix returns focus to its Trigger,
+	// which here is the non-focusable wrapper span, not the button the user activated.
+	it('returns focus to the trigger button when the menu closes', async () => {
+		renderMenu();
+		const trigger = screen.getByRole('button', { name: 'Menu' });
+		trigger.focus();
+		fireEvent.click(trigger);
+		const menu = await screen.findByRole('menu');
+		fireEvent.keyDown(menu, { key: 'Escape' });
+		await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
+		expect(document.activeElement).toBe(trigger);
+	});
+
+	// The trigger button, not its wrapper, must carry the popup state for assistive technology.
+	it('exposes aria-haspopup="menu" and aria-expanded on the trigger button', async () => {
+		renderMenu();
+		const trigger = screen.getByRole('button', { name: 'Menu' });
+		expect(trigger).toHaveAttribute('aria-haspopup', 'menu');
+		expect(trigger).toHaveAttribute('aria-expanded', 'false');
+		fireEvent.click(trigger);
+		await screen.findByRole('menu');
+		expect(trigger).toHaveAttribute('aria-expanded', 'true');
+	});
+
+	// A kebab trigger is usually a component that does not forward props: the state must still reach its button.
+	it('sets the popup state on the button even when the trigger component forwards no props', async () => {
+		const Kebab = () => <button aria-label="Open menu">...</button>;
+		render(<ContextMenu trigger={<Kebab />} items={defaultItems} />);
+		const trigger = screen.getByRole('button', { name: 'Open menu' });
+		expect(trigger).toHaveAttribute('aria-haspopup', 'menu');
+		expect(trigger).toHaveAttribute('aria-expanded', 'false');
+		fireEvent.click(trigger);
+		await screen.findByRole('menu');
+		expect(trigger).toHaveAttribute('aria-expanded', 'true');
 	});
 
 	// Pattern A: render already-open to check icon

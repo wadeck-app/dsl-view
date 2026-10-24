@@ -1,6 +1,8 @@
 import * as RadixPopover from '@radix-ui/react-popover';
 import React, { useState } from 'react';
 
+import { usePopupTrigger } from './usePopupTrigger.js';
+
 export interface PopoverProps {
 	/** Element that opens/closes the popover */
 	trigger: React.ReactNode;
@@ -30,6 +32,7 @@ export function Popover({
 	const isControlled = controlledOpen !== undefined;
 	const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
 	const isOpen = isControlled ? controlledOpen : uncontrolledOpen;
+	const popupTrigger = usePopupTrigger(isOpen, 'dialog');
 
 	function handleOpenChange(next: boolean) {
 		if (!isControlled) {
@@ -42,7 +45,7 @@ export function Popover({
 		<RadixPopover.Root open={isOpen} onOpenChange={handleOpenChange}>
 			<RadixPopover.Trigger asChild>
 				{/* Radix anchors the panel to this element's rect; `display: contents` has no box and pinned it to the page origin. */}
-				<span style={{ display: 'inline-flex' }}>{trigger}</span>
+				<span ref={popupTrigger.ref} style={{ display: 'inline-flex' }}>{trigger}</span>
 			</RadixPopover.Trigger>
 			<RadixPopover.Portal>
 				<RadixPopover.Content
@@ -50,6 +53,7 @@ export function Popover({
 					side={side}
 					align={align}
 					sideOffset={8}
+					onCloseAutoFocus={popupTrigger.onCloseAutoFocus}
 					className={[
 						'z-50 rounded-lg border border-border bg-surface p-4 shadow-lg outline-none',
 						className,

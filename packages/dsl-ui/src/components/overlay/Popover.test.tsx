@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Popover } from './Popover.js';
@@ -199,5 +199,40 @@ describe('Popover', () => {
 		);
 		fireEvent.click(screen.getByRole('button', { name: 'Action inside popover' }));
 		expect(onAction).toHaveBeenCalledOnce();
+	});
+});
+
+describe('Popover trigger accessibility', () => {
+	// A real browser showed focus falling back to <body> when the panel closed: Radix returns focus to its Trigger,
+	// the non-focusable wrapper span, instead of the button the user activated.
+	it('returns focus to the trigger button when the panel closes', async () => {
+		render(
+			<Popover trigger={<button>Open</button>}>
+				<p>Panel content</p>
+			</Popover>
+		);
+		const trigger = screen.getByRole('button', { name: 'Open' });
+		trigger.focus();
+		fireEvent.click(trigger);
+		const panel = await screen.findByRole('dialog');
+		fireEvent.keyDown(panel, { key: 'Escape' });
+		await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+		expect(document.activeElement).toBe(trigger);
+	});
+
+	// A trigger is often a component that forwards no props: the popup state must still reach its button.
+	it('sets aria-haspopup and aria-expanded on the button, also for a trigger component that forwards no props', async () => {
+		const Plain = () => <button>Open</button>;
+		render(
+			<Popover trigger={<Plain />}>
+				<p>Panel content</p>
+			</Popover>
+		);
+		const trigger = screen.getByRole('button', { name: 'Open' });
+		expect(trigger).toHaveAttribute('aria-haspopup', 'dialog');
+		expect(trigger).toHaveAttribute('aria-expanded', 'false');
+		fireEvent.click(trigger);
+		await screen.findByRole('dialog');
+		expect(trigger).toHaveAttribute('aria-expanded', 'true');
 	});
 });
