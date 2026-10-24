@@ -13,8 +13,9 @@ export function formatBytes(bytes: number): string {
 	}
 	const k = 1024;
 	let i = Math.min(Math.max(Math.floor(Math.log(bytes) / Math.log(k)), 0), UNITS.length - 1);
-	// 1048575 B is 1023.999 KB: toFixed(1) would print "1024.0 KB". Move up to the next unit when the rounded value hits k.
-	if (i > 0 && i < UNITS.length - 1 && Number((bytes / Math.pow(k, i)).toFixed(1)) >= k) {
+	// 1048575 B is 1023.999 KB: toFixed(1) would print "1024.0 KB", and 1023.5 B would print "1024 B". Move up to the
+	// next unit when the value rounded at the unit's own precision (whole bytes, one decimal above) hits k.
+	if (i < UNITS.length - 1 && Number((bytes / Math.pow(k, i)).toFixed(i === 0 ? 0 : 1)) >= k) {
 		i += 1;
 	}
 	const value = bytes / Math.pow(k, i);

@@ -34,6 +34,21 @@ describe('formatBytes', () => {
 		expect(formatBytes(MB - 1024)).toBe('1023.0 KB');
 	});
 
+	// Above bytes the carry is decided at ONE decimal: 1023.6 KB prints as is, only 1023.95 KB and more become 1.0 MB.
+	it('does not move up while the one-decimal value is still below 1024', () => {
+		expect(formatBytes(1048166)).toBe('1023.6 KB');
+		expect(formatBytes(MB - 52)).toBe('1023.9 KB');
+		expect(formatBytes(MB - 51)).toBe('1.0 MB');
+	});
+
+	// A fractional byte count (an axis tick, an average) that rounds to 1024 at the unit's own precision must move up too:
+	// "1024 B" is the same impossible reading as "1024.0 KB".
+	it('moves up from bytes when the rounded value would print 1024', () => {
+		expect(formatBytes(1023.5)).toBe('1.0 KB');
+		expect(formatBytes(1023.96)).toBe('1.0 KB');
+		expect(formatBytes(1023.4)).toBe('1023 B');
+	});
+
 	it('stays on TB for huge values instead of printing an undefined unit', () => {
 		expect(formatBytes(1024 * TB)).toBe('1024.0 TB');
 		expect(formatBytes(5000 * TB)).toMatch(/ TB$/);
