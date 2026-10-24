@@ -161,6 +161,25 @@ export function isReactNodeSlotType(typeText: string): boolean {
 	return members.some(isNode) && members.every(member => isNode(member) || isRenderFunction(member) || member === 'undefined' || member === 'null');
 }
 
+/**
+ * For a prop typed as an array of a plain interface declared in the same file (`Step[]`, `Array<Step>`), the names of
+ * that interface's properties that hold DSL nodes (`items: React.ReactNode`). Such a prop is authored as a YAML list of
+ * objects whose node fields are lists of DSL nodes; passed through untouched they reach React as raw objects
+ * ("Objects are not valid as a React child"), so the generated render must turn those fields into elements.
+ */
+export function extractNodeFieldsOfItems(
+	sourceFile: ReturnType<InstanceType<typeof Project>['addSourceFileAtPath']>,
+	typeText: string
+): string[] {
+	const match = /^(\w+)\[\]$/.exec(typeText.trim()) ?? /^Array<\s*(\w+)\s*>$/.exec(typeText.trim());
+	const itemInterface = match?.[1] ? sourceFile.getInterface(match[1]) : undefined;
+	if (!itemInterface) return [];
+	return itemInterface
+		.getProperties()
+		.filter((p) => isReactNodeSlotType(p.getTypeNode()?.getText() ?? ''))
+		.map((p) => unquotePropName(p.getName()));
+}
+
 export function extractAllowedChildren(
 	sourceFile: ReturnType<InstanceType<typeof Project>['addSourceFileAtPath']>,
 	componentName: string
@@ -584,6 +603,20 @@ function generateSimpleEntry(
 				`const ${varName} = (n: unknown, extraCtx: Record<string, unknown>) => renderChildren([n], registry, { ...ctx, ...extraCtx })[0] ?? null`
 			);
 			jsxAttrs.push(`${name}={${varName}}`);
+		} else if (extractNodeFieldsOfItems(sourceFile, typeText).length > 0) {
+			// An array of objects some of whose fields hold DSL nodes (Stepper `steps[].items`): resolve the list, then
+			// render each node field of each entry, leaving entries and fields that are not lists for the component to judge.
+			usesRegistry = true;
+			const nodeFields = extractNodeFieldsOfItems(sourceFile, typeText);
+			const propType = `import('${importPath}').${component.name}Props${typeArgs}['${name}']`;
+			const renderedFields = nodeFields
+				.map(field => `${field}: Array.isArray(e['${field}']) ? renderChildren(e['${field}'] as unknown[], registry, ctx) : e['${field}']`)
+				.join(', ');
+			declLines.push(`const ${name}Raw = resolveExpressionValue(node['${name}'], ctx)`);
+			declLines.push(
+				`const ${name} = (Array.isArray(${name}Raw) ? ${name}Raw.map((entry: unknown) => { if (entry === null || typeof entry !== 'object') return entry; const e = entry as Record<string, unknown>; return { ...e, ${renderedFields} } }) : ${name}Raw) as ${propType}`
+			);
+			jsxAttrs.push(`${name}={${name}}`);
 		} else {
 			// Plain prop - resolve reactive expression then cast.
 			// For hyphenated names (e.g. aria-label), use a camelCase JS variable.

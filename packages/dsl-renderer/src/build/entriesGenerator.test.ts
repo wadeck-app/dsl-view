@@ -7,7 +7,7 @@ import { Project } from 'ts-morph';
 
 import { createRegistry } from '../ComponentRegistry.js';
 import { compileDslDocument } from './dslCompiler.js';
-import { buildEntriesFile, extractAllowedChildren, extractItemKeys, extractKnownKeys, extractMapSlots, isReactNodeSlotType } from './entriesGenerator.js';
+import { buildEntriesFile, extractAllowedChildren, extractItemKeys, extractKnownKeys, extractMapSlots, extractNodeFieldsOfItems, isReactNodeSlotType } from './entriesGenerator.js';
 
 describe('entriesGenerator @registryLazy', () => {
 	const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'entries-generator-test-'));
@@ -149,6 +149,26 @@ describe('extractAllowedChildren DSL key', () => {
 			'FieldWrapper'
 		);
 		expect(result).toEqual({ children: ['atomic'] });
+	});
+});
+
+describe('extractNodeFieldsOfItems', () => {
+	function fieldsOf(source: string, typeText: string) {
+		const project = new Project({ useInMemoryFileSystem: true, skipFileDependencyResolution: true });
+		return extractNodeFieldsOfItems(project.createSourceFile('C.tsx', source), typeText);
+	}
+	const step = ['export interface Step {', '  label: string;', '  items: React.ReactNode;', '  footer?: ReactNode | null;', '  count: number;', '}'].join('\n');
+
+	it('names the node fields of an array of a same-file interface, both array spellings', () => {
+		expect(fieldsOf(step, 'Step[]')).toEqual(['items', 'footer']);
+		expect(fieldsOf(step, 'Array<Step>')).toEqual(['items', 'footer']);
+	});
+
+	it('finds nothing when the items have no node field, the interface is elsewhere, or the type is not an array', () => {
+		expect(fieldsOf('export interface Row { id: string }', 'Row[]')).toEqual([]);
+		expect(fieldsOf(step, 'Unknown[]')).toEqual([]);
+		expect(fieldsOf(step, 'Step')).toEqual([]);
+		expect(fieldsOf(step, 'React.ReactNode')).toEqual([]);
 	});
 });
 
