@@ -33,8 +33,13 @@ export interface PageContentProps {
  * @registryTags content
  */
 export function PageContent({ sections, maxWidth = 'xl' }: PageContentProps) {
+	// A width name from YAML can be mistyped; without this the class list would silently contain "undefined".
+	const widthClass = MAX_WIDTH_CLASSES[maxWidth];
+	if (widthClass === undefined) {
+		console.error(`[PageContent] unknown maxWidth "${String(maxWidth)}". Valid widths: ${Object.keys(MAX_WIDTH_CLASSES).join(', ')}. Using "xl".`);
+	}
 	return (
-		<div className={`mx-auto w-full ${MAX_WIDTH_CLASSES[maxWidth]} p-4`}>
+		<div className={`mx-auto w-full ${widthClass ?? MAX_WIDTH_CLASSES.xl} p-4`}>
 			<div className="space-y-4">{sections}</div>
 		</div>
 	);
