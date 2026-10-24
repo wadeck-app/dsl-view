@@ -158,7 +158,7 @@ describe('ContextMenu', () => {
 		const items: ContextMenuItem[] = [
 			{
 				label: 'With Icon',
-				icon: <span data-testid="test-icon">★</span>,
+				icon: <span data-testid="test-icon">i</span>,
 				onClick: vi.fn(),
 			},
 		];

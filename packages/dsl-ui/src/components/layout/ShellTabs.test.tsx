@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppShell, type ShellItem } from './AppShell.js';
 import { scrollDeltaToReveal } from './ShellTabs.js';
 
@@ -203,5 +203,198 @@ describe('AppShell tabs overflow', () => {
 			document.removeEventListener('click', keepPage);
 			expect(button.getAttribute('aria-expanded')).toBe('false');
 		});
+	});
+});
+
+describe('scrollDeltaToReveal boundaries', () => {
+	it('tolerates a cut of exactly one pixel at either edge, and no more', () => {
+		expect(scrollDeltaToReveal(0, 300, -1, 100)).toBe(0);
+		expect(scrollDeltaToReveal(0, 300, -1.5, 100)).toBe(-1.5);
+		expect(scrollDeltaToReveal(0, 300, 200, 301)).toBe(0);
+		expect(scrollDeltaToReveal(0, 300, 200, 302)).toBe(2);
+	});
+	it('measures both edges from the nav, wherever the nav starts', () => {
+		// Nav spans 500..800; a tab at 460..560 is cut by 40 at the left, one at 760..860 by 60 at the right.
+		expect(scrollDeltaToReveal(500, 300, 460, 560)).toBe(-40);
+		expect(scrollDeltaToReveal(500, 300, 760, 860)).toBe(60);
+		expect(scrollDeltaToReveal(500, 300, 600, 700)).toBe(0);
+	});
+	it('shows the left edge of a tab wider than the box that starts inside it', () => {
+		expect(scrollDeltaToReveal(0, 100, 30, 230)).toBe(30);
+	});
+});
+
+describe('AppShell tabs observers and edge cases', () => {
+	beforeEach(fakeLayout);
+	afterEach(() => {
+		restoreLayout();
+		vi.unstubAllGlobals();
+		vi.restoreAllMocks();
+	});
+
+	const nav = () => screen.getByRole('navigation', { name: 'Sections' });
+
+	// A ResizeObserver the test drives by hand.
+	function stubResizeObserver() {
+		const instances: Array<{ observed: Element[]; disconnected: boolean; callback: () => void }> = [];
+		class FakeResizeObserver {
+			observed: Element[] = [];
+			disconnected = false;
+			constructor(public callback: () => void) {
+				instances.push(this);
+			}
+			observe(element: Element) {
+				this.observed.push(element);
+			}
+			unobserve() {}
+			disconnect() {
+				this.disconnected = true;
+			}
+		}
+		vi.stubGlobal('ResizeObserver', FakeResizeObserver);
+		return instances;
+	}
+
+	it('observes the nav box, and stops observing when unmounted', () => {
+		const instances = stubResizeObserver();
+		const { unmount } = render(shell(tabs(8, 0), 'More'));
+		expect(instances).toHaveLength(1);
+		expect(instances[0]!.observed).toEqual([nav()]);
+		unmount();
+		expect(instances[0]!.disconnected).toBe(true);
+	});
+
+	it('reveals the current tab and refreshes the overflow list when the nav box is resized', () => {
+		const instances = stubResizeObserver();
+		render(shell(tabs(8, 7), 'More'));
+		// Something moved the nav back to the start (e.g. the overflow control appeared next to it).
+		nav().scrollLeft = 0;
+		act(() => instances[0]!.callback());
+		expect(nav().scrollLeft).toBe(500);
+		expect(screen.getByRole('button', { name: /more/i }).textContent).toBe('More(5)');
+	});
+
+	it('measures the cut-off tabs again when the nav box is resized, without any scroll event', () => {
+		const instances = stubResizeObserver();
+		render(shell(tabs(8, -1), 'More'));
+		fireEvent.click(screen.getByRole('button', { name: /more/i }));
+		expect(within(screen.getByRole('navigation', { name: 'More' })).getAllByRole('link').map((a) => a.textContent)).toEqual(['Tab 3', 'Tab 4', 'Tab 5', 'Tab 6', 'Tab 7']);
+
+		// No tab is current, so nothing is revealed again: the list can only change if the resize re-measures.
+		nav().scrollLeft = 500;
+		act(() => instances[0]!.callback());
+		expect(within(screen.getByRole('navigation', { name: 'More' })).getAllByRole('link').map((a) => a.textContent)).toEqual(['Tab 0', 'Tab 1', 'Tab 2', 'Tab 3', 'Tab 4']);
+	});
+
+	it('still works where ResizeObserver does not exist', () => {
+		vi.stubGlobal('ResizeObserver', undefined);
+		render(shell(tabs(8, 7), 'More'));
+		expect(nav().scrollLeft).toBe(500);
+	});
+
+	it('listens to the scroll of the nav passively, and stops when unmounted', () => {
+		stubResizeObserver();
+		const add = vi.spyOn(HTMLElement.prototype, 'addEventListener');
+		const remove = vi.spyOn(HTMLElement.prototype, 'removeEventListener');
+		const { unmount } = render(shell(tabs(8, 0), 'More'));
+		// React also attaches its own scroll listeners to elements; the one of the tabs is the passive one.
+		const scrollAdds = add.mock.calls.filter(([type, , options]) => type === 'scroll' && typeof options === 'object' && (options as AddEventListenerOptions).passive === true);
+		expect(scrollAdds).toHaveLength(1);
+		unmount();
+		const removed = remove.mock.calls.filter(([type]) => type === 'scroll').map(([, handler]) => handler);
+		expect(removed).toContain(scrollAdds[0]![1]);
+	});
+
+	it('offers the overflow control for a single cut-off tab', () => {
+		// 4 tabs of 100px in a 300px box: only the last one is cut off.
+		render(shell(tabs(4, 0), 'More'));
+		const button = screen.getByRole('button', { name: /more/i });
+		expect(button.textContent).toBe('More(1)');
+		fireEvent.click(button);
+		expect(within(screen.getByRole('navigation', { name: 'More' })).getAllByRole('link').map((a) => a.textContent)).toEqual(['Tab 3']);
+	});
+
+	it('hides the count of cut-off tabs from assistive technology (the label carries the meaning)', () => {
+		render(shell(tabs(8, 0), 'More'));
+		expect(screen.getByText('(5)')).toHaveAttribute('aria-hidden', 'true');
+	});
+
+	it('uses the accent of a current tab, the theme accent when it has none', () => {
+		const items: ShellItem[] = [
+			{ id: 'a', label: 'A', href: '/a', current: 'true', accent: '#e11d48' },
+			{ id: 'b', label: 'B', href: '/b', current: 'true' },
+			{ id: 'c', label: 'C', href: '/c' },
+		];
+		render(shell(items));
+		const style = (name: string) => screen.getByRole('link', { name }).getAttribute('style') ?? '';
+		expect(style('A')).toContain('#e11d48');
+		expect(style('B')).toContain('var(--color-primary-solid)');
+		expect(style('C')).toBe('');
+	});
+
+	it('does not throw when no tab is current, nor when a link renders more than one element', () => {
+		expect(() => render(shell(tabs(4, -1), 'More'))).not.toThrow();
+	});
+
+	it('shows no overflow control when the host renders several elements per tab (tabs cannot be matched to boxes)', () => {
+		const items = tabs(8, 0);
+		render(
+			<AppShell
+				brand="app"
+				tabs={items}
+				tabsLabel="Sections"
+				menu={MENU}
+				moreLabel="More"
+				renderLink={(props) => (
+					<>
+						<a href={props.href} className={props.className}>
+							{props.children}
+						</a>
+						<span>extra</span>
+					</>
+				)}
+			>
+				<p>content</p>
+			</AppShell>,
+		);
+		expect(screen.queryByRole('button', { name: /more/i })).toBeNull();
+	});
+
+	it('closes the panel when the control goes away, and does not reopen it when it comes back', () => {
+		const { rerender } = render(shell(tabs(8, 0), 'More'));
+		fireEvent.click(screen.getByRole('button', { name: /more/i }));
+		expect(screen.getByRole('navigation', { name: 'More' })).toBeInTheDocument();
+
+		rerender(shell(tabs(2, 0), 'More'));
+		expect(screen.queryByRole('button', { name: /more/i })).toBeNull();
+
+		rerender(shell(tabs(8, 0), 'More'));
+		const button = screen.getByRole('button', { name: /more/i });
+		expect(button.getAttribute('aria-expanded')).toBe('false');
+		expect(screen.queryByRole('navigation', { name: 'More' })).toBeNull();
+	});
+
+	it('listens to the document only while the panel is open', () => {
+		const add = vi.spyOn(document, 'addEventListener');
+		const remove = vi.spyOn(document, 'removeEventListener');
+		render(shell(tabs(8, 0), 'More'));
+		const countOf = (spy: typeof add, type: string) => spy.mock.calls.filter(([t]) => t === type).length;
+		expect(countOf(add, 'keydown')).toBe(0);
+
+		fireEvent.click(screen.getByRole('button', { name: /more/i }));
+		expect(countOf(add, 'keydown')).toBe(1);
+		expect(countOf(add, 'pointerdown')).toBe(1);
+
+		fireEvent.keyDown(document, { key: 'Escape' });
+		expect(countOf(remove, 'keydown')).toBe(1);
+		expect(countOf(remove, 'pointerdown')).toBe(1);
+	});
+
+	it('ignores other keys while the panel is open', () => {
+		render(shell(tabs(8, 0), 'More'));
+		const button = screen.getByRole('button', { name: /more/i });
+		fireEvent.click(button);
+		fireEvent.keyDown(document, { key: 'a' });
+		expect(button.getAttribute('aria-expanded')).toBe('true');
 	});
 });

@@ -162,3 +162,67 @@ describe('AbExperiments dock', () => {
 		expect(screen.getByText('app')).toBeInTheDocument();
 	});
 });
+
+describe('AbDock keys and reminders', () => {
+	it('keeps the Escape that folds the dock to itself: the page around it does not see it (a dialog would close)', () => {
+		const onPageKey = vi.fn();
+		function Page() {
+			const color = useAbTest({ id: 'color', label: 'Fake color', options: OPTIONS, initial: 'red' });
+			return (
+				// eslint-disable-next-line jsx-a11y/no-static-element-interactions
+				<div onKeyDown={onPageKey}>
+					<AbDock tests={[color]} enabled />
+				</div>
+			);
+		}
+		render(<Page />);
+		fireEvent.keyDown(screen.getByRole('button', { name: 'Blue' }), { key: 'Escape' });
+		expect(onPageKey).not.toHaveBeenCalled();
+	});
+
+	it('lets other keys through to the page', () => {
+		const onPageKey = vi.fn();
+		function Page() {
+			const color = useAbTest({ id: 'color', label: 'Fake color', options: OPTIONS, initial: 'red' });
+			return (
+				// eslint-disable-next-line jsx-a11y/no-static-element-interactions
+				<div onKeyDown={onPageKey}>
+					<AbDock tests={[color]} enabled />
+				</div>
+			);
+		}
+		render(<Page />);
+		fireEvent.keyDown(screen.getByRole('button', { name: 'Blue' }), { key: 'a' });
+		expect(onPageKey).toHaveBeenCalledTimes(1);
+		expect(dock()).toBeVisible();
+	});
+
+	it('does not fold on an Escape another handler already took', () => {
+		function Page() {
+			const color = useAbTest({ id: 'color', label: 'Fake color', options: OPTIONS, initial: 'red' });
+			return <AbDock tests={[color]} enabled />;
+		}
+		render(
+			<div
+				// Capture phase: runs before the dock's own handler and claims the key.
+				onKeyDownCapture={(event) => event.preventDefault()}
+			>
+				<Page />
+			</div>
+		);
+		fireEvent.keyDown(screen.getByRole('button', { name: 'Blue' }), { key: 'Escape' });
+		expect(dock()).toBeVisible();
+	});
+
+	it('shows the reminder area only when a row is hidden', () => {
+		localStorage.setItem(HIDDEN_TESTS_KEY, '["size"]');
+		const { unmount } = render(<Harness />);
+		expect(dock().querySelector('.flex-wrap')).not.toBeNull();
+		expect(screen.getByRole('button', { name: 'Show Fake size' })).toBeInTheDocument();
+		unmount();
+
+		localStorage.removeItem(HIDDEN_TESTS_KEY);
+		render(<Harness />);
+		expect(dock().querySelector('.flex-wrap')).toBeNull();
+	});
+});

@@ -149,6 +149,17 @@ describe('warnIfAccentUnsupported', () => {
 		expect(warn.mock.calls[0]![0]).toMatch(/^\[accent\].*Chrome 123.*Safari 17\.5.*Firefox 120/);
 	});
 
+	it.each([
+		['light-dark()', (value: string) => !value.startsWith('light-dark')],
+		['color-mix()', (value: string) => !value.startsWith('color-mix')],
+	])('warns when the browser supports only one of the two features (no %s)', async (_missing, supports) => {
+		vi.stubEnv('NODE_ENV', 'development');
+		vi.stubGlobal('CSS', { supports: (_property: string, value: string) => supports(value) });
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		(await load())();
+		expect(warn).toHaveBeenCalledTimes(1);
+	});
+
 	it('stays silent when the browser supports both features', async () => {
 		vi.stubEnv('NODE_ENV', 'development');
 		vi.stubGlobal('CSS', { supports: () => true });

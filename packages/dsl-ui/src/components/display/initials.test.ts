@@ -39,6 +39,27 @@ describe('colorFromId', () => {
 		}
 	});
 
+	it('never changes the color of an id from one release to the next (pinned indices of a 9-color palette)', () => {
+		// A module keeps its color for users who learned it: changing the hash would silently recolor every tile.
+		const expected: Record<string, number> = {
+			queue: 8,
+			orchestrator: 4,
+			billing: 5,
+			inventory: 4,
+			reports: 3,
+			'audit-log': 6,
+			settings: 5,
+			a: 0,
+			'': 5,
+			task: 7,
+			flow: 3,
+			'app-core': 7,
+		};
+		for (const [id, index] of Object.entries(expected)) {
+			expect(NINE.indexOf(colorFromId(id, NINE)), id).toBe(index);
+		}
+	});
+
 	it('spreads short ids over several entries (a plain hash * 31 sent half of them to one)', () => {
 		const ids = ['queue', 'orchestrator', 'billing', 'inventory', 'reports', 'audit-log', 'settings'];
 		expect(new Set(ids.map((id) => colorFromId(id, NINE))).size).toBeGreaterThan(3);

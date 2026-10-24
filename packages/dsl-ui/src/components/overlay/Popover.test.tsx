@@ -48,6 +48,30 @@ describe('Popover', () => {
 		expect(onOpenChange).toHaveBeenCalledWith(true);
 	});
 
+	it('manages its own open state when not controlled: the trigger opens and closes the panel', () => {
+		render(
+			<Popover trigger={<button>Open</button>}>
+				<p>Own state content</p>
+			</Popover>
+		);
+		fireEvent.click(screen.getByRole('button', { name: 'Open' }));
+		expect(screen.getByText('Own state content')).toBeInTheDocument();
+		fireEvent.click(screen.getByRole('button', { name: 'Open' }));
+		expect(screen.queryByText('Own state content')).not.toBeInTheDocument();
+	});
+
+	it('leaves the open state to its owner when controlled: the trigger only asks', () => {
+		const onOpenChange = vi.fn();
+		render(
+			<Popover trigger={<button>Open</button>} open={false} onOpenChange={onOpenChange}>
+				<p>Owner content</p>
+			</Popover>
+		);
+		fireEvent.click(screen.getByRole('button', { name: 'Open' }));
+		expect(onOpenChange).toHaveBeenCalledWith(true);
+		expect(screen.queryByText('Owner content')).not.toBeInTheDocument();
+	});
+
 	// Pattern A: render already-open to test content visibility
 	it('renders children content when open', () => {
 		render(

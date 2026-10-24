@@ -151,4 +151,41 @@ describe('useRegisterAbTests', () => {
 		render(<Deep id="quiet" />);
 		expect(warnSpy.mock.calls.filter(([m]) => String(m).includes('useRegisterAbTests'))).toHaveLength(0);
 	});
+
+	it('with <AbExperiments> in development stays silent: there is a dock', async () => {
+		// The warning is said once per page: an earlier test may have used it up, so load a fresh copy of the whole graph
+		// (hook and host share one context) where nothing was said yet.
+		vi.resetModules();
+		vi.doMock('./isDev.js', () => ({ isDev: () => true }));
+		const { AbExperiments: FreshHost } = await import('./AbExperiments.js');
+		const { useRegisterAbTests: fresh } = await import('./useRegisterAbTests.js');
+		function Docked() {
+			fresh([]);
+			return null;
+		}
+		render(
+			<FreshHost enabled>
+				<Docked />
+			</FreshHost>
+		);
+		vi.doUnmock('./isDev.js');
+		vi.resetModules();
+		expect(warnSpy.mock.calls.filter(([m]) => String(m).includes('useRegisterAbTests'))).toHaveLength(0);
+	});
+
+	it('says so only once per page, however many components mount without a dock', async () => {
+		// The "already said" memory lives in the module: load a fresh copy so that earlier tests do not count.
+		vi.resetModules();
+		vi.doMock('./isDev.js', () => ({ isDev: () => true }));
+		const { useRegisterAbTests: fresh } = await import('./useRegisterAbTests.js');
+		function Bare() {
+			fresh([]);
+			return null;
+		}
+		render(<Bare />);
+		render(<Bare />);
+		vi.doUnmock('./isDev.js');
+		vi.resetModules();
+		expect(warnSpy.mock.calls.filter(([m]) => String(m).includes('useRegisterAbTests'))).toHaveLength(1);
+	});
 });
