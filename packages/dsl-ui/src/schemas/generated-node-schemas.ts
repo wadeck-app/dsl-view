@@ -227,6 +227,13 @@ export const JsonViewerNodeSchema = baseNode.extend({
 	maxHeight: z.string().optional(),
 });
 
+export const MarkdownNodeSchema = baseNode.extend({
+	text: z.string().optional(),
+	maxHeight: z.string().optional(),
+	collapsed: dsl(z.boolean()).optional(),
+	allowImages: dsl(z.boolean()).optional(),
+});
+
 export const PageHeaderNodeSchema = baseNode.extend({
 	title: z.string(),
 	subtitle: z.string().optional(),

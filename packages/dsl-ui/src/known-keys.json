@@ -714,6 +714,14 @@
 			"onChange"
 		]
 	},
+	"Markdown": {
+		"knownKeys": [
+			"allowImages",
+			"collapsed",
+			"maxHeight",
+			"text"
+		]
+	},
 	"NavBar": {
 		"knownKeys": [
 			"items"

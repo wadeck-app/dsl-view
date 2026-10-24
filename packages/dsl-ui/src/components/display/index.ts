@@ -7,6 +7,7 @@ export * from './FetchSpinner.js';
 export * from './HttpMethodBadge.js';
 export * from './HttpStatusBadge.js';
 export * from './JsonViewer.js';
+export * from './Markdown.js';
 export * from './PageHeader.js';
 export * from './Progress.js';
 export * from './Skeleton.js';

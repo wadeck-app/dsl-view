@@ -583,6 +583,21 @@ columns:
 - `position: start` places the link right after the expansion chevron; link clicks do not trigger row clicks.
 - Registries generated before this version do not know the new keys: regenerate `entries.tsx` and restart the dev server fully.
 
+## `Markdown`
+
+```yaml
+- { $type: Markdown, text: $ctx.row.log, maxHeight: 20rem }   # as a DataTable `expansion`: the clicked row is `$ctx.row`
+- { $type: Markdown, text: $sources.notes.body, collapsed: true }
+```
+
+- Props: `text`, `maxHeight` (CSS value, scrolls inside a keyboard-focusable region), `collapsed` (starts folded to a short preview with a "Show more" toggle, `aria-expanded`), `allowImages`.
+- Safe by construction, for untrusted text such as logs or model output: raw HTML is shown as text, never parsed; links open in a new tab with `rel="noopener noreferrer"` and only for `http:`, `https:`, `mailto:` (anything else, including relative paths and `javascript:`/`data:`, keeps the text without an anchor).
+- Images are not loaded by default (the request would leak that the page was opened, and any data in the URL): the alt text shows as `[image: alt]`. `allowImages: true` opts in (`loading="lazy"`, no referrer); `javascript:`/`data:` sources never load.
+- GFM tables and task lists work (checkboxes are read-only). Fenced code is a monospace block with a "Copy code" button that copies the code exactly; without the clipboard API, or when it rejects, the button shows "Copy failed" and the reason is logged.
+- A missing `text` (data not loaded yet) renders nothing; a non-string `text` logs an error and renders nothing.
+- `@registryLazy`: generated entries load it in its own chunk, because `react-markdown` + `remark-gfm` weigh about 154 kB minified (48 kB gzip). A static `import { Markdown } from '@wadeck-app/dsl-ui'` bypasses that: the package has no `sideEffects` flag, so use the registry for the lazy chunk.
+- Registries generated before this version do not know the node: regenerate `entries.tsx` and restart the dev server fully.
+
 ## Loading, refreshing and failed loads
 
 A component must not say "empty" before its data has arrived. No YAML is needed:
