@@ -12,10 +12,10 @@ Rule: `dsl-ui` only ships generic UI components (see "Scope of dsl-ui" in `.clau
 | `HttpMethodBadge`, `HttpStatusBadge`, DataTable `format: httpMethod` / `httpStatus`, `ColumnHelpers.httpMethod` / `httpStatus` | BORDERLINE, extract | HTTP-log vocabulary hard-wired in `DataTable.tsx` (the file header already says app-specific formats belong to the app) | `dsl-wdrive-app/.../logs.yaml:110,117`, `logs-advanced.yaml:31,38` only |
 | `useVersionPoller` | BORDERLINE, extract | Backend contract baked in: `GET /api/version` returning `{ version }`, global `window.__APP_VERSION__`, fixed toast copy; not exported by the barrel, reached via `@dsl-ui/hooks/...` | `dsl-wdrive-app/src/main.tsx:5,13`, `dsl-agent-fleet-app/src/main.tsx:5,13` |
 | `LiveToggle` | GENERIC, single consumer | Domain-neutral live/paused toggle; keep, re-evaluate if still one consumer | `dsl-wdrive-app/.../logs.yaml:67,147` |
-| `FetchSpinner` | GENERIC, redundant | Domain-neutral; duplicates `Spinner`; deprecate in favour of `Spinner` | `dsl-wdrive-app/.../logs.yaml:73,153` |
+| `FetchSpinner` | GENERIC, single consumer | Domain-neutral; shows a spinner only while `loading` is true; the one use omits `loading` and renders nothing | `dsl-wdrive-app/.../logs.yaml:73,153` |
 | `CronBuilder` | GENERIC, single consumer | Cron is a generic scheduling control; no product vocabulary | `orchestrator/packages/dsl-lib-orch/src/components/JobForm.tsx:656` |
 | `FilterChips`, `ChipButton`, `BackLink`, `ThemePicker`, `ColorPicker`, `UnsavedBadge`, `JsonViewer`, `RelativeDate` | GENERIC | Domain-neutral, several consumers or clearly reusable | orchestrator, dsl-ui-wdrive, app-core, queue, flow, task |
-| `InlineEdit` | GENERIC, unused | Domain-neutral; no consumer found; keep | none |
+| `InlineEdit` | GENERIC, unused | Domain-neutral; no consumer in any repo; removed in `2026.10.24-228` | none |
 | Everything else (form fields, overlays, layout, navigation, `Chart`, `Markdown`, `AppShell`, `AbDock`...) | GENERIC | No product vocabulary | n/a |
 
 Not in dsl-ui (confirmed): `NavBadge`, `FileDropZone`, `FileNavigator`, `FilePreview` live in `capability-framework/packages/dsl-ui-wdrive`.
@@ -52,4 +52,4 @@ Done. `InviteTokenWidget`, `ShownFetchedCounter` (+ `computeShownTotal`), `Statu
 
 Destinations (capability-framework `f3ea7f9`): `dsl-ui-wdrive` (`admin/InviteTokenWidget`, `logs/ShownFetchedCounter`, `logs/StatusFilter`, `logs/HttpMethodBadge`, `logs/HttpStatusBadge`, `logs/wdriveColumnFormats`, `logs/useStatusFamilyPredicate`, `utils/computeShownTotal`); a local `useVersionPoller` in `dsl-wdrive-app` and `dsl-agent-fleet-app`.
 
-Left in dsl-ui on purpose: `LiveToggle`, `CronBuilder` (domain-neutral, single consumer). `FetchSpinner` (duplicate of `Spinner`) and `InlineEdit` (no consumer) are candidates for a later deletion.
+Left in dsl-ui on purpose: `LiveToggle`, `CronBuilder` (domain-neutral, single consumer). `FetchSpinner` stays: wdrive `logs.yaml:73,153` uses it, but without the required `loading` prop, so it renders nothing (it is not a duplicate of `Spinner`: it renders only while `loading` is true). `InlineEdit` had no consumer and was removed.
