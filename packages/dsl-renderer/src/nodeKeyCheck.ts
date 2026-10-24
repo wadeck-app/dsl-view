@@ -103,7 +103,9 @@ export function checkItemKeys(
 		}
 		const record = item as Record<string, unknown>;
 		const itemType = record['type'];
-		const effective = typeof itemType === 'string' ? spec.byType?.[itemType] ?? spec : spec;
+		// Own variants only: an authored `type: constructor` must not pick Object.prototype.constructor as a key list.
+		const variant = typeof itemType === 'string' && spec.byType && Object.prototype.hasOwnProperty.call(spec.byType, itemType) ? spec.byType[itemType] : undefined;
+		const effective = variant ?? spec;
 		for (const key of Object.keys(record)) {
 			if (effective.keys.includes(key)) {
 				continue;
