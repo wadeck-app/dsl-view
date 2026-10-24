@@ -33,6 +33,27 @@ export function fillTemplate(template: string, row: Record<string, unknown>): Fi
 }
 
 /**
+ * `{field}` substitution for plain TEXT (a cell tooltip), as opposed to a path: values are NOT percent-encoded.
+ * Same own-fields rule as `fillTemplate` (`{constructor}` never leaks), and a value only counts when it is a
+ * string, number, boolean or bigint (an object would print "[object Object]"). Returns undefined when any
+ * placeholder has no usable value or the result is blank: a half-filled sentence ("- 2h") would mislead, and a
+ * tooltip is cosmetic, so there is nothing to report.
+ */
+export function fillTextTemplate(template: string, row: Record<string, unknown>): string | undefined {
+	let missing = false;
+	const text = template.replace(PLACEHOLDER, (_, key: string) => {
+		const value = Object.hasOwn(row, key) ? row[key] : undefined;
+		const usable = typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint';
+		if (!usable || value === '') {
+			missing = true;
+			return '';
+		}
+		return String(value);
+	});
+	return missing || text.trim() === '' ? undefined : text;
+}
+
+/**
  * Interpolates `{field}` placeholders in a path template from the matching key on `row`
  * (e.g. `/files/{id}` + `{ id: '42' }` -> `/files/42`), see `fillTemplate` for the rules. A missing
  * field resolves to an empty string here; callers that must not act on an incomplete path use

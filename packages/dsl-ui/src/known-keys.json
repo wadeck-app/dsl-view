@@ -283,7 +283,8 @@
 					"format",
 					"badge",
 					"href",
-					"external"
+					"external",
+					"title"
 				],
 				"byType": {
 					"actions": {
@@ -298,7 +299,8 @@
 									"label",
 									"action",
 									"variant",
-									"condition"
+									"condition",
+									"icon"
 								]
 							}
 						}
@@ -428,8 +430,8 @@
 			"error",
 			"label",
 			"loadOptions",
-			"name",
 			"loadSelected",
+			"name",
 			"noOptionsMessage",
 			"placeholder",
 			"required"
@@ -538,8 +540,8 @@
 		"knownKeys": [
 			"bind",
 			"description",
-			"error",
 			"disabled",
+			"error",
 			"label",
 			"options",
 			"placeholder",
@@ -574,13 +576,13 @@
 		"knownKeys": [
 			"bind",
 			"description",
-			"label",
 			"disabled",
 			"error",
-			"rows"
+			"label",
 			"placeholder",
 			"readOnly",
 			"required",
+			"rows"
 		]
 	},
 	"FieldTime": {

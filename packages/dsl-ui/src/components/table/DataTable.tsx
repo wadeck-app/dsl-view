@@ -31,7 +31,7 @@ import { AppLink } from '../navigation/AppLink.js';
 import { formatBytes } from '@dsl-ui/utils/formatBytes.js';
 import { buildLinkPath } from '@dsl-ui/utils/linkTarget.js';
 import { RouterContext } from '@dsl-ui/RouterContext.js';
-import { fillTemplate } from '@dsl-ui/utils/templatedPath.js';
+import { fillTemplate, fillTextTemplate } from '@dsl-ui/utils/templatedPath.js';
 
 // Local alias matching dsl-engine's DslRawNode = Record<string, unknown>
 type DslRawNode = Record<string, unknown>;
@@ -187,6 +187,13 @@ export interface DataTableColumnSpec {
 	href?: string;
 	/** `href` is a full http(s)/mailto URL opened in a new tab (placeholders are still encoded). */
 	external?: boolean;
+	/**
+	 * Tooltip (the cell's `title` attribute) from a text template, `{field}` filled from the row without encoding
+	 * (`{lastSeenAt}`, `Last seen {lastSeenAt} by {worker}`). A placeholder with no usable value means no tooltip, silently:
+	 * it is cosmetic. An explicit title wins over the one `truncate` derives from the cell text. A `title` is not reachable
+	 * from the keyboard: never put essential information only there.
+	 */
+	title?: string;
 }
 
 /**
@@ -199,7 +206,7 @@ export interface DataTableLinkColumnSpec {
 	to: string;
 	/** Accessible name and tooltip of the icon-only link. */
 	label?: string;
-	/** Icon name: arrow-right | chevron-right | external-link (default) | eye | file-text | info | link | list | search. */
+	/** Icon name from the vocabulary of display/iconByName (external-link by default). */
 	icon?: string;
 	/** `start` puts the link right after the expansion chevron (before the data columns), `end` (default) keeps its place in the list. */
 	position?: 'start' | 'end';
@@ -215,6 +222,11 @@ export interface DataTableActionItemSpec {
 	variant?: string;
 	/** Row field: shown when truthy; `!field`: shown when falsy. */
 	condition?: string;
+	/**
+	 * Icon name (rocket, rotate-ccw, play, trash, archive, send, pencil, ...: the vocabulary of display/iconByName).
+	 * The button becomes icon-only; `label` stays its accessible name and tooltip.
+	 */
+	icon?: string;
 }
 
 /** A row-actions column authored in YAML (`type: actions`). */
@@ -229,10 +241,10 @@ const NON_YAML_COLUMN_KEYS = ['render', 'isActions', 'actions'];
 
 // MUST list the same keys as DataTableColumnSpec / DataTableActionsColumnSpec / DataTableActionItemSpec: a test
 // compares them with what the build tooling extracts from those interfaces.
-export const DATA_TABLE_COLUMN_KEYS = ['field', 'key', 'label', 'width', 'truncate', 'nowrap', 'mono', 'muted', 'sortable', 'format', 'badge', 'href', 'external'] as const;
+export const DATA_TABLE_COLUMN_KEYS = ['field', 'key', 'label', 'width', 'truncate', 'nowrap', 'mono', 'muted', 'sortable', 'format', 'badge', 'href', 'external', 'title'] as const;
 export const DATA_TABLE_ACTIONS_COLUMN_KEYS = ['type', 'items', 'width'] as const;
 export const DATA_TABLE_LINK_COLUMN_KEYS = ['type', 'to', 'label', 'icon', 'position', 'external', 'width'] as const;
-export const DATA_TABLE_ACTION_ITEM_KEYS = ['label', 'action', 'variant', 'condition'] as const;
+export const DATA_TABLE_ACTION_ITEM_KEYS = ['label', 'action', 'variant', 'condition', 'icon'] as const;
 
 type RawYamlColumn = Partial<DataTableColumnSpec> &
 	Partial<Omit<DataTableActionsColumnSpec, 'type'>> &
@@ -293,7 +305,7 @@ function warnUnsupportedColumnKeys(col: Record<string, unknown>, index: number):
 				return;
 			}
 			for (const key of Object.keys(item)) {
-				if (!(DATA_TABLE_ACTION_ITEM_KEYS as readonly string[]).includes(key) && key !== 'icon') {
+				if (!(DATA_TABLE_ACTION_ITEM_KEYS as readonly string[]).includes(key)) {
 					warnOnce(
 						`[DataTable] actions column ${where}, item #${i}: unknown key "${key}" is ignored. Supported keys: ${describeKeys(DATA_TABLE_ACTION_ITEM_KEYS)}.`
 					);
@@ -374,13 +386,19 @@ function normalizeColumn<T extends Record<string, unknown>>(col: RawYamlColumn, 
 	// Actions column
 	if (col.type === 'actions' || col.isActions) {
 		// An item that is not an object (`items: [null]`) cannot be rendered: drop it and say so, rather than crash the table.
-		const actions = ((col.items ?? col.actions ?? []) as unknown[]).filter((item, i) => {
-			const valid = item !== null && typeof item === 'object';
-			if (!valid) {
-				warnOnce(`[DataTable] actions column #${index}, item #${i}: ignored, an action item must be an object with a label and an action (got ${JSON.stringify(item)}).`);
-			}
-			return valid;
-		}) as ActionDef<T>[];
+		const actions = ((col.items ?? col.actions ?? []) as unknown[])
+			.filter((item, i) => {
+				const valid = item !== null && typeof item === 'object';
+				if (!valid) {
+					warnOnce(`[DataTable] actions column #${index}, item #${i}: ignored, an action item must be an object with a label and an action (got ${JSON.stringify(item)}).`);
+				}
+				return valid;
+			})
+			.map((item, i) => {
+				const def = item as ActionDef<T>;
+				// YAML can only name an icon: resolve it here. A hand-built ActionDef already carries a React node.
+				return typeof def.icon === 'string' ? { ...def, icon: iconByName(def.icon, `DataTable actions column #${index}, item #${i}`, 'h-3 w-3') } : def;
+			});
 		return {
 			key: '_actions',
 			label: '',
@@ -445,10 +463,15 @@ function normalizeColumn<T extends Record<string, unknown>>(col: RawYamlColumn, 
 			</AppLink>
 		);
 	};
+	const titleTemplate = col.title;
+	if (titleTemplate !== undefined && typeof titleTemplate !== 'string') {
+		warnOnce(`[DataTable] column ${where}: \`title\` must be a text template such as "{lastSeenAt}", got ${JSON.stringify(titleTemplate)}; no tooltip.`);
+	}
 	return {
 		key: field,
 		label: col.label ?? field,
 		width: col.width,
+		cellTitle: typeof titleTemplate === 'string' ? (row: T) => fillTextTemplate(titleTemplate, row) : undefined,
 		truncate: col.truncate,
 		nowrap: col.nowrap,
 		mono: col.mono,
@@ -488,6 +511,8 @@ export interface TableColumn<T extends Record<string, unknown>> {
 	sortable?: boolean;
 	isActions?: boolean;
 	actions?: ActionDef<T>[];
+	/** Tooltip of a cell, from the column's `title` template. Undefined: no explicit tooltip for this row. */
+	cellTitle?: (row: T) => string | undefined;
 	/** An icon-only link column (`type: link`): no header text, narrow cell. */
 	isLink?: boolean;
 	/** Where a link column sits: `start` moves it right after the expansion chevron. */
@@ -1183,7 +1208,7 @@ export function DataTable<T extends Record<string, unknown>>({
 															.filter(Boolean)
 															.join(' ')}
 														style={col.width ? { width: `${col.width * 4}px` } : undefined}
-														title={col.truncate && typeof rendered === 'string' ? rendered : undefined}
+														title={col.cellTitle?.(row) ?? (col.truncate && typeof rendered === 'string' ? rendered : undefined)}
 													>
 														{rendered}
 													</td>

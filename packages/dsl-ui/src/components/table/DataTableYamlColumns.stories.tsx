@@ -86,6 +86,30 @@ export const LinkColumns: Story = {
 	),
 };
 
+// Icon-only row actions authored in YAML (`icon: <name>` on an `actions` item, the label stays the accessible name and
+// tooltip) next to a `title` tooltip template on a data column (hover the "At" cells).
+export const IconActionsAndTooltips: Story = {
+	render: () => (
+		<Narrow>
+			<DataTable
+				rows={ROWS.map(row => ({ ...row, retryable: row['state'] === 'failed' }))}
+				columns={yamlColumns([
+					{ field: 'event', label: 'Event', mono: true, truncate: true },
+					{ field: 'at', label: 'At', format: 'time', title: 'Received {at} after {attempts} attempt(s)' },
+					{
+						type: 'actions',
+						items: [
+							{ label: 'Push test event', action: 'push', icon: 'rocket' },
+							{ label: 'Retry now', action: 'retry', icon: 'rotate-ccw', condition: 'retryable' },
+							{ label: 'Clear', action: 'clear', icon: 'trash', variant: 'danger-outline' },
+						],
+					},
+				])}
+			/>
+		</Narrow>
+	),
+};
+
 // The same table on a dark panel: badges, muted text and borders must follow the theme.
 export const NoMidWordBreaksOnDarkPanel: Story = {
 	render: () => (

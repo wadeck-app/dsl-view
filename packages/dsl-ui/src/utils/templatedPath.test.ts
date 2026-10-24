@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildTemplatedPath, fillTemplate } from './templatedPath.js';
+import { buildTemplatedPath, fillTemplate, fillTextTemplate } from './templatedPath.js';
 
 describe('fillTemplate', () => {
 	it('reports the first placeholder without a value and still fills the others', () => {
@@ -81,5 +81,47 @@ describe('buildTemplatedPath', () => {
 	it('only reads the row\'s own fields: {constructor} and {toString} resolve to nothing, not to function source', () => {
 		expect(buildTemplatedPath('/x/{constructor}/{toString}', {})).toBe('/x//');
 		expect(buildTemplatedPath('/x/{constructor}', { constructor: 'real' })).toBe('/x/real');
+	});
+});
+
+describe('fillTextTemplate', () => {
+	it('fills plain text without percent-encoding', () => {
+		expect(fillTextTemplate('{when}', { when: '2026-10-24 10:30' })).toBe('2026-10-24 10:30');
+		expect(fillTextTemplate('Last seen {when} by {who}', { when: 'a/b?c d', who: 'R&D' })).toBe('Last seen a/b?c d by R&D');
+	});
+
+	it('keeps 0 and false (real data) and stringifies numbers', () => {
+		expect(fillTextTemplate('{n}', { n: 0 })).toBe('0');
+		expect(fillTextTemplate('{ok}', { ok: false })).toBe('false');
+		expect(fillTextTemplate('{big}', { big: 10n })).toBe('10');
+	});
+
+	it('returns undefined, not a half-filled sentence, when any placeholder has no usable value', () => {
+		expect(fillTextTemplate('{a} - {b}', { a: 'x' })).toBeUndefined();
+		expect(fillTextTemplate('{a} - {b}', { a: 'x', b: '' })).toBeUndefined();
+		expect(fillTextTemplate('{a}', { a: null })).toBeUndefined();
+		expect(fillTextTemplate('{a}', { a: undefined })).toBeUndefined();
+	});
+
+	it('refuses objects, arrays and functions instead of printing "[object Object]"', () => {
+		expect(fillTextTemplate('{a}', { a: { deep: 1 } })).toBeUndefined();
+		expect(fillTextTemplate('{a}', { a: [1, 2] })).toBeUndefined();
+		expect(fillTextTemplate('{a}', { a: () => 1 })).toBeUndefined();
+	});
+
+	it('returns undefined for a blank result, and keeps a template without placeholders as is', () => {
+		expect(fillTextTemplate('   ', {})).toBeUndefined();
+		expect(fillTextTemplate('', {})).toBeUndefined();
+		expect(fillTextTemplate('Static note', {})).toBe('Static note');
+	});
+
+	it("only reads the row's own fields: {constructor} and {toString} never leak a function", () => {
+		expect(fillTextTemplate('{constructor}', {})).toBeUndefined();
+		expect(fillTextTemplate('{toString}', {})).toBeUndefined();
+		expect(fillTextTemplate('{constructor}', { constructor: 'real' })).toBe('real');
+	});
+
+	it('does not re-scan a substituted value for placeholders', () => {
+		expect(fillTextTemplate('{a}', { a: '{b}', b: 'NO' })).toBe('{b}');
 	});
 });

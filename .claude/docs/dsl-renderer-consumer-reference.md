@@ -555,18 +555,24 @@ columns:
       badge: { completed: success, failed: danger, pending: warning } } # cell value -> Badge variant
   - { field: at, label: At, format: datetime }                          # datetime | date | time | bytes | ms | httpMethod | httpStatus
   - { field: tries, label: Tries, width: 12, sortable: true }           # width in Tailwind units (12 = 3rem)
-  - { type: actions, items: [{ label: Clear, action: clearEntry, variant: danger-outline, condition: "!locked" }] }
+  - { type: actions, items: [{ label: Clear, action: clearEntry, variant: danger-outline, condition: "!locked" },
+                             { label: Push test event, action: push, icon: rocket }] }  # icon: icon-only button, label = name + tooltip
+  - { field: seen, label: Seen, title: "Last seen {lastSeenAt}" }        # cell tooltip from the row
   - { type: link, to: "/modules/flow/executions/{executionId}", icon: external-link,
       label: Open details, position: start }                              # icon-only link, rows stay non-clickable
   - { field: event, label: Event, href: "/modules/queue/history?event={event}" }  # the cell value is a link
 ```
 
-- Column keys: `field` (alias `key`), `label`, `width`, `truncate`, `nowrap`, `mono`, `muted`, `sortable`, `format`, `badge`, `href`, `external`. Actions column: `type`, `items`, `width`; item keys: `label`, `action`, `variant`, `condition`. Link column: `type`, `to`, `label`, `icon`, `position`, `external`, `width`.
+- Column keys: `field` (alias `key`), `label`, `width`, `truncate`, `nowrap`, `mono`, `muted`, `sortable`, `format`, `badge`, `href`, `external`, `title`. Actions column: `type`, `items`, `width`; item keys: `label`, `action`, `variant`, `condition`, `icon`. Link column: `type`, `to`, `label`, `icon`, `position`, `external`, `width`.
 - Any other column key is an error: `compileDslDocument` / `findUnknownKeys` report it with the column path, and `DataTable` logs it once with `console.error`. Earlier versions dropped everything but `field`/`label` silently, so `width`, `truncate`, `mono`, `muted`, `format` and `sortable` start taking effect on pages that already declared them.
 - An actions column is `type: actions`. `$type: actions` (older wdrive pages) was never recognised: the column rendered as an empty data column; it is now reported.
 - Default wrapping is unchanged: a plain column breaks anywhere (`break-all`). In a narrow container use `nowrap` (never wraps, the column widens), `truncate`, or `width`.
 - `badge`: values missing from the map stay plain text; a variant other than `default | primary | success | warning | danger | info` logs an error and shows the neutral variant.
 - `format` renders in the viewer's locale and local time zone.
+- Action item `icon` is a name from the icon vocabulary (below). The button is icon-only: `label` stays its accessible name and tooltip, and `variant`, `condition`, `confirm` (on the `$actions` entry) and the per-row busy spinner work as for a text button. An item without `icon` renders a text button and logs a warning.
+- `title` fills `{field}` from the row's own fields as plain text (no encoding) into the cell's tooltip. Any placeholder without a usable value (missing, empty, null, an object) means no tooltip and no error; an explicit title wins over the one `truncate` derives from the cell text. A tooltip is not keyboard-reachable: never put essential information only there.
+
+Icon vocabulary (`icon:` of an action item, link column, `StatTile`/`Badge` links): `archive`, `arrow-right`, `check`, `chevron-right`, `copy`, `download`, `external-link`, `eye`, `file-text`, `info`, `link`, `list`, `pencil`, `play`, `plus`, `refresh-cw`, `rocket`, `rotate-ccw`, `search`, `send`, `trash`, `x`. An unknown name logs an error listing them and shows `external-link`.
 
 ## Links: `StatTile`, `Badge`, `DataTable`
 
@@ -580,7 +586,7 @@ columns:
 - A target that breaks these rules (`javascript:`, `data:`, `//host`, a relative path) is ignored: the non-link form renders and an error is logged once naming the component.
 - Table templates (`to`, column `href`, and `navigateTo`) fill `{field}` from the row's own fields, percent-encoded (an id `a/b?c` stays one segment). A row whose placeholder is missing or empty gets no link (plain value, or no icon) and an error is logged once with the row's keys; there is never an empty path segment. A `navigateTo` row click with a missing field does nothing and logs the same error, instead of opening a half-filled path.
 - A template that is just one placeholder (`navigateTo: '{href}'`, `to: '{href}'`, `{url}`) takes the whole target from the row, unencoded; internal targets must still be an absolute app path (not `//host`), and `external: true` targets are scheme-checked (http, https, mailto). Earlier versions spliced `navigateTo` values unencoded: pre-encode nothing, or the value is encoded twice.
-- Link column `icon` names: `arrow-right`, `chevron-right`, `external-link` (default), `eye`, `file-text`, `info`, `link`, `list`, `search`. An unknown name logs an error listing them and shows `external-link`. `label` is required (accessible name and tooltip; "Open" is used with a warning when missing).
+- Link column `icon`: a name from the icon vocabulary above (`external-link` by default). `label` is required (accessible name and tooltip; "Open" is used with a warning when missing).
 - `position: start` places the link right after the expansion chevron; link clicks do not trigger row clicks.
 - Registries generated before this version do not know the new keys: regenerate `entries.tsx` and restart the dev server fully.
 

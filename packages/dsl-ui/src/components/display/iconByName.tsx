@@ -1,5 +1,28 @@
 import React from 'react';
-import { ArrowRight, ChevronRight, ExternalLink, Eye, FileText, Info, Link as LinkIcon, List, Search } from 'lucide-react';
+import {
+	Archive,
+	ArrowRight,
+	Check,
+	ChevronRight,
+	Copy,
+	Download,
+	ExternalLink,
+	Eye,
+	FileText,
+	Info,
+	Link as LinkIcon,
+	List,
+	Pencil,
+	Play,
+	Plus,
+	RefreshCw,
+	Rocket,
+	RotateCcw,
+	Search,
+	Send,
+	Trash2,
+	X,
+} from 'lucide-react';
 
 import { reportOnce } from '../dev/reportOnce.js';
 
@@ -7,15 +30,28 @@ import { reportOnce } from '../dev/reportOnce.js';
 // whole vocabulary: add an entry here when a view needs another icon.
 // @formatter:off
 const ICONS: Record<string, React.ComponentType<{ className?: string; 'aria-hidden'?: boolean | 'true' | 'false' }>> = {
+	'archive':       Archive,
 	'arrow-right':   ArrowRight,
+	'check':         Check,
 	'chevron-right': ChevronRight,
+	'copy':          Copy,
+	'download':      Download,
 	'external-link': ExternalLink,
 	'eye':           Eye,
 	'file-text':     FileText,
 	'info':          Info,
 	'link':          LinkIcon,
 	'list':          List,
+	'pencil':        Pencil,
+	'play':          Play,
+	'plus':          Plus,
+	'refresh-cw':    RefreshCw,
+	'rocket':        Rocket,
+	'rotate-ccw':    RotateCcw,
 	'search':        Search,
+	'send':          Send,
+	'trash':         Trash2,
+	'x':             X,
 };
 // @formatter:on
 
