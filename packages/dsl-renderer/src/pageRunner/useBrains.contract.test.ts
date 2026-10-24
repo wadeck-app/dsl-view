@@ -100,7 +100,7 @@ describe('$chain parameter references', () => {
 			{ brainRegistry: { probe } }
 		);
 		await waitFor(() => expect(seen).toHaveLength(2));
-		// The step id is passed along with the other params (it can shadow a URL {id} placeholder).
+		// A registry brain still receives the step id with the other params (built-in $http / navigate steps do not: see useBrains.strictParams.test.ts).
 		expect(seen[1]).toEqual({ id: 'second', fromSeed: 'S', fromStep: 'created-1', literal: 'L' });
 	});
 

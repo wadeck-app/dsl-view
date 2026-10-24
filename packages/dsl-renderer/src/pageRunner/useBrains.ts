@@ -64,13 +64,40 @@ function warnMissingPlaceholder(brainRef: string, url: string, key: string): str
 	return '';
 }
 
+// Declaration keys that configure the brain itself and are never forwarded to it as parameters.
+const BRAIN_OPTION_KEYS = new Set(['strictParams']);
+
+// Built-in brains that build a URL from their parameters. A chain step `id` is the step's own label, so it must never
+// become a `{id}` URL value for these (it would silently shadow the route param of the same name).
+function buildsUrlFromParams(brainRef: string): boolean {
+	return brainRef.startsWith('$brains.$http.') || brainRef === '$brains.$ctx.navigate';
+}
+
+// `strictParams: true` mirrors `$actions.<name>.strictParams`: values are percent-encoded and a placeholder without a
+// value fails before any request or navigation. Without it the legacy lenient substitution (plus a warning) applies.
+function fillUrl(brainRef: string, url: string, params: Record<string, string>, strict: boolean): string {
+	return substituteUrlParams(url, params, {
+		encode: strict,
+		onMissing: key => {
+			if (strict) {
+				throw new Error(
+					`[useBrains] ${brainRef}: URL placeholder {${key}} has no value in "${url}" ` +
+						`(available: ${Object.keys(params).join(', ') || 'none'}). ` +
+						`Pass it as a parameter of the brain or in the route, or fix the url`
+				);
+			}
+			return warnMissingPlaceholder(brainRef, url, key);
+		},
+	});
+}
+
 function collectReactiveParams(
 	spec: Record<string, unknown>,
 	ctx: Record<string, unknown>
 ): Record<string, unknown> {
 	const result: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(spec)) {
-		if (key.startsWith('$')) continue;
+		if (key.startsWith('$') || BRAIN_OPTION_KEYS.has(key)) continue;
 		if (isReactiveRef(value)) {
 			result[key] = resolveParamFromCtx(value as string, ctx);
 		}
@@ -84,7 +111,7 @@ function resolveAllParams(
 ): Record<string, unknown> {
 	const result: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(spec)) {
-		if (key.startsWith('$')) continue;
+		if (key.startsWith('$') || BRAIN_OPTION_KEYS.has(key)) continue;
 		result[key] = isReactiveRef(value) ? resolveParamFromCtx(value as string, ctx) : value;
 	}
 	return result;
@@ -97,7 +124,8 @@ async function executeFrameworkOrRegistryBrain(
 	getToken: (() => Promise<string | null>) | undefined,
 	fetcher: Fetcher,
 	brainRegistry?: BrainRegistry,
-	routeParams?: Record<string, string>
+	routeParams?: Record<string, string>,
+	strictParams = false
 ): Promise<unknown> {
 	if (brainRef === '$brains.$ctx.setVar') {
 		const varName = params['varName'];
@@ -122,7 +150,7 @@ async function executeFrameworkOrRegistryBrain(
 				allParams[k] = String(v);
 			}
 		}
-		window.location.href = substituteUrlParams(to, allParams, { onMissing: key => warnMissingPlaceholder(brainRef, to, key) });
+		window.location.href = fillUrl(brainRef, to, allParams, strictParams);
 		return undefined;
 	}
 
@@ -141,7 +169,7 @@ async function executeFrameworkOrRegistryBrain(
 				allParams[k] = String(v);
 			}
 		}
-		const resolvedUrl = substituteUrlParams(url, allParams, { onMissing: key => warnMissingPlaceholder(brainRef, url, key) });
+		const resolvedUrl = fillUrl(brainRef, url, allParams, strictParams);
 		const authHeaders = await resolveAuthHeaders(getToken);
 		if (method === 'GET' || method === 'DELETE') {
 			return await fetcher(resolvedUrl, undefined, undefined, authHeaders);
@@ -231,8 +259,11 @@ export function useBrains(params: {
 				const chainData: Record<string, Record<string, unknown>> = {};
 				for (const step of chainSpec.$chain) {
 					const stepParams: Record<string, unknown> = {};
+					const stepBuildsUrl = buildsUrlFromParams(step.$brain);
 					for (const [key, value] of Object.entries(step)) {
-						if (key.startsWith('$')) continue;
+						if (key.startsWith('$') || BRAIN_OPTION_KEYS.has(key)) continue;
+						// Registry brains keep receiving the step id as before; built-in URL brains must not (see buildsUrlFromParams).
+						if (key === 'id' && stepBuildsUrl) continue;
 						if (typeof value === 'string' && value.startsWith('$chain.')) {
 							const parts = value.slice(7).split('.');
 							if (parts.length === 2) {
@@ -253,7 +284,8 @@ export function useBrains(params: {
 						getToken,
 						fetcher,
 						brainRegistry,
-						routeParamsRef.current
+						routeParamsRef.current,
+						(step['strictParams'] ?? chainSpec['strictParams']) === true
 					);
 					if (step.$outputs) {
 						const stepResult: Record<string, unknown> = {};
@@ -290,7 +322,8 @@ export function useBrains(params: {
 					getToken,
 					fetcher,
 					brainRegistry,
-					routeParamsRef.current
+					routeParamsRef.current,
+					simpleSpec['strictParams'] === true
 				);
 				if (simpleSpec.$outputs) {
 					const resultRecord: Record<string, unknown> = {};
