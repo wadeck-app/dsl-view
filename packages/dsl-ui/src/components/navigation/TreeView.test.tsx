@@ -257,6 +257,141 @@ describe('TreeView', () => {
         expect(screen.getByTestId('my-icon')).toBeInTheDocument();
     });
 
+    // --- Keyboard boundaries and structure ---
+
+    const nodeIdOf = () => document.activeElement?.getAttribute('data-node-id');
+
+    it('ArrowDown with nothing focused goes to the first node', () => {
+        render(<TreeView nodes={simpleNodes} />);
+        fireEvent.keyDown(screen.getByRole('tree'), { key: 'ArrowDown' });
+        expect(nodeIdOf()).toBe('a');
+    });
+
+    it('ArrowDown on the last visible node stays on it', () => {
+        render(<TreeView nodes={simpleNodes} />);
+        fireEvent.click(screen.getByText('Gamma'));
+        fireEvent.keyDown(screen.getByRole('tree'), { key: 'ArrowDown' });
+        expect(nodeIdOf()).toBe('c');
+    });
+
+    it('ArrowUp on the first node stays on it', () => {
+        render(<TreeView nodes={simpleNodes} />);
+        fireEvent.click(screen.getByText('Alpha'));
+        fireEvent.keyDown(screen.getByRole('tree'), { key: 'ArrowUp' });
+        expect(nodeIdOf()).toBe('a');
+    });
+
+    it('ArrowDown walks visible nodes in document order, into expanded children and out of them', () => {
+        render(<TreeView nodes={nestedNodes} defaultExpandedIds={['root1']} />);
+        const tree = screen.getByRole('tree');
+        fireEvent.click(screen.getByText('Root One'));
+        const seen: Array<string | null | undefined> = [];
+        for (let i = 0; i < 3; i++) {
+            fireEvent.keyDown(tree, { key: 'ArrowDown' });
+            seen.push(nodeIdOf());
+        }
+        expect(seen).toEqual(['child1', 'child2', 'root2']);
+    });
+
+    it('ArrowLeft on a child moves focus to its parent, and on a root leaf does nothing', () => {
+        render(<TreeView nodes={nestedNodes} defaultExpandedIds={['root1']} />);
+        const tree = screen.getByRole('tree');
+        fireEvent.click(screen.getByText('Child Two'));
+        fireEvent.keyDown(tree, { key: 'ArrowLeft' });
+        expect(nodeIdOf()).toBe('root1');
+        fireEvent.click(screen.getByText('Root Two'));
+        fireEvent.keyDown(tree, { key: 'ArrowLeft' });
+        expect(nodeIdOf()).toBe('root2');
+    });
+
+    it('ArrowRight on a leaf or an already expanded node does not change the expansion', () => {
+        const onExpandChange = vi.fn();
+        render(<TreeView nodes={nestedNodes} expandedIds={['root1']} onExpandChange={onExpandChange} />);
+        const tree = screen.getByRole('tree');
+        fireEvent.click(screen.getByText('Root One'));
+        fireEvent.keyDown(tree, { key: 'ArrowRight' });
+        fireEvent.click(screen.getByText('Child One'));
+        fireEvent.keyDown(tree, { key: 'ArrowRight' });
+        expect(onExpandChange).not.toHaveBeenCalled();
+    });
+
+    it('Enter with nothing focused selects nothing', () => {
+        const onSelect = vi.fn();
+        render(<TreeView nodes={simpleNodes} onSelect={onSelect} />);
+        fireEvent.keyDown(screen.getByRole('tree'), { key: 'Enter' });
+        expect(onSelect).not.toHaveBeenCalled();
+    });
+
+    it('navigation keys are prevented from scrolling the page, other keys are not', () => {
+        render(<TreeView nodes={simpleNodes} />);
+        const tree = screen.getByRole('tree');
+        expect(fireEvent.keyDown(tree, { key: 'ArrowDown' })).toBe(false);
+        expect(fireEvent.keyDown(tree, { key: 'a' })).toBe(true);
+    });
+
+    // --- Roving tabindex ---
+
+    // A parent's accessible name includes its children, so rows are looked up by node id.
+    const rowOf = (id: string) => document.querySelector(`[data-node-id="${id}"]`) as HTMLElement;
+
+    it('exactly one node is a tab stop: the first at rest, the focused one afterwards', () => {
+        render(<TreeView nodes={simpleNodes} />);
+        const tabStops = () => document.querySelectorAll('[data-node-id][tabindex="0"]');
+        expect(Array.from(tabStops()).map(el => el.getAttribute('data-node-id'))).toEqual(['a']);
+        fireEvent.click(screen.getByText('Gamma'));
+        expect(Array.from(tabStops()).map(el => el.getAttribute('data-node-id'))).toEqual(['c']);
+        expect(rowOf('a')).toHaveAttribute('tabindex', '-1');
+    });
+
+    it('falls back to the first node as tab stop when the focused node is hidden by a collapse from outside', () => {
+        const { rerender } = render(<TreeView nodes={nestedNodes} expandedIds={['root1']} />);
+        fireEvent.click(screen.getByText('Child One'));
+        expect(rowOf('child1')).toHaveAttribute('tabindex', '0');
+        rerender(<TreeView nodes={nestedNodes} expandedIds={[]} />);
+        expect(document.querySelectorAll('[data-node-id][tabindex="0"]')).toHaveLength(1);
+        expect(rowOf('root1')).toHaveAttribute('tabindex', '0');
+        fireEvent.keyDown(screen.getByRole('tree'), { key: 'ArrowDown' });
+        expect(nodeIdOf()).toBe('root1');
+    });
+
+    // --- Mouse ---
+
+    it('clicking the chevron toggles without selecting the node', () => {
+        const onSelect = vi.fn();
+        render(<TreeView nodes={nestedNodes} onSelect={onSelect} />);
+        fireEvent.click(screen.getByRole('button', { name: 'Expand' }));
+        expect(onSelect).not.toHaveBeenCalled();
+        expect(screen.getByText('Child One')).toBeInTheDocument();
+    });
+
+    it('selecting a parent does not expand it', () => {
+        render(<TreeView nodes={nestedNodes} />);
+        fireEvent.click(screen.getByText('Root One'));
+        expect(screen.queryByText('Child One')).not.toBeInTheDocument();
+    });
+
+    it('controlled: a click on the chevron reports but does not expand by itself', () => {
+        render(<TreeView nodes={nestedNodes} expandedIds={[]} onExpandChange={vi.fn()} />);
+        fireEvent.click(screen.getByRole('button', { name: 'Expand' }));
+        expect(screen.queryByText('Child One')).not.toBeInTheDocument();
+    });
+
+    it('marks a nested selectedId and calls onSelect with the nested node', () => {
+        const onSelect = vi.fn();
+        render(<TreeView nodes={nestedNodes} defaultExpandedIds={['root1']} selectedId="child2" onSelect={onSelect} />);
+        expect(rowOf('child2').closest('li')).toHaveAttribute('aria-selected', 'true');
+        expect(rowOf('child1').closest('li')).toHaveAttribute('aria-selected', 'false');
+        expect(rowOf('root1').closest('li')).toHaveAttribute('aria-selected', 'false');
+        fireEvent.click(screen.getByText('Child One'));
+        expect(onSelect).toHaveBeenCalledExactlyOnceWith(nestedNodes[0]!.children![0]);
+    });
+
+    it('renders an empty tree without throwing', () => {
+        render(<TreeView nodes={[]} />);
+        expect(screen.getByRole('tree')).toBeEmptyDOMElement();
+        fireEvent.keyDown(screen.getByRole('tree'), { key: 'ArrowDown' });
+    });
+
     // --- Leaf nodes ---
 
     it('leaf nodes do not have aria-expanded', () => {

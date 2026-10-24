@@ -70,6 +70,12 @@ export function TreeView({
 
     const parentMap = useMemo(() => buildParentMap(nodes), [nodes]);
 
+    const visibleNodes = useMemo(() => getVisibleNodes(nodes, expandedSet), [nodes, expandedSet]);
+    // A focused node that is no longer visible (its ancestor was collapsed from outside, or the node
+    // disappeared) must not stay the tab stop: nothing would be reachable with Tab.
+    const effectiveFocusedId =
+        focusedId !== null && visibleNodes.some(n => n.id === focusedId) ? focusedId : null;
+
     const toggleExpand = useCallback(
         (node: TreeNode) => {
             const isExpanded = expandedSet.has(node.id);
@@ -99,11 +105,10 @@ export function TreeView({
 
     const handleKeyDown = useCallback(
         (e: React.KeyboardEvent<HTMLUListElement>) => {
-            const visibleNodes = getVisibleNodes(nodes, expandedSet);
             if (visibleNodes.length === 0) return;
 
-            const currentIndex = focusedId
-                ? visibleNodes.findIndex(n => n.id === focusedId)
+            const currentIndex = effectiveFocusedId
+                ? visibleNodes.findIndex(n => n.id === effectiveFocusedId)
                 : -1;
             const current = currentIndex >= 0 ? visibleNodes[currentIndex] : null;
 
@@ -151,7 +156,7 @@ export function TreeView({
                 }
             }
         },
-        [nodes, expandedSet, focusedId, focusNode, toggleExpand, onSelect, parentMap]
+        [visibleNodes, expandedSet, effectiveFocusedId, focusNode, toggleExpand, onSelect, parentMap]
     );
 
     return (
@@ -169,7 +174,7 @@ export function TreeView({
                     isInitialFocusTarget={index === 0}
                     expandedSet={expandedSet}
                     selectedId={selectedId}
-                    focusedId={focusedId}
+                    focusedId={effectiveFocusedId}
                     onSelect={onSelect}
                     onToggleExpand={toggleExpand}
                     onFocus={focusNode}

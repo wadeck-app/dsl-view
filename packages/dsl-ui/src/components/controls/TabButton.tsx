@@ -20,7 +20,13 @@ export function TabButton({
 }: TabButtonProps) {
 	const activeClass = active ? 'border-b-2 border-[var(--color-primary-solid)]' : '';
 	return (
-		<Button variant={variant} className={[activeClass, className].filter(Boolean).join(' ')} {...rest}>
+		<Button
+			variant={variant}
+			// The underline alone tells sighted users which tab is active: expose it to assistive tech too.
+			aria-current={active ? 'true' : undefined}
+			className={[activeClass, className].filter(Boolean).join(' ')}
+			{...rest}
+		>
 			{children}
 		</Button>
 	);
