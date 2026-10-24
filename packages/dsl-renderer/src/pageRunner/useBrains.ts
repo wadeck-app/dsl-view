@@ -203,7 +203,7 @@ export function useBrains(params: {
 	getToken?: () => Promise<string | null>;
 	fetcher: Fetcher;
 	routeParams?: Record<string, string>;
-	/** Receives a failed brain (never a success: brains also drive data loading). Opt out per brain with `$notify: false`. */
+	/** Receives every failed brain (never a success: brains also drive data loading). There is no per-brain opt-out. */
 	notify?: Notify;
 }): {
 	brainResults: Record<string, unknown>;
@@ -246,6 +246,8 @@ export function useBrains(params: {
 
 	// snapshots[brainId] = last-known reactive param values (for change detection)
 	const snapshots = useRef<Record<string, Record<string, unknown>>>({});
+	// Brains already told that their retired `$notify` key is ignored (one warning per brain).
+	const warnedRetiredNotify = useRef<Set<string>>(new Set());
 
 	const runBrain = useCallback(
 		async (
@@ -381,6 +383,14 @@ export function useBrains(params: {
 		if (!$brains) return;
 		for (const [brainId, spec] of Object.entries($brains)) {
 			const rawSpec = spec as Record<string, unknown>;
+			// `$notify` used to keep a failed brain out of the feedback. A failure is now always reported, so the key does nothing:
+			// say so once instead of letting an author believe the failure is silenced.
+			if ('$notify' in rawSpec && !warnedRetiredNotify.current.has(brainId)) {
+				warnedRetiredNotify.current.add(brainId);
+				console.warn(
+					`[useBrains] brain "${brainId}": the "$notify" key is no longer supported and is ignored, a failed brain is always reported to the user. Remove it.`
+				);
+			}
 			const currentReactive = collectReactiveParams(rawSpec, ctxWithBrains);
 			const prevReactive = snapshots.current[brainId];
 			const isFirstRender = prevReactive === undefined;
@@ -420,7 +430,7 @@ export function useBrains(params: {
 						// which is how a failed mutation looked exactly like a successful one.
 						setBrainStatus(prev => ({ ...prev, [brainId]: { $pending: false, $error: message } }));
 						console.error(`[useBrains] brain "${brainId}" failed:`, message);
-						if (rawSpec['$notify'] !== false && notifyRef.current) {
+						if (notifyRef.current) {
 							notifyFailure(notifyRef.current, brainId, undefined, err);
 						}
 					});

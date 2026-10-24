@@ -333,10 +333,10 @@ items:
 |---|---|
 | `successMessage` | Success text. Default `Done`. A `message` string in the JSON response overrides it. |
 | `errorPrefix` | Failure text becomes `<prefix>: <message>`. |
-| `notify: false` | No feedback for this action. Failures still reach `console.error` and `onActionError`. |
+| `notify: false` | No SUCCESS message for this action (e.g. a silent background reload). A failure is always shown (with `errorPrefix`), logged and passed to `onActionError`. |
 | `strictParams: true` | Form handlers (`$ctx.<name>`) only: encode `{key}` values and fail on an empty or missing one (see above). |
 
-- A `$brains` entry accepts `$notify: false` to keep its failure out of the feedback (still published as `$brains.<id>.$error`).
+- A failed `$brains` entry is always shown and published as `$brains.<id>.$error`. The former `$brains.<id>.$notify` key is ignored with a one-time `console.warn`: remove it.
 - `$brains.$http.*` and `$ctx.navigate` fill `{key}` in `url` / `to` from the brain's parameters, then the route params. Default: values are used as given and an empty or missing one is a one-time `console.warn` (the request still goes out). `strictParams: true` on the brain (or on the `$chain`, where a step can override it) percent-encodes the values and fails before any request or navigation on an empty or missing one; the error names the brain and is published as `$brains.<id>.$error`. It is never passed to the brain as a parameter.
 - In a `$chain`, a step's `id` is its own label (`$chain.<id>.<field>`). Registry brains still receive it as a parameter; built-in `$http.*` / `$ctx.navigate` steps do not, so `url: /api/jobs/{id}` is filled from the route params (or reported as missing), never with the step id.
 - Double submit: while an action runs, a repeated call of the same action (same row for row actions) is ignored with a console warning. `$ctx.$actionPending.<name>` is `true` while it runs, e.g. `disabled: $ctx.$actionPending.clearEntry` on a button. `$ctx.$actionPendingRows.<name>` lists the row ids in flight for that action (`*` for a batch call). DataTable follows both by default: a row button is disabled and `aria-busy` only for its own row (or every row during a batch call), and the batch button follows `$actionPending`. A host that passes only `actionPending` keeps the per-action-name behaviour.

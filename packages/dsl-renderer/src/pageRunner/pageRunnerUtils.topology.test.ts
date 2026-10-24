@@ -122,14 +122,15 @@ describe('failure notifications', () => {
 		}
 	});
 
-	it('prefixes the message with errorPrefix, and stays silent when notify is false', () => {
+	it('prefixes the message with errorPrefix, and notify: false does not hide a failure', () => {
 		const notify = vi.fn();
 
 		notifyFailure(notify, 'save', spec({ errorPrefix: 'Could not save' }), new Error('disk full'));
 		expect(notify.mock.calls[0]![0].message).toBe('Could not save: disk full');
 
-		notifyFailure(notify, 'save', spec({ notify: false }), new Error('disk full'));
-		expect(notify).toHaveBeenCalledTimes(1);
+		notifyFailure(notify, 'save', spec({ notify: false, errorPrefix: 'Could not save' }), new Error('disk full'));
+		expect(notify).toHaveBeenCalledTimes(2);
+		expect(notify.mock.calls[1]![0]).toEqual({ kind: 'error', message: 'Could not save: disk full', status: undefined, action: 'save' });
 	});
 
 	it('a failure before the spec could be read (unknown action) is always reported', () => {

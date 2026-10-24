@@ -147,11 +147,14 @@ describe('notifyFailure / notifyLoadFailure', () => {
 		expect(seen.map(n => n.message)).toEqual(['boom', 'boom', 'boom', 'just a string', 'null']);
 	});
 
-	it('prefixes the message with errorPrefix and is silent with notify: false', () => {
+	it('prefixes the message with errorPrefix, and notify: false (success only) never hides a failure', () => {
 		const { seen, notify } = collect();
 		notifyFailure(notify, 'a', { errorPrefix: 'Could not replay' }, new Error('Daemon is not running'));
-		notifyFailure(notify, 'a', { notify: false }, new Error('hidden'));
-		expect(seen).toEqual([{ kind: 'error', message: 'Could not replay: Daemon is not running', status: undefined, action: 'a' }]);
+		notifyFailure(notify, 'a', { notify: false }, new Error('still shown'));
+		expect(seen).toEqual([
+			{ kind: 'error', message: 'Could not replay: Daemon is not running', status: undefined, action: 'a' },
+			{ kind: 'error', message: 'still shown', status: undefined, action: 'a' },
+		]);
 	});
 
 	it('reports a failure that happened before the spec was known (unknown action name)', () => {

@@ -194,8 +194,9 @@ describe('brain status and notifications', () => {
 		await waitFor(() => expect(result.current.brainResults['job']).toEqual({ $pending: false, $error: null }));
 	});
 
-	it('notifies a failure unless the brain opts out with $notify: false, and an explicit $notify: true still notifies', async () => {
+	it('always notifies a failure: the retired $notify key (true or false) does not silence it and is reported once', async () => {
 		vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 		const failing = async () => {
 			throw new Error('nope');
 		};
@@ -207,8 +208,15 @@ describe('brain status and notifications', () => {
 			},
 			{ brainRegistry: { failing } }
 		);
-		await waitFor(() => expect(notifications).toHaveLength(2));
-		expect(notifications.map(n => n.action).sort()).toEqual(['defaultOn', 'explicitOn']);
+		await waitFor(() => expect(notifications).toHaveLength(3));
+		expect(notifications.map(n => n.action).sort()).toEqual(['defaultOn', 'explicitOn', 'off']);
+		expect(notifications.every(n => n.kind === 'error' && n.message === 'nope')).toBe(true);
+		// One warning per brain that still carries the key, naming the brain and the reason; none for the brain without it.
+		const warned = consoleWarn.mock.calls.map(call => String(call[0])).filter(text => text.includes('$notify'));
+		expect(warned).toHaveLength(2);
+		expect(warned.some(text => text.includes('"off"') && text.includes('always'))).toBe(true);
+		expect(warned.some(text => text.includes('"explicitOn"'))).toBe(true);
+		expect(warned.some(text => text.includes('"defaultOn"'))).toBe(false);
 	});
 
 	it('does not break when a brain fails and the host gave no notifier', async () => {

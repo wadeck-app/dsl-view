@@ -6,8 +6,6 @@ export interface SimpleBrainSpec {
 	$brain: string;
 	$outputs?: string[];
 	$reload?: string[];
-	/** false = a failure of this brain is only logged / published as `$brains.<id>.$error`, not shown as feedback. */
-	$notify?: boolean;
 	/**
 	 * true = for `$http.*` and `$ctx.navigate`: percent-encode the values filled into `{placeholder}`s and fail before
 	 * any request/navigation when one has no value. Not forwarded to the brain as a parameter.
@@ -29,8 +27,6 @@ export interface ChainStepSpec {
 export interface ChainBrainSpec {
 	$chain: ChainStepSpec[];
 	$reload?: string[];
-	/** false = a failure of this brain is only logged / published as `$brains.<id>.$error`, not shown as feedback. */
-	$notify?: boolean;
 	/** Default `strictParams` of every step (a step can override it). */
 	strictParams?: boolean;
 	[param: string]: unknown;

@@ -123,18 +123,34 @@ describe('action feedback: default inline banner (no host notifier)', () => {
 		expect(screen.queryByRole('alert')).toBeNull();
 	});
 
-	it('notify: false silences both success and failure feedback, failures stay in the console and in onActionError', async () => {
+	it('notify: false silences the success feedback only: a failure is still shown, logged and passed to onActionError', async () => {
 		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 		const onActionError = vi.fn();
 		const fetcher = vi.fn().mockResolvedValueOnce({}).mockRejectedValueOnce(failure('boom', 500));
-		renderPage(PAGE('    notify: false'), { fetcher, onActionError });
+		renderPage(PAGE('    notify: false\n    errorPrefix: "Could not clear"'), { fetcher, onActionError });
 		fireEvent.click(screen.getByText('row'));
 		await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
+		// One macrotask turn: a success banner would be on screen by now.
+		await act(async () => {
+			await new Promise<void>(resolve => setTimeout(resolve, 0));
+		});
+		expect(screen.queryByRole('status')).toBeNull();
 		fireEvent.click(screen.getByText('row'));
 		await waitFor(() => expect(onActionError).toHaveBeenCalledTimes(1));
 		expect(consoleError).toHaveBeenCalledWith(expect.stringContaining('row action "clearEntry" failed: boom'));
-		expect(screen.queryByRole('status')).toBeNull();
-		expect(screen.queryByRole('alert')).toBeNull();
+		const alert = await screen.findByRole('alert');
+		expect(alert.textContent).toContain('Could not clear: boom');
+		expect(alert.textContent).toContain('HTTP 500');
+	});
+
+	it('notify: false also keeps batch and named-handler failures visible', async () => {
+		vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		const fetcher = vi.fn().mockRejectedValue(failure('boom', 500));
+		renderPage(PAGE('    notify: false'), { fetcher });
+		fireEvent.click(screen.getByText('batch'));
+		expect((await screen.findByRole('alert')).textContent).toContain('boom');
+		fireEvent.click(screen.getByText('form'));
+		await waitFor(() => expect(screen.getAllByRole('alert')).toHaveLength(2));
 	});
 
 	it('gives no success feedback for a local action that sent no request (confirm declined or no url)', async () => {
@@ -211,16 +227,13 @@ action: clearEntry
 		expect((await screen.findByRole('alert')).textContent).toContain('Brain exploded');
 	});
 
-	it('keeps a $notify: false brain failure out of the feedback', async () => {
-		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+	it('still shows a failed brain that carries the retired $notify: false, and says the key is ignored', async () => {
+		vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 		const failing = vi.fn().mockRejectedValue(failure('Brain exploded', 502));
 		renderPage(BRAIN_PAGE('    $notify: false'), { brainRegistry: { failing } });
-		await waitFor(() => expect(consoleError).toHaveBeenCalledWith('[useBrains] brain "saveThing" failed:', 'Brain exploded'));
-		// One macrotask turn: a banner for this failure would be on screen by now.
-		await act(async () => {
-			await new Promise<void>(resolve => setTimeout(resolve, 0));
-		});
-		expect(screen.queryByRole('alert')).toBeNull();
+		expect((await screen.findByRole('alert')).textContent).toContain('Brain exploded');
+		expect(consoleWarn).toHaveBeenCalledWith(expect.stringContaining('brain "saveThing"'));
 	});
 
 	it('logs an unknown action key instead of silently using the default behaviour', () => {

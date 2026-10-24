@@ -18,7 +18,7 @@ export interface ActionSpec {
 	successMessage?: string;
 	/** Prepended to the failure message: `errorPrefix: "Could not replay"` -> "Could not replay: <server message>". */
 	errorPrefix?: string;
-	/** false = no success/failure feedback for this action (e.g. a silent background reload). Failures are still logged. */
+	/** false = no SUCCESS feedback for this action (e.g. a silent background reload). A failure is always reported to the user, with `errorPrefix` applied. */
 	notify?: boolean;
 	/**
 	 * true = the `{key}` placeholders of `url` are percent-encoded and an empty/missing one fails before any request
@@ -368,11 +368,8 @@ export function notifyLoadFailure(notify: Notify, error: unknown): void {
 	});
 }
 
-/** Failure feedback. `spec` is undefined when the failure happened before the spec could be read (unknown action name): always reported then. */
+/** Failure feedback. `spec` is undefined when the failure happened before the spec could be read (unknown action name). A failure is ALWAYS reported: `notify: false` only silences the success message. */
 export function notifyFailure(notify: Notify, actionName: string, spec: ActionSpec | undefined, error: unknown): void {
-	if (spec?.notify === false) {
-		return;
-	}
 	const message = getErrorMessage(error);
 	notify({
 		kind: 'error',
