@@ -15,16 +15,10 @@ function strip(col: TableColumn<Record<string, unknown>>) {
 }
 
 describe('resolveColumn', () => {
-	it('dispatches httpMethod format, forwarding only mono/truncate/width (never muted/sortable)', () => {
-		const col = resolveColumn({
-			field: 'method', label: 'Method', format: 'httpMethod', mono: true, truncate: true, sortable: true, muted: true,
-		});
-		expect(strip(col)).toEqual({ key: 'method', label: 'Method', format: 'httpMethod', mono: true, truncate: true, width: undefined });
-	});
-
-	it('dispatches httpStatus format, forwarding only mono/truncate/width', () => {
-		const col = resolveColumn({ field: 'status', label: 'Status', format: 'httpStatus', sortable: true });
-		expect(strip(col)).toEqual({ key: 'status', label: 'Status', format: 'httpStatus', mono: undefined, truncate: undefined, width: undefined });
+	it('treats the former httpMethod / httpStatus formats as unrecognized: a plain text column, sortable kept', () => {
+		// They moved out of dsl-ui: an app that wants them registers them (registerColumnFormat) or passes extraFormats.
+		const col = resolveColumn({ field: 'method', label: 'Method', format: 'httpMethod', mono: true, sortable: true });
+		expect(strip(col)).toEqual({ key: 'method', label: 'Method', mono: true, muted: undefined, truncate: undefined, width: undefined, sortable: true });
 	});
 
 	it('dispatches bytes format, forwarding only width', () => {

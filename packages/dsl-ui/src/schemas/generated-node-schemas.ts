@@ -82,11 +82,6 @@ export const IconButtonNodeSchema = baseNode.extend({
 	size: dsl(z.enum(['icon', 'icon-field', 'icon-sm', 'icon-xs'])).optional(),
 });
 
-export const InviteTokenWidgetNodeSchema = baseNode.extend({
-	inviteToken: z.string().nullable().optional(),
-	isPending: dsl(z.boolean()).optional(),
-});
-
 export const LiveToggleNodeSchema = baseNode.extend({
 	live: dsl(z.boolean()),
 });
@@ -202,14 +197,6 @@ export const ChartNodeSchema = baseNode.extend({
 
 export const FetchSpinnerNodeSchema = baseNode.extend({
 	loading: dsl(z.boolean()),
-});
-
-export const HttpMethodBadgeNodeSchema = baseNode.extend({
-	method: z.string(),
-});
-
-export const HttpStatusBadgeNodeSchema = baseNode.extend({
-	status: dsl(z.number()),
 });
 
 export const InlineEditNodeSchema = baseNode.extend({
@@ -795,7 +782,7 @@ const TableColumnSchema = z.object({
 	label: z.string(),
 	mono: z.boolean().optional(),
 	muted: z.boolean().optional(),
-	format: z.enum(['datetime', 'date', 'time', 'bytes', 'ms', 'httpMethod', 'httpStatus']).optional(),
+	format: z.enum(['datetime', 'date', 'time', 'bytes', 'ms']).optional(),
 	width: z.number().optional(),
 	truncate: z.boolean().optional(),
 	nowrap: z.boolean().optional(),
@@ -879,13 +866,6 @@ export const SearchBarNodeSchema = baseNode.extend({
 	size: dsl(z.enum(['sm', 'md'])).optional(),
 });
 
-export const ShownFetchedCounterNodeSchema = baseNode.extend({
-	raw: dsl(z.union([z.record(z.string(), z.unknown()), z.array(z.unknown())])).nullable().optional(),
-	entriesField: z.string().optional(),
-	totalField: z.string().optional(),
-	pushRight: dsl(z.boolean()).optional(),
-});
-
 const SortStateSchema = z.object({
 	key: z.string(),
 	dir: z.enum(['asc', 'desc']),
@@ -895,13 +875,4 @@ export const SortableColumnNodeSchema = baseNode.extend({
 	label: z.string(),
 	sortKey: z.string(),
 	currentSort: dsl(SortStateSchema).nullable(),
-});
-
-export const StatusFilterNodeSchema = baseNode.extend({
-	field: z.string().optional(),
-	value: z.string(),
-	options: dsl(z.array(z.union([z.string(), z.object({
-		value: z.string(),
-		label: z.string(),
-	})]))).optional(),
 });

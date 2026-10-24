@@ -54,8 +54,7 @@ const SURFACE_CLS: Record<NonNullable<ThemeScopeProps['surface']>, string> = {
  * scope above it: light inside dark inside light behaves as written.
  *
  * KNOWN LIMITATION: a handful of dsl-ui components still style themselves with Tailwind `dark:`
- * variants rather than tokens - chipColors (so ChipButton), Skeleton, HttpMethodBadge,
- * HttpStatusBadge, ColorPicker. Those variants key off ANY `.dark` ancestor, so inside a light scope
+ * variants rather than tokens - chipColors (so ChipButton), Skeleton, ColorPicker. Those variants key off ANY `.dark` ancestor, so inside a light scope
  * nested in a dark app they keep their dark styling. CSS cannot express "nearest ancestor wins" for
  * a variant selector, so the fix is those components using tokens; it is not something this
  * component can paper over.

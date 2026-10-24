@@ -5,7 +5,6 @@ export * from './DataTable.js';
 export * from './FilterChips.js';
 export * from './Pagination.js';
 export * from './SearchBar.js';
-export * from './ShownFetchedCounter.js';
 export * from './SortableColumn.js';
-export * from './StatusFilter.js';
 export * from './FilterBar.js';
+export * from './columnFormats.js';

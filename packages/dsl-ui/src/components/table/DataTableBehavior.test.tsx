@@ -79,25 +79,6 @@ describe('DataTable cell formats', () => {
 		expect(screen.getByRole('cell').textContent).toBe('');
 	});
 
-	it('renders http method and status columns as badges', () => {
-		const cols = [ColumnHelpers.httpMethod<Row>('method', 'Method'), ColumnHelpers.httpStatus<Row>('status', 'Status')];
-		render(<DataTable rows={[rows[1]!]} columns={cols} />);
-		const cells = screen.getAllByRole('cell');
-		expect(cells[0]).toHaveTextContent('POST');
-		expect(cells[1]).toHaveTextContent('404');
-	});
-
-	it('an http method / status YAML column renders the same badges, empty values included', () => {
-		const yaml = [
-			{ field: 'method', label: 'Method', format: 'httpMethod' },
-			{ field: 'status', label: 'Status', format: 'httpStatus' },
-		];
-		render(<DataTable rows={[rows[0]!]} columns={yaml as never} />);
-		const cells = screen.getAllByRole('cell');
-		expect(cells[0]).toHaveTextContent('GET');
-		expect(cells[1]).toHaveTextContent('200');
-	});
-
 	it('a plain YAML column prints the value, "" for null, and the label falls back to the field', () => {
 		const view = render(<DataTable rows={[{ id: '1', nick: null }] as never} columns={[{ field: 'nick' }] as never} />);
 		expect(screen.getByRole('columnheader')).toHaveTextContent('nick');
@@ -507,9 +488,14 @@ describe('DataTable filter state', () => {
 	];
 	const cols = [ColumnHelpers.text<F>('name', 'Name')];
 
-	it('a status family keeps exactly its hundred (400 and 499 in, 399 and 500 out)', () => {
-		render(<DataTable<F> rows={data} columns={cols} defaultFilters={{ status: '4xx' }} />);
-		expect(names()).toEqual(['b', 'c']);
+	it('a "4xx" string is an exact match like any other: the status-family rule belongs to the app (a registered predicate)', () => {
+		render(<DataTable<F> rows={data} columns={cols} defaultFilters={{ status: '4xx' }} emptyMessage="No match" />);
+		expect(screen.getByText('No match')).toBeInTheDocument();
+	});
+
+	it('an exact-match string filter on a numeric field compares its text (400 matches "400", not 399 or 499)', () => {
+		render(<DataTable<F> rows={data} columns={cols} defaultFilters={{ status: '400' }} />);
+		expect(names()).toEqual(['b']);
 	});
 
 	it('an array filter keeps rows whose field is in the list; an empty array filters nothing', () => {
@@ -537,7 +523,7 @@ describe('DataTable filter state', () => {
 	});
 
 	it('combines several filters (all must match)', () => {
-		render(<DataTable<F> rows={data} columns={cols} defaultFilters={{ method: 'GET', status: '4xx' }} />);
+		render(<DataTable<F> rows={data} columns={cols} defaultFilters={{ method: 'GET', status: '499' }} />);
 		expect(names()).toEqual(['c']);
 	});
 

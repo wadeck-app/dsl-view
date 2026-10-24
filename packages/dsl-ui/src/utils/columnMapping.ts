@@ -62,8 +62,8 @@ export function resolveColumn<T extends Record<string, unknown>>(
 
 	// `datetime`/`date`/`time`/`ms` aren't their own ColumnHelpers methods - they're sub-values
 	// of `ColumnHelpers.date`'s/`.number`'s own `format` option, not a same-named static method
-	// (unlike `httpMethod`/`httpStatus`/`bytes`, which ARE named identically to their format
-	// value). Both branches are dispatched by format value, never by component/prop name.
+	// (unlike `bytes`, which IS named identically to its format value). Both branches are
+	// dispatched by format value, never by component/prop name.
 	if (dc.format === 'datetime' || dc.format === 'date' || dc.format === 'time') {
 		const built = ColumnHelpers.date<T>(key, dc.label, { format: dc.format, width: dc.width });
 		if (dc.mono) built.mono = dc.mono;
@@ -80,15 +80,8 @@ export function resolveColumn<T extends Record<string, unknown>>(
 		if (dc.sortable) built.sortable = dc.sortable;
 		return built;
 	}
-	// httpMethod/httpStatus only forward mono/truncate (never muted/sortable) as constructor
-	// options, and bytes only forwards width - matching the original hand-written
-	// entriesGenerator.ts logic exactly (real callers never sort by or mute those columns today).
-	if (dc.format === 'httpMethod' || dc.format === 'httpStatus') {
-		const helperOptions = { mono: dc.mono, truncate: dc.truncate, width: dc.width };
-		return dc.format === 'httpMethod'
-			? ColumnHelpers.httpMethod<T>(key, dc.label, helperOptions)
-			: ColumnHelpers.httpStatus<T>(key, dc.label, helperOptions);
-	}
+	// bytes only forwards width - matching the original hand-written entriesGenerator.ts logic
+	// exactly (real callers never sort by or mute those columns today).
 	if (dc.format === 'bytes') {
 		return ColumnHelpers.bytes<T>(key, dc.label, { width: dc.width });
 	}

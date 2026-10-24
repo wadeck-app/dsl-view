@@ -1,10 +1,10 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { RouterContext } from '@dsl-ui/RouterContext.js';
 import { ColumnHelpers, DataTable, useDataTableFilter } from './DataTable.js';
 import { FilterChips } from './FilterChips.js';
-import { StatusFilter } from './StatusFilter.js';
 
 type Row = { id: string; name: string; status: number; method: string };
 
@@ -93,20 +93,36 @@ describe('DataTable', () => {
 		expect(onAction).toHaveBeenCalledWith('edit', rows[0]);
 	});
 
-	it('filters rows by status family (4xx) via DataTableFilterCtx', () => {
+	it('filters rows through a predicate the filter component registers (a status-family rule owned by the app)', () => {
 		const cols = [ColumnHelpers.text<Row>('name', 'Name'), ColumnHelpers.text<Row>('status', 'Status')];
-		function StatusFilterConnected() {
+		function FamilyFilter() {
 			const ctx = useDataTableFilter()!;
-			const value = (ctx.filters['status'] as string) ?? 'all';
-			return <StatusFilter value={value} onChange={v => ctx.setFilter('status', v)} />;
+			const registerRef = React.useRef(ctx.registerFilterPredicate);
+			React.useLayoutEffect(() => {
+				registerRef.current?.('status', (row, value) => String(Math.floor(Number(row['status']) / 100)) === String(value)[0]);
+			}, []);
+			return <button type="button" onClick={() => ctx.setFilter('status', '4xx')}>4xx</button>;
 		}
-		render(<DataTable rows={rows} columns={cols} filters={<StatusFilterConnected />} />);
+		render(<DataTable rows={rows} columns={cols} filters={<FamilyFilter />} />);
 		expect(screen.getByText('Alice')).toBeInTheDocument();
 		expect(screen.getByText('Bob')).toBeInTheDocument();
 		expect(screen.getByText('Carol')).toBeInTheDocument();
 		fireEvent.click(screen.getByText('4xx'));
 		expect(screen.queryByText('Alice')).not.toBeInTheDocument();
 		expect(screen.getByText('Bob')).toBeInTheDocument();
+		expect(screen.queryByText('Carol')).not.toBeInTheDocument();
+	});
+
+	it('a status-family value such as "4xx" is just an exact-match string without a registered predicate (no built-in HTTP rule)', () => {
+		const cols = [ColumnHelpers.text<Row>('name', 'Name'), ColumnHelpers.text<Row>('status', 'Status')];
+		function RawFilter() {
+			const ctx = useDataTableFilter()!;
+			return <button type="button" onClick={() => ctx.setFilter('status', '4xx')}>4xx</button>;
+		}
+		render(<DataTable rows={rows} columns={cols} filters={<RawFilter />} />);
+		fireEvent.click(screen.getByText('4xx'));
+		expect(screen.queryByText('Alice')).not.toBeInTheDocument();
+		expect(screen.queryByText('Bob')).not.toBeInTheDocument();
 		expect(screen.queryByText('Carol')).not.toBeInTheDocument();
 	});
 

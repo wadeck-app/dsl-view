@@ -3,16 +3,17 @@
  *
  * IN SCOPE:
  *   - Rendering rows, columns, sorting, pagination state
- *   - Generic column formats: datetime, date, time, bytes, ms, httpMethod, httpStatus
+ *   - Generic column formats: datetime, date, time, bytes, ms
+ *   - A registry for app-specific formats (registerColumnFormat in ./columnFormats.ts)
  *   - Filter context (DataTableFilterCtx) for generic filter components
  *   - Selection and batch actions
  *   - Expansion rows
  *
  * OUT OF SCOPE - do NOT add these here:
- *   - App-specific column formats (e.g. "expiry countdown", "revoked badge") -> put in the
- *     app's own ColumnHelpers (e.g. WdriveColumnHelpers in dsl-ui-wdrive)
- *   - Business logic or domain knowledge (HTTP status conventions are an accepted exception
- *     because they are a universal web standard, not app-specific)
+ *   - App-specific column formats (e.g. "expiry countdown", "revoked badge", HTTP method/status swatches)
+ *     -> the app registers them with registerColumnFormat, or keeps them in its own ColumnHelpers
+ *     (e.g. WdriveColumnHelpers in dsl-ui-wdrive)
+ *   - Business logic or domain knowledge (see "Scope of dsl-ui" in .claude/guiding-principles.md)
  *   - Formatting that encodes app state (e.g. "Auto-deletes in N days" is wdrive-specific)
  */
 import { ChevronDown, ChevronRight, ChevronUp, ChevronsUpDown, Loader2 } from 'lucide-react';
@@ -21,11 +22,9 @@ import React, { createContext, useCallback, useContext, useMemo, useRef, useStat
 import { Button } from '../controls/_Button.js';
 import { IconButton } from '../controls/IconButton.js';
 import { Checkbox } from '../controls/Checkbox.js';
-import { HttpMethodBadge } from '../display/HttpMethodBadge.js';
 import { Badge } from '../display/Badge.js';
 import { Skeleton } from '../display/Skeleton.js';
 import type { BadgeVariant } from '../display/Badge.js';
-import { HttpStatusBadge } from '../display/HttpStatusBadge.js';
 import { iconByName } from '../display/iconByName.js';
 import { AppLink } from '../navigation/AppLink.js';
 import { formatBytes } from '@dsl-ui/utils/formatBytes.js';
@@ -33,14 +32,17 @@ import { buildLinkPath } from '@dsl-ui/utils/linkTarget.js';
 import { RouterContext } from '@dsl-ui/RouterContext.js';
 import { fillTemplate, fillTextTemplate } from '@dsl-ui/utils/templatedPath.js';
 
+import { getColumnFormat, registeredColumnFormatNames } from './columnFormats.js';
+import type { ColumnFormatRenderer } from './columnFormats.js';
+
 // Local alias matching dsl-engine's DslRawNode = Record<string, unknown>
 type DslRawNode = Record<string, unknown>;
 
 export type SortDir = 'asc' | 'desc';
 
-// Column value formats with a dedicated render path (formatValue) or a custom swatch (httpMethod/httpStatus)
+// Built-in column value formats, rendered by formatValue. App-specific formats are registered with registerColumnFormat.
 export type ColumnValueFormat = 'datetime' | 'date' | 'time' | 'bytes' | 'ms';
-export type ColumnFormat = ColumnValueFormat | 'httpMethod' | 'httpStatus';
+export type ColumnFormat = ColumnValueFormat;
 
 // --- Filter context -----------------------------------------------------------
 
@@ -132,14 +134,9 @@ function applyFilters<T extends Record<string, unknown>>(
 			if (value.length > 0 && !value.includes(row[key])) {
 				return false;
 			}
-		} else if (typeof value === 'string' && /^[1-5]xx$/.test(value)) {
-			const code = Number(row[key]);
-			const prefix = parseInt(value[0]!, 10) * 100;
-			if (code < prefix || code >= prefix + 100) {
-				return false;
-			}
 		} else if (typeof value === 'string') {
-			// Exact-match filter for non-status-family string values (e.g. action type filter)
+			// Exact-match filter. A rule that is not an equality (an HTTP status family such as "4xx") is owned by the
+			// app: its filter component registers a predicate for the key (registerFilterPredicate).
 			if (String(row[key] ?? '') !== value) {
 				return false;
 			}
@@ -158,7 +155,7 @@ function applyFilters<T extends Record<string, unknown>>(
 // accepted by the compiler and a key not listed here is an error instead of a silent no-op.
 
 const BADGE_VARIANTS: readonly BadgeVariant[] = ['default', 'primary', 'success', 'warning', 'danger', 'info'];
-const COLUMN_FORMATS: readonly ColumnFormat[] = ['datetime', 'date', 'time', 'bytes', 'ms', 'httpMethod', 'httpStatus'];
+const COLUMN_FORMATS: readonly ColumnFormat[] = ['datetime', 'date', 'time', 'bytes', 'ms'];
 
 /** A data column authored in YAML. */
 export interface DataTableColumnSpec {
@@ -176,7 +173,7 @@ export interface DataTableColumnSpec {
 	muted?: boolean;
 	/** Click-to-sort header. */
 	sortable?: boolean;
-	/** datetime | date | time | bytes | ms | httpMethod | httpStatus. */
+	/** datetime | date | time | bytes | ms, or a format the app registered with registerColumnFormat. */
 	format?: string;
 	/** Shows the value as a Badge: map of cell value to badge variant (default | primary | success | warning | danger | info). Values not in the map stay plain text. */
 	badge?: Record<string, string>;
@@ -416,11 +413,21 @@ function normalizeColumn<T extends Record<string, unknown>>(col: RawYamlColumn, 
 	const field = col.field ?? col.key ?? '';
 	const where = `"${field || index}"`;
 	let format: ColumnFormat | undefined;
+	// An app-registered format (registerColumnFormat) renders the cell itself; the built-in ones go through formatValue.
+	let customFormat: ColumnFormatRenderer | undefined;
 	if (col.format !== undefined) {
 		if ((COLUMN_FORMATS as readonly string[]).includes(col.format)) {
 			format = col.format as ColumnFormat;
 		} else {
-			warnOnce(`[DataTable] column ${where}: unknown format "${col.format}" is ignored. Supported formats: ${COLUMN_FORMATS.join(', ')}.`);
+			customFormat = getColumnFormat(col.format);
+			if (!customFormat) {
+				const registeredNames = registeredColumnFormatNames();
+				const supported = [...COLUMN_FORMATS, ...registeredNames].join(', ');
+				warnOnce(
+					`[DataTable] column ${where}: unknown format "${col.format}" is ignored. Supported formats: ${supported}. ` +
+						`An app-specific format must be registered with registerColumnFormat before the page renders.`
+				);
+			}
 		}
 	}
 	const badge = col.badge;
@@ -433,11 +440,8 @@ function normalizeColumn<T extends Record<string, unknown>>(col: RawYamlColumn, 
 				return <Badge label={String(value)} variant={variant} tone="subtle" />;
 			}
 		}
-		if (format === 'httpMethod') {
-			return <HttpMethodBadge method={String(value ?? '')} />;
-		}
-		if (format === 'httpStatus') {
-			return <HttpStatusBadge status={Number(value)} />;
+		if (customFormat) {
+			return customFormat(value, row);
 		}
 		if (format) {
 			return formatValue(value, format as ColumnValueFormat);
@@ -503,7 +507,7 @@ export interface TableColumn<T extends Record<string, unknown>> {
 	mono?: boolean;
 	/** When true, renders in muted text (text-muted) regardless of format. */
 	muted?: boolean;
-	format?: 'datetime' | 'date' | 'time' | 'bytes' | 'ms' | 'httpMethod' | 'httpStatus';
+	format?: ColumnFormat;
 	width?: number;
 	truncate?: boolean;
 	/** When true, the cell never wraps (a long value widens the column instead of breaking mid-word). */
@@ -590,22 +594,6 @@ export class ColumnHelpers {
 			format: options.format,
 			width: options.width,
 			render: row => formatValue(row[key], options.format),
-		};
-	}
-
-	static httpMethod<T extends Record<string, unknown>>(key: keyof T & string, label: string, options: TextOptions = {}): TableColumn<T> {
-		return {
-			...ColumnHelpers.text<T>(key, label, options),
-			format: 'httpMethod' as const,
-			render: row => <HttpMethodBadge method={String(row[key] ?? '')} />,
-		};
-	}
-
-	static httpStatus<T extends Record<string, unknown>>(key: keyof T & string, label: string, options: TextOptions = {}): TableColumn<T> {
-		return {
-			...ColumnHelpers.text<T>(key, label, options),
-			format: 'httpStatus' as const,
-			render: row => <HttpStatusBadge status={Number(row[key])} />,
 		};
 	}
 

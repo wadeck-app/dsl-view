@@ -555,7 +555,7 @@ columns:
   - { field: event, label: Event, mono: true, truncate: true }          # ellipsis + full text as tooltip
   - { field: state, label: State, nowrap: true,
       badge: { completed: success, failed: danger, pending: warning } } # cell value -> Badge variant
-  - { field: at, label: At, format: datetime }                          # datetime | date | time | bytes | ms | httpMethod | httpStatus
+  - { field: at, label: At, format: datetime }                          # datetime | date | time | bytes | ms, or a format the app registered
   - { field: tries, label: Tries, width: 12, sortable: true }           # width in Tailwind units (12 = 3rem)
   - { type: actions, items: [{ label: Clear, action: clearEntry, variant: danger-outline, condition: "!locked" },
                              { label: Push test event, action: push, icon: rocket }] }  # icon: icon-only button, label = name + tooltip
@@ -570,7 +570,7 @@ columns:
 - An actions column is `type: actions`. `$type: actions` (older wdrive pages) was never recognised: the column rendered as an empty data column; it is now reported.
 - Default wrapping is unchanged: a plain column breaks anywhere (`break-all`). In a narrow container use `nowrap` (never wraps, the column widens), `truncate`, or `width`.
 - `badge`: values missing from the map stay plain text; a variant other than `default | primary | success | warning | danger | info` logs an error and shows the neutral variant.
-- `format` renders in the viewer's locale and local time zone.
+- `format` renders in the viewer's locale and local time zone. App-specific formats (an HTTP status swatch, an expiry countdown) are registered by the app before its first page renders: `registerColumnFormat('httpStatus', (value, row) => <MyStatusBadge status={Number(value)} />)`, then `format: httpStatus` in YAML. Registering a built-in name or a malformed name throws; registering a name twice replaces the renderer; an unregistered name logs the supported formats and shows the plain value. Same rule for filters: a non-equality rule such as an HTTP status family (`4xx`) is the app's, registered by its filter component with `registerFilterPredicate`.
 - Action item `icon` is a name from the icon vocabulary (below). The button is icon-only: `label` stays its accessible name and tooltip, and `variant`, `condition`, `confirm` (on the `$actions` entry) and the per-row busy spinner work as for a text button. An item without `icon` renders a text button and logs a warning.
 - `title` fills `{field}` from the row's own fields as plain text (no encoding) into the cell's tooltip. Any placeholder without a usable value (missing, empty, null, an object) means no tooltip and no error; an explicit title wins over the one `truncate` derives from the cell text. A tooltip is not keyboard-reachable: never put essential information only there.
 

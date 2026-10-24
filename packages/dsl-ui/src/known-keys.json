@@ -666,16 +666,6 @@
 			]
 		}
 	},
-	"HttpMethodBadge": {
-		"knownKeys": [
-			"method"
-		]
-	},
-	"HttpStatusBadge": {
-		"knownKeys": [
-			"status"
-		]
-	},
 	"IconButton": {
 		"knownKeys": [
 			"aria-label",
@@ -692,13 +682,6 @@
 			"placeholder",
 			"validate",
 			"value"
-		]
-	},
-	"InviteTokenWidget": {
-		"knownKeys": [
-			"inviteToken",
-			"isPending",
-			"onGenerateToken"
 		]
 	},
 	"JsonViewer": {
@@ -902,14 +885,6 @@
 			]
 		}
 	},
-	"ShownFetchedCounter": {
-		"knownKeys": [
-			"entriesField",
-			"pushRight",
-			"raw",
-			"totalField"
-		]
-	},
 	"Skeleton": {
 		"knownKeys": [
 			"count",
@@ -952,14 +927,6 @@
 			"label",
 			"loading",
 			"trend",
-			"value"
-		]
-	},
-	"StatusFilter": {
-		"knownKeys": [
-			"field",
-			"onChange",
-			"options",
 			"value"
 		]
 	},

@@ -9,7 +9,6 @@ export * from './ChipButton.js';
 export * from './ColorPicker.js';
 export * from './CompactSelect.js';
 export * from './IconButton.js';
-export * from './InviteTokenWidget.js';
 export * from './LiveToggle.js';
 export * from './PageSizeSelect.js';
 export * from './Radio.js';
