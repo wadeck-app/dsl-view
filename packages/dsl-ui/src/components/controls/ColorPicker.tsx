@@ -39,10 +39,11 @@ const swatchInactiveClass = 'hover:scale-105';
  * @registryBind formData onChange
  */
 export function ColorPicker({ label, options, value, onChange }: ColorPickerProps) {
+	const labelId = React.useId();
 	return (
 		<div>
-				<p className="mb-3 text-sm text-muted">{label}</p>
-			<div className="flex gap-3">
+			<p id={labelId} className="mb-3 text-sm text-muted">{label}</p>
+			<div role="group" aria-labelledby={labelId} className="flex gap-3">
 				{options.map(({ value: optValue, label: optLabel }) => {
 					const isActive = value === optValue;
 					const bg = colorBgMap[optValue] ?? 'bg-gray-500';

@@ -10,7 +10,8 @@ export type DeleteButtonProps = Omit<ButtonProps, 'variant' | 'size'>;
  */
 export function DeleteButton({ children = 'Delete', ...rest }: DeleteButtonProps) {
 	return (
-		<Button variant="danger" size="sm" {...rest}>
+		// rest first: the types omit variant and size, but a DSL node can still carry them at runtime.
+		<Button {...rest} variant="danger" size="sm">
 			{children}
 		</Button>
 	);

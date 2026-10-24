@@ -38,10 +38,11 @@ export function ThemePicker({ label, options, value, onChange }: ThemePickerProp
 		onChange(v);
 		themeCtx?.setTheme(v as ThemeMode);
 	}
+	const labelId = React.useId();
 	return (
 		<div>
-			<p className="mb-3 text-sm text-muted">{label}</p>
-			<div className="flex gap-3">
+			<p id={labelId} className="mb-3 text-sm text-muted">{label}</p>
+			<div role="group" aria-labelledby={labelId} className="flex gap-3">
 				{options.map(({ value: optValue, label: optLabel, icon }) => {
 					const isActive = effectiveValue === optValue;
 					return (
