@@ -22,6 +22,32 @@ function warnOnce(id: string, message: string): void {
 	console.warn(`[DslRenderer] ${message}`);
 }
 
+// `items: ["Label"]` or `items: "$sources.rows"` (an expression that was never resolved to a list) renders nothing: the empty
+// container reads as "no data" instead of "authoring mistake". An absent `items` is legitimate and stays quiet.
+export function warnInvalidChildren(nodes: unknown): void {
+	if (nodes === undefined || nodes === null) {
+		return;
+	}
+	if (!Array.isArray(nodes)) {
+		const shown = typeof nodes === 'string' ? `"${nodes}"` : typeof nodes;
+		warnOnce(
+			`children-not-a-list|${shown}`,
+			`A container's children must be a list of nodes, got ${shown}: nothing is rendered. ` +
+				'Write them as a YAML list under items:, or make sure the expression resolves to a list.'
+		);
+		return;
+	}
+	for (const child of nodes) {
+		if (child === null || typeof child !== 'object' || Array.isArray(child)) {
+			const shown = child === null ? 'null' : Array.isArray(child) ? 'a nested list' : typeof child === 'string' ? `"${child}"` : typeof child;
+			warnOnce(
+				`child-not-a-node|${shown}`,
+				`A child entry is ${shown} instead of a node with a $type: it is skipped. Each item under items: must be a mapping such as { $type: Label, ... }.`
+			);
+		}
+	}
+}
+
 export function warnUnknownNodeKeys(
 	node: Record<string, unknown>,
 	type: string,

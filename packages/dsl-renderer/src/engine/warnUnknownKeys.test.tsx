@@ -64,6 +64,8 @@ describe('DslRenderer: unknown authored keys at runtime (development)', () => {
 		expect(message).toContain('[DslRenderer] [Stack]');
 		expect(message).toContain('Did you mean "items"?');
 		expect(message).toContain('Known keys: gap, items');
+		// A key on the node itself carries no position suffix.
+		expect(message).not.toContain('(at ');
 	});
 
 	it('warns about a typo and suggests the closest known key', () => {
@@ -88,7 +90,10 @@ describe('DslRenderer: unknown authored keys at runtime (development)', () => {
 
 	it('checks the keys of array-of-object props (itemKeys), e.g. DataTable columns', () => {
 		render(<DslRenderer node={{ $type: 'Table', columns: [{ field: 'a', widht: 100 }] }} registry={registry} />);
-		expect(warnings().some(m => m.includes('unknown key "widht"') && m.includes('columns[0]'))).toBe(true);
+		const message = warnings().find(m => m.includes('unknown key "widht"'));
+		expect(message).toContain('columns[0]');
+		// An item key is located by its path under the node.
+		expect(message?.endsWith(' (at columns[0])')).toBe(true);
 	});
 
 	it('leaves an expression-bound itemKeys prop alone', () => {

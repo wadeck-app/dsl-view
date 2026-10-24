@@ -145,6 +145,26 @@ export function useActionHandlers(params: {
 		onActionErrorRef.current?.(err, { action: actionName, kind });
 	}, []);
 
+	// Refetch after an action. The cache is bypassed on purpose: the action just changed server data, so serving a
+	// source from its TTL cache would keep showing the rows the user just changed.
+	// `reloadSources`: a list reloads only those sources, `true` reloads all. Unset: `reloadAllWhenUnset` decides
+	// (row and batch actions reload everything, a named form handler reloads nothing).
+	const reloadAfterAction = useCallback(
+		async (reloadSources: ActionSpec['reloadSources'], reloadAllWhenUnset: boolean) => {
+			if (Array.isArray(reloadSources)) {
+				for (const sourceKey of reloadSources) {
+					invalidateSourceCache(sourceKey);
+				}
+				await loadSources(false, {}, new Set(reloadSources), true);
+				return;
+			}
+			if (reloadSources || reloadAllWhenUnset) {
+				await loadSources(false, {}, undefined, true);
+			}
+		},
+		[invalidateSourceCache, loadSources]
+	);
+
 	const namedHandlers = useMemo(() => {
 		const handlers: Record<string, (extraBody?: Record<string, unknown>) => Promise<unknown>> = {};
 		for (const [name, rawSpec] of Object.entries($actions ?? {})) {
@@ -167,12 +187,16 @@ export function useActionHandlers(params: {
 						const allParams: Record<string, string> = { ...currentRouteParams };
 						if (currentSearchParams) {
 							for (const [k, v] of currentSearchParams.entries()) {
-								if (!(k in allParams)) allParams[k] = v;
+								if (!(k in allParams)) {
+									allParams[k] = v;
+								}
 							}
 						}
 						if (extraBody) {
 							for (const [k, v] of Object.entries(extraBody)) {
-								if (!(k in allParams) && v != null) allParams[k] = String(v);
+								if (!(k in allParams) && v != null) {
+									allParams[k] = String(v);
+								}
 							}
 						}
 						const resolvedUrl = substituteUrlParams(spec.url, allParams, {
@@ -212,16 +236,7 @@ export function useActionHandlers(params: {
 							setExtras(prev => ({ ...prev, [spec.resultKey!]: result }));
 						}
 					}
-					if (spec.reloadSources) {
-						if (Array.isArray(spec.reloadSources)) {
-							for (const sourceKey of spec.reloadSources) {
-								invalidateSourceCache(sourceKey);
-							}
-							await loadSources(false, {}, new Set(spec.reloadSources));
-						} else {
-							await loadSources(false, {});
-						}
-					}
+					await reloadAfterAction(spec.reloadSources, false);
 					return result;
 				} catch (error) {
 					// Rethrown: a form keeps its values and a caller can still react to the rejection.
@@ -233,7 +248,7 @@ export function useActionHandlers(params: {
 			};
 		}
 		return handlers;
-	}, [$actions, fetcher, getToken, invalidateSourceCache, loadSources, mountedRef, begin, end]);
+	}, [$actions, fetcher, getToken, reloadAfterAction, mountedRef, begin, end]);
 
 	const onAction = useCallback(
 		async (actionName: string, row: Record<string, unknown>) => {
@@ -279,18 +294,7 @@ export function useActionHandlers(params: {
 				const authHeaders = await resolveAuthHeaders(getToken);
 				const result = await fetcher(resolvedUrl, { id }, undefined, authHeaders);
 				notifySuccess(notifyRef.current, actionName, spec, result);
-				if (spec.reloadSources) {
-					if (Array.isArray(spec.reloadSources)) {
-						for (const sourceKey of spec.reloadSources) {
-							invalidateSourceCache(sourceKey);
-						}
-						await loadSources(false, {}, new Set(spec.reloadSources));
-					} else {
-						await loadSources(false, {});
-					}
-				} else {
-					await loadSources(false, {});
-				}
+				await reloadAfterAction(spec.reloadSources, true);
 			} catch (error) {
 				reportActionError(actionName, 'row', error, spec);
 			} finally {
@@ -299,7 +303,7 @@ export function useActionHandlers(params: {
 				}
 			}
 		},
-		[$actions, fetcher, getToken, invalidateSourceCache, loadSources, mountedRef, reportActionError, begin, end]
+		[$actions, fetcher, getToken, reloadAfterAction, mountedRef, reportActionError, begin, end]
 	);
 
 	const onBatchAction = useCallback(
@@ -327,7 +331,7 @@ export function useActionHandlers(params: {
 				const authHeaders = await resolveAuthHeaders(getToken);
 				const result = await fetcher(batchUrl, undefined, { ids }, authHeaders);
 				notifySuccess(notifyRef.current, actionName, spec, result);
-				await loadSources(false, {});
+				await reloadAfterAction(undefined, true);
 			} catch (error) {
 				reportActionError(actionName, 'batch', error, spec);
 			} finally {
@@ -336,7 +340,7 @@ export function useActionHandlers(params: {
 				}
 			}
 		},
-		[$actions, fetcher, getToken, loadSources, reportActionError, begin, end]
+		[$actions, fetcher, getToken, reloadAfterAction, reportActionError, begin, end]
 	);
 
 	return { namedHandlers, onAction, onBatchAction, extras, actionPending, actionPendingRows: pendingRows };

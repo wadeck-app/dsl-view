@@ -89,6 +89,15 @@ export function useSourceLoader(params: {
 		sourceManagerRef.current = new SourceManager();
 	}
 
+	// Loads can overlap (a filter typed twice, a poll tick during a reload) and responses can arrive out of order.
+	// Each load stamps the sources it fetches; a response is applied only for the sources it still owns, so a slow
+	// older answer never replaces a newer one.
+	const loadSeqRef = useRef(0);
+	const latestLoadBySourceRef = useRef<Record<string, number>>({});
+	// `loading` / `isRefreshing` stay on until the LAST overlapping load of their kind settles.
+	const pendingLoadsRef = useRef(0);
+	const pendingPollsRef = useRef(0);
+
 	const loadSources = useCallback(
 		async (
 			isPolled = false,
@@ -114,9 +123,16 @@ export function useSourceLoader(params: {
 
 			const sortedKeys = topoSortSources(specsToLoad);
 
+			const loadSeq = ++loadSeqRef.current;
+			for (const key of Object.keys(specsToLoad)) {
+				latestLoadBySourceRef.current[key] = loadSeq;
+			}
+
 			if (isPolled) {
+				pendingPollsRef.current += 1;
 				setIsRefreshing(true);
 			} else {
+				pendingLoadsRef.current += 1;
 				setLoading(true);
 			}
 
@@ -216,18 +232,37 @@ export function useSourceLoader(params: {
 					return;
 				}
 
+				// A newer load started for some of these sources while this one was in flight: its answer wins, ours is stale.
+				const supersededKeys = new Set(Object.keys(specsToLoad).filter(key => latestLoadBySourceRef.current[key] !== loadSeq));
+				const current = Object.fromEntries(Object.entries(accumulated).filter(([key]) => !supersededKeys.has(key)));
 				// Partial reload (keysToLoad set): merge into existing state to preserve sources not reloaded
 				if (keysToLoad) {
-					setSourceData(prev => ({ ...prev, ...accumulated }));
+					setSourceData(prev => ({ ...prev, ...current }));
 				} else {
-					setSourceData(accumulated);
+					// Full load replaces the state, but a source a newer load owns keeps whatever is stored for it.
+					setSourceData(prev => {
+						const next = { ...current };
+						for (const key of supersededKeys) {
+							if (key in prev) {
+								next[key] = prev[key];
+							}
+						}
+						return next;
+					});
 				}
 				lastReportedErrorRef.current = null;
 			} finally {
+				if (isPolled) {
+					pendingPollsRef.current -= 1;
+				} else {
+					pendingLoadsRef.current -= 1;
+				}
 				if (mountedRef.current) {
 					if (isPolled) {
-						setIsRefreshing(false);
-					} else {
+						if (pendingPollsRef.current === 0) {
+							setIsRefreshing(false);
+						}
+					} else if (pendingLoadsRef.current === 0) {
 						setLoading(false);
 						setLoadedOnce(true);
 					}
@@ -249,7 +284,7 @@ export function useSourceLoader(params: {
 
 		const intervals: ReturnType<typeof setInterval>[] = [];
 
-		for (const [, raw] of Object.entries($sources)) {
+		for (const [key, raw] of Object.entries($sources)) {
 			const spec = normalizeSource(raw);
 			if (!spec.poll) {
 				continue;
@@ -271,6 +306,13 @@ export function useSourceLoader(params: {
 					if (!val || val === '0' || val === 'false') {
 						continue;
 					}
+				} else {
+					// Only `$urlParam.<name>` can be evaluated here. Polling anyway keeps the previous behaviour, but never silently:
+					// the author wrote a condition that is not being applied.
+					console.error(
+						`[useSourceLoader] Source "${key}": pollWhen "${spec.pollWhen}" is not supported, the condition is ignored and the source polls ` +
+							'unconditionally. Use "$urlParam.<name>" (polls while that query param is truthy).'
+					);
 				}
 			}
 

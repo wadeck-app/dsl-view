@@ -1,13 +1,9 @@
 import React from 'react';
 
-// process is defined by Node.js, Webpack, Vite, and similar bundlers.
-// The runtime usage below is always guarded by `typeof process !== 'undefined'`.
-// This declaration prevents TS errors in browser-targeted consuming projects.
-declare const process: { env: Record<string, string | undefined> } | undefined;
-
 import type { ComponentRegistry } from '../ComponentRegistry.js';
 import { EXTENSION_SLOT_TYPE, KNOWN_DSL_KEYS, omitNavKeys } from '../dslKeys.js';
-import { warnUnknownNodeKeys } from './warnUnknownKeys.js';
+import { isDevelopment } from './devMode.js';
+import { warnInvalidChildren, warnUnknownNodeKeys } from './warnUnknownKeys.js';
 
 export interface RenderContext {
 	[key: string]: unknown;
@@ -21,6 +17,25 @@ export interface RendererProps {
 
 // Defined in a React-free module so Node tooling can share them; re-exported to keep this module's public surface.
 export { EXTENSION_SLOT_TYPE, KNOWN_DSL_KEYS, omitNavKeys };
+
+/** True when a `$if` expression resolves to something falsy: the node renders nothing. */
+function isHiddenByIf(node: Record<string, unknown>, ctx: RenderContext): boolean {
+	const ifExpr = node['$if'] as string | undefined;
+	return Boolean(ifExpr) && !resolveExpressionValue(ifExpr, ctx);
+}
+
+/** Zod issues as a list, for the dev-mode schema alerts. */
+function IssueList({ issues }: { issues: ReadonlyArray<{ path: ReadonlyArray<PropertyKey>; message: string }> }) {
+	return (
+		<ul>
+			{issues.map((issue, i) => (
+				<li key={i}>
+					{issue.path.join('.') || 'root'}: {issue.message}
+				</li>
+			))}
+		</ul>
+	);
+}
 
 export function DslRenderer({ node, registry, ctx = {} }: RendererProps): React.ReactElement | null {
 	const type = node['$type'] as string | undefined;
@@ -41,12 +56,8 @@ export function DslRenderer({ node, registry, ctx = {} }: RendererProps): React.
 		);
 	}
 
-	const ifExpr = node['$if'] as string | undefined;
-	if (ifExpr) {
-		const resolved = resolveExpressionValue(ifExpr, ctx);
-		if (!resolved) {
-			return null;
-		}
+	if (isHiddenByIf(node, ctx)) {
+		return null;
 	}
 
 	// Compute child ctx: apply $context.expose if present.
@@ -61,7 +72,7 @@ export function DslRenderer({ node, registry, ctx = {} }: RendererProps): React.
 		}
 	}
 
-	if (typeof process !== 'undefined' && process.env['NODE_ENV'] !== 'production') {
+	if (isDevelopment()) {
 		// Unknown $-key check
 		for (const key of Object.keys(node)) {
 			if (key.startsWith('$') && !KNOWN_DSL_KEYS.has(key)) {
@@ -105,13 +116,7 @@ export function DslRenderer({ node, registry, ctx = {} }: RendererProps): React.
 				return (
 					<div role="alert">
 						<strong>[{type}] node schema error:</strong>
-						<ul>
-							{result.error.issues.map((issue, i) => (
-								<li key={i}>
-									{issue.path.join('.') || 'root'}: {issue.message}
-								</li>
-							))}
-						</ul>
+						<IssueList issues={result.error.issues} />
 					</div>
 				);
 			}
@@ -123,13 +128,7 @@ export function DslRenderer({ node, registry, ctx = {} }: RendererProps): React.
 				return (
 					<div role="alert">
 						<strong>[{type}] ctx schema warning:</strong>
-						<ul>
-							{result.error.issues.map((issue, i) => (
-								<li key={i}>
-									{issue.path.join('.') || 'root'}: {issue.message}
-								</li>
-							))}
-						</ul>
+						<IssueList issues={result.error.issues} />
 					</div>
 				);
 			}
@@ -146,12 +145,8 @@ function renderExtensionSlot(
 	registry: ComponentRegistry,
 	ctx: RenderContext
 ): React.ReactElement | null {
-	const ifExpr = node['$if'] as string | undefined;
-	if (ifExpr) {
-		const resolved = resolveExpressionValue(ifExpr, ctx);
-		if (!resolved) {
-			return null;
-		}
+	if (isHiddenByIf(node, ctx)) {
+		return null;
 	}
 
 	const itemsExpr = node['items'];
@@ -194,7 +189,9 @@ export function resolveExpressionValue(expr: unknown, ctx: RenderContext): unkno
 		current = ctx['$brains'];
 	} else if (root === 'sources') {
 		// $sources.books -> ctx['books'], $sources.books.items -> ctx['books'].items
-		if (rest.length === 0) return undefined;
+		if (rest.length === 0) {
+			return undefined;
+		}
 		current = ctx[rest[0]!];
 		for (const key of rest.slice(1)) {
 			if (current == null || typeof current !== 'object') {
@@ -221,7 +218,12 @@ export function renderChildren(
 	registry: ComponentRegistry,
 	ctx: RenderContext
 ): React.ReactElement[] {
-	if (!Array.isArray(nodes)) return [];
+	if (isDevelopment()) {
+		warnInvalidChildren(nodes);
+	}
+	if (!Array.isArray(nodes)) {
+		return [];
+	}
 	return (nodes as unknown[])
 		.map((node, i) => {
 			if (!node || typeof node !== 'object' || Array.isArray(node)) {

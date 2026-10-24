@@ -117,7 +117,16 @@ function PageRunner({
 			}
 			return compiled.doc as PageSpec & Record<string, unknown>;
 		}
-		return parseYaml(yamlText!) as PageSpec & Record<string, unknown>;
+		const parsed = parseYaml(yamlText!);
+		// Destructuring a scalar, a list or an empty document further down would fail with an opaque TypeError.
+		if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+			const got = parsed === undefined || parsed === null ? 'an empty document' : Array.isArray(parsed) ? 'a list' : `a ${typeof parsed}`;
+			throw new Error(
+				`[GenericPageRunner] The page YAML must be a mapping with a $type (got ${got}). ` +
+					'Check that the file is not empty, commented out, or missing its top-level keys.'
+			);
+		}
+		return parsed as PageSpec & Record<string, unknown>;
 	}, [yamlText, compiled, registry]);
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars -- $route stripped from spread so it doesn't reach the render tree

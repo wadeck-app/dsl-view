@@ -65,20 +65,24 @@ export function normalizeSource(raw: RawSourceSpec): SourceSpec {
 	return raw;
 }
 
+const DURATION_UNIT_MS = { s: 1000, m: 60_000 } as const;
+
+/** "30s" / "5m" to milliseconds, undefined when the text is not in that format. */
+function parseDurationMs(value: string): number | undefined {
+	const match = /^(\d+)([sm])$/.exec(value);
+	return match ? parseInt(match[1]!, 10) * DURATION_UNIT_MS[match[2] as keyof typeof DURATION_UNIT_MS] : undefined;
+}
+
 // Cache key = `sourceKey:resolvedUrl`. TTL is per-entry and set at write time.
 export class SourceManager {
 	private readonly cache = new Map<string, { data: unknown; fetchedAt: number; ttl: number }>();
 
 	parseDuration(s: string): number {
-		const secMatch = /^(\d+)s$/.exec(s);
-		if (secMatch) {
-			return parseInt(secMatch[1], 10) * 1000;
+		const ms = parseDurationMs(s);
+		if (ms === undefined) {
+			throw new Error(`Unparseable cache duration: "${s}". Expected format like "30s" or "5m".`);
 		}
-		const minMatch = /^(\d+)m$/.exec(s);
-		if (minMatch) {
-			return parseInt(minMatch[1], 10) * 60_000;
-		}
-		throw new Error(`Unparseable cache duration: "${s}". Expected format like "30s" or "5m".`);
+		return ms;
 	}
 
 	static buildKey(sourceKey: string, resolvedUrl: string): string {
@@ -122,15 +126,11 @@ export class SourceManager {
 }
 
 export function parsePollMs(poll: string): number {
-	const secMatch = /^(\d+)s$/.exec(poll);
-	if (secMatch) {
-		return parseInt(secMatch[1], 10) * 1000;
+	const ms = parseDurationMs(poll);
+	if (ms === undefined) {
+		throw new Error(`Unparseable poll interval: "${poll}". Expected format like "10s" or "1m".`);
 	}
-	const minMatch = /^(\d+)m$/.exec(poll);
-	if (minMatch) {
-		return parseInt(minMatch[1], 10) * 60_000;
-	}
-	throw new Error(`Unparseable poll interval: "${poll}". Expected format like "10s" or "1m".`);
+	return ms;
 }
 
 export function resolveParamValue(
@@ -330,13 +330,18 @@ export function notifySuccess(notify: Notify, actionName: string, spec: ActionSp
 	});
 }
 
+/** The numeric HTTP status the fetcher's thrown Error carries, if any. */
+function errorStatus(error: unknown): number | undefined {
+	const status = typeof error === 'object' && error !== null ? (error as { status?: unknown }).status : undefined;
+	return typeof status === 'number' ? status : undefined;
+}
+
 /** A `$sources` load failed: the page keeps whatever it had (nothing on first load), so say so instead of letting a table read as empty. */
 export function notifyLoadFailure(notify: Notify, error: unknown): void {
-	const status = typeof error === 'object' && error !== null ? (error as { status?: unknown }).status : undefined;
 	notify({
 		kind: 'error',
 		message: `Could not load the data: ${getErrorMessage(error)}`,
-		status: typeof status === 'number' ? status : undefined,
+		status: errorStatus(error),
 	});
 }
 
@@ -346,11 +351,10 @@ export function notifyFailure(notify: Notify, actionName: string, spec: ActionSp
 		return;
 	}
 	const message = getErrorMessage(error);
-	const status = typeof error === 'object' && error !== null ? (error as { status?: unknown }).status : undefined;
 	notify({
 		kind: 'error',
 		message: spec?.errorPrefix ? `${spec.errorPrefix}: ${message}` : message,
-		status: typeof status === 'number' ? status : undefined,
+		status: errorStatus(error),
 		action: actionName,
 	});
 }

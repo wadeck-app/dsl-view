@@ -27,44 +27,41 @@ function isReactiveRef(value: unknown): boolean {
 	);
 }
 
-function resolveParamFromCtx(value: string, ctx: Record<string, unknown>): unknown {
-	const path = value.slice(1).split('.');
-	const root = path[0];
-	const rest = path.slice(1);
+/** Follows `keys` into `start`; undefined as soon as a step is not an object (a missing value is not an error here: it means "not ready yet"). */
+function walkPath(start: unknown, keys: string[]): unknown {
+	let current = start;
+	for (const key of keys) {
+		if (current == null || typeof current !== 'object') {
+			return undefined;
+		}
+		current = (current as Record<string, unknown>)[key];
+	}
+	return current;
+}
 
-	let current: unknown;
+function resolveParamFromCtx(value: string, ctx: Record<string, unknown>): unknown {
+	const [root, ...rest] = value.slice(1).split('.');
 	if (root === 'outputs') {
-		current = ctx['$outputs'];
-		for (const key of rest) {
-			if (current == null || typeof current !== 'object') return undefined;
-			current = (current as Record<string, unknown>)[key];
-		}
-		return current;
-	} else if (root === 'sources') {
+		return walkPath(ctx['$outputs'], rest);
+	}
+	if (root === 'sources') {
 		// $sources.books -> ctx['books'], $sources.books.items -> ctx['books'].items
-		if (rest.length === 0) return undefined;
-		current = ctx[rest[0]!];
-		for (const key of rest.slice(1)) {
-			if (current == null || typeof current !== 'object') return undefined;
-			current = (current as Record<string, unknown>)[key];
-		}
-		return current;
-	} else if (root === 'vars') {
-		current = ctx['$vars'];
-		for (const key of rest) {
-			if (current == null || typeof current !== 'object') return undefined;
-			current = (current as Record<string, unknown>)[key];
-		}
-		return current;
-	} else if (root === 'brains') {
-		current = ctx['$brains'];
-		for (const key of rest) {
-			if (current == null || typeof current !== 'object') return undefined;
-			current = (current as Record<string, unknown>)[key];
-		}
-		return current;
+		return rest.length === 0 ? undefined : walkPath(ctx[rest[0]!], rest.slice(1));
+	}
+	if (root === 'vars') {
+		return walkPath(ctx['$vars'], rest);
+	}
+	if (root === 'brains') {
+		return walkPath(ctx['$brains'], rest);
 	}
 	return undefined;
+}
+
+// A `{placeholder}` with no value still produces a request/navigation (an empty segment, e.g. `DELETE /api/items/`), so
+// it is reported instead of passing silently. Same lenient policy as `$actions` without strictParams.
+function warnMissingPlaceholder(brainRef: string, url: string, key: string): string {
+	console.warn(`[useBrains] ${brainRef}: URL placeholder {${key}} has no value in "${url}", substituting an empty string.`);
+	return '';
 }
 
 function collectReactiveParams(
@@ -103,9 +100,12 @@ async function executeFrameworkOrRegistryBrain(
 	routeParams?: Record<string, string>
 ): Promise<unknown> {
 	if (brainRef === '$brains.$ctx.setVar') {
-		const varName = params['varName'] as string;
-		const value = params['value'];
-		setVar(varName, value);
+		const varName = params['varName'];
+		// Without a name the value would land under the key "undefined" and nothing would ever read it.
+		if (typeof varName !== 'string' || varName === '') {
+			throw new Error(`[useBrains] ${brainRef} needs a non-empty "varName" (got ${JSON.stringify(varName) ?? 'nothing'}).`);
+		}
+		setVar(varName, params['value']);
 		return undefined;
 	}
 
@@ -114,9 +114,11 @@ async function executeFrameworkOrRegistryBrain(
 		if (!to) return undefined;
 		const allParams: Record<string, string> = { ...(routeParams ?? {}) };
 		for (const [k, v] of Object.entries(params)) {
-			if (k !== 'to' && k !== 'route' && k !== '_event' && v != null) allParams[k] = String(v);
+			if (k !== 'to' && k !== 'route' && k !== '_event' && v != null) {
+				allParams[k] = String(v);
+			}
 		}
-		window.location.href = substituteUrlParams(to, allParams);
+		window.location.href = substituteUrlParams(to, allParams, { onMissing: key => warnMissingPlaceholder(brainRef, to, key) });
 		return undefined;
 	}
 
@@ -131,9 +133,11 @@ async function executeFrameworkOrRegistryBrain(
 		// Merge route params first (lower priority), then brain params (higher priority)
 		const allParams: Record<string, string> = { ...(routeParams ?? {}) };
 		for (const [k, v] of Object.entries(params)) {
-			if (k !== 'url' && k !== 'body' && v != null) allParams[k] = String(v);
+			if (k !== 'url' && k !== 'body' && v != null) {
+				allParams[k] = String(v);
+			}
 		}
-		const resolvedUrl = substituteUrlParams(url, allParams);
+		const resolvedUrl = substituteUrlParams(url, allParams, { onMissing: key => warnMissingPlaceholder(brainRef, url, key) });
 		const authHeaders = await resolveAuthHeaders(getToken);
 		if (method === 'GET' || method === 'DELETE') {
 			return await fetcher(resolvedUrl, undefined, undefined, authHeaders);
