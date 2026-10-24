@@ -17,33 +17,23 @@ import fs from 'fs';
 import path from 'path';
 import { Node, Project, SyntaxKind } from 'ts-morph';
 import type { FunctionDeclaration } from 'ts-morph';
-import { load as parseYaml } from 'js-yaml';
 import { fileURLToPath } from 'url';
 import type { Plugin } from 'vite';
+import { readDslConfig } from './dslConfig.js';
+import type { DslConfig } from './dslConfig.js';
+import { isPathInside } from './pathUtils.js';
 import { buildKnownKeysManifest } from './unknownKeys.js';
 import type { DslKeysManifest } from './unknownKeys.js';
+import { EXTENSION_SLOT_TYPE } from '../dslKeys.js';
 import type { ItemKeysSpec, MapSlotSpec } from '../dslKeys.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ─── dsl.config.yaml reader ───────────────────────────────────────────────────
-
-interface DslConfig {
-	packages: Record<string, string>;
-}
-
-function readDslConfig(appRoot: string): DslConfig {
-	const configPath = path.join(appRoot, 'dsl.config.yaml');
-	if (!fs.existsSync(configPath)) {
-		return { packages: {} };
-	}
-	const raw = parseYaml(fs.readFileSync(configPath, 'utf-8')) as { packages?: Record<string, string> } | null;
-	return { packages: raw?.packages ?? {} };
-}
+// ─── Package directory resolution ─────────────────────────────────────────────
 
 /** Find the node_modules directory that actually contains the given package. */
-function findNodeModulesForPackage(startDir: string, pkgName: string): string | null {
+export function findNodeModulesForPackage(startDir: string, pkgName: string): string | null {
 	let dir = startDir;
 	for (let i = 0; i < 8; i++) {
 		const candidate = path.join(dir, 'node_modules', pkgName);
@@ -57,7 +47,7 @@ function findNodeModulesForPackage(startDir: string, pkgName: string): string | 
 
 /** Resolve the src/components directory for an npm package name.
  *  Tries in order: monorepo packages/, workspace packages/, node_modules. */
-function resolvePackageComponentsDir(
+export function resolvePackageComponentsDir(
 	npmPkgName: string,
 	monorepoRoot: string,
 	appRoot: string
@@ -88,7 +78,7 @@ function resolvePackageComponentsDir(
 	return workspacePath;
 }
 
-function resolveWatchDirs(
+export function resolveWatchDirs(
 	config: DslConfig,
 	monorepoRoot: string,
 	appRoot: string
@@ -96,7 +86,7 @@ function resolveWatchDirs(
 	const dirs: Array<{ pkg: string; absDir: string }> = [
 		{ pkg: 'dsl-ui', absDir: resolvePackageComponentsDir('dsl-ui', monorepoRoot, appRoot) },
 	];
-	for (const pkg of Object.values(config.packages)) {
+	for (const pkg of Object.values(config.packages ?? {})) {
 		dirs.push({ pkg, absDir: resolvePackageComponentsDir(pkg, monorepoRoot, appRoot) });
 	}
 	return dirs;
@@ -121,6 +111,30 @@ function findCallExpressionArgIdentifiers(fn: FunctionDeclaration, calleeName: s
 // Props that are internal to React/HTML and never authored in DSL YAML.
 // 'children' is intentionally NOT here — it falls through to the hasChildren path.
 const GENERATED_RENDER_SKIP_PROPS = new Set(['className', 'style', 'ref', 'key']);
+
+// ts-morph returns quoted names for hyphenated props (e.g. "'aria-label'" instead of "aria-label").
+function unquotePropName(name: string): string {
+	return name.replace(/^['"`]|['"`]$/g, '');
+}
+
+/**
+ * Whether the generated render reads this prop from the YAML node at all. The single filter behind both
+ * `extractKnownKeys` (what the compiler accepts) and `generateSimpleEntry` (what the render reads): they must never disagree.
+ * data-* and non-identifier names are never authored; aria-* is valid JSX and therefore authorable.
+ */
+function isAuthorablePropName(name: string): boolean {
+	if (name.startsWith('data-')) return false;
+	if (!/^[a-zA-Z][a-zA-Z0-9]*$/.test(name) && !name.startsWith('aria-')) return false;
+	return !GENERATED_RENDER_SKIP_PROPS.has(name);
+}
+
+// A callback shaped (node, ctx) => ReactNode - the generic "recurse back into the DSL renderer for this one sub-node"
+// slot, e.g. DataTable's `renderNode` (expansion rows, one per clicked row). Unlike a plain React.ReactNode slot it needs
+// extra per-call ctx (e.g. { row }) merged in by the caller, so it can't be resolved once up front like other props:
+// the component itself calls it, passing its own extra ctx each time.
+function isRenderNodeCallbackType(typeText: string): boolean {
+	return typeText.includes('=>') && /=>\s*(React\.)?ReactNode\s*$/.test(typeText);
+}
 
 /**
  * A prop that holds nested DSL nodes: `React.ReactNode`, or a union of `ReactNode` and render functions
@@ -209,7 +223,7 @@ export function extractMapSlots(
 						`[entriesGenerator] ${where}: @mapSlot needs the type "Record<string, SomeInterface>" with SomeInterface declared in the same file, got "${typeText}"`
 					);
 				}
-				const keys = entryInterface.getProperties().map((p) => p.getName().replace(/^['"`]|['"`]$/g, ''));
+				const keys = entryInterface.getProperties().map((p) => unquotePropName(p.getName()));
 				if (!keys.includes(nodeKey)) {
 					throw new Error(`[entriesGenerator] ${where}: @mapSlot key "${nodeKey}" is not a property of ${entryInterface.getName()} (${keys.join(', ')})`);
 				}
@@ -223,7 +237,7 @@ export function extractMapSlots(
 type TsSourceFile = ReturnType<InstanceType<typeof Project>['addSourceFileAtPath']>;
 
 function propertyNames(iface: { getProperties(): Array<{ getName(): string }> }): string[] {
-	return iface.getProperties().map((p) => p.getName().replace(/^['"`]|['"`]$/g, ''));
+	return iface.getProperties().map((p) => unquotePropName(p.getName()));
 }
 
 // Keys of one YAML object interface, plus the keys of its own array-of-interface properties (e.g. an actions
@@ -242,7 +256,7 @@ function itemSpecOf(sourceFile: TsSourceFile, interfaceName: string, where: stri
 		const typeText = prop.getTypeNode()?.getText() ?? '';
 		const match = /^(\w+)\[\]$/.exec(typeText) ?? /^Array<\s*(\w+)\s*>$/.exec(typeText);
 		if (match?.[1] && sourceFile.getInterface(match[1])) {
-			arrays[prop.getName().replace(/^['"`]|['"`]$/g, '')] = itemSpecOf(sourceFile, match[1], where, nextVisited);
+			arrays[unquotePropName(prop.getName())] = itemSpecOf(sourceFile, match[1], where, nextVisited);
 		}
 	}
 	return { keys: propertyNames(iface), ...(Object.keys(arrays).length > 0 ? { arrays } : {}) };
@@ -317,15 +331,13 @@ export function extractKnownKeys(
 	const keys = new Set<string>();
 	if (isFormDataBind) keys.add('bind');
 	for (const prop of properties) {
-		const name = prop.getName().replace(/^['"`]|['"`]$/g, '');
+		const name = unquotePropName(prop.getName());
 		if (consumed.has(name)) continue;
-		if (name.startsWith('data-')) continue;
-		if (!/^[a-zA-Z][a-zA-Z0-9]*$/.test(name) && !name.startsWith('aria-')) continue;
-		if (GENERATED_RENDER_SKIP_PROPS.has(name)) continue;
+		if (!isAuthorablePropName(name)) continue;
 		const typeText = prop.getTypeNode()?.getText() ?? '';
 		const isReactNode = isReactNodeSlotType(typeText);
 		// A (node, ctx) => ReactNode callback is wired by the generated render, never read from the YAML node.
-		if (!isReactNode && typeText.includes('=>') && /=>\s*(React\.)?ReactNode\s*$/.test(typeText)) continue;
+		if (!isReactNode && isRenderNodeCallbackType(typeText)) continue;
 		// A ReactNode `children` prop is read from the `items` DSL key (see generateSimpleEntry).
 		keys.add(name === 'children' && isReactNode ? 'items' : name);
 	}
@@ -370,12 +382,18 @@ export function extractProvidesContextFromProviderJsx(fn: FunctionDeclaration): 
 	return [...new Set(names)];
 }
 
+// Tests, stories and specs are never components or hooks of the library: skipping them keeps a test helper from being
+// registered and spares ts-morph from parsing a large share of the files of a component tree.
+function isComponentSourceFile(file: string): boolean {
+	return file.endsWith('.tsx') && !/\.(test|spec|stories)\.tsx$/.test(file);
+}
+
 function collectContextHookWrappers(pkgDirs: string[]): Map<string, string[]> {
 	const wrapperToContexts = new Map<string, string[]>();
 	const project = new Project({ skipFileDependencyResolution: true });
 	for (const dir of pkgDirs) {
 		if (!fs.existsSync(dir)) continue;
-		for (const file of (fs.readdirSync(dir, { recursive: true }) as string[]).filter(f => f.endsWith('.tsx'))) {
+		for (const file of (fs.readdirSync(dir, { recursive: true }) as string[]).filter(isComponentSourceFile)) {
 			const sourceFile = project.addSourceFileAtPath(path.join(dir, file));
 			for (const fn of sourceFile.getFunctions()) {
 				if (!fn.isExported()) continue;
@@ -428,7 +446,7 @@ function discoverComponents(srcDir: string, hookWrappers: Map<string, string[]>)
 	const project = new Project({ skipFileDependencyResolution: true });
 	const discovered: DiscoveredComponent[] = [];
 
-	for (const file of (fs.readdirSync(srcDir, { recursive: true }) as string[]).filter(f => f.endsWith('.tsx'))) {
+	for (const file of (fs.readdirSync(srcDir, { recursive: true }) as string[]).filter(isComponentSourceFile)) {
 		const absPath = path.join(srcDir, file);
 		const sourceFile = project.addSourceFileAtPath(absPath);
 		for (const fn of sourceFile.getFunctions()) {
@@ -485,22 +503,24 @@ function discoverComponents(srcDir: string, hookWrappers: Map<string, string[]>)
 // `moduleLevel` receives code that must live at module scope of the generated file (e.g. the stable
 // wrapper component of a bind-pattern entry): a component declared inside `render` gets a new identity on
 // every render, so React would unmount and remount the field (focus lost, refs stale) each time.
+// `project` is shared by every component of one generation: building a ts-morph Project (and its type checker, needed
+// for the bound value types) per component made a registry of ~90 components take tens of seconds.
 function generateSimpleEntry(
 	component: DiscoveredComponent,
 	importPath: string,
-	moduleLevel: string[]
+	moduleLevel: string[],
+	project: Project
 ): string {
-	const project = new Project({ skipFileDependencyResolution: true });
-	const sourceFile = project.addSourceFileAtPath(component.sourcePath);
+	const sourceFile = project.getSourceFile(component.sourcePath) ?? project.addSourceFileAtPath(component.sourcePath);
 	const propsInterface = sourceFile.getInterface(`${component.name}Props`);
 
 	if (!propsInterface) {
 		// No Props interface found — check if the component accepts children via HTML attributes
 		// (e.g. RouterProvider from react-router-dom which wraps HTMLElement).
 		// Generate a children-forwarding render to avoid broken JSX with required children.
-		return `render: ({ node, registry }: RegistryRenderProps) => {
+		return `render: ({ node, registry, ctx }: RegistryRenderProps) => {
 		const items = node['items'] as unknown[] | undefined
-		return <${component.name}>{items ? renderChildren(items, registry, {}) : null}</${component.name}>
+		return <${component.name}>{items ? renderChildren(items, registry, ctx) : null}</${component.name}>
 	},`;
 	}
 
@@ -518,11 +538,9 @@ function generateSimpleEntry(
 
 	const declLines: string[] = [];
 	const jsxAttrs: string[] = [];
-	let hasSlots = false;
 	// True when any generated line calls renderChildren(..., registry, ...), so `registry` must be destructured.
 	let usesRegistry = false;
 	let hasChildren = false;
-	let childrenDslKey = 'items';
 
 	// Pre-scan: determine if this is a checked-style (toggle) component for bind exclusion
 	const hasCheckedProp = allProperties.some(p => p.getName() === 'checked');
@@ -538,37 +556,21 @@ function generateSimpleEntry(
 		if (hasCheckedProp && !hasValueProp) bindConsumedProps.add('checked');
 	}
 
-	const SKIP_PROPS = GENERATED_RENDER_SKIP_PROPS;
-
 	for (const prop of allProperties) {
-		// ts-morph returns quoted names for hyphenated props (e.g. "'aria-label'" instead of "aria-label").
-		// Strip surrounding quotes to get the raw name.
-		const name = prop.getName().replace(/^['"`]|['"`]$/g, '');
+		const name = unquotePropName(prop.getName());
 		if (bindConsumedProps.has(name)) continue;
-		// Skip data-* props -- never authored in DSL YAML. Allow aria-* (valid JSX attrs).
-		if (name.startsWith('data-')) continue;
-		if (!/^[a-zA-Z][a-zA-Z0-9]*$/.test(name) && !name.startsWith('aria-')) continue;
-		// Skip internal React/HTML props never authored in DSL YAML
-		if (SKIP_PROPS.has(name)) continue;
+		// data-*, non-identifier and internal React/HTML props are never authored in DSL YAML.
+		if (!isAuthorablePropName(name)) continue;
 
-		const typeNode = prop.getTypeNode();
-		const typeText = typeNode?.getText() ?? '';
+		const typeText = prop.getTypeNode()?.getText() ?? '';
 		const isReactNode = isReactNodeSlotType(typeText);
-		// A callback shaped (node, ctx) => ReactNode - the generic "recurse back into the DSL
-		// renderer for this one sub-node" slot, e.g. DataTable's `renderNode` (expansion rows,
-		// one per clicked row). Unlike a plain React.ReactNode slot it needs extra per-call ctx
-		// (e.g. { row }) merged in by the caller, so it can't be resolved once up front like
-		// other props - the component itself calls it, passing its own extra ctx each time.
-		const isRenderNodeCallback = typeText.includes('=>') && /=>\s*(React\.)?ReactNode\s*$/.test(typeText);
+		const isRenderNodeCallback = isRenderNodeCallbackType(typeText);
 
 		if (isReactNode) {
-			hasSlots = true;
 			usesRegistry = true;
 			if (name === 'children') {
+				// A ReactNode `children` prop is read from the `items` DSL key (see extractAllowedChildren / extractKnownKeys).
 				hasChildren = true;
-				// Check for custom childrenDslKey from JSDoc @slot or conventions
-				// Default to 'items' — most components use 'items' as the DSL array key
-				childrenDslKey = 'items';
 			} else {
 				// Named slot: render as children array from node['propName']
 				declLines.push(`const ${name} = node['${name}'] as unknown[] | undefined`);
@@ -650,14 +652,14 @@ ${fullDecl}
 	}
 
 	if (hasChildren) {
-		const childDeclLine = `\t\tconst ${childrenDslKey} = node['${childrenDslKey}'] as unknown[] | undefined`;
+		const childDeclLine = "\t\tconst items = node['items'] as unknown[] | undefined";
 		const fullDecl = declText ? `${childDeclLine}\n${declText}` : childDeclLine;
 
 		return `render: ({ node, registry, ctx }: RegistryRenderProps) => {
 ${fullDecl}
 		return (
 			<${component.name}${attrsText}>
-				{${childrenDslKey} ? renderChildren(${childrenDslKey}, registry, ctx) : null}
+				{items ? renderChildren(items, registry, ctx) : null}
 			</${component.name}>
 		)
 	},`;
@@ -691,7 +693,7 @@ ${declText}
 // Derives a component's import specifier from its discovered absolute source path.
 // When the source is inside node_modules/@wadeck-app/<pkg>/src/..., use the package
 // name import rather than a long relative ../../../../node_modules/... path.
-function relativeImportPath(sourcePath: string, outputDir: string): string {
+export function relativeImportPath(sourcePath: string, outputDir: string): string {
 	// Normalize separators for cross-platform matching
 	const normalised = sourcePath.split(path.sep).join('/');
 	const nmMatch = normalised.match(/\/node_modules\/(@[^/]+\/[^/]+|[^/]+)\/(.+)$/);
@@ -711,15 +713,17 @@ function relativeImportPath(sourcePath: string, outputDir: string): string {
 
 // ─── YAML $type guard-rail ────────────────────────────────────────────────────
 
-function collectYamlTypeReferences(pagesDir: string): Set<string> {
+// Component names written as `$type: Name` (optionally quoted) in the pages, several per line allowed (flow style).
+// A comment (`#` at the start of a line or after a space) is ignored; an expression value (`$type: $ctx.kind`) is not a name.
+export function collectYamlTypeReferences(pagesDir: string): Set<string> {
 	const types = new Set<string>();
 	if (!fs.existsSync(pagesDir)) return types;
-	const re = /\$type:\s*(\S+)/g;
-	for (const file of fs.readdirSync(pagesDir).filter(f => f.endsWith('.yaml'))) {
-		const content = fs.readFileSync(path.join(pagesDir, file), 'utf-8');
-		let match: RegExpExecArray | null;
-		while ((match = re.exec(content)) !== null) {
-			if (match[1]) types.add(match[1]);
+	for (const file of fs.readdirSync(pagesDir).filter(f => f.endsWith('.yaml')).sort()) {
+		for (const line of fs.readFileSync(path.join(pagesDir, file), 'utf-8').split(/\r?\n/)) {
+			const code = line.replace(/(^|\s)#.*$/, '$1');
+			for (const match of code.matchAll(/\$type:\s*['"]?([A-Za-z_][\w:.-]*)/g)) {
+				types.add(match[1]!);
+			}
 		}
 	}
 	return types;
@@ -773,21 +777,33 @@ function buildEntriesFileImpl(
 ): string {
 	const outputDir = path.resolve(appRoot, 'src/generated');
 	const allDiscovered = overrideDiscovered ?? (() => {
+		// A configured package whose components directory cannot be found contributes nothing: say so instead of letting
+		// every page that uses its components fail later with "Unknown component type".
+		for (const { pkg, absDir } of watchDirs) {
+			if (!fs.existsSync(absDir)) {
+				console.warn(
+					`[entriesGenerator] components directory not found for package "${pkg}": ${absDir}. ` +
+						`Its components will be missing from the registry - check the package name in dsl.config.yaml and that it is installed.`
+				);
+			}
+		}
 		const hookWrappers = collectContextHookWrappers(watchDirs.map(d => d.absDir));
 		return watchDirs.flatMap(({ absDir }) => discoverComponents(absDir, hookWrappers));
 	})();
 
-	// Guard-rail: check all YAML $type references are covered
+	// Guard-rail: a page $type that no scanned component provides renders "Unknown component type" at runtime (a component
+	// missing its @registryCategory tag is silently left out of the registry). Only a warning: an app-local component
+	// registered by hand, the built-in ExtensionSlot and `<module>:<Name>` library components are legitimate and unknowable here.
 	const pagesDir = path.resolve(appRoot, 'src/dsl/pages');
-	const yamlTypeReferences = collectYamlTypeReferences(pagesDir);
 	const registeredNames = new Set(allDiscovered.map(c => c.name));
-	const uncoveredComponents = allDiscovered.filter(
-		c => yamlTypeReferences.has(c.name) && !registeredNames.has(c.name)
+	const unresolvedTypes = [...collectYamlTypeReferences(pagesDir)].filter(
+		type => !registeredNames.has(type) && type !== EXTENSION_SLOT_TYPE && !type.includes(':')
 	);
-	if (uncoveredComponents.length > 0) {
-		throw new Error(
-			`[buildEntriesFile] Components referenced by a YAML $type but never wired: ${uncoveredComponents.map(c => c.name).join(', ')}. ` +
-				`Add a @registryCategory JSDoc tag to the component.`
+	if (unresolvedTypes.length > 0) {
+		console.warn(
+			`[entriesGenerator] src/dsl/pages uses $type(s) that no scanned component provides: ${unresolvedTypes.join(', ')}. ` +
+				`If a component of a scanned package is meant to be one of them, add a @registryCategory JSDoc tag to it; ` +
+				`ignore this for components you register by hand.`
 		);
 	}
 
@@ -844,9 +860,14 @@ ${importLines.join('\n')}
 
 	// Generate one entry per discovered component
 	const moduleLevelBlocks: string[] = [];
+	const project = new Project({ skipFileDependencyResolution: true });
+	// Every file is added before the first type query so the program is built once, not rebuilt per added file.
+	for (const component of allDiscovered) {
+		if (!project.getSourceFile(component.sourcePath)) project.addSourceFileAtPath(component.sourcePath);
+	}
 	const entriesBody = allDiscovered.map(component => {
 		const importPath = relativeImportPath(component.sourcePath, outputDir);
-		const renderBlock = generateSimpleEntry(component, importPath, moduleLevelBlocks);
+		const renderBlock = generateSimpleEntry(component, importPath, moduleLevelBlocks, project);
 		const tagsJson = JSON.stringify(component.tags);
 
 		return `export const ${component.name}Entry: ComponentRegistryEntry = {
@@ -871,9 +892,9 @@ ${importLines.join('\n')}
 				lines.push(`${entryVar}.mapSlots = ${JSON.stringify(c.mapSlots)};`);
 			}
 			if (c.itemKeys && Object.keys(c.itemKeys).length > 0) {
-					lines.push(`${entryVar}.itemKeys = ${JSON.stringify(c.itemKeys)};`);
-				}
-				if (c.knownKeys) {
+				lines.push(`${entryVar}.itemKeys = ${JSON.stringify(c.itemKeys)};`);
+			}
+			if (c.knownKeys) {
 				lines.push(`${entryVar}.knownKeys = ${JSON.stringify(c.knownKeys)};`);
 			}
 			if (c.providesContext.length > 0) {
@@ -908,7 +929,12 @@ ${metadataLines}
 
 // ─── Vite plugin ──────────────────────────────────────────────────────────────
 
-export function entriesGenerator(): Plugin {
+export interface EntriesGeneratorOptions {
+	/** Root scanned for `packages/<name>/src/components` before the app's own workspace. Defaults to four levels above this file. */
+	monorepoRoot?: string;
+}
+
+export function entriesGenerator(options: EntriesGeneratorOptions = {}): Plugin {
 	let appRoot = '';
 	let outputPath = '';
 	let watchDirs: Array<{ pkg: string; absDir: string }> = [];
@@ -917,7 +943,7 @@ export function entriesGenerator(): Plugin {
 	// Walk up from this file to find the monorepo root.
 	// In the dsl-view source: build/ -> src/ -> dsl-renderer/ -> packages/ -> root (4 levels up).
 	// When installed as npm package: dist/build/ -> dist/ -> @wadeck-app/dsl-renderer/ -> @wadeck-app/ -> node_modules/ -> ... (not a monorepo root).
-	const monorepoRoot = path.resolve(__dirname, '../../../..');
+	const monorepoRoot = options.monorepoRoot ?? path.resolve(__dirname, '../../../..');
 	// Detect whether we are running inside the dsl-view source tree or as an installed npm package.
 	const isInMonorepo = fs.existsSync(path.resolve(monorepoRoot, 'packages/dsl-renderer'));
 
@@ -940,7 +966,7 @@ export function entriesGenerator(): Plugin {
 			generate();
 		},
 		handleHotUpdate({ file }) {
-			const isWatched = watchDirs.some(({ absDir }) => file.startsWith(absDir));
+			const isWatched = watchDirs.some(({ absDir }) => isPathInside(absDir, file));
 			if (isWatched) {
 				generate();
 			}

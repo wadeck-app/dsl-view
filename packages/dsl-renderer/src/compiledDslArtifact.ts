@@ -8,7 +8,20 @@ export interface CompiledDslDiagnostic {
 	severity: 'error' | 'warning';
 	type: string;
 	nodePath: string;
-	code: 'unknown-component-type' | 'unknown-directive' | 'node-schema' | 'unknown-key' | 'unchecked-keys' | 'invalid-map-slot' | 'invalid-item-keys' | 'unknown-action-key';
+	code:
+		| 'unknown-component-type'
+		| 'unknown-directive'
+		| 'node-schema'
+		| 'unknown-key'
+		| 'unchecked-keys'
+		| 'invalid-map-slot'
+		| 'invalid-item-keys'
+		| 'unknown-action-key'
+		// A value where a DSL node is expected is not a map, or a node has no `$type`: either renders nothing.
+		| 'invalid-node'
+		| 'missing-type'
+		// A slot (`items`) that is neither a list nor an expression string.
+		| 'invalid-slot';
 	message: string;
 }
 

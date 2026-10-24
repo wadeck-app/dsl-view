@@ -22,7 +22,7 @@ export function suggestKey(key: string, knownKeys: string[]): string | undefined
 		return 'items';
 	}
 	let best: string | undefined;
-	// Max distance 2, and strictly less than half the key length so short keys don't get random suggestions.
+	// Accepted distance is at most 2 and strictly under half the key length (rounded up), so short keys get no random suggestion.
 	let bestDistance = Math.min(3, Math.ceil(key.length / 2));
 	for (const candidate of knownKeys) {
 		const distance = editDistance(key.toLowerCase(), candidate.toLowerCase());

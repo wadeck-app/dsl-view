@@ -86,3 +86,19 @@ describe('extractPath', () => {
 		expect(extractPath('/api/books/')).toBe('/api/books/');
 	});
 });
+
+describe('normalizeUrlStructure placeholder syntax', () => {
+	it('only treats a segment as a {param} when it both opens and closes with a brace', () => {
+		expect(normalizeUrlStructure('/api/{half')).toBe('/api/{half');
+		expect(normalizeUrlStructure('/api/half}')).toBe('/api/half}');
+		expect(normalizeUrlStructure('/api/{full}')).toBe('/api/:__p0');
+	});
+
+	it('numbers {param} and :param placeholders in one shared sequence', () => {
+		expect(normalizeUrlStructure('/a/{x}/b/:y/c/{z}')).toBe('/a/:__p0/b/:__p1/c/:__p2');
+	});
+
+	it('drops the query string after the params are numbered', () => {
+		expect(normalizeUrlStructure('GET /api/books/{id}?expand=true&x=1')).toBe('/api/books/:__p0');
+	});
+});

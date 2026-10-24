@@ -397,6 +397,23 @@ Unknown keys (`unknown-key`, error) come from `knownKeys` on each generated regi
 
 The same check runs in `DslRenderer` in development (same `NODE_ENV` guard as the unknown-`$`-directive alert), for pages that run without the compiler: a `console.warn` naming the component, the key, a suggestion (`children` -> `items`, closest known key) and the known keys, plus the keys of `itemKeys` props such as DataTable `columns`. It never changes what renders. Runtime has no node path, so a warning appears once per component type + key per page load; a hand-written entry without `knownKeys` gets one "keys not checked" line per type. Both checks share `src/nodeKeyCheck.ts`.
 
+Shape errors, all `error`, all because the node would render nothing:
+
+| Code | Meaning |
+|---|---|
+| `invalid-node` | A slot item (or the whole page, e.g. an empty file) is not a map. |
+| `missing-type` | A map in a slot, or the page itself, has no `$type`. |
+| `invalid-slot` | A slot (`items`) is neither a list nor an expression string; `items:` with nothing under it counts. |
+
+An invalid YAML file makes `compileDslDocument` throw `[dslCompiler] <file>: invalid YAML - …` (the file name js-yaml does not give). `$actions` keys the compiler does not know are `unknown-action-key` errors.
+
+Build-time generators (Vite plugins) fail or warn loudly instead of skipping:
+
+- `entriesGenerator` warns when a configured package has no components directory, and when a page `$type` matches no scanned component (ignore it for components you register by hand; `ExtensionSlot` and `<module>:<Name>` are not reported). Test, spec and stories files are never scanned.
+- `routesGenerator` fails when two page filenames map to the same import identifier (`a-b.yaml`, `a_b.yaml`).
+- `dsl.config.yaml` that is invalid YAML or not a map fails with its path. A `contracts` package installed under the app's `node_modules` is imported through its `package.json` entry (`exports["."]` import/default, `module`, `main`).
+- Hot updates regenerate files on Windows too: the watched-path check normalises separators and drive-letter case.
+
 Not checked at compile time (need runtime `$sources` data): `ctxSchema`, and whether `$context.expose` references a ctx key that actually exists. `DslRenderer.tsx` still checks both of these at render, in dev, regardless of whether the page was compiled.
 
 ### `scripts/check-dsl.ts` (consuming app, not shipped by dsl-renderer)

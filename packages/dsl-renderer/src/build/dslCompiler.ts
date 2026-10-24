@@ -16,7 +16,14 @@ export function compileDslDocument(
 	registry: ComponentRegistry,
 	options?: { sourcePath?: string }
 ): CompiledDslArtifact {
-	const doc = parseYaml(yamlText) as Record<string, unknown>;
+	let doc: Record<string, unknown>;
+	try {
+		doc = parseYaml(yamlText) as Record<string, unknown>;
+	} catch (error) {
+		// js-yaml reports a line and column but not which file; name it so a CI log is actionable.
+		const where = options?.sourcePath ?? '<inline document>';
+		throw new Error(`[dslCompiler] ${where}: invalid YAML - ${error instanceof Error ? error.message : String(error)}`, { cause: error });
+	}
 	// The unknown-key walk lives in unknownKeys.ts (shared with CLIs that only have a JSON manifest).
 	const diagnostics: CompiledDslDiagnostic[] = findUnknownKeys(doc, registry);
 

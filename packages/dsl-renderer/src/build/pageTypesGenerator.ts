@@ -1,27 +1,14 @@
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { pathToFileURL } from 'url';
 import { load as parseYaml } from 'js-yaml';
 import type { Plugin } from 'vite';
 import type { ContractAdapter } from './ContractAdapter.js';
 import type { HttpMethod } from '../routeBuilder.js';
+import { readDslConfig } from './dslConfig.js';
+import type { DslConfig } from './dslConfig.js';
+import { isPathInside } from './pathUtils.js';
 import { extractMethod, extractPath, normalizeUrlStructure } from './urlNormalizer.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// ─── dsl.config.yaml types ───────────────────────────────────────────────────
-
-interface ContractDeclaration {
-	package: string;
-	export: string;
-	adapter?: 'zod';
-}
-
-interface DslConfigWithContracts {
-	packages?: Record<string, string>;
-	contracts?: ContractDeclaration[];
-}
 
 // ─── YAML page shape (only what we need) ─────────────────────────────────────
 
@@ -41,13 +28,6 @@ interface PageYaml {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function readDslConfig(appRoot: string): DslConfigWithContracts {
-	const configPath = path.join(appRoot, 'dsl.config.yaml');
-	if (!fs.existsSync(configPath)) return {};
-	const raw = parseYaml(fs.readFileSync(configPath, 'utf-8')) as DslConfigWithContracts | null;
-	return raw ?? {};
-}
-
 function slugFromFilename(filename: string): string {
 	return path.basename(filename, '.yaml');
 }
@@ -59,35 +39,23 @@ function toPascalCase(slug: string): string {
 		.join('');
 }
 
-function extractSourceUrl(spec: string | RawSourceSpec | undefined): string | undefined {
+function extractUrl(spec: string | RawSourceSpec | RawBrainSpec | null | undefined): string | undefined {
 	if (typeof spec === 'string') return spec;
 	return spec?.url;
 }
 
-function extractBrainUrl(spec: string | RawBrainSpec | undefined): string | undefined {
-	if (!spec || typeof spec === 'string') return undefined;
-	return spec.url as string | undefined;
-}
-
-function isHttpBrain(spec: string | RawBrainSpec | undefined): boolean {
+function isHttpBrain(spec: string | RawBrainSpec | null | undefined): boolean {
 	if (!spec || typeof spec === 'string') return false;
-	const brain = (spec as { $brain?: string }).$brain ?? '';
-	return brain.startsWith('$brains.$http.');
+	return (spec.$brain ?? '').startsWith('$brains.$http.');
 }
 
 // ─── Code generation ─────────────────────────────────────────────────────────
 
-interface SourceEntry {
+// One source or one brain of a page, typed against the contract. Only brains use `bodyTypeExpr`.
+interface ContractEntry {
 	name: string;
 	contractKey: string | null;
-	responseTypeExpr: string;
-	error: string | null;
-}
-
-interface BrainEntry {
-	name: string;
-	contractKey: string | null;
-	bodyTypeExpr: string | undefined;
+	bodyTypeExpr?: string;
 	responseTypeExpr: string;
 	error: string | null;
 }
@@ -95,60 +63,39 @@ interface BrainEntry {
 interface PageResult {
 	slug: string;
 	pascal: string;
-	sources: SourceEntry[];
-	brains: BrainEntry[];
+	sources: ContractEntry[];
+	brains: ContractEntry[];
 }
 
 function resolveEntries(
-	items: Record<string, string | RawSourceSpec | RawBrainSpec>,
+	items: Record<string, string | RawSourceSpec | RawBrainSpec | null>,
 	mode: 'source' | 'brain',
 	adapter: ContractAdapter | null,
 	pageFile: string,
-): Array<SourceEntry | BrainEntry> {
-	const results: Array<SourceEntry | BrainEntry> = [];
+): ContractEntry[] {
+	const results: ContractEntry[] = [];
 
 	for (const [name, spec] of Object.entries(items)) {
-		const rawUrl =
-			mode === 'source'
-				? extractSourceUrl(spec as string | RawSourceSpec)
-				: extractBrainUrl(spec as RawBrainSpec);
+		const rawUrl = extractUrl(spec);
 
 		if (!rawUrl) continue;
 
 		// For brains, skip non-HTTP brains ($ctx.*, custom registry)
-		if (mode === 'brain' && !isHttpBrain(spec as RawBrainSpec)) continue;
+		if (mode === 'brain' && !isHttpBrain(spec as RawBrainSpec | null)) continue;
 
 		const method = extractMethod(rawUrl) as HttpMethod | undefined;
 		const urlPath = extractPath(rawUrl);
 
 		if (!method) {
 			const error = `No HTTP method prefix in URL: "${rawUrl}" (in ${path.basename(pageFile)})`;
-			if (mode === 'source') {
-				results.push({ name, contractKey: null, responseTypeExpr: 'unknown', error });
-			} else {
-				results.push({ name, contractKey: null, bodyTypeExpr: undefined, responseTypeExpr: 'unknown', error });
-			}
+			results.push({ name, contractKey: null, responseTypeExpr: 'unknown', error });
 			continue;
 		}
 
 		if (!adapter) {
 			// No contract configured — type is unknown, emit a build warning
-			if (mode === 'source') {
-				results.push({
-					name,
-					contractKey: null,
-					responseTypeExpr: 'unknown',
-					error: `No contract configured. Add a "contracts:" section to dsl.config.yaml to enable typing for ${rawUrl}`,
-				});
-			} else {
-				results.push({
-					name,
-					contractKey: null,
-					bodyTypeExpr: undefined,
-					responseTypeExpr: 'unknown',
-					error: `No contract configured. Add a "contracts:" section to dsl.config.yaml to enable typing for ${rawUrl}`,
-				});
-			}
+			const error = `No contract configured. Add a "contracts:" section to dsl.config.yaml to enable typing for ${rawUrl}`;
+			results.push({ name, contractKey: null, responseTypeExpr: 'unknown', error });
 			continue;
 		}
 
@@ -157,30 +104,17 @@ function resolveEntries(
 
 		if (!resolved) {
 			const error = `No contract match for: ${method} ${urlPath} (in ${path.basename(pageFile)})`;
-			if (mode === 'source') {
-				results.push({ name, contractKey: null, responseTypeExpr: 'unknown', error });
-			} else {
-				results.push({ name, contractKey: null, bodyTypeExpr: undefined, responseTypeExpr: 'unknown', error });
-			}
+			results.push({ name, contractKey: null, responseTypeExpr: 'unknown', error });
 			continue;
 		}
 
-		if (mode === 'source') {
-			results.push({
-				name,
-				contractKey: resolved.contractKey,
-				responseTypeExpr: resolved.responseTypeExpr,
-				error: null,
-			});
-		} else {
-			results.push({
-				name,
-				contractKey: resolved.contractKey,
-				bodyTypeExpr: resolved.bodyTypeExpr,
-				responseTypeExpr: resolved.responseTypeExpr,
-				error: null,
-			});
-		}
+		results.push({
+			name,
+			contractKey: resolved.contractKey,
+			responseTypeExpr: resolved.responseTypeExpr,
+			bodyTypeExpr: resolved.bodyTypeExpr,
+			error: null,
+		});
 	}
 
 	return results;
@@ -233,27 +167,24 @@ function generatePageTypesFile(pages: PageResult[], adapter: ContractAdapter | n
 		}
 
 		// Brains
-		if (page.brains.length > 0) {
-			for (const brain of page.brains) {
-				if (brain.error) {
-					lines.push(`// ERROR: ${brain.error}`);
-					lines.push(`// @ts-expect-error Contract not found — ${brain.error}`);
-					lines.push(`type _ContractCheck_${page.pascal}_brain_${brain.name} = never;`);
-				} else if (brain.bodyTypeExpr) {
-					lines.push(`type _ContractCheck_${page.pascal}_brain_${brain.name} = ${brain.bodyTypeExpr};`);
-				}
+		for (const brain of page.brains) {
+			if (brain.error) {
+				lines.push(`// ERROR: ${brain.error}`);
+				lines.push(`// @ts-expect-error Contract not found — ${brain.error}`);
+				lines.push(`type _ContractCheck_${page.pascal}_brain_${brain.name} = never;`);
+			} else if (brain.bodyTypeExpr) {
+				lines.push(`type _ContractCheck_${page.pascal}_brain_${brain.name} = ${brain.bodyTypeExpr};`);
 			}
-			if (page.brains.some((b) => !b.error && b.bodyTypeExpr)) {
-				lines.push('');
-				lines.push(`export type ${page.pascal}BrainBodies = {`);
-				for (const brain of page.brains) {
-					if (!brain.error && brain.bodyTypeExpr) {
-						lines.push(`\t${brain.name}: ${brain.bodyTypeExpr};`);
-					}
-				}
-				lines.push('};');
-				lines.push('');
+		}
+		const brainsWithBody = page.brains.filter((b) => !b.error && b.bodyTypeExpr);
+		if (brainsWithBody.length > 0) {
+			lines.push('');
+			lines.push(`export type ${page.pascal}BrainBodies = {`);
+			for (const brain of brainsWithBody) {
+				lines.push(`\t${brain.name}: ${brain.bodyTypeExpr};`);
 			}
+			lines.push('};');
+			lines.push('');
 		}
 
 		pageSlugMap.push(`\t'${page.slug}': ${page.pascal}PageSources;`);
@@ -301,8 +232,8 @@ export async function buildPageTypesFile(appRoot: string, adapter: ContractAdapt
 		const sourceItems = raw.$sources ?? {};
 		const brainItems = raw.$brains ?? {};
 
-		const sources = resolveEntries(sourceItems, 'source', adapter, filePath) as SourceEntry[];
-		const brains = resolveEntries(brainItems as Record<string, RawBrainSpec>, 'brain', adapter, filePath) as BrainEntry[];
+		const sources = resolveEntries(sourceItems, 'source', adapter, filePath);
+		const brains = resolveEntries(brainItems, 'brain', adapter, filePath);
 
 		// Collect errors for console output
 		for (const s of sources) {
@@ -321,17 +252,35 @@ export async function buildPageTypesFile(appRoot: string, adapter: ContractAdapt
 
 	const content = generatePageTypesFile(pages, adapter);
 
-	const generatedDir = path.join(appRoot, 'src', 'generated');
-	if (!fs.existsSync(generatedDir)) {
-		fs.mkdirSync(generatedDir, { recursive: true });
-	}
+	fs.mkdirSync(path.dirname(outFile), { recursive: true });
 	fs.writeFileSync(outFile, content, 'utf-8');
 }
 
 // ─── Dynamic adapter loading ──────────────────────────────────────────────────
 
-async function loadAdapterFromConfig(
-	config: DslConfigWithContracts,
+// Entry file of an installed package, read from its package.json (exports["."] import/default, then module, main).
+// Node's ESM loader rejects both a bare absolute path (Windows) and a directory (any OS), so the entry is resolved here
+// and imported as a file URL.
+export function resolveInstalledPackageEntry(packageDir: string): string {
+	const manifestPath = path.join(packageDir, 'package.json');
+	if (!fs.existsSync(manifestPath)) {
+		throw new Error(`no package.json in ${packageDir}`);
+	}
+	const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8')) as {
+		exports?: string | { '.'?: string | { import?: unknown; default?: unknown } };
+		module?: string;
+		main?: string;
+	};
+	const root = typeof manifest.exports === 'object' ? manifest.exports['.'] : manifest.exports;
+	const fromExports = typeof root === 'object' && root !== null ? (root.import ?? root.default) : root;
+	if (fromExports !== undefined && typeof fromExports !== 'string') {
+		throw new Error(`${manifestPath}: exports["."] must resolve to a file path for "import" or "default", got ${JSON.stringify(fromExports)}`);
+	}
+	return path.resolve(packageDir, fromExports ?? manifest.module ?? manifest.main ?? 'index.js');
+}
+
+export async function loadAdapterFromConfig(
+	config: DslConfig,
 	appRoot: string,
 ): Promise<ContractAdapter | null> {
 	if (!config.contracts || config.contracts.length === 0) return null;
@@ -353,7 +302,7 @@ async function loadAdapterFromConfig(
 			// then fall back to normal resolution
 			const resolved = path.resolve(appRoot, 'node_modules', decl.package);
 			if (fs.existsSync(resolved)) {
-				mod = await import(resolved);
+				mod = await import(pathToFileURL(resolveInstalledPackageEntry(resolved)).href);
 			} else {
 				mod = await import(decl.package);
 			}
@@ -381,9 +330,8 @@ async function loadAdapterFromConfig(
 	}
 
 	if (adapters.length === 0) return null;
-	if (adapters.length === 1) return adapters[0]!;
 
-	// Merge multiple adapters: try each in order, first match wins
+	// Merge the adapters (one or several): try each in order, first match wins
 	return {
 		resolve: (method, normalizedPath) => {
 			for (const a of adapters) {
@@ -416,17 +364,13 @@ export function pageTypesGenerator(options: PageTypesGeneratorOptions = {}): Plu
 
 			if (!options.adapter) {
 				const dslConfig = readDslConfig(appRoot);
-				try {
-					adapter = await loadAdapterFromConfig(dslConfig, appRoot);
-					if (!adapter) {
-						console.warn(
-							'[pageTypesGenerator] No contracts configured in dsl.config.yaml — ' +
-								'source/brain types will be "unknown". Add a "contracts:" section to enable typed contracts.',
-						);
-					}
-				} catch (err) {
-					// Hard fail at startup — contract config errors must be fixed before building
-					throw err;
+				// A contract config error rejects here on purpose: it must be fixed before building.
+				adapter = await loadAdapterFromConfig(dslConfig, appRoot);
+				if (!adapter) {
+					console.warn(
+						'[pageTypesGenerator] No contracts configured in dsl.config.yaml — ' +
+							'source/brain types will be "unknown". Add a "contracts:" section to enable typed contracts.',
+					);
 				}
 			}
 		},
@@ -437,7 +381,7 @@ export function pageTypesGenerator(options: PageTypesGeneratorOptions = {}): Plu
 
 		async handleHotUpdate({ file }) {
 			const pagesDir = path.join(appRoot, 'src', 'dsl', 'pages');
-			if (file.endsWith('.yaml') && file.startsWith(pagesDir)) {
+			if (file.endsWith('.yaml') && isPathInside(pagesDir, file)) {
 				await buildPageTypesFile(appRoot, adapter);
 			}
 		},

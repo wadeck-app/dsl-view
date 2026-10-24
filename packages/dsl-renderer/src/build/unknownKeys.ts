@@ -40,13 +40,36 @@ export function buildKnownKeysManifest(
 // - ctxSchema: depends on runtime $sources data, not available at compile time.
 // - "$context.expose references missing ctx keys": same reason, ctx keys come from
 //   runtime $sources/$vars/$brains data. DslRenderer.tsx keeps checking both at runtime.
-function walk(node: unknown, manifest: DslKeysManifest, nodePath: string, diagnostics: CompiledDslDiagnostic[], skipType?: (type: string) => boolean): void {
+function describeValue(value: unknown): string {
+	if (value === null) return 'null';
+	if (Array.isArray(value)) return 'a list';
+	return typeof value;
+}
+
+// `parent` names the component whose slot holds `node`; it is the diagnostic's type when `node` has none of its own.
+// Neither case renders anything at runtime (renderChildren drops non-maps, DslRenderer renders nothing without a
+// `$type`), so both are errors here: a silently blank node is the failure this check exists to prevent.
+function walk(node: unknown, manifest: DslKeysManifest, nodePath: string, diagnostics: CompiledDslDiagnostic[], skipType?: (type: string) => boolean, parent = '(document)'): void {
 	if (!node || typeof node !== 'object' || Array.isArray(node)) {
+		diagnostics.push({
+			severity: 'error',
+			type: parent,
+			nodePath,
+			code: 'invalid-node',
+			message: `[${parent}] ${nodePath} must be a DSL node (a map with a $type), got ${describeValue(node)}: it renders nothing`,
+		});
 		return;
 	}
 	const record = node as Record<string, unknown>;
-	const type = record['$type'] as string | undefined;
-	if (!type) {
+	const type = record['$type'];
+	if (typeof type !== 'string' || !type) {
+		diagnostics.push({
+			severity: 'error',
+			type: parent,
+			nodePath,
+			code: 'missing-type',
+			message: `[${parent}] ${nodePath} has no $type (got ${type === undefined ? 'nothing' : describeValue(type)}): it renders nothing`,
+		});
 		return;
 	}
 
@@ -102,11 +125,22 @@ function walk(node: unknown, manifest: DslKeysManifest, nodePath: string, diagno
 	// allowedChildren is a dead end for this walker (documented limitation).
 	for (const slotKey of Object.keys(entry.allowedChildren ?? {})) {
 		const slotValue = record[slotKey];
+		// Absent: nothing to render. A string is an expression bound at runtime (`items: $sources.x`), unknowable here.
+		if (slotValue === undefined || typeof slotValue === 'string') {
+			continue;
+		}
 		if (!Array.isArray(slotValue)) {
+			diagnostics.push({
+				severity: 'error',
+				type,
+				nodePath,
+				code: 'invalid-slot',
+				message: `[${type}] "${slotKey}" must be a list of nodes (or an expression string), got ${describeValue(slotValue)}: it renders nothing`,
+			});
 			continue;
 		}
 		slotValue.forEach((child, i) => {
-			walk(child, manifest, `${nodePath}.${slotKey}[${i}]`, diagnostics, skipType);
+			walk(child, manifest, `${nodePath}.${slotKey}[${i}]`, diagnostics, skipType, type);
 		});
 	}
 
@@ -182,17 +216,12 @@ function walkMapSlot(
 			});
 			continue;
 		}
-		walk(entry[spec.nodeKey], manifest, `${entryPath}.${spec.nodeKey}`, diagnostics, skipType);
+		walk(entry[spec.nodeKey], manifest, `${entryPath}.${spec.nodeKey}`, diagnostics, skipType, type);
 	}
 }
 
-/**
- * Static check of one parsed DSL page against a manifest (a registry or the shipped known-keys JSON).
- * Page-level keys ($sources, $actions, $route, $vars, $brains, $nav*) are stripped first, like the runtime does.
- * Types not in the manifest are reported as `unknown-component-type`; pass `skipType` (e.g. `(t) => t.includes(':')`
- * for `<moduleId>:<Name>` dsl-lib components) to leave types the manifest cannot describe unchecked.
- */
 function findUnknownActionKeys($actions: unknown, diagnostics: CompiledDslDiagnostic[]): void {
+	// `$actions:` with nothing under it parses to null: no actions, nothing to check.
 	if ($actions == null || typeof $actions !== 'object') return;
 	const known: string[] = [...KNOWN_ACTION_KEYS];
 	for (const [name, spec] of Object.entries($actions as Record<string, unknown>)) {
@@ -206,20 +235,40 @@ function findUnknownActionKeys($actions: unknown, diagnostics: CompiledDslDiagno
 				type: '$actions',
 				nodePath: `$actions.${name}`,
 				code: 'unknown-action-key',
-				message: `[$actions.${name}] unknown action key "${key}"${suggestion ? `. Did you mean "${suggestion}"?` : ''} Known keys: ${known.join(', ')}`,
+				message:
+					`[$actions.${name}] unknown action key "${key}" - it has no effect.` +
+					(suggestion ? ` Did you mean "${suggestion}"?` : '') +
+					` Known keys: ${known.join(', ')}`,
 			});
 		}
 	}
 }
 
+/**
+ * Static check of one parsed DSL page against a manifest (a registry or the shipped known-keys JSON).
+ * Page-level keys ($sources, $actions, $route, $vars, $brains, $nav*) are stripped first, like the runtime does.
+ * Types not in the manifest are reported as `unknown-component-type`; pass `skipType` (e.g. `(t) => t.includes(':')`
+ * for `<moduleId>:<Name>` dsl-lib components) to leave types the manifest cannot describe unchecked.
+ * A document that is not a map (an empty file parses to nothing) is reported as `invalid-node`, not thrown on.
+ */
 export function findUnknownKeys(
 	doc: Record<string, unknown>,
 	manifest: DslKeysManifest,
 	options?: { skipType?: (type: string) => boolean }
 ): CompiledDslDiagnostic[] {
+	const diagnostics: CompiledDslDiagnostic[] = [];
+	if (!doc || typeof doc !== 'object' || Array.isArray(doc)) {
+		diagnostics.push({
+			severity: 'error',
+			type: '(document)',
+			nodePath: '$',
+			code: 'invalid-node',
+			message: `The page must be a YAML map with a $type, got ${describeValue(doc)}${doc === undefined || doc === null ? ' (an empty file?)' : ''}`,
+		});
+		return diagnostics;
+	}
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const { $sources, $actions, $route, $vars, $brains, ...pageNode } = doc;
-	const diagnostics: CompiledDslDiagnostic[] = [];
 	findUnknownActionKeys($actions, diagnostics);
 	walk(omitNavKeys(pageNode), manifest, '$', diagnostics, options?.skipType);
 	return diagnostics;
