@@ -482,9 +482,13 @@ function discoverComponents(srcDir: string, hookWrappers: Map<string, string[]>)
 // Special case: @registryBind formData onChange -> wrap with FormContext.
 // No urlBackedPairs, no ctxSourceProp, no ctxFixedKeyProps. YAML declares all wiring.
 
+// `moduleLevel` receives code that must live at module scope of the generated file (e.g. the stable
+// wrapper component of a bind-pattern entry): a component declared inside `render` gets a new identity on
+// every render, so React would unmount and remount the field (focus lost, refs stale) each time.
 function generateSimpleEntry(
 	component: DiscoveredComponent,
-	importPath: string
+	importPath: string,
+	moduleLevel: string[]
 ): string {
 	const project = new Project({ skipFileDependencyResolution: true });
 	const sourceFile = project.addSourceFileAtPath(component.sourcePath);
@@ -628,21 +632,21 @@ function generateSimpleEntry(
 							? `(formData?.[bind] as string[] | undefined) ?? []`
 							: `String(formData?.[bind] ?? '')`;
 
-		const outerDecl = `\t\tconst bind = node['bind'] as string`;
-		const fullOuterDecl = declText ? `${outerDecl}\n${declText}` : outerDecl;
+		const destructured = `{ node, ${usesRegistry ? 'registry, ' : ''}ctx }`;
+		const bindDecl = `\t\tconst bind = node['bind'] as string`;
+		const fullDecl = declText ? `${bindDecl}\n${declText}` : bindDecl;
 
-		return `render: ({ node, ${usesRegistry ? 'registry, ' : ''}ctx }: RegistryRenderProps) => {
-${fullOuterDecl}
-		function ${component.name}WithContext() {
-			const formCtx = useFormContext()
-			const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
-			const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
-			return (
-				<${component.name}${bindAttr}${attrsText} ${boundAttr}={${valueExpr}} onChange={(v) => onChange?.(bind, v)} />
-			)
-		}
-		return <${component.name}WithContext />
-	},`;
+		moduleLevel.push(`function ${component.name}WithContext(${destructured}: RegistryRenderProps) {
+${fullDecl}
+		const formCtx = useFormContext()
+		const formData = formCtx?.formData ?? (ctx['formData'] ?? ctx['row']) as Record<string, unknown> | undefined
+		const onChange = formCtx?.onChange ?? ctx['onChange'] as ((key: string, v: unknown) => void) | undefined
+		return (
+			<${component.name}${bindAttr}${attrsText} ${boundAttr}={${valueExpr}} onChange={(v) => onChange?.(bind, v)} />
+		)
+}`);
+
+		return `render: (props: RegistryRenderProps) => <${component.name}WithContext {...props} />,`;
 	}
 
 	if (hasChildren) {
@@ -839,9 +843,10 @@ ${importLines.join('\n')}
 `;
 
 	// Generate one entry per discovered component
+	const moduleLevelBlocks: string[] = [];
 	const entriesBody = allDiscovered.map(component => {
 		const importPath = relativeImportPath(component.sourcePath, outputDir);
-		const renderBlock = generateSimpleEntry(component, importPath);
+		const renderBlock = generateSimpleEntry(component, importPath, moduleLevelBlocks);
 		const tagsJson = JSON.stringify(component.tags);
 
 		return `export const ${component.name}Entry: ComponentRegistryEntry = {
@@ -894,7 +899,11 @@ ${allEntriesLines}
 ${metadataLines}
 `;
 
-	return header + '\n' + entriesBody + tail;
+	const moduleLevelText = moduleLevelBlocks.length > 0
+		? '\n// ─── Stable wrapper components (module scope: one declared inside render would remount its field on every render) ───\n\n' + moduleLevelBlocks.join('\n\n') + '\n'
+		: '';
+
+	return header + moduleLevelText + '\n' + entriesBody + tail;
 }
 
 // ─── Vite plugin ──────────────────────────────────────────────────────────────
