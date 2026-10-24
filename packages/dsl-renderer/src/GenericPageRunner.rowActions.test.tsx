@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import React from 'react';
@@ -76,7 +76,8 @@ describe('GenericPageRunner row actions', () => {
 		fireEvent.click(screen.getByText('run-0'));
 
 		await waitFor(() => {
-			expect(fetcher).toHaveBeenCalledWith('POST /api/dlq/a%2Fb%3Fc/clear', expect.anything(), undefined, undefined);
+			// The URL is encoded; the params handed to hosts that read them stay the raw row id.
+			expect(fetcher).toHaveBeenCalledWith('POST /api/dlq/a%2Fb%3Fc/clear', { id: 'a/b?c' }, undefined, undefined);
 		});
 	});
 
@@ -86,7 +87,10 @@ describe('GenericPageRunner row actions', () => {
 		renderPage(PAGE('POST /api/dlq/{id}/clear', '[{id: "a-1"}]'), fetcher);
 
 		fireEvent.click(screen.getByText('run-0'));
-		await Promise.resolve();
+		// One macrotask turn: a request sent after the declined confirm would have started by now.
+		await act(async () => {
+			await new Promise<void>(resolve => setTimeout(resolve, 0));
+		});
 
 		expect(window.confirm).toHaveBeenCalledWith('Sure?');
 		expect(fetcher).not.toHaveBeenCalled();
@@ -108,7 +112,7 @@ describe('GenericPageRunner row actions', () => {
 		expect((error as Error).message).toContain('row keys: id');
 		expect(info).toEqual({ action: 'clearEntry', kind: 'row' });
 		expect(fetcher).not.toHaveBeenCalled();
-		expect(errorSpy).toHaveBeenCalled();
+		expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('row action "clearEntry" failed'));
 	});
 
 	it('reports a failing request through onActionError and console.error instead of an unhandled rejection', async () => {
@@ -126,6 +130,7 @@ describe('GenericPageRunner row actions', () => {
 	});
 
 	it('reports a failing batch action the same way', async () => {
+		vi.spyOn(window, 'confirm').mockReturnValue(true);
 		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 		const fetcher = vi.fn().mockRejectedValue(new Error('boom'));
 		const onActionError = vi.fn();
@@ -135,6 +140,6 @@ describe('GenericPageRunner row actions', () => {
 
 		await waitFor(() => expect(onActionError).toHaveBeenCalledTimes(1));
 		expect(onActionError.mock.calls[0]![1]).toEqual({ action: 'clearEntry', kind: 'batch' });
-		expect(errorSpy).toHaveBeenCalled();
+		expect(errorSpy).toHaveBeenCalledWith('[GenericPageRunner] batch action "clearEntry" failed: boom');
 	});
 });

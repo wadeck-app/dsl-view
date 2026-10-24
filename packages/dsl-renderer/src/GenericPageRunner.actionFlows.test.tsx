@@ -95,9 +95,11 @@ $sources:
     cache: 5m
 `;
 
+// Used before asserting that something did NOT happen: one macrotask turn lets every pending promise
+// continuation run first, so a late fetch or notification cannot slip in after the assertion.
 async function settle() {
 	await act(async () => {
-		await Promise.resolve();
+		await new Promise<void>(resolve => setTimeout(resolve, 0));
 	});
 }
 
@@ -175,14 +177,17 @@ body: ${body}
 			routePath: '/p/:id',
 		}) as { fetcher: ReturnType<typeof vi.fn> };
 		fireEvent.click(screen.getByText('form'));
-		await waitFor(() => expect(fetcher).toHaveBeenCalledWith('POST /api/R1/Q1/B3', undefined, expect.anything(), undefined));
+		// The whole form data is the body, null values included; only the URL placeholders skip nulls.
+		await waitFor(() =>
+			expect(fetcher).toHaveBeenCalledWith('POST /api/R1/Q1/B3', undefined, { id: 'B1', q: 'B2', z: 'B3', skipped: null }, undefined)
+		);
 	});
 
 	it('does not use a null form value for a placeholder (it counts as missing)', async () => {
 		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 		const { fetcher } = renderPage(PAGE('{id: "B1", q: "B2", z: null}'));
 		fireEvent.click(screen.getByText('form'));
-		await waitFor(() => expect(fetcher).toHaveBeenCalledWith('POST /api/B1/B2/', undefined, expect.anything(), undefined));
+		await waitFor(() => expect(fetcher).toHaveBeenCalledWith('POST /api/B1/B2/', undefined, { id: 'B1', q: 'B2', z: null }, undefined));
 		expect(warn).toHaveBeenCalledWith(expect.stringContaining('{z}'));
 	});
 
@@ -287,7 +292,7 @@ body: {id: "r1"}
 	it('without reloadSources a named handler does not refetch anything', async () => {
 		const { calls } = await initial(PAGE(''));
 		fireEvent.click(screen.getByText('form'));
-		await waitFor(() => expect(screen.getByRole('status')).toBeTruthy());
+		await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Done'));
 		expect(calls.items).toBe(1);
 		expect(calls.other).toBe(1);
 		// No resultKey: nothing may be stored in the ctx under a made-up key.
@@ -371,6 +376,51 @@ body: {id: "r1"}
 		fireEvent.click(screen.getByText('batch'));
 		await waitFor(() => expect(screen.getByTestId('items').textContent).toBe('[{"n":2}]'));
 		expect(calls.other).toBe(2);
+	});
+
+	it('a batch action with reloadSources: [name] refetches only that source, like a row action', async () => {
+		const { calls } = await initial(PAGE('    reloadSources: [other]'));
+		fireEvent.click(screen.getByText('batch'));
+		await waitFor(() => expect(screen.getByTestId('other').textContent).toBe('[{"n":2}]'));
+		expect(calls.items).toBe(1);
+	});
+});
+
+describe('batch actions honour confirm', () => {
+	const PAGE = `
+$actions:
+  bulk:
+    url: "POST /api/dlq/{id}/"
+    confirm: "Delete the selection?"
+$type: Probe
+handler: bulk
+action: bulk
+`;
+	const posts = (fetcher: { mock: { calls: unknown[][] } }) => fetcher.mock.calls.filter(c => String(c[0]).startsWith('POST'));
+
+	it('sends nothing, reports nothing and frees the action when the confirmation is declined', async () => {
+		const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+		const { fetcher } = renderPage(PAGE);
+		fireEvent.click(screen.getByText('batch'));
+		await settle();
+		expect(confirm).toHaveBeenCalledTimes(1);
+		expect(confirm).toHaveBeenCalledWith('Delete the selection?');
+		expect(posts(fetcher)).toHaveLength(0);
+		expect(screen.queryByRole('status')).toBeNull();
+		expect(screen.queryByRole('alert')).toBeNull();
+		// Declining must not leave the action stuck as "in flight": the next attempt asks again.
+		expect(screen.getByTestId('pending').textContent).toBe('{"bulk":false}');
+		confirm.mockReturnValue(true);
+		fireEvent.click(screen.getByText('batch'));
+		await waitFor(() => expect(posts(fetcher)).toHaveLength(1));
+		expect(confirm).toHaveBeenCalledTimes(2);
+	});
+
+	it('sends the request with the selected ids once the confirmation is accepted', async () => {
+		vi.spyOn(window, 'confirm').mockReturnValue(true);
+		const { fetcher } = renderPage(PAGE);
+		fireEvent.click(screen.getByText('batch'));
+		await waitFor(() => expect(fetcher).toHaveBeenCalledWith('POST /api/dlq', undefined, { ids: ['b1', 'b2'] }, undefined));
 	});
 });
 

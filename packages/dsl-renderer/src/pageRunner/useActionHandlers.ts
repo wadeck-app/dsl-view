@@ -325,13 +325,17 @@ export function useActionHandlers(params: {
 					return;
 				}
 				started = true;
+				// Same guard as a row or form action: a destructive bulk action must ask before it sends anything.
+				if (spec.confirm && !window.confirm(spec.confirm)) {
+					return;
+				}
 				// Strip {id} placeholder from batch URL (batch sends ids in body)
 				const batchUrl = spec.url.replace(/\{[^}]+\}/g, '').replace(/\/+$/, '');
 				const ids = rows.map(r => (r as Record<string, unknown>)['id']);
 				const authHeaders = await resolveAuthHeaders(getToken);
 				const result = await fetcher(batchUrl, undefined, { ids }, authHeaders);
 				notifySuccess(notifyRef.current, actionName, spec, result);
-				await reloadAfterAction(undefined, true);
+				await reloadAfterAction(spec.reloadSources, true);
 			} catch (error) {
 				reportActionError(actionName, 'batch', error, spec);
 			} finally {
