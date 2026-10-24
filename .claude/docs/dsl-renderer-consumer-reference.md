@@ -300,16 +300,17 @@ items:
     body:
       payload: $vars.payload
   - $type: Badge
-    $if: $validation.valid
+    $if: "$validation.valid && $vars.payload == $validated.payload"
     label: Valid
     variant: success
   - $type: JsonViewer
-    $if: $validation.errors
+    $if: "$validation.valid == false"
     row: $validation
     field: errors
 ```
 
 - Push is disabled before any validation, after `valid: false`, after a failed call (the failure clears `requestKey` and replaces `validation` by `{ error, status }`), and after any edit that differs from the validated text.
+- `Valid` follows the validated text (it disappears on an edit); the errors viewer tests `valid == false` because an empty `errors` list is truthy and would print `[]`.
 - `generatedEntries.payloadPage.test.tsx` in dsl-ui runs this exact page with the real components.
 
 **Action feedback** (every `$actions` call that sent a request, and every failed `$brains` entry):
@@ -754,6 +755,7 @@ First published version containing the change (`dsl-ui` and `dsl-renderer` share
 | `2026.10.24-245` | **Dev diagnostics now run in the browser under `vite dev`**: `isDevelopment()` guarded on `typeof process`, which no bundler replaces, so it was false in a browser and every dev-only check (unknown `$` directive alert, unknown-key and prop-value warnings) stayed silent; it now reads `process.env.NODE_ENV` directly. Expect new console warnings and `[Type] unknown DSL directive` alerts in dev. Generated entries no longer ship prop schemas (and zod) in production: main chunk of an app using every component was +111 KB raw / +29 KB gzip with the schema check, now +1.6 KB / +54 B over the build without it. This needs both **regenerated `entries.tsx`** (entries from before still import the schemas unconditionally) and the new `sideEffects` fields of `dsl-ui` / `dsl-renderer`; restart the dev server fully. The compiler (`compileDslDocument`, `findUnknownKeys` on a registry with schemas) now reports a literal prop value the component's schema rejects as `invalid-prop-value` (error) and a required prop the node does not set as `missing-required-prop` (warning); `$expressions` are never judged. A generated registry loaded under `NODE_ENV=production` carries no schemas: the compiler says so with an `unchecked-props` warning, run it with `NODE_ENV=development`. |
 | `2026.10.24-249` | Expressions take operators (`!`, `==`, `!=`, `&&`, `\|\|`, parentheses); a string that does not parse is read as before, and no page in capability-framework, app-core, queue, task, flow or orchestrator contained an operator string. A `$vars` entry whose value is an expression (`payload: $sources.event.exampleText`) is now seeded when it first resolves and starts undefined (before, it held the expression text as a literal string; no repo declared one). A bound field with no Form, table row or `onChange` around it reads and writes `$vars` through `ctx.$setVar` (before, it showed `''` and dropped edits). `$actions.<name>.requestKey` is a new action key. The generated node schemas accept a `!` expression wherever a `$` one was accepted. Regenerate `entries.tsx` (full dev-server restart) for the bound-field change. |
 | `2026.10.24-251` | `notify: false` on a `$actions` entry now silences the success message only: a failure is always shown (with `errorPrefix`), logged and passed to `onActionError`. The `$notify` key of a `$brains` entry is retired: a failed brain is always shown, and the key is ignored with a one-time `console.warn` naming the brain. Before, both hid failures (a failed mutation looked like a successful one). No YAML in capability-framework, app-core, queue, task, flow or orchestrator used either key. No regeneration needed. |
+| Unreleased | `Tooltip` points its single element child at the tooltip text (`aria-describedby`) and also shows on keyboard focus, so a disabled `Button` / `ActionButton` / `ButtonSave` exposes its `disabledReason` as its accessible description (a disabled control cannot take focus, so before it was reachable by mouse hover only). A test locating such a button by `getByRole('button', { name })` is unchanged; one asserting the button has no `aria-describedby` would break (none found). No regeneration needed. |
 
 ## Pitfalls
 

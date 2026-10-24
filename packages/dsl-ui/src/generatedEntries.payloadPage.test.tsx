@@ -87,11 +87,11 @@ items:
     body:
       payload: $vars.payload
   - $type: Badge
-    $if: $validation.valid
+    $if: "$validation.valid && $vars.payload == $validated.payload"
     label: Valid
     variant: success
   - $type: JsonViewer
-    $if: $validation.errors
+    $if: "$validation.valid == false"
     row: $validation
     field: errors
 `;
@@ -167,6 +167,26 @@ describe('the editable payload page, with the real components', () => {
 
 		fireEvent.click(screen.getByRole('button', { name: 'Validate' }));
 		await waitFor(() => expect(push()).toBeEnabled());
+	});
+
+	it('a valid answer shows the verdict without an empty error list, and an edit takes the stale verdict away', async () => {
+		// Found in a real browser: the viewer printed `[]` under the Valid badge, and the badge stayed after an edit.
+		renderPage(makeFetcher(() => ({ valid: true, errors: [] })));
+		await waitFor(() => expect(area()).toHaveValue('{"a":1}'));
+		fireEvent.click(screen.getByRole('button', { name: 'Validate' }));
+		await waitFor(() => expect(screen.getByText('Valid')).toBeInTheDocument());
+		expect(screen.queryByText('[]')).toBeNull();
+
+		fireEvent.change(area(), { target: { value: '{"a":2}' } });
+		expect(screen.queryByText('Valid')).toBeNull();
+		expect(push()).toBeDisabled();
+	});
+
+	it('tells assistive technology why Push is disabled (a disabled button cannot take focus)', async () => {
+		renderPage(makeFetcher(() => ({ valid: true })));
+		await waitFor(() => expect(area()).toHaveValue('{"a":1}'));
+		expect(push()).toBeDisabled();
+		expect(push()).toHaveAccessibleDescription('Validate the payload first');
 	});
 
 	it('Push posts the edited text and reports success', async () => {

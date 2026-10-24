@@ -5,7 +5,7 @@ import React from 'react';
 // surfaces which flip with the .dark class) - matches the pre-migration raw
 // palette colors which had no dark-mode variant. Arbitrary hex values keep
 // exact visual parity without introducing a new semantic token.
-const tooltipClass = 'pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs rounded bg-[#111827] px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-normal text-center';
+const tooltipClass = 'pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs rounded bg-[#111827] px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity z-50 whitespace-normal text-center';
 const arrowClass = 'absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#111827]';
 // @formatter:on
 
@@ -21,10 +21,20 @@ export interface TooltipProps {
  * @uiexception hover-only - Tooltips are intentionally hover-triggered; they cannot be permanently visible without defeating their purpose (screen real estate and visual noise). This is the sole accepted exception to UX §6.
  */
 export function Tooltip({ content, children }: TooltipProps) {
+	const tooltipId = React.useId();
+	// A hover-only tooltip never reaches a keyboard or screen-reader user by itself, and the main use is a DISABLED
+	// button ("why can't I click this"), which cannot take focus: point the wrapped element at the tooltip so its text
+	// is the element's accessible description. Only a single element child can be described; anything else is left as is.
+	const described = React.isValidElement<{ 'aria-describedby'?: string }>(children)
+		? React.cloneElement(children, {
+				'aria-describedby': [children.props['aria-describedby'], tooltipId].filter(Boolean).join(' '),
+			})
+		: children;
 	return (
 		<span className="relative inline-flex group">
-			{children}
+			{described}
 			<span
+				id={tooltipId}
 				role="tooltip"
 				className={tooltipClass}
 			>
