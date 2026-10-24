@@ -83,7 +83,8 @@ export const IconButtonNodeSchema = baseNode.extend({
 });
 
 export const LiveToggleNodeSchema = baseNode.extend({
-	live: dsl(z.boolean()),
+	live: dsl(z.boolean()).optional(),
+	urlParam: z.string().optional(),
 });
 
 export const PageSizeSelectNodeSchema = baseNode.extend({
@@ -91,6 +92,7 @@ export const PageSizeSelectNodeSchema = baseNode.extend({
 	resetUrlParams: dsl(z.array(z.string())).optional(),
 	value: dsl(z.number()).optional(),
 	options: dsl(z.array(z.number())),
+	default: dsl(z.number()).optional(),
 });
 
 const RadioOptionSchema = z.object({
@@ -215,7 +217,7 @@ export const MarkdownNodeSchema = baseNode.extend({
 export const PageHeaderNodeSchema = baseNode.extend({
 	title: z.string(),
 	subtitle: z.string().optional(),
-	icon: z.unknown().optional(),
+	icon: dsl(z.union([z.unknown(), z.string()])).optional(),
 	headerActions: dsl(z.array(z.unknown())).optional(),
 	size: dsl(z.enum(['default', 'sm'])).optional(),
 });
@@ -642,7 +644,8 @@ const PageTabDefSchema = z.object({
 
 export const PageTabsNodeSchema = baseNode.extend({
 	tabs: dsl(z.array(PageTabDefSchema)),
-	activeTab: z.string(),
+	activeTab: z.string().optional(),
+	urlParam: z.string().optional(),
 });
 
 const StepperStepSchema = z.object({

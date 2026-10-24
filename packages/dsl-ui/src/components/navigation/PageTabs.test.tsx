@@ -2,6 +2,8 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import { UrlParamContext } from '../../context/UrlParamContext.js';
+import type { UrlParamService } from '../../context/UrlParamContext.js';
 import { PageTabs } from './PageTabs.js';
 
 const tabs = [
@@ -100,5 +102,95 @@ describe('PageTabs', () => {
 		const btn = screen.getByRole('tab', { name: 'One' });
 		const occurrences = btn.className.split('px-4 py-2 text-sm font-medium').length - 1;
 		expect(occurrences).toBe(1);
+	});
+});
+
+// Without `onChange` the component keeps the selection itself, and `urlParam` moves it to the URL: the logs page
+// of the wdrive app writes `urlParam: tab` and passes no handler at all.
+describe('PageTabs uncontrolled and urlParam modes', () => {
+	function serviceWith(initial: Record<string, string>) {
+		const store = new Map(Object.entries(initial));
+		const set = vi.fn((key: string, value: string) => {
+			store.set(key, value);
+		});
+		const service: UrlParamService = { get: key => store.get(key) ?? null, set };
+		return { service, set };
+	}
+
+	it('keeps the selection itself when it gets neither activeTab nor onChange', async () => {
+		const user = userEvent.setup();
+		render(<PageTabs tabs={tabs} />);
+		expect(selected()).toEqual(['One']);
+		await user.click(screen.getByRole('tab', { name: 'Three' }));
+		expect(selected()).toEqual(['Three']);
+		expect(screen.getByRole('tabpanel')).toHaveTextContent('Three content');
+	});
+
+	it('uses activeTab alone as the initial selection, then follows the user', async () => {
+		const user = userEvent.setup();
+		render(<PageTabs tabs={tabs} activeTab="two" />);
+		expect(selected()).toEqual(['Two']);
+		await user.click(screen.getByRole('tab', { name: 'One' }));
+		expect(selected()).toEqual(['One']);
+	});
+
+	it('shows the tab named by the URL param and ignores activeTab and onChange', () => {
+		const { service } = serviceWith({ tab: 'three' });
+		const onChange = vi.fn();
+		render(
+			<UrlParamContext.Provider value={service}>
+				<PageTabs tabs={tabs} urlParam="tab" activeTab="one" onChange={onChange} />
+			</UrlParamContext.Provider>
+		);
+		expect(selected()).toEqual(['Three']);
+		expect(screen.getByRole('tabpanel')).toHaveTextContent('Three content');
+	});
+
+	it('falls back to the first tab while the URL has no value, and to the first tab for an unknown id', () => {
+		const { service } = serviceWith({});
+		const { rerender } = render(
+			<UrlParamContext.Provider value={service}>
+				<PageTabs tabs={tabs} urlParam="tab" />
+			</UrlParamContext.Provider>
+		);
+		expect(selected()).toEqual(['One']);
+		const unknown = serviceWith({ tab: 'nope' });
+		rerender(
+			<UrlParamContext.Provider value={unknown.service}>
+				<PageTabs tabs={tabs} urlParam="tab" />
+			</UrlParamContext.Provider>
+		);
+		expect(selected()).toEqual(['One']);
+	});
+
+	it('writes the clicked tab id to the URL param with replace, and does not call onChange', async () => {
+		const user = userEvent.setup();
+		const { service, set } = serviceWith({});
+		const onChange = vi.fn();
+		render(
+			<UrlParamContext.Provider value={service}>
+				<PageTabs tabs={tabs} urlParam="tab" onChange={onChange} />
+			</UrlParamContext.Provider>
+		);
+		await user.click(screen.getByRole('tab', { name: 'Two' }));
+		expect(set).toHaveBeenCalledExactlyOnceWith('tab', 'two', { replace: true });
+		expect(onChange).not.toHaveBeenCalled();
+	});
+
+	it('moves with the arrow keys through the URL param as well', () => {
+		const { service, set } = serviceWith({ tab: 'one' });
+		render(
+			<UrlParamContext.Provider value={service}>
+				<PageTabs tabs={tabs} urlParam="tab" />
+			</UrlParamContext.Provider>
+		);
+		fireEvent.keyDown(screen.getByRole('tab', { name: 'One' }), { key: 'ArrowRight' });
+		expect(set).toHaveBeenLastCalledWith('tab', 'two', { replace: true });
+	});
+
+	it('throws a clear error when urlParam is used outside a UrlParamContext', () => {
+		const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		expect(() => render(<PageTabs tabs={tabs} urlParam="tab" />)).toThrow('useOptionalUrlParam("tab") requires UrlParamContext');
+		error.mockRestore();
 	});
 });

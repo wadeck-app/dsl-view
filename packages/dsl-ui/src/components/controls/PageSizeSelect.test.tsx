@@ -120,3 +120,43 @@ describe('PageSizeSelect', () => {
 		});
 	});
 });
+
+describe('PageSizeSelect default', () => {
+	it('shows the default instead of the first option when nothing is selected (controlled)', () => {
+		render(<PageSizeSelect options={[10, 25, 50]} default={50} onChange={() => {}} />);
+		expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('50');
+	});
+
+	it('lets an explicit value win over the default (controlled)', () => {
+		render(<PageSizeSelect options={[10, 25, 50]} value={25} default={50} onChange={() => {}} />);
+		expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('25');
+	});
+
+	it('fills an absent URL param with the default, once, with the url mode setter', () => {
+		const { set, select } = renderUrlBacked({}, { default: 50 });
+		expect(select.value).toBe('50');
+		expect(set).toHaveBeenCalledExactlyOnceWith('size', '50', { replace: true });
+	});
+
+	it('leaves a URL param that is present alone, even when it differs from the default', () => {
+		const { set, select } = renderUrlBacked({ size: '25' }, { default: 50 });
+		expect(select.value).toBe('25');
+		expect(set).not.toHaveBeenCalled();
+	});
+
+	it('does not touch the URL without a default', () => {
+		const { set, select } = renderUrlBacked({});
+		expect(select.value).toBe('10');
+		expect(set).not.toHaveBeenCalled();
+	});
+
+	it('reports a default that is not one of the options, ignores it and writes nothing', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+		const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		const { set, select } = renderUrlBacked({}, { default: 40 });
+		expect(select.value).toBe('10');
+		expect(set).not.toHaveBeenCalled();
+		const reported = [...warn.mock.calls, ...error.mock.calls].map(call => String(call[0]));
+		expect(reported.some(message => message.includes('[PageSizeSelect] default 40 is not one of the offered sizes (10, 25, 50) and is ignored.'))).toBe(true);
+	});
+});

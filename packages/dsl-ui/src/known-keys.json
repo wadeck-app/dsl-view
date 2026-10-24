@@ -693,7 +693,8 @@
 	"LiveToggle": {
 		"knownKeys": [
 			"live",
-			"onChange"
+			"onChange",
+			"urlParam"
 		]
 	},
 	"Markdown": {
@@ -767,6 +768,7 @@
 	},
 	"PageSizeSelect": {
 		"knownKeys": [
+			"default",
 			"onChange",
 			"options",
 			"resetUrlParams",
@@ -778,7 +780,8 @@
 		"knownKeys": [
 			"activeTab",
 			"onChange",
-			"tabs"
+			"tabs",
+			"urlParam"
 		]
 	},
 	"Pagination": {

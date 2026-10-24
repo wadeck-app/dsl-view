@@ -1,4 +1,6 @@
-import React, { useId } from 'react';
+import React, { useId, useState } from 'react';
+
+import { useOptionalUrlParam } from '@dsl-ui/context/UrlParamContext.js';
 
 import { Button } from '../controls/_Button.js';
 import { nextTabIndex } from './tabKeyboard.js';
@@ -14,19 +16,43 @@ export interface PageTabDef {
 
 export interface PageTabsProps {
 	tabs: PageTabDef[];
-	activeTab: string;
-	onChange: (id: string) => void;
+	/** Selected tab id. Controlled mode, together with `onChange`; ignored when `urlParam` is set. */
+	activeTab?: string;
+	/** Called with the clicked tab id. Ignored when `urlParam` is set. */
+	onChange?: (id: string) => void;
+	/**
+	 * URL search param name backing the selected tab id, e.g. "tab". When set, PageTabs reads and writes it through
+	 * UrlParamContext (the tab survives a reload and can be linked to) and `activeTab` / `onChange` are ignored.
+	 * Without `urlParam`, `activeTab` and `onChange`, the selection is kept in the component.
+	 */
+	urlParam?: string;
 }
 
 /**
  * @registryCategory disposition
  * @registryTags tabs navigation
  */
-export function PageTabs({ tabs, activeTab, onChange }: PageTabsProps) {
+export function PageTabs({ tabs, activeTab, onChange: onChangeProp, urlParam }: PageTabsProps) {
 	const idBase = useId();
+	const [urlTab, setUrlTab] = useOptionalUrlParam(urlParam);
+	const [ownTab, setOwnTab] = useState<string | undefined>(undefined);
+	// Controlled when the host passes both `activeTab` and `onChange`; otherwise the component keeps the selection.
+	const controlled = activeTab !== undefined && onChangeProp !== undefined;
+	// `activeTab` alone is the initial selection; once the user picks a tab, their choice wins.
+	const requestedTab = urlParam ? (urlTab ?? undefined) : controlled ? activeTab : (ownTab ?? activeTab);
+	const onChange = (id: string) => {
+		if (urlParam) {
+			setUrlTab(id);
+			return;
+		}
+		if (!controlled) {
+			setOwnTab(id);
+		}
+		onChangeProp?.(id);
+	};
 	// The tab that is both marked selected and whose content is shown: an unknown activeTab falls
 	// back to the first tab for BOTH, so the selected state never disagrees with the panel.
-	const activeTabDef = tabs.find(tab => tab.id === activeTab) ?? tabs[0];
+	const activeTabDef = tabs.find(tab => tab.id === requestedTab) ?? tabs[0];
 	const effectiveActiveTab = activeTabDef?.id ?? '';
 
 	// Arrow keys, Home and End move between tabs (roving tabindex); the focused tab is also selected.
