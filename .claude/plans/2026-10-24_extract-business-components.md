@@ -45,3 +45,11 @@ Housekeeping found: `PageHeader` exists twice (`components/display/PageHeader.ts
 4. `useVersionPoller`.
 
 Nothing is removed while a consumer still uses it.
+
+## Status (2026-10-24)
+
+Done. `InviteTokenWidget`, `ShownFetchedCounter` (+ `computeShownTotal`), `StatusFilter`, `HttpMethodBadge` / `HttpStatusBadge`, `useVersionPoller` and the built-in `"4xx"` filter rule were removed from dsl-ui in `29192e2` (published `2026.10.24-218`). New hooks for apps: `registerColumnFormat` (YAML `format: <name>`) and, already present, `registerFilterPredicate`.
+
+Destinations (capability-framework `f3ea7f9`): `dsl-ui-wdrive` (`admin/InviteTokenWidget`, `logs/ShownFetchedCounter`, `logs/StatusFilter`, `logs/HttpMethodBadge`, `logs/HttpStatusBadge`, `logs/wdriveColumnFormats`, `logs/useStatusFamilyPredicate`, `utils/computeShownTotal`); a local `useVersionPoller` in `dsl-wdrive-app` and `dsl-agent-fleet-app`.
+
+Left in dsl-ui on purpose: `LiveToggle`, `CronBuilder` (domain-neutral, single consumer). `FetchSpinner` (duplicate of `Spinner`) and `InlineEdit` (no consumer) are candidates for a later deletion.
