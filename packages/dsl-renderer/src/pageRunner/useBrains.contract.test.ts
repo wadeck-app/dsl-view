@@ -159,7 +159,7 @@ describe('$reload after a brain', () => {
 		);
 		await waitFor(() => expect(loadSources).toHaveBeenCalledTimes(1));
 		await waitFor(() => expect(params.setVar).toHaveBeenCalledWith('b', 2));
-		expect((loadSources.mock.calls[0]![1] as { $vars: Record<string, unknown> }).$vars).toEqual({ a: 1 });
+		expect((loadSources.mock.calls[0]![1] as { $vars: Record<string, unknown> }).$vars).toStrictEqual({ a: 1 });
 		expect(loadSources).toHaveBeenCalledTimes(1);
 	});
 
