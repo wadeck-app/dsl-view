@@ -39,8 +39,8 @@ import {
 } from 'ts-morph';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const componentsDir = path.resolve(__dirname, '../src/components');
-const outFile = path.resolve(__dirname, '../src/schemas/generated-node-schemas.ts');
+const defaultComponentsDir = path.resolve(__dirname, '../src/components');
+const defaultOutFile = path.resolve(__dirname, '../src/schemas/generated-node-schemas.ts');
 
 // Set of interface names in the current file being processed (populated per file)
 let currentFileInterfaces: Set<string> = new Set();
@@ -173,7 +173,8 @@ function typeNodeToZod(typeNode: TypeNode, indent = ''): string | null {
 			if (parts.length === 0) {
 				return null;
 			}
-			let r = `z.union([${parts.join(', ')}])`;
+			// Callback members were dropped: a single survivor is that type itself, not a one-member union.
+			let r = parts.length === 1 ? parts[0]! : `z.union([${parts.join(', ')}])`;
 			if (hasNull) {
 				r += '.nullable()';
 			}
@@ -261,9 +262,6 @@ function readDefault(prop: PropertySignature): string | null {
 	return null;
 }
 
-// A ReactNode `children` prop is authored under the `items` DSL key: the generated render in
-// dsl-renderer's entriesGenerator (generateSimpleEntry / extractKnownKeys) reads node['items'].
-// Keep this rule in sync with it (dsl-ui's schema consistency test guards the drift).
 // Optional directives other than `$type` (required). Must equal KNOWN_DSL_KEYS minus `$type` in dsl-renderer.
 const BASE_NODE_DIRECTIVES = ['$if', '$source', '$context', '$route', '$extends', '$id', '$outputs'] as const;
 
@@ -275,8 +273,11 @@ function isReactNodeSlot(typeText: string): boolean {
 	let depth = 0;
 	let current = '';
 	for (const ch of typeText) {
-		if ('([{<'.includes(ch)) depth++;
-		else if (')]}>'.includes(ch) && !(ch === '>' && current.endsWith('='))) depth--;
+		if ('([{<'.includes(ch)) {
+			depth++;
+		} else if (')]}>'.includes(ch) && !(ch === '>' && current.endsWith('='))) {
+			depth--;
+		}
 		if (ch === '|' && depth === 0) {
 			members.push(current.trim());
 			current = '';
@@ -290,6 +291,9 @@ function isReactNodeSlot(typeText: string): boolean {
 	return members.some(isNode) && members.every(member => isNode(member) || isRenderFunction(member) || member === 'undefined' || member === 'null');
 }
 
+// A ReactNode `children` prop is authored under the `items` DSL key: the generated render in
+// dsl-renderer's entriesGenerator (generateSimpleEntry / extractKnownKeys) reads node['items'].
+// Keep this rule in sync with it (dsl-ui's schema consistency test guards the drift).
 function dslKeyFor(prop: PropertySignature): string {
 	const name = prop.getName();
 	const typeText = prop.getTypeNode()?.getText() ?? '';
@@ -487,85 +491,113 @@ function generateSubSchemas(sourceFile: SourceFile, propsInterfaceName: string):
 
 // --- Main ---------------------------------------------------------------------
 
-const project = new Project({ skipFileDependencyResolution: true });
+/**
+ * Scans `componentsDir` and returns the text of the generated schemas module and how many node schemas it holds.
+ * Exported so tests can run it on a fixture directory; the CLI below writes the result to disk.
+ */
+export function generateNodeSchemas(componentsDir: string): { output: string; count: number } {
+	const project = new Project({ skipFileDependencyResolution: true });
 
-const files = (readdirSync(componentsDir, { recursive: true }) as string[])
-	.filter(f => f.endsWith('.tsx') && !f.endsWith('.test.tsx') && !f.endsWith('.stories.tsx'))
-	.sort();
+	const files = (readdirSync(componentsDir, { recursive: true }) as string[])
+		.filter(f => f.endsWith('.tsx') && !f.endsWith('.test.tsx') && !f.endsWith('.stories.tsx'))
+		.sort();
 
-const schemaBlocks: string[] = [];
-let autoCount = 0;
+	const schemaBlocks: string[] = [];
+	let autoCount = 0;
 
-for (const file of files) {
-	const filePath = path.resolve(componentsDir, file);
-	const sourceFile = project.addSourceFileAtPath(filePath);
+	for (const file of files) {
+		const filePath = path.resolve(componentsDir, file);
+		const sourceFile = project.addSourceFileAtPath(filePath);
 
-	// Find exported component function with @registryCategory JSDoc tag
-	let componentName: string | null = null;
-	for (const fn of sourceFile.getFunctions()) {
-		if (!fn.isExported()) {
+		// Find exported component function with @registryCategory JSDoc tag
+		let componentName: string | null = null;
+		for (const fn of sourceFile.getFunctions()) {
+			if (!fn.isExported()) {
+				continue;
+			}
+			const name = fn.getName();
+			if (!name || !name[0] || name[0] !== name[0].toUpperCase()) {
+				continue;
+			}
+			const jsDoc = fn.getJsDocs()[0];
+			if (!jsDoc) {
+				continue;
+			}
+			if (jsDoc.getTags().some(t => t.getTagName() === 'registryCategory')) {
+				componentName = name;
+				break;
+			}
+		}
+		if (!componentName) {
 			continue;
 		}
-		const name = fn.getName();
-		if (!name || !name[0] || name[0] !== name[0].toUpperCase()) {
+
+		// Look for XxxProps interface in the same file
+		const propsInterface = sourceFile.getInterface(componentName + 'Props');
+		if (!propsInterface) {
 			continue;
 		}
-		const jsDoc = fn.getJsDocs()[0];
-		if (!jsDoc) {
-			continue;
-		}
-		if (jsDoc.getTags().some(t => t.getTagName() === 'registryCategory')) {
-			componentName = name;
-			break;
-		}
+
+		const schemaName = componentName + 'NodeSchema';
+		const allInterfaces = sourceFile.getInterfaces().map(i => i.getName());
+		currentFileInterfaces = new Set(allInterfaces);
+
+		// Generate sub-schemas for interfaces referenced by XxxProps
+		const subSchemas = generateSubSchemas(sourceFile, componentName + 'Props');
+		// Reset currentFileInterfaces to only include interfaces in this file
+		currentFileInterfaces = new Set(sourceFile.getInterfaces().map(i => i.getName()));
+
+		const componentDoc = sourceFile.getFunction(componentName)?.getJsDocs()[0];
+		const bindTag = componentDoc?.getTags().find((t) => t.getTagName() === 'registryBind');
+		const bindPattern = bindTag ? (bindTag.getCommentText() ?? '').trim().split(/\s+/).filter(Boolean) : null;
+		const schemaCode = interfaceToZodSchema(propsInterface, schemaName, true, bindPattern);
+		const fileBlock = [...subSchemas, `export ${schemaCode}`].join('\n\n');
+		schemaBlocks.push(fileBlock);
+		autoCount++;
 	}
-	if (!componentName) {
-		continue;
-	}
 
-	// Look for XxxProps interface in the same file
-	const propsInterface = sourceFile.getInterface(componentName + 'Props');
-	if (!propsInterface) {
-		continue;
-	}
+	const output = [
+		'// src/schemas/generated-node-schemas.ts — GENERATED from XxxProps interfaces by scripts/generate-node-schemas.ts, do not edit',
+		"import { z } from 'zod';",
+		'',
+		'// Directives every DSL node may carry (mirrors KNOWN_DSL_KEYS in dsl-renderer, a test keeps them in sync).',
+		'// A node is authored with `$type`, never `type`: `type` is an ordinary prop of some components (Chart, ButtonAction).',
+		'// Other keys are not rejected here: unknown keys are reported by the knownKeys check, not twice.',
+		'const baseNode = z.object({',
+		'\t$type: z.string(),',
+		...BASE_NODE_DIRECTIVES.map((key) => `\t${key}: z.unknown().optional(),`),
+		'});',
+		'',
+		'// A prop may hold an expression (`$sources.x`, `$vars.y`) resolved at render time, so it is accepted wherever the literal is.',
+		"const expr = z.string().startsWith('$');",
+		'const dsl = <T extends z.ZodType>(schema: T) => z.union([schema, expr]);',
+		'',
+		schemaBlocks.join('\n\n'),
+		'',
+	].join('\n');
 
-	const schemaName = componentName + 'NodeSchema';
-	const allInterfaces = sourceFile.getInterfaces().map(i => i.getName());
-	currentFileInterfaces = new Set(allInterfaces);
-
-	// Generate sub-schemas for interfaces referenced by XxxProps
-	const subSchemas = generateSubSchemas(sourceFile, componentName + 'Props');
-	// Reset currentFileInterfaces to only include interfaces in this file
-	currentFileInterfaces = new Set(sourceFile.getInterfaces().map(i => i.getName()));
-
-	const componentDoc = sourceFile.getFunction(componentName)?.getJsDocs()[0];
-	const bindTag = componentDoc?.getTags().find((t) => t.getTagName() === 'registryBind');
-	const bindPattern = bindTag ? (bindTag.getCommentText() ?? '').trim().split(/\s+/).filter(Boolean) : null;
-	const schemaCode = interfaceToZodSchema(propsInterface, schemaName, true, bindPattern);
-	const fileBlock = [...subSchemas, `export ${schemaCode}`].join('\n\n');
-	schemaBlocks.push(fileBlock);
-	autoCount++;
+	return { output, count: autoCount };
 }
 
-const output = [
-	'// src/schemas/generated-node-schemas.ts — GENERATED from XxxProps interfaces by scripts/generate-node-schemas.ts, do not edit',
-	"import { z } from 'zod';",
-	'',
-	'// Directives every DSL node may carry (mirrors KNOWN_DSL_KEYS in dsl-renderer, a test keeps them in sync).',
-	'// A node is authored with `$type`, never `type`: `type` is an ordinary prop of some components (Chart, ButtonAction).',
-	'// Other keys are not rejected here: unknown keys are reported by the knownKeys check, not twice.',
-	'const baseNode = z.object({',
-	'\t$type: z.string(),',
-	...BASE_NODE_DIRECTIVES.map((key) => `\t${key}: z.unknown().optional(),`),
-	'});',
-	'',
-	'// A prop may hold an expression (`$sources.x`, `$vars.y`) resolved at render time, so it is accepted wherever the literal is.',
-	"const expr = z.string().startsWith('$');",
-	'const dsl = <T extends z.ZodType>(schema: T) => z.union([schema, expr]);',
-	'',
-	schemaBlocks.join('\n\n'),
-	'',
-].join('\n');
+// --- CLI ----------------------------------------------------------------------
 
-writeFileSync(outFile, output, 'utf-8');
-console.log(`[ok] Generated generated-node-schemas.ts with ${autoCount} schemas`);
+// Runs only when executed directly (`node scripts/generate-node-schemas.ts`), not when a test imports the module.
+if (process.argv[1] !== undefined && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+	// `--out <file>` writes elsewhere (the drift test regenerates into a temp file and compares it with the committed
+	// one); `--components <dir>` scans another directory (the fixture test feeds it synthetic components).
+	const optionValue = (flag: string): string | undefined => {
+		const index = process.argv.indexOf(flag);
+		if (index === -1) {
+			return undefined;
+		}
+		const value = process.argv[index + 1];
+		if (!value) {
+			throw new Error(`[generate-node-schemas] ${flag} needs a path`);
+		}
+		return path.resolve(value);
+	};
+	const outFile = optionValue('--out') ?? defaultOutFile;
+	const { output, count } = generateNodeSchemas(optionValue('--components') ?? defaultComponentsDir);
+	writeFileSync(outFile, output, 'utf-8');
+	console.log(`[ok] Generated generated-node-schemas.ts with ${count} schemas`);
+}
