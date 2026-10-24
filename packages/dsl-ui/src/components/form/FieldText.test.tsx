@@ -85,6 +85,33 @@ describe('FieldText', () => {
 		});
 	});
 
+	describe('read-only keeps the same extras as the editable input', () => {
+		it('a consumer className and native attributes also reach the read-only input', () => {
+			render(<FieldText label="Name" value="fixed" readOnly onChange={vi.fn()} className="w-24" name="n" type="password" />);
+			const input = screen.getByLabelText('Name');
+			expect(input.className.split(' ')).toEqual(expect.arrayContaining(['w-24', 'block']));
+			expect(input).toHaveAttribute('name', 'n');
+			expect(input).toHaveAttribute('type', 'password');
+		});
+
+		it('switching from editable to read-only keeps the shown value and stops reporting edits', () => {
+			const onChange = vi.fn();
+			const { rerender } = render(<FieldText label="Name" value="same" onChange={onChange} />);
+			rerender(<FieldText label="Name" value="same" readOnly onChange={onChange} />);
+			const input = screen.getByRole('textbox', { name: 'Name' });
+			expect(input).toHaveValue('same');
+			fireEvent.change(input, { target: { value: 'edited' } });
+			expect(onChange).not.toHaveBeenCalled();
+		});
+	});
+
+	describe('label association', () => {
+		it('a consumer-supplied id does not detach the label from the input', () => {
+			render(<FieldText label="Name" value="" onChange={vi.fn()} id="custom-id" />);
+			expect(screen.getByRole('textbox', { name: 'Name' })).toBeInTheDocument();
+		});
+	});
+
 	describe('validation wiring', () => {
 		it('an error is announced and tied to the input, which is flagged invalid', () => {
 			render(<FieldText label="Name" value="" onChange={vi.fn()} error="Required" />);

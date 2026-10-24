@@ -130,6 +130,35 @@ describe('InviteTokenWidget', () => {
 		expect(mockToast.success).not.toHaveBeenCalled();
 	});
 
+	it('a clipboard that throws synchronously (permissions policy, unfocused document) is reported, not thrown', () => {
+		Object.defineProperty(navigator, 'clipboard', {
+			value: { writeText: vi.fn(() => { throw new DOMException('Document is not focused', 'NotAllowedError'); }) },
+			writable: true,
+			configurable: true,
+		});
+		renderWidget({ inviteToken: 'abc-123', onGenerateToken: vi.fn() });
+		expect(() => fireEvent.click(screen.getByText('Copy'))).not.toThrow();
+		expect(mockToast.error).toHaveBeenCalledExactlyOnceWith('Failed to copy - please copy manually');
+		expect(mockToast.success).not.toHaveBeenCalled();
+	});
+
+	it('Copy with a token copies exactly that token, once per click, without calling Generate', async () => {
+		const onGenerateToken = vi.fn();
+		renderWidget({ inviteToken: 'tok en/+=', onGenerateToken });
+		fireEvent.click(screen.getByText('Copy'));
+		fireEvent.click(screen.getByText('Copy'));
+		expect(navigator.clipboard.writeText).toHaveBeenCalledTimes(2);
+		expect(navigator.clipboard.writeText).toHaveBeenNthCalledWith(1, 'tok en/+=');
+		expect(onGenerateToken).not.toHaveBeenCalled();
+		await waitFor(() => expect(mockToast.success).toHaveBeenCalledTimes(2));
+	});
+
+	it('the token is shown whole and verbatim in a monospace block', () => {
+		renderWidget({ inviteToken: 'AbC-123_xyz.', onGenerateToken: vi.fn() });
+		const block = screen.getByText('AbC-123_xyz.');
+		expect(block.tagName).toBe('CODE');
+	});
+
 	it('shows error toast when clipboard.writeText rejects', async () => {
 		Object.defineProperty(navigator, 'clipboard', {
 			value: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },

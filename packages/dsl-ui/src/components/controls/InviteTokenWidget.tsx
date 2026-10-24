@@ -3,6 +3,8 @@ import React from 'react';
 import { useToast } from '../overlay/Toast.js';
 import { Button } from '../controls/_Button.js';
 
+const COPY_FAILED = 'Failed to copy - please copy manually';
+
 // @formatter:off
 const tokenDisplayClass = 'flex-1 rounded border border-border bg-bg-secondary px-3 py-2 text-sm font-mono text-content break-all';
 // @formatter:on
@@ -27,12 +29,20 @@ export function InviteTokenWidget({ inviteToken, onGenerateToken, isPending = fa
 		// navigator.clipboard is undefined outside secure contexts (plain http on a LAN host): say so
 		// instead of throwing a TypeError nobody sees.
 		if (!navigator.clipboard) {
-			toast.error('Failed to copy - please copy manually');
+			toast.error(COPY_FAILED);
 			return;
 		}
-		navigator.clipboard.writeText(inviteToken).then(
+		// Some browsers throw synchronously (permissions policy, unfocused document) instead of rejecting.
+		let written: Promise<void>;
+		try {
+			written = navigator.clipboard.writeText(inviteToken);
+		} catch {
+			toast.error(COPY_FAILED);
+			return;
+		}
+		written.then(
 			() => toast.success('Token copied to clipboard'),
-			() => toast.error('Failed to copy - please copy manually')
+			() => toast.error(COPY_FAILED)
 		);
 	}
 
