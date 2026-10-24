@@ -1,0 +1,12 @@
+{
+	"$schema": "../../node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+	"testRunner": "vitest",
+	"vitest": { "configFile": "vitest.stryker.config.ts" },
+	"mutate": ["src/nodeKeyCheck.ts", "src/pageRunner/pageRunnerUtils.ts", "src/build/unknownKeys.ts"],
+	"concurrency": 1,
+	"coverageAnalysis": "perTest",
+	"reporters": ["clear-text", "progress"],
+	"tempDirName": ".stryker-tmp",
+	"cleanTempDir": true,
+	"timeoutMS": 60000
+}

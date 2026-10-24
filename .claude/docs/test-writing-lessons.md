@@ -35,7 +35,8 @@ Do not write tests for them; classify with a one-line reason in the PR or report
 
 Logic-heavy pure code: generators, parsers, URL/path helpers, formatters, hashes, schema mapping, or right after refactoring them. Not for markup or cosmetics.
 
-- `@stryker-mutator/core`, `@stryker-mutator/vitest-runner` and `@vitest/coverage-v8` are root devDependencies since `d2411c9`. No Stryker config is committed yet: create one per package.
-- Run ONE campaign at a time (they are expensive) with a single vitest worker.
-- The 2026-10-24 campaigns used ad-hoc, sampled scripts (some files sampled at 100-300 mutants), so scores are indicative. The scripts lived outside the repo (`C:/tmp/mut-A-scripts/`, `C:/tmp/mutate-*.mjs`) and may be gone.
-- Line/branch coverage was never measured before Stryker and `@vitest/coverage-v8` were installed.
+- Stryker and `@vitest/coverage-v8` are root devDependencies (`d2411c9`). Coverage: `npm run test:coverage` in a package (reports in git-ignored `coverage/`). Mutation: `npx stryker run` in `packages/dsl-renderer` (config: `stryker.config.json`, 3 pure-logic files, about 15 minutes, concurrency 1).
+- Stryker runs the tests in a sandbox copy of the package only. Tests that read the real repository layout cannot pass there: list them in `vitest.stryker.config.ts` `exclude` (today `entriesGenerator.pipeline.test.ts`).
+- Run ONE campaign (coverage or mutation) at a time, and no other heavy command meanwhile.
+- First measurement (2026-10-24, one worker): dsl-renderer lines 99.2%, branches 96.3%; dsl-ui lines 92.2% -> 98.4%, branches 89.2% -> 96.3% after the tests added for it. Mutation score of the 3 files in `stryker.config.json`: 93.1% on the first campaign, 99.0% after the tests and 2 fixes it exposed (the 7 survivors left are equivalent: redundant guards and a message separator).
+- A low number is a question, not a target: read the survivors and the uncovered branches, write tests for the behaviour they reveal, skip the equivalent ones.
