@@ -7,3 +7,4 @@
 - Token security — all token handling after `getToken` is the consumer's responsibility.
 - Server-side rendering — renderer targets client-side React only.
 - Backend contract definition — `pageTypesGenerator` validates against consumer-provided contracts; it does not define them.
+- Domain and business components — anything whose name, props, copy, endpoint or data shape belongs to one product (invite tokens, request-log counters...) lives in the requesting project's own library. See "Scope of dsl-ui" in `guiding-principles.md`.

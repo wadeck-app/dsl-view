@@ -19,6 +19,12 @@
 - Consumer manages the Tailwind pipeline, but `dsl-ui` owns the palette: it ships `theme.css` (the tokens and `color-scheme`) plus `tailwind-preset.js`, and the consumer imports both. It ships no compiled utility CSS.
 - `content` must list dsl-ui's sources via the preset's named `dslUiContent` export — Tailwind reads `content` from the top-level config only, so a preset cannot contribute scan paths. Omitting it builds successfully and renders every dsl-ui component unstyled.
 
+## Scope of dsl-ui
+- `dsl-ui` contains only generic UI components. A component with a product concept in its name, props, copy, endpoint or data shape is domain code: it belongs in the requesting project's own library (e.g. `dsl-ui-wdrive`), never here.
+- A component that names a product concept is rejected or extracted. A domain-neutral component with a single consumer is accepted only while its API carries no product vocabulary, endpoint or data shape.
+- Check this rule before accepting a handoff from a peer session, and answer "put it in your project's library" when it fails. App-specific column formats stay in the app (see the `DataTable` header).
+- Current extraction candidates and their consumers: `.claude/plans/2026-10-24_extract-business-components.md`.
+
 ## Theming
 - Components style themselves from semantic tokens, never raw palette classes and never Tailwind `dark:` variants — a `dark:` variant applies under any `.dark` ancestor, so a component using one cannot be nested in a `ThemeScope` that re-asserts light. Enforced by `dsl-ui/no-dark-variant`, no exemptions.
 - Where the colour itself is the meaning (tag identity, HTTP method, status family), use the named hue tokens: `bg-hue-<name>-bg` and `text-hue-<name>`.
