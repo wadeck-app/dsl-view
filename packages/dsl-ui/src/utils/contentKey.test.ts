@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { contentKey } from './contentKey.js';
+import { contentKey, plainFormData } from './contentKey.js';
 
 describe('contentKey', () => {
 	it('is equal for two objects with the same content and differs when the content differs', () => {
@@ -36,5 +36,24 @@ describe('contentKey', () => {
 		expect(first).toMatch(/^unserialisable:/);
 		expect(second).not.toBe(first);
 		expect(contentKey({ n: 1n })).toMatch(/^unserialisable:/);
+	});
+
+	describe('plainFormData', () => {
+		it('drops top-level DOM nodes, events and functions, keeps everything else', () => {
+			const button = document.createElement('button');
+			const data = { title: 'Dune', n: 0, empty: '', nothing: null, nested: { keep: [1] }, el: button, ev: new Event('click'), cb: () => 1 };
+
+			expect(plainFormData(data)).toStrictEqual({ title: 'Dune', n: 0, empty: '', nothing: null, nested: { keep: [1] } });
+		});
+
+		it('returns the very same object when there is nothing to drop (stable identity for effects)', () => {
+			const data = { title: 'Dune' };
+			expect(plainFormData(data)).toBe(data);
+		});
+
+		it('passes null and undefined through', () => {
+			expect(plainFormData(null)).toBeNull();
+			expect(plainFormData(undefined)).toBeUndefined();
+		});
 	});
 });

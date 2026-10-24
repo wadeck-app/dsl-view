@@ -1,5 +1,5 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { contentKey } from '@dsl-ui/utils/contentKey.js';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { contentKey, plainFormData } from '@dsl-ui/utils/contentKey.js';
 
 export interface FormContextValue {
 	formData: Record<string, unknown>;
@@ -30,7 +30,10 @@ export interface FormProps {
  * @registryCategory composite
  * @registryTags form
  */
-export function Form({ fields, actions, onSubmit, initialData }: FormProps) {
+export function Form({ fields, actions, onSubmit, initialData: initialDataProp }: FormProps) {
+	// A click handler can hand the form the clicked element or event as data: neither is form data, and either would
+	// reach the request body. Identity is kept when nothing was dropped.
+	const initialData = useMemo(() => plainFormData(initialDataProp), [initialDataProp]);
 	const [formState, setFormState] = useState<Record<string, unknown>>(initialData ?? {});
 	const [savedState, setSavedState] = useState<Record<string, unknown>>(initialData ?? {});
 	const [isPending, setIsPending] = useState(false);

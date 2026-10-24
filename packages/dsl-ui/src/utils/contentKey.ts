@@ -29,3 +29,17 @@ export function contentKey(value: unknown): string {
 		return `unserialisable:${unserialisableCounter}`;
 	}
 }
+
+/**
+ * The form data of `data`: top-level values that are DOM nodes, events or functions are dropped, because they are not
+ * data and would end up in the request body (and crash its serialisation). The same object is returned when nothing
+ * had to be dropped, so identity-based effects keep seeing a stable value.
+ */
+export function plainFormData<T extends Record<string, unknown> | null | undefined>(data: T): T {
+	if (data == null || typeof data !== 'object') {
+		return data;
+	}
+	const entries = Object.entries(data);
+	const kept = entries.filter(([, value]) => typeof value !== 'function' && !(typeof value === 'object' && value !== null && isDomNodeOrEvent(value)));
+	return kept.length === entries.length ? data : (Object.fromEntries(kept) as T);
+}

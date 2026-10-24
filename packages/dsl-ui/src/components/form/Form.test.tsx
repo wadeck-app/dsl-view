@@ -93,6 +93,18 @@ describe('Form', () => {
 		expect(screen.queryByText('Unsaved changes')).toBeNull();
 	});
 
+	it('never hands a DOM element from the initialData to onSubmit (it would reach the request body)', async () => {
+		const button = document.createElement('button');
+		const onSubmit = vi.fn().mockResolvedValue(undefined);
+
+		render(<Form fields={<NameField />} actions={<ButtonSave />} onSubmit={onSubmit} initialData={{ name: 'Dune', currentTarget: button }} />);
+		fireEvent.change(screen.getByLabelText('name'), { target: { value: 'Dune II' } });
+		fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+		await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+		expect(onSubmit).toHaveBeenCalledWith({ name: 'Dune II' });
+	});
+
 	it('starts with empty formData when there is no initialData', () => {
 		render(<Form fields={<FormDataDisplay />} actions={<div />} onSubmit={vi.fn().mockResolvedValue(undefined)} />);
 		expect(screen.getByTestId('form-data')).toHaveTextContent('{}');
