@@ -96,11 +96,18 @@ describe('RouterProvider', () => {
 		expect(new Set(seen).size).toBe(1);
 	});
 
-	it('navigate pushes the path and back goes back one entry', () => {
+	// `navigate` and `back` return the router's promise: a sync `act` handed that promise becomes an async act that
+	// nobody awaits, which leaves React's act queue open and silently breaks every later render in the worker
+	// (the next tests then see no component at all, only under a shuffled order). Await it.
+	it('navigate pushes the path and back goes back one entry', async () => {
 		const t = setup();
-		act(() => t.services.router.navigate('/other'));
+		await act(async () => {
+			await t.services.router.navigate('/other');
+		});
 		expect(t.router.state.location.pathname).toBe('/other');
-		act(() => t.services.router.back());
+		await act(async () => {
+			await t.services.router.back();
+		});
 		expect(t.router.state.location.pathname).toBe('/list');
 	});
 });

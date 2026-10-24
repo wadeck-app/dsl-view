@@ -26,12 +26,15 @@ function checkedRowBoxes(): boolean[] {
 describe('DataTable row identity for selection', () => {
 	it('selects only the clicked row when rows have no id (they used to share one empty key and all toggled together)', () => {
 		const warn = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-		const rows: Row[] = [{ name: 'A' }, { name: 'B' }, { name: 'C' }];
+		// DataTable reports each distinct message once per module, so a warning is asserted only by a test whose message
+		// no other test of this file produces: here "4 row(s)" (the others use 3, 2 or 1 row without an id). With a
+		// shared message the test that runs first would get the warning and the others none, depending on the order.
+		const rows: Row[] = [{ name: 'A' }, { name: 'B' }, { name: 'C' }, { name: 'D' }];
 		render(<DataTable rows={rows} columns={cols} selectable batchActions={batch} />);
 		fireEvent.click(checkbox('Select row 1'));
-		expect(checkedRowBoxes()).toStrictEqual([false, true, false]);
+		expect(checkedRowBoxes()).toStrictEqual([false, true, false, false]);
 		expect(screen.getByText('1 selected')).toBeInTheDocument();
-		expect(warn).toHaveBeenCalled();
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('4 row(s) have no "id" value'));
 	});
 
 	it('hands the batch action exactly the selected rows when ids are missing', () => {

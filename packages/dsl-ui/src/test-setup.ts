@@ -1,4 +1,15 @@
 import '@testing-library/jest-dom';
+import { afterEach, vi } from 'vitest';
+
+// A test that fails before its own `vi.useRealTimers()` would leave fake timers installed for every
+// following test in the file; always go back to the real clock. Persisted state (the A/B dock, filters, theme)
+// and the URL are also reset so one test cannot pre-seed the next one.
+afterEach(() => {
+    vi.useRealTimers();
+    localStorage.clear();
+    sessionStorage.clear();
+    window.history.replaceState(null, '', '/');
+});
 
 // Radix primitives use ResizeObserver internally
 (globalThis as typeof globalThis & { ResizeObserver: unknown }).ResizeObserver = class ResizeObserver {

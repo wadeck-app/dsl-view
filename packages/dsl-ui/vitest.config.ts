@@ -47,6 +47,11 @@ export default defineConfig({
 		globals: true,
 		setupFiles: ['./src/test-setup.ts'],
 		testTimeout: 30000,
+		// A spy, stubbed env var or global left over by a failing test would otherwise leak into the next
+		// test and make it fail for an unrelated reason, hiding the first real failure.
+		restoreMocks: true,
+		unstubEnvs: true,
+		unstubGlobals: true,
 		coverage: {
 			provider: 'v8',
 			reporter: ['text-summary', 'json-summary', 'lcov'],
