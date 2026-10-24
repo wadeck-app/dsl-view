@@ -5,6 +5,8 @@
 //
 // Valid values are returned untouched: the helper only intervenes for a value of the wrong kind.
 
+import { describeReceived, schemaWarnedProps } from './propWarnings.js';
+
 export type PropKind = 'string' | 'primitive' | 'array' | 'object' | 'function';
 
 const warned = new Set<string>();
@@ -14,20 +16,10 @@ export function resetCoercionWarnings(): void {
 	warned.clear();
 }
 
-// typeof reports null and arrays as 'object': name them, the YAML fixes differ.
-function describeReceived(value: unknown): string {
-	if (value === null) {
-		return 'null';
-	}
-	if (Array.isArray(value)) {
-		return 'a list';
-	}
-	return typeof value === 'object' ? 'a map' : typeof value;
-}
-
 function warnOnce(where: string, expected: string, value: unknown): void {
 	const id = `${where}|${expected}|${describeReceived(value)}`;
-	if (warned.has(id)) {
+	// The node-schema check (warnInvalidNodeProps) runs first and already told the author about this prop.
+	if (warned.has(id) || schemaWarnedProps.has(where)) {
 		return;
 	}
 	warned.add(id);

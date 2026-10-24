@@ -3,6 +3,7 @@ import React from 'react';
 import type { ComponentRegistry } from '../ComponentRegistry.js';
 import { EXTENSION_SLOT_TYPE, KNOWN_DSL_KEYS, omitNavKeys } from '../dslKeys.js';
 import { isDevelopment } from './devMode.js';
+import { warnInvalidNodeProps } from './warnInvalidNodeProps.js';
 import { warnInvalidChildren, warnUnknownNodeKeys } from './warnUnknownKeys.js';
 
 export interface RenderContext {
@@ -19,6 +20,8 @@ export interface RendererProps {
 export { EXTENSION_SLOT_TYPE, KNOWN_DSL_KEYS, omitNavKeys };
 // The generated entries import their runtime helpers from this module (see buildEntriesFile).
 export { coerceProp, coerceStringList, coerceDate } from './coerceProp.js';
+export { pickPropSchema } from './pickPropSchema.js';
+export { isDevelopment } from './devMode.js';
 
 /** True when a `$if` expression resolves to something falsy: the node renders nothing. */
 function isHiddenByIf(node: Record<string, unknown>, ctx: RenderContext): boolean {
@@ -88,6 +91,9 @@ export function DslRenderer({ node, registry, ctx = {} }: RendererProps): React.
 
 		// Unknown authored key (a non-$ key the component never reads): warn once, never change what renders.
 		warnUnknownNodeKeys(node, type, entry);
+
+		// A resolved prop value of the wrong shape (a typo'd enum, a map for a list): warn once, never change what renders.
+		warnInvalidNodeProps(node, type, entry, childCtx, resolveExpressionValue);
 
 		// $context.expose resolution check: warn if source ctx key is missing from current ctx
 		if (contextDirective?.expose) {

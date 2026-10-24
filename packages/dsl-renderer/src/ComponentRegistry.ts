@@ -14,6 +14,11 @@ export interface ComponentRegistryEntry {
 	category: 'atomic' | 'disposition' | 'composite';
 	tags: string[];
 	nodeSchema?: z.ZodSchema;
+	// Per-prop schema of an authored node (an object schema whose `shape` holds one schema per prop), expression-tolerant:
+	// a prop may hold `$sources.x`. Used by DslRenderer in development to WARN about a resolved value of the wrong shape
+	// (never to change what renders, unlike nodeSchema). Filled by entriesGenerator when the library ships
+	// `schemas/generated-node-schemas`; absent = the props of that component are not checked.
+	propSchema?: z.ZodSchema;
 	ctxSchema?: z.ZodSchema;
 	render: (props: RegistryRenderProps) => React.ReactElement | null;
 	// Constraint metadata - populated by entriesGenerator from JSDoc @slot tags and createContext/useContext calls
