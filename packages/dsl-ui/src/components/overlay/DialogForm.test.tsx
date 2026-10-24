@@ -80,6 +80,32 @@ describe('DialogForm', () => {
 		});
 	});
 
+	describe('create mode with initialData (no id)', () => {
+		it('pre-populates the form, and submits the prefilled values through onSubmit without adding an id', async () => {
+			const onSubmitEdit = vi.fn();
+			const { onSubmit } = renderDialog({ initialData: { name: 'Template' }, onSubmitEdit });
+			expect(screen.getByLabelText('name')).toHaveValue('Template');
+			const user = userEvent.setup();
+			await user.type(screen.getByLabelText('name'), ' 2');
+			await user.click(screen.getByRole('button', { name: 'Save' }));
+			await waitFor(() => expect(onSubmit).toHaveBeenCalledExactlyOnceWith({ name: 'Template 2' }));
+			expect(onSubmitEdit).not.toHaveBeenCalled();
+		});
+
+		it.each([[null], [undefined]])('an id of %s is create mode, not an edit of "null"/"undefined"', async idValue => {
+			const onSubmitEdit = vi.fn();
+			const { onSubmit } = renderDialog({ initialData: { id: idValue, name: 'Draft' } as never, onSubmitEdit });
+			const user = userEvent.setup();
+			await user.type(screen.getByLabelText('name'), '!');
+			await user.click(screen.getByRole('button', { name: 'Save' }));
+			await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+			expect(onSubmitEdit).not.toHaveBeenCalled();
+			expect(onSubmit.mock.calls[0]![0]).toMatchObject({ name: 'Draft!' });
+			expect(onSubmit.mock.calls[0]![0]).not.toHaveProperty('id', 'null');
+			expect(onSubmit.mock.calls[0]![0]).not.toHaveProperty('id', 'undefined');
+		});
+	});
+
 	it('create mode: data without an id does not add one and uses onSubmit', async () => {
 		const onSubmitEdit = vi.fn();
 		const { onSubmit } = renderDialog({ initialData: null, onSubmitEdit });

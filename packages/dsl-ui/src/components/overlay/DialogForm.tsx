@@ -9,7 +9,10 @@ export interface DialogFormProps {
 	title: string;
 	/** Truthy = dialog open; falsy = dialog closed. */
 	visible: unknown;
-	/** Pre-populate the form. An object with an `id` key = edit mode; otherwise = create mode. */
+	/**
+	 * Pre-populate the form. An object with a non-null `id` = edit mode; any other object (or none) = create mode, which
+	 * still pre-populates the fields (a template for a new item) and submits through `onSubmit`.
+	 */
 	initialData?: Record<string, unknown> | null;
 	onClose?: () => void;
 	onSubmit: (data: Record<string, unknown>) => Promise<void>;
@@ -26,20 +29,19 @@ export interface DialogFormProps {
  */
 export function DialogForm({ title, visible, initialData, onClose = () => undefined, onSubmit, onSubmitEdit, fields, size = 'md' }: DialogFormProps) {
 	const isOpen = Boolean(visible);
-	const editData =
-		initialData != null && typeof initialData === 'object' && 'id' in initialData
-			// violations-suppress: ts/no-unsafe-type-cast runtime guard confirmed object with 'id' - cast is safe
-			? (initialData as Record<string, unknown>)
-			: undefined;
+	const prefill = initialData != null && typeof initialData === 'object' ? initialData : undefined;
+	// Edit mode needs a real id: `{ id: null }` (a "new item" template) is a create, not an edit of the item "null".
+	const editId = prefill?.['id'];
+	const isEdit = editId !== undefined && editId !== null;
 
 	function handleOpenChange(next: boolean) {
 		if (!next) onClose();
 	}
 
 	async function handleSubmit(data: Record<string, unknown>) {
-		if (editData) {
+		if (isEdit) {
 			const submitEdit = onSubmitEdit ?? onSubmit;
-			await submitEdit({ ...data, id: String(editData['id']) });
+			await submitEdit({ ...data, id: String(editId) });
 		} else {
 			await onSubmit(data);
 		}
@@ -56,7 +58,7 @@ export function DialogForm({ title, visible, initialData, onClose = () => undefi
 						<ButtonCancel onCancel={() => handleOpenChange(false)} />
 					</>
 				}
-				initialData={editData}
+				initialData={prefill}
 				onSubmit={handleSubmit}
 			/>
 		</Dialog>
