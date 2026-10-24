@@ -17,6 +17,12 @@ export interface CompiledDslDiagnostic {
 		| 'invalid-map-slot'
 		| 'invalid-item-keys'
 		| 'unknown-action-key'
+		// A literal prop value the component's generated node schema rejects (wrong type, value outside the enum), or a
+		// required prop the node does not set. Expressions ($...) are never judged: they only have a value at runtime.
+		| 'invalid-prop-value'
+		| 'missing-required-prop'
+		// The prop value checks could not run: the registry carries no prop schemas (see dslCompiler).
+		| 'unchecked-props'
 		// A value where a DSL node is expected is not a map, or a node has no `$type`: either renders nothing.
 		| 'invalid-node'
 		| 'missing-type'

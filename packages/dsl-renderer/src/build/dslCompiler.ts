@@ -11,6 +11,26 @@ import { findUnknownKeys } from './unknownKeys.js';
 export type { CompiledDslArtifact, CompiledDslDiagnostic } from '../compiledDslArtifact.js';
 export { COMPILED_DSL_FORMAT_VERSION } from '../compiledDslArtifact.js';
 
+// The generated entries carry `propSchema` only outside production (a production bundle must not ship the schemas), so
+// a compile step that runs with NODE_ENV=production on such a registry would silently skip every prop value check.
+// Say so, once per document, instead of passing quietly.
+function uncheckedPropsWarning(registry: ComponentRegistry): CompiledDslDiagnostic | null {
+	const entries = Object.values(registry);
+	const isGeneratedRegistry = entries.some((entry) => entry.knownKeys !== undefined);
+	if (!isGeneratedRegistry || entries.some((entry) => entry.propSchema !== undefined) || process.env['NODE_ENV'] !== 'production') {
+		return null;
+	}
+	return {
+		severity: 'warning',
+		type: '(registry)',
+		nodePath: '$',
+		code: 'unchecked-props',
+		message:
+			'Prop value checks were skipped: the registry carries no prop schemas because NODE_ENV is "production" ' +
+			'(generated entries only include them otherwise). Run the compile step with NODE_ENV=development to check literal prop values.',
+	};
+}
+
 export function compileDslDocument(
 	yamlText: string,
 	registry: ComponentRegistry,
@@ -26,6 +46,10 @@ export function compileDslDocument(
 	}
 	// The unknown-key walk lives in unknownKeys.ts (shared with CLIs that only have a JSON manifest).
 	const diagnostics: CompiledDslDiagnostic[] = findUnknownKeys(doc, registry);
+	const unchecked = uncheckedPropsWarning(registry);
+	if (unchecked) {
+		diagnostics.push(unchecked);
+	}
 
 	return {
 		formatVersion: COMPILED_DSL_FORMAT_VERSION,

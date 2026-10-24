@@ -4,6 +4,7 @@ import type { CompiledDslDiagnostic } from '../compiledDslArtifact.js';
 import { EXTENSION_SLOT_TYPE, KNOWN_ACTION_KEYS, KNOWN_DSL_KEYS, omitNavKeys } from '../dslKeys.js';
 import type { ItemKeysSpec, MapSlotSpec } from '../dslKeys.js';
 import { checkItemKeys, checkNodeKeys, suggestKey } from '../nodeKeyCheck.js';
+import { findInvalidNodeProps } from '../nodePropIssues.js';
 
 // Isomorphic and React-free on purpose: a CLI can validate author views against a JSON manifest of the
 // built-in components without loading the renderer or the generated entries.
@@ -15,6 +16,8 @@ export interface DslKeysEntry {
 	mapSlots?: Record<string, MapSlotSpec>;
 	itemKeys?: Record<string, ItemKeysSpec>;
 	nodeSchema?: z.ZodSchema;
+	/** The generated schema of the component's props (a registry entry carries it outside production). A JSON manifest has none. */
+	propSchema?: z.ZodSchema;
 }
 
 /** Component name -> key metadata. A `ComponentRegistry` is a valid manifest; so is the JSON produced by `buildKnownKeysManifest`. */
@@ -120,6 +123,8 @@ function walk(node: unknown, manifest: DslKeysManifest, nodePath: string, diagno
 		}
 	}
 
+	diagnostics.push(...checkPropValues(record, type, nodePath, entry));
+
 	// Recursion is only possible via allowedChildren - the sole metadata that says
 	// where child DSL nodes live in this component's props. A component with no
 	// allowedChildren is a dead end for this walker (documented limitation).
@@ -151,6 +156,38 @@ function walk(node: unknown, manifest: DslKeysManifest, nodePath: string, diagno
 	for (const [propKey, spec] of Object.entries(entry.itemKeys ?? {})) {
 		checkItemKeys(record[propKey], propKey, spec, type, `${nodePath}.${propKey}`, diagnostics);
 	}
+}
+
+// The literal values the component's generated schema rejects: a typo'd enum, a map where a list is expected. These
+// render something wrong with no error today, so a clear mismatch is an error. An `$expression` is never judged (the
+// resolver below knows nothing), and a node that may get props from `$extends` / `$source` is not blamed for the ones
+// it does not set (those only exist at runtime), so a missing required prop is only a warning.
+function checkPropValues(record: Record<string, unknown>, type: string, nodePath: string, entry: DslKeysEntry): CompiledDslDiagnostic[] {
+	if (!entry.propSchema) {
+		return [];
+	}
+	const mayInherit = record['$extends'] !== undefined || record['$source'] !== undefined;
+	const diagnostics: CompiledDslDiagnostic[] = [];
+	for (const issue of findInvalidNodeProps(record, type, entry.propSchema, {}, () => undefined)) {
+		if (issue.present) {
+			diagnostics.push({
+				severity: 'error',
+				type,
+				nodePath,
+				code: 'invalid-prop-value',
+				message: `[${type}] "${issue.key}" expects ${issue.expected}${issue.subPath} but the YAML has ${issue.received}: the component ignores it or renders something unexpected`,
+			});
+		} else if (!mayInherit) {
+			diagnostics.push({
+				severity: 'warning',
+				type,
+				nodePath,
+				code: 'missing-required-prop',
+				message: `[${type}] "${issue.key}" is required (${issue.expected}) but the node does not set it: the component may render nothing useful`,
+			});
+		}
+	}
+	return diagnostics;
 }
 
 // A prop that is a map of named entries, each carrying one nested node (e.g. AbTest `variants.<key>.view`).
