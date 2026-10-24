@@ -99,3 +99,83 @@ describe('CronBuilder controls', () => {
 		expect(onChange).toHaveBeenLastCalledWith('0 10 * * 1');
 	});
 });
+
+describe('CronBuilder step field validation', () => {
+	function stepField() {
+		return screen.getByRole('spinbutton', { name: 'Every N minutes' });
+	}
+
+	it.each([['', 'cleared'], ['0', 'zero'], ['60', 'above 59'], ['-5', 'negative'], ['2.5', 'fractional']])(
+		'a %j step (%s) flags the field, explains why and cannot be applied',
+		value => {
+			const { onChange } = open();
+			chooseFrequency('every-n-min');
+			fireEvent.change(stepField(), { target: { value } });
+
+			expect(stepField()).toHaveAttribute('aria-invalid', 'true');
+			expect(screen.getByRole('alert')).toHaveTextContent('whole number of minutes between 1 and 59');
+			expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
+			fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+			expect(onChange).not.toHaveBeenCalled();
+		},
+	);
+
+	it.each(['1', '59'])('the edge value %s is accepted', value => {
+		const { onChange } = open();
+		chooseFrequency('every-n-min');
+		fireEvent.change(stepField(), { target: { value } });
+
+		expect(stepField()).not.toHaveAttribute('aria-invalid');
+		expect(screen.queryByRole('alert')).toBeNull();
+		apply();
+		expect(onChange).toHaveBeenCalledWith(`*/${value} * * * *`);
+	});
+
+	it('fixing an invalid step enables Apply again', () => {
+		open();
+		chooseFrequency('every-n-min');
+		fireEvent.change(stepField(), { target: { value: '0' } });
+		expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
+		fireEvent.change(stepField(), { target: { value: '5' } });
+		expect(screen.getByRole('button', { name: 'Apply' })).toBeEnabled();
+	});
+
+	it('the step error does not appear for the other frequencies', () => {
+		open();
+		chooseFrequency('every-n-min');
+		fireEvent.change(stepField(), { target: { value: '0' } });
+		chooseFrequency('daily');
+		expect(screen.queryByRole('alert')).toBeNull();
+		expect(screen.getByRole('button', { name: 'Apply' })).toBeEnabled();
+	});
+});
+
+describe('CronBuilder accessibility and reopening', () => {
+	it('two builders on one page keep their own labels (no shared ids)', () => {
+		render(
+			<>
+				<CronBuilder value="" onChange={vi.fn()} onClose={vi.fn()} />
+				<CronBuilder value="*/5 * * * *" onChange={vi.fn()} onClose={vi.fn()} />
+			</>,
+		);
+		const frequencies = screen.getAllByLabelText('Frequency:') as HTMLSelectElement[];
+		expect(frequencies).toHaveLength(2);
+		expect(frequencies[0]!.value).toBe('daily');
+		expect(frequencies[1]!.value).toBe('every-n-min');
+		expect(new Set(frequencies.map(f => f.id)).size).toBe(2);
+	});
+
+	it('an expression with a minute off the five-minute grid is shown as it is and applied unchanged', () => {
+		const { onChange } = open('7 * * * *');
+		const minute = screen.getByLabelText('at minute') as HTMLSelectElement;
+		expect(minute.value).toBe('7');
+		expect(Array.from(minute.options).map(o => o.textContent)).toContain('07');
+		apply();
+		expect(onChange).toHaveBeenCalledWith('7 * * * *');
+	});
+
+	it('the minute list keeps its twelve five-minute steps when the minute is on the grid', () => {
+		open('15 * * * *');
+		expect((screen.getByLabelText('at minute') as HTMLSelectElement).options).toHaveLength(12);
+	});
+});

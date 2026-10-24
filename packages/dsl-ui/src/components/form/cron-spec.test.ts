@@ -134,3 +134,13 @@ describe('parseCronToSpec', () => {
 		expect(parseCronToSpec(null)).toBeNull();
 	});
 });
+
+describe('parseCronToSpec: steps the wizard cannot express', () => {
+	it.each(['*/0 * * * *', '*/60 * * * *', '*/75 * * * *'])('%s is not expressible (step outside 1-59)', expr => {
+		expect(parseCronToSpec(expr)).toBeNull();
+	});
+
+	it.each(['*/1 * * * *', '*/59 * * * *'])('%s is expressible (edge of 1-59)', expr => {
+		expect(parseCronToSpec(expr)?.freq).toBe('every-n-min');
+	});
+});

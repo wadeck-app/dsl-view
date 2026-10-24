@@ -68,6 +68,11 @@ export function buildCron(spec: CronSpec): string {
 	}
 }
 
+// An "every N minutes" step is a whole number from 1 to 59: a step of 0 or 75 is not a schedule.
+export function isValidMinuteStep(n: number): boolean {
+	return Number.isInteger(n) && n >= 1 && n <= 59;
+}
+
 const NUM_LIST = /^\d+(,\d+)*$/;
 
 function parseHours(field: string): number[] | null {
@@ -108,7 +113,8 @@ export function parseCronToSpec(expr: string | null | undefined): CronSpec | nul
 	}
 	const step = /^\*\/(\d+)$/.exec(min);
 	if (step && hour === '*' && dom === '*' && dow === '*') {
-		return { ...base, freq: 'every-n-min', everyNMinutes: Number(step[1]) };
+		// Outside 1-59 the wizard cannot describe it, and opening on a made-up step would rewrite the schedule.
+		return isValidMinuteStep(Number(step[1])) ? { ...base, freq: 'every-n-min', everyNMinutes: Number(step[1]) } : null;
 	}
 	if (!/^\d+$/.test(min) || Number(min) > 59) {
 		return null;
