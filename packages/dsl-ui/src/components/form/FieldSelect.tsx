@@ -30,12 +30,23 @@ export interface FieldSelectProps {
 	error?: string;
 }
 
+// Reported once per received type, not once per render.
+const reportedBadOptions = new Set<string>();
+
 /**
  * @registryCategory atomic
  * @registryTags field select
  * @registryBind formData onChange
  */
-export function FieldSelect({ label, description, value, onChange, options, placeholder, disabled, required, error }: FieldSelectProps) {
+export function FieldSelect({ label, description, value, onChange, options: optionsProp, placeholder, disabled, required, error }: FieldSelectProps) {
+	// `options: $sources.authors` is undefined until the source has loaded: show an empty list meanwhile instead of
+	// crashing the page on `.map`. Anything else that is not a list is an authoring mistake and is reported once.
+	const received: unknown = optionsProp;
+	if (received !== undefined && received !== null && !Array.isArray(received) && !reportedBadOptions.has(typeof received)) {
+		reportedBadOptions.add(typeof received);
+		console.error(`[FieldSelect] "${label}": options must be a list of { value, label }, got ${typeof received}; showing no options.`);
+	}
+	const options: FieldSelectOption[] = Array.isArray(received) ? (received as FieldSelectOption[]) : [];
 	return (
 		// Function form: the control is nested inside the positioning wrapper the chevron
 		// needs, so FieldWrapper cannot reach it by cloning its first child.

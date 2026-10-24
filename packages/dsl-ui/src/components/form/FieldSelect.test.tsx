@@ -108,4 +108,26 @@ describe('FieldSelect', () => {
 		expect(select).toHaveAttribute('aria-invalid', 'true');
 		expect(select).toHaveAttribute('aria-required', 'true');
 	});
+
+	it('renders an empty list, without crashing, while `options: $sources.x` is still undefined', () => {
+		const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+		render(<FieldSelect label="Author" value="" onChange={vi.fn()} options={undefined as never} placeholder="Pick" />);
+
+		expect(screen.getAllByRole('option').map(option => option.textContent)).toEqual(['Pick']);
+		expect(error).not.toHaveBeenCalled();
+		error.mockRestore();
+	});
+
+	it('reports options that are not a list once, naming the field and the received type, and shows no options', () => {
+		const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+		render(<FieldSelect label="Genre" value="" onChange={vi.fn()} options={{ rows: [] } as never} />);
+		render(<FieldSelect label="Genre" value="" onChange={vi.fn()} options={{ rows: [] } as never} />);
+
+		expect(screen.queryAllByRole('option')).toHaveLength(0);
+		expect(error).toHaveBeenCalledTimes(1);
+		expect(error.mock.calls[0]![0]).toContain('[FieldSelect] "Genre": options must be a list of { value, label }, got object');
+		error.mockRestore();
+	});
 });
