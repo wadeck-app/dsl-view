@@ -19,6 +19,18 @@ const PADDING_CLASSES: Record<NonNullable<CardProps['padding']>, string> = {
     lg: 'p-6',
 };
 
+// Elements that own their click: a click on one of them inside a clickable card must not also activate the card.
+const NESTED_INTERACTIVE =
+    'a[href], button, input, select, textarea, label, summary, [role="button"], [role="link"], [role="checkbox"], [role="switch"], [role="menuitem"], [role="tab"], [contenteditable=""], [contenteditable="true"]';
+
+function isNestedInteractive(target: EventTarget | null, card: HTMLElement): boolean {
+    if (!(target instanceof Element)) {
+        return false;
+    }
+    const interactive = target.closest(NESTED_INTERACTIVE);
+    return interactive !== null && interactive !== card && card.contains(interactive);
+}
+
 /**
  * @registryCategory disposition
  * @registryTags card container surface
@@ -48,7 +60,7 @@ export function Card({
     return (
         <div
             className={base}
-            onClick={onClick}
+            onClick={isClickable ? (e) => { if (!isNestedInteractive(e.target, e.currentTarget)) { onClick?.(); } } : undefined}
             role={isClickable ? 'button' : undefined}
             tabIndex={isClickable ? 0 : undefined}
             // Only the card's own key presses count: Enter/Space typed in a field or pressed on a button inside the

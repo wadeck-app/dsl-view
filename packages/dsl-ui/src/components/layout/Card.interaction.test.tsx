@@ -62,8 +62,8 @@ describe('Card as a button (onClick given)', () => {
 
 		// Before the fix the card's key handler prevented the default action, so the inner button never fired.
 		expect(onInner).toHaveBeenCalledTimes(1);
-		// The card still sees the inner button's click bubble up, once (that is plain click bubbling, not the key handler).
-		expect(onClick).toHaveBeenCalledTimes(1);
+		// The inner button owns its click: it no longer activates the card behind it (see CardActivation.test.tsx).
+		expect(onClick).not.toHaveBeenCalled();
 	});
 });
 
