@@ -471,6 +471,7 @@ export const FieldTextareaNodeSchema = baseNode.extend({
 	label: z.string(),
 	description: z.string().optional(),
 	rows: dsl(z.number()).optional(),
+	mono: dsl(z.boolean()).optional(),
 	placeholder: z.string().optional(),
 	readOnly: dsl(z.boolean()).optional(),
 	disabled: dsl(z.boolean()).optional(),

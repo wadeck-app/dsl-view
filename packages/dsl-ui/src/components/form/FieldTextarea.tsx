@@ -11,6 +11,8 @@ export interface FieldTextareaProps {
 	value: string;
 	onChange: (v: string) => void;
 	rows?: number;
+	/** Monospace text, for code, JSON and other pasted payloads. */
+	mono?: boolean;
 	placeholder?: string;
 	/** Not editable but still focusable and submitted; onChange is never called. */
 	readOnly?: boolean;
@@ -32,6 +34,7 @@ export function FieldTextarea({
 	value,
 	onChange,
 	rows = 4,
+	mono = false,
 	placeholder,
 	readOnly,
 	disabled,
@@ -48,7 +51,7 @@ export function FieldTextarea({
 				placeholder={placeholder}
 				readOnly={readOnly}
 				disabled={disabled}
-				className={textareaClass}
+				className={mono ? `${textareaClass} font-mono` : textareaClass}
 			/>
 		</FieldWrapper>
 	);

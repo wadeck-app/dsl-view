@@ -596,6 +596,7 @@
 			"disabled",
 			"error",
 			"label",
+			"mono",
 			"placeholder",
 			"readOnly",
 			"required",

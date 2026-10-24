@@ -36,6 +36,15 @@ describe('FieldTextarea', () => {
 		expect(screen.getByRole('textbox')).toHaveAttribute('rows', '8');
 	});
 
+	it('mono switches the text to monospace; by default it is not', () => {
+		const { rerender } = render(<FieldTextarea label="Payload" value="{}" onChange={vi.fn()} />);
+		expect(screen.getByRole('textbox')).not.toHaveClass('font-mono');
+		rerender(<FieldTextarea label="Payload" value="{}" mono onChange={vi.fn()} />);
+		expect(screen.getByRole('textbox')).toHaveClass('font-mono');
+		rerender(<FieldTextarea label="Payload" value="{}" mono={false} onChange={vi.fn()} />);
+		expect(screen.getByRole('textbox')).not.toHaveClass('font-mono');
+	});
+
 	it('renders description when provided', () => {
 		render(<FieldTextarea label="Notes" description="Enter your notes here" value="" onChange={vi.fn()} />);
 		expect(screen.getByText('Enter your notes here')).toBeInTheDocument();
