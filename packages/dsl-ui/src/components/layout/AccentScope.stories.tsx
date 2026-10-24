@@ -12,9 +12,11 @@ const meta: Meta<typeof AccentScope> = {
 export default meta;
 type Story = StoryObj<typeof AccentScope>;
 
+const SAMPLE_CLASS = 'flex items-center gap-3 rounded-lg border border-border bg-surface p-3 text-content';
+
 function Sample({ label }: { label: string }) {
 	return (
-		<div className="flex items-center gap-3 rounded-lg border border-border bg-surface p-3 text-content">
+		<div className={SAMPLE_CLASS}>
 			<span className="text-primary">{label}</span>
 			<span className="rounded bg-primary-light px-2 py-1 text-primary">tint</span>
 			<Button variant="primary">Primary</Button>

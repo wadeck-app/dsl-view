@@ -2,8 +2,13 @@ import { useState } from 'react';
 
 // A set of strings kept in localStorage as a JSON array. A stored value that is not a JSON array of strings is
 // reported (never silently used) and the set starts empty.
-export function usePersistentSet(key: string): [ReadonlySet<string>, (id: string) => void] {
+// `enabled` false (default true): the set is empty and nothing is read from or written to the storage. It is read at
+// mount, like usePersistentChoice.
+export function usePersistentSet(key: string, enabled = true): [ReadonlySet<string>, (id: string) => void] {
 	const [set, setSet] = useState<ReadonlySet<string>>(() => {
+		if (!enabled) {
+			return new Set();
+		}
 		const stored = localStorage.getItem(key);
 		if (stored === null) {
 			return new Set();
@@ -20,6 +25,9 @@ export function usePersistentSet(key: string): [ReadonlySet<string>, (id: string
 		return new Set();
 	});
 	const toggle = (id: string): void => {
+		if (!enabled) {
+			return;
+		}
 		const next = new Set(set);
 		if (!next.delete(id)) {
 			next.add(id);

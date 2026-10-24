@@ -1,5 +1,5 @@
 import { CheckCircle, Info, X, XCircle } from 'lucide-react';
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 export type ToastVariant = 'success' | 'error' | 'info';
 
@@ -75,11 +75,15 @@ export function ToastProvider({ children }: ToastProviderProps) {
 		return () => t.forEach(clearTimeout);
 	}, []);
 
-	const ctx: ToastContextValue = {
-		success: msg => add(msg, 'success'),
-		error: msg => add(msg, 'error'),
-		info: msg => add(msg, 'info'),
-	};
+	// Stable across renders: a consumer of useToast must not re-render each time a toast comes or goes.
+	const ctx = useMemo<ToastContextValue>(
+		() => ({
+			success: msg => add(msg, 'success'),
+			error: msg => add(msg, 'error'),
+			info: msg => add(msg, 'info'),
+		}),
+		[add]
+	);
 
 	return (
 		<ToastContext.Provider value={ctx}>

@@ -69,7 +69,11 @@ export function useOpticalCenter(ref: RefObject<HTMLElement | null>, text: strin
 			el.style.transform = '';
 			return;
 		}
+		let cancelled = false;
 		const apply = (): void => {
+			if (cancelled) {
+				return;
+			}
 			const m = measure(el, text);
 			if (!m) {
 				return;
@@ -80,6 +84,10 @@ export function useOpticalCenter(ref: RefObject<HTMLElement | null>, text: strin
 		apply();
 		// The font may not be loaded at first paint: measuring with the fallback font would be wrong.
 		void document.fonts?.ready.then(apply);
+		// A measurement that resolves after the text changed, or after the element went away, must not overwrite a newer one.
+		return () => {
+			cancelled = true;
+		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps -- `deps` is the caller's explicit re-measure list
 	}, [text, enabled, ...deps]);
 }

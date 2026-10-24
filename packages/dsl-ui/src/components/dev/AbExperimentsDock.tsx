@@ -10,12 +10,10 @@ const reportedHostDuplicates = new Set<string>();
 export function AbExperimentsDock({ store, hostTests, enabled }: { store: AbStore; hostTests: readonly AbDockTest[]; enabled: boolean }): React.ReactElement {
 	const registered = useSyncExternalStore(store.subscribe, store.getSnapshot);
 	const hostIds = new Set(hostTests.map((t) => t.id));
-	const clashingKey = registered
-		.filter((t) => hostIds.has(t.id))
-		.map((t) => t.id)
-		.join(',');
+	// A string, so that the effect below re-runs only when the set of clashing ids changes (ids may contain commas).
+	const clashingKey = JSON.stringify(registered.filter((t) => hostIds.has(t.id)).map((t) => t.id));
 	useEffect(() => {
-		for (const id of clashingKey ? clashingKey.split(',') : []) {
+		for (const id of JSON.parse(clashingKey) as string[]) {
 			if (!reportedHostDuplicates.has(id)) {
 				reportedHostDuplicates.add(id);
 				console.error(`[ab] The host test "${id}" and an AbTest node use the same id: only the host test is shown in the dock.`);

@@ -43,7 +43,8 @@ const COLLAPSE_OPTIONS = ['open', 'collapsed'] as const;
  * Not a DSL node: it is a React API (hook + component) for the host app's code, so it carries no `@registryCategory`.
  */
 export function AbDock({ tests, enabled = isDev() }: { tests: readonly AbTest[]; enabled?: boolean }): React.ReactElement | null {
-	const [hidden, toggleHidden] = usePersistentSet(HIDDEN_TESTS_KEY);
+	// Off (production by default): the tool reads nothing from the storage, so a stale value cannot even log a warning.
+	const [hidden, toggleHidden] = usePersistentSet(HIDDEN_TESTS_KEY, enabled);
 	// The fold state is read even with no test yet: a test registering later must find the stored state, not 'open'.
 	const [dockState, setDockState] = usePersistentChoice(COLLAPSED_DOCK_KEY, COLLAPSE_OPTIONS, 'open', 'dock state', undefined, enabled);
 	const dockId = useId();

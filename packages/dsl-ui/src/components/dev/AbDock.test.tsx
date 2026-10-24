@@ -124,6 +124,14 @@ describe('AbDock dev flag (built in)', () => {
 		expect(applied).toBe('green');
 	});
 
+	it('reads nothing of its own state when off: a stale hidden list cannot log a warning in production', () => {
+		localStorage.setItem(HIDDEN_TESTS_KEY, '{not json');
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		render(<Harness enabled={false} />);
+		expect(warn).not.toHaveBeenCalled();
+		warn.mockRestore();
+	});
+
 	it('can be forced on explicitly', () => {
 		render(<Harness enabled />);
 		expect(screen.getByTestId('ab-dock')).toBeInTheDocument();

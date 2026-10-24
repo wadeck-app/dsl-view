@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { useAbExperiments } from './AbExperiments.js';
 import type { AbTest as AbDockTest } from './abTypes.js';
 import { isDev } from './isDev.js';
+import { reportOnce } from './reportOnce.js';
 import { usePersistentChoice } from './usePersistentChoice.js';
 
 // The test as the dock shows it. Same name as the node below: a type and a function do not clash, and this keeps
@@ -31,15 +32,6 @@ export interface AbTestProps {
 }
 
 const ID_PATTERN = /^[A-Za-z0-9_-]+$/;
-const reported = new Set<string>();
-
-// Reported once per message: a render loop must not flood the console.
-function reportOnce(message: string, log: (message: string) => void): void {
-	if (!reported.has(message)) {
-		reported.add(message);
-		log(message);
-	}
-}
 
 // What is wrong with the declaration, or null. These are authoring mistakes the build-time check also catches.
 function configError({ id, label, initial, variants }: Pick<AbTestProps, 'id' | 'label' | 'initial' | 'variants'>): string | null {

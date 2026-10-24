@@ -65,3 +65,78 @@ describe('ToastProvider', () => {
 		expect(screen.getByRole('status').textContent).toContain('Saved');
 	});
 });
+
+describe('ToastProvider timers', () => {
+	beforeEach(() => {
+		vi.useFakeTimers();
+	});
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	it('announces each toast on its own, politely, in a region that is not read as a whole', () => {
+		setup();
+		const region = document.querySelector('[aria-live]')!;
+		expect(region).toHaveAttribute('aria-live', 'polite');
+		expect(region).toHaveAttribute('aria-atomic', 'false');
+	});
+
+	it('drops the auto-dismiss timer of a toast the user dismissed first', () => {
+		setup();
+		fireEvent.click(screen.getByText('ok'));
+		expect(vi.getTimerCount()).toBe(1);
+		fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+		expect(screen.queryByRole('status')).toBeNull();
+		expect(vi.getTimerCount()).toBe(0);
+	});
+
+	it('leaves no timer behind when the provider unmounts', () => {
+		const { unmount } = render(
+			<ToastProvider>
+				<Trigger />
+			</ToastProvider>
+		);
+		fireEvent.click(screen.getByText('ok'));
+		fireEvent.click(screen.getByText('info'));
+		expect(vi.getTimerCount()).toBe(2);
+		unmount();
+		expect(vi.getTimerCount()).toBe(0);
+	});
+
+	it('starts no timer for an error, which stays until dismissed', () => {
+		setup();
+		fireEvent.click(screen.getByText('fail'));
+		expect(vi.getTimerCount()).toBe(0);
+	});
+});
+
+describe('useToast consumers', () => {
+	it('do not re-render when a toast comes or goes (the context value is stable)', () => {
+		let renders = 0;
+		function Counting() {
+			const toast = useToast();
+			renders++;
+			return <button onClick={() => toast.success('Saved')}>ok</button>;
+		}
+		render(
+			<ToastProvider>
+				<Counting />
+			</ToastProvider>
+		);
+		const before = renders;
+		fireEvent.click(screen.getByText('ok'));
+		fireEvent.click(screen.getByText('ok'));
+		expect(screen.getAllByRole('status')).toHaveLength(2);
+		expect(renders).toBe(before);
+	});
+
+	it('throws a clear error outside a provider', () => {
+		const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+		function Bare() {
+			useToast();
+			return null;
+		}
+		expect(() => render(<Bare />)).toThrow('useToast must be used inside <ToastProvider>');
+		error.mockRestore();
+	});
+});

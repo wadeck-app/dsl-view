@@ -32,7 +32,9 @@ export function Popover({
 	const isOpen = isControlled ? controlledOpen : uncontrolledOpen;
 
 	function handleOpenChange(next: boolean) {
-		if (!isControlled) setUncontrolledOpen(next);
+		if (!isControlled) {
+			setUncontrolledOpen(next);
+		}
 		onOpenChange?.(next);
 	}
 
@@ -40,7 +42,7 @@ export function Popover({
 		<RadixPopover.Root open={isOpen} onOpenChange={handleOpenChange}>
 			<RadixPopover.Trigger asChild>
 				{/* Radix anchors the panel to this element's rect; `display: contents` has no box and pinned it to the page origin. */}
-					<span style={{ display: 'inline-flex' }}>{trigger}</span>
+				<span style={{ display: 'inline-flex' }}>{trigger}</span>
 			</RadixPopover.Trigger>
 			<RadixPopover.Portal>
 				<RadixPopover.Content

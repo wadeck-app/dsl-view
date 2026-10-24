@@ -3,16 +3,7 @@ import { useEffect, useRef } from 'react';
 import { useAbExperiments } from './AbExperiments.js';
 import type { AbTest as AbDockTest } from './abTypes.js';
 import { isDev } from './isDev.js';
-
-const reported = new Set<string>();
-
-// Reported once: a render loop must not flood the console.
-function reportOnce(message: string): void {
-	if (!reported.has(message)) {
-		reported.add(message);
-		console.warn(message);
-	}
-}
+import { reportOnce } from './reportOnce.js';
 
 // What the dock shows of a test, without the callback: when it changes the row must be refreshed.
 function shownKey(test: AbDockTest): string {

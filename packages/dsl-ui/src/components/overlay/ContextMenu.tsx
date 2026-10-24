@@ -30,6 +30,7 @@ const itemBaseClass = 'flex w-full items-center gap-2 rounded px-3 py-2 text-sm 
 const itemEnabledClass = 'hover:bg-surface-subtle focus:bg-surface-subtle text-content cursor-pointer';
 const itemDangerClass = 'hover:bg-danger/10 focus:bg-danger/10 text-danger cursor-pointer';
 const itemDisabledClass = 'opacity-50 cursor-not-allowed text-content-subtle pointer-events-none';
+const panelClass = 'z-50 min-w-[10rem] rounded-lg border border-border bg-surface p-1 shadow-lg outline-none';
 // @formatter:on
 
 /**
@@ -109,7 +110,7 @@ export function ContextMenu({ trigger, items, side = 'bottom', align = 'start', 
 							itemRefs.current[firstIdx]?.focus();
 						}
 					}}
-					className="z-50 min-w-[10rem] rounded-lg border border-border bg-surface p-1 shadow-lg outline-none"
+					className={panelClass}
 					data-testid="context-menu-content"
 				>
 					<ul role="menu" className="flex flex-col">
@@ -122,6 +123,7 @@ export function ContextMenu({ trigger, items, side = 'bottom', align = 'start', 
 
 							return (
 								<li key={index} role="none">
+									{/* violations-suppress: react/no-raw-button the menu item owns its geometry and its roving focus (ArrowUp/Down/Home/End) */}
 									<button
 										// eslint-disable-next-line react-compiler/react-compiler
 										ref={el => {
