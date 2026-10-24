@@ -72,6 +72,16 @@ describe('buildLinkPath', () => {
 		expect(buildLinkPath('/{x}', { x: 'a/b' })).toEqual({ href: '/a%2Fb' });
 	});
 
+	it('takes a whole app path from an internal template that is a single placeholder, still refusing other origins', () => {
+		expect(buildLinkPath('{href}', { href: '/modules/task/tasks/1?tab=notes' })).toEqual({ href: '/modules/task/tasks/1?tab=notes' });
+		expect(buildLinkPath('{href}', { href: '//evil.example/x' }).problem).toMatch(/single "\/"/);
+		expect(buildLinkPath('{href}', { href: 'javascript:alert(1)' }).problem).toMatch(/absolute app path/);
+	});
+
+	it('never reads inherited fields: {constructor} is a missing value, not a function source', () => {
+		expect(buildLinkPath('/x/{constructor}', {}).problem).toMatch(/placeholder \{constructor\}/);
+	});
+
 	it('checks an external template against the external rule', () => {
 		expect(buildLinkPath('https://example.com/{id}', { id: 'a/b' }, true)).toEqual({ href: 'https://example.com/a%2Fb' });
 		expect(buildLinkPath('/{id}', { id: 'a' }, true).problem).toMatch(/http:, https: or mailto:/);

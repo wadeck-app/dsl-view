@@ -31,7 +31,7 @@ import { AppLink } from '../navigation/AppLink.js';
 import { formatBytes } from '@dsl-ui/utils/formatBytes.js';
 import { buildLinkPath } from '@dsl-ui/utils/linkTarget.js';
 import { RouterContext } from '@dsl-ui/RouterContext.js';
-import { buildTemplatedPath } from '@dsl-ui/utils/templatedPath.js';
+import { fillTemplate } from '@dsl-ui/utils/templatedPath.js';
 
 // Local alias matching dsl-engine's DslRawNode = Record<string, unknown>
 type DslRawNode = Record<string, unknown>;
@@ -761,7 +761,13 @@ export function DataTable<T extends Record<string, unknown>>({
 					);
 					return;
 				}
-				router.navigate(buildTemplatedPath(navigateTo, row));
+				const { text, missing } = fillTemplate(navigateTo, row);
+				if (missing !== undefined) {
+					// Loud, because navigating to "/files/" would open another page than the clicked row's.
+					warnOnce(`[DataTable] navigateTo="${navigateTo}": the clicked row has no value for {${missing}}, so the row click does nothing (row keys: ${Object.keys(row).sort().join(', ') || 'none'}).`);
+					return;
+				}
+				router.navigate(text);
 		  }
 		: undefined;
 

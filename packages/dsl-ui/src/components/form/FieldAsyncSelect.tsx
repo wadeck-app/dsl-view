@@ -64,6 +64,8 @@ export function FieldAsyncSelect({
 	/** True once at least one loadOptions call has resolved. Used to gate the
 	 *  "no options" message so it does not appear while the first load is pending. */
 	const [hasSearched, setHasSearched] = useState(false);
+	/** True when the last loadOptions call rejected: shown as an error, never as "no options". */
+	const [loadFailed, setLoadFailed] = useState(false);
 
 	const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -93,6 +95,7 @@ export function FieldAsyncSelect({
 			setInputValue(selectedLabel ?? '');
 			setActiveIndex(-1);
 			setHasSearched(false);
+			setLoadFailed(false);
 		}
 		// Intentionally omitting selectedLabel from deps:
 		// we only want to revert inputValue when isOpen transitions to false.
@@ -110,11 +113,15 @@ export function FieldAsyncSelect({
 					const result = await loadOptions(query);
 					if (requestId !== requestIdRef.current) return;
 					setOptions(result);
+					setLoadFailed(false);
 					setHasSearched(true);
 					setActiveIndex(-1);
-				} catch {
+				} catch (loadError) {
 					if (requestId !== requestIdRef.current) return;
+					// A failed load must not read as "no options": keep the cause for whoever debugs it.
+					console.error(`[FieldAsyncSelect] loadOptions("${query}") failed:`, loadError);
 					setOptions([]);
+					setLoadFailed(true);
 					setHasSearched(true);
 				} finally {
 					if (requestId === requestIdRef.current) setIsLoading(false);
@@ -137,6 +144,10 @@ export function FieldAsyncSelect({
 
 	function handleFocus() {
 		if (!disabled) {
+			// Coming back before the delayed close of a previous blur fired: keep the list open.
+			if (blurTimerRef.current) {
+				clearTimeout(blurTimerRef.current);
+			}
 			setHasSearched(false);
 			setIsOpen(true);
 			triggerLoad(inputValue);
@@ -208,7 +219,9 @@ export function FieldAsyncSelect({
 		activeIndex >= 0 && options[activeIndex] ? `${id}-option-${activeIndex}` : undefined;
 
 	// Show "no options" only after at least one search has resolved (not during initial load).
-	const showNoOptions = isOpen && !isLoading && hasSearched && options.length === 0;
+	const showLoadError = isOpen && !isLoading && hasSearched && loadFailed;
+	const showNoOptions = isOpen && !isLoading && hasSearched && options.length === 0 && !loadFailed;
+	const errorId = `${id}-error`;
 	const showOptions = isOpen && options.length > 0;
 
 	return (
@@ -247,6 +260,7 @@ export function FieldAsyncSelect({
 							aria-activedescendant={activeDescendant}
 							aria-required={required}
 							aria-invalid={error ? true : undefined}
+							aria-describedby={error ? errorId : undefined}
 							value={inputValue}
 							onChange={handleInputChange}
 							onFocus={handleFocus}
@@ -324,6 +338,11 @@ export function FieldAsyncSelect({
 										</button>
 									</li>
 								))}
+							{showLoadError && (
+								<li className="px-3 py-2 text-sm text-danger" role="option" aria-disabled="true">
+									Could not load options
+								</li>
+							)}
 							{showNoOptions && (
 								<li
 									className="px-3 py-2 text-sm text-muted"
@@ -338,7 +357,7 @@ export function FieldAsyncSelect({
 				</Popover.Portal>
 			</Popover.Root>
 
-			{error && <p className="mt-1 text-xs text-red-500" role="alert">{error}</p>}
+			{error && <p id={errorId} className="mt-1 text-xs text-red-500" role="alert">{error}</p>}
 		</div>
 	);
 }

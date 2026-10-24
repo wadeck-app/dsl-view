@@ -449,3 +449,276 @@ describe('FieldAsyncSelect — keyboard navigation', () => {
 		expect(screen.queryByText('United States')).not.toBeInTheDocument();
 	});
 });
+
+// ── Robustness: races, failures, focus ─────────────────────────────────────────
+
+function deferred<T>() {
+	let resolve!: (v: T) => void;
+	const promise = new Promise<T>(res => {
+		resolve = res;
+	});
+	return { promise, resolve };
+}
+
+describe('FieldAsyncSelect — late and failing answers', () => {
+	it('ignores the answer of a superseded request, and keeps the spinner until the latest one answers', async () => {
+		const first = deferred<FieldAsyncSelectOption[]>();
+		const second = deferred<FieldAsyncSelectOption[]>();
+		const load = vi.fn().mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+		render(
+			<FieldAsyncSelect label="Country" value={null} onChange={vi.fn()} loadOptions={load} debounceMs={0} />,
+		);
+		const input = screen.getByRole('combobox');
+		fireEvent.change(input, { target: { value: 'u' } });
+		act(() => { vi.advanceTimersByTime(0); });
+		fireEvent.change(input, { target: { value: 'ca' } });
+		act(() => { vi.advanceTimersByTime(0); });
+		expect(load).toHaveBeenCalledTimes(2);
+
+		// The newer request answers first, then the older one arrives late: it must not overwrite.
+		await act(async () => { second.resolve([{ value: 'ca', label: 'Canada' }]); });
+		await act(async () => { first.resolve([{ value: 'us', label: 'United States' }]); });
+		expect(screen.getByText('Canada')).toBeInTheDocument();
+		expect(screen.queryByText('United States')).not.toBeInTheDocument();
+		expect(screen.queryByRole('status')).not.toBeInTheDocument();
+	});
+
+	it('a stale answer arriving first does not show and does not stop the spinner of the pending latest request', async () => {
+		const first = deferred<FieldAsyncSelectOption[]>();
+		const second = deferred<FieldAsyncSelectOption[]>();
+		const load = vi.fn().mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+		render(
+			<FieldAsyncSelect label="Country" value={null} onChange={vi.fn()} loadOptions={load} debounceMs={0} />,
+		);
+		const input = screen.getByRole('combobox');
+		fireEvent.change(input, { target: { value: 'u' } });
+		act(() => { vi.advanceTimersByTime(0); });
+		fireEvent.change(input, { target: { value: 'ca' } });
+		act(() => { vi.advanceTimersByTime(0); });
+		await act(async () => { first.resolve([{ value: 'us', label: 'United States' }]); });
+		expect(screen.queryByText('United States')).not.toBeInTheDocument();
+		expect(screen.getByRole('status')).toBeInTheDocument();
+		await act(async () => { second.resolve([{ value: 'ca', label: 'Canada' }]); });
+		expect(screen.getByText('Canada')).toBeInTheDocument();
+		expect(screen.queryByRole('status')).not.toBeInTheDocument();
+	});
+
+	it('a failing load is shown as an error, not as "no options", and is logged with its cause', async () => {
+		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const load = vi.fn().mockRejectedValue(new Error('503 daemon down'));
+		render(
+			<FieldAsyncSelect
+				label="Country"
+				value={null}
+				onChange={vi.fn()}
+				loadOptions={load}
+				debounceMs={0}
+				noOptionsMessage="Nothing found"
+			/>,
+		);
+		fireEvent.change(screen.getByRole('combobox'), { target: { value: 'x' } });
+		await advanceAndFlush(0);
+		expect(screen.getByText('Could not load options')).toBeInTheDocument();
+		expect(screen.queryByText('Nothing found')).not.toBeInTheDocument();
+		expect(consoleError).toHaveBeenCalledTimes(1);
+		expect(String(consoleError.mock.calls[0]?.[0])).toContain('loadOptions("x")');
+		expect(consoleError.mock.calls[0]?.[1]).toEqual(new Error('503 daemon down'));
+		consoleError.mockRestore();
+	});
+
+	it('the next successful search replaces the error with the results', async () => {
+		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const load = vi.fn().mockRejectedValueOnce(new Error('boom')).mockResolvedValueOnce(mockOptions);
+		render(
+			<FieldAsyncSelect label="Country" value={null} onChange={vi.fn()} loadOptions={load} debounceMs={0} />,
+		);
+		const input = screen.getByRole('combobox');
+		fireEvent.change(input, { target: { value: 'x' } });
+		await advanceAndFlush(0);
+		expect(screen.getByText('Could not load options')).toBeInTheDocument();
+		fireEvent.change(input, { target: { value: 'u' } });
+		await advanceAndFlush(0);
+		expect(screen.queryByText('Could not load options')).not.toBeInTheDocument();
+		expect(screen.getByText('Canada')).toBeInTheDocument();
+		consoleError.mockRestore();
+	});
+
+	it('an empty answer still says "no options" (not the error)', async () => {
+		render(
+			<FieldAsyncSelect
+				label="Country"
+				value={null}
+				onChange={vi.fn()}
+				loadOptions={vi.fn().mockResolvedValue([])}
+				debounceMs={0}
+			/>,
+		);
+		fireEvent.change(screen.getByRole('combobox'), { target: { value: 'x' } });
+		await advanceAndFlush(0);
+		expect(screen.getByText('No options')).toBeInTheDocument();
+		expect(screen.queryByText('Could not load options')).not.toBeInTheDocument();
+	});
+
+	it('unmounting before the debounce fires never calls loadOptions', () => {
+		const load = makeLoad();
+		const { unmount } = render(
+			<FieldAsyncSelect label="Country" value={null} onChange={vi.fn()} loadOptions={load} debounceMs={200} />,
+		);
+		fireEvent.change(screen.getByRole('combobox'), { target: { value: 'can' } });
+		unmount();
+		vi.advanceTimersByTime(1000);
+		expect(load).not.toHaveBeenCalled();
+	});
+
+	it('the default debounce is 300 ms', () => {
+		const load = makeLoad();
+		render(<FieldAsyncSelect label="Country" value={null} onChange={vi.fn()} loadOptions={load} />);
+		fireEvent.change(screen.getByRole('combobox'), { target: { value: 'can' } });
+		act(() => { vi.advanceTimersByTime(299); });
+		expect(load).not.toHaveBeenCalled();
+		act(() => { vi.advanceTimersByTime(1); });
+		expect(load).toHaveBeenCalledExactlyOnceWith('can');
+	});
+});
+
+describe('FieldAsyncSelect — focus, blur and keyboard details', () => {
+	async function openWithOptions() {
+		const onChange = vi.fn();
+		render(
+			<FieldAsyncSelect label="Country" value={null} onChange={onChange} loadOptions={makeLoad()} debounceMs={0} />,
+		);
+		const input = screen.getByRole('combobox');
+		fireEvent.change(input, { target: { value: 'u' } });
+		await advanceAndFlush(0);
+		return { input, onChange };
+	}
+
+	it('blur closes the list only after the grace delay', async () => {
+		const { input } = await openWithOptions();
+		fireEvent.blur(input);
+		act(() => { vi.advanceTimersByTime(149); });
+		expect(screen.getByText('Canada')).toBeInTheDocument();
+		act(() => { vi.advanceTimersByTime(1); });
+		expect(screen.queryByText('Canada')).not.toBeInTheDocument();
+	});
+
+	it('coming back within the grace delay keeps the list open', async () => {
+		const { input } = await openWithOptions();
+		fireEvent.blur(input);
+		act(() => { vi.advanceTimersByTime(100); });
+		fireEvent.focus(input);
+		await advanceAndFlush(200);
+		expect(input).toHaveAttribute('aria-expanded', 'true');
+	});
+
+	it('ArrowDown / ArrowUp move the active option, announce it, and stop at the ends', async () => {
+		const { input } = await openWithOptions();
+		const active = () => input.getAttribute('aria-activedescendant');
+		expect(active()).toBeNull();
+		fireEvent.keyDown(input, { key: 'ArrowDown' });
+		const first = active();
+		expect(first).toMatch(/-option-0$/);
+		fireEvent.keyDown(input, { key: 'ArrowDown' });
+		expect(active()).toMatch(/-option-1$/);
+		fireEvent.keyDown(input, { key: 'ArrowDown' });
+		fireEvent.keyDown(input, { key: 'ArrowDown' });
+		expect(active()).toMatch(/-option-2$/);
+		fireEvent.keyDown(input, { key: 'ArrowUp' });
+		expect(active()).toMatch(/-option-1$/);
+		fireEvent.keyDown(input, { key: 'ArrowUp' });
+		fireEvent.keyDown(input, { key: 'ArrowUp' });
+		fireEvent.keyDown(input, { key: 'ArrowUp' });
+		expect(active()).toBeNull();
+		expect(document.getElementById(first as string)).toHaveTextContent('United States');
+	});
+
+	it('Enter selects the first option when none is highlighted', async () => {
+		const { input, onChange } = await openWithOptions();
+		fireEvent.keyDown(input, { key: 'Enter' });
+		expect(onChange).toHaveBeenCalledExactlyOnceWith('us');
+	});
+
+	it('Enter picks the option highlighted with the arrows, not the first', async () => {
+		const { input, onChange } = await openWithOptions();
+		fireEvent.keyDown(input, { key: 'ArrowDown' });
+		fireEvent.keyDown(input, { key: 'ArrowDown' });
+		fireEvent.keyDown(input, { key: 'Enter' });
+		expect(onChange).toHaveBeenCalledExactlyOnceWith('ca');
+	});
+
+	it('Enter, Escape and ArrowUp on a closed list are left to the browser', () => {
+		render(<FieldAsyncSelect label="Country" value={null} onChange={vi.fn()} loadOptions={makeLoad()} />);
+		const input = screen.getByRole('combobox');
+		expect(fireEvent.keyDown(input, { key: 'Enter' })).toBe(true);
+		expect(fireEvent.keyDown(input, { key: 'Escape' })).toBe(true);
+		expect(fireEvent.keyDown(input, { key: 'ArrowUp' })).toBe(true);
+	});
+
+	it('Enter with no option loaded selects nothing', async () => {
+		const onChange = vi.fn();
+		render(
+			<FieldAsyncSelect
+				label="Country"
+				value={null}
+				onChange={onChange}
+				loadOptions={vi.fn().mockResolvedValue([])}
+				debounceMs={0}
+			/>,
+		);
+		const input = screen.getByRole('combobox');
+		fireEvent.change(input, { target: { value: 'zzz' } });
+		await advanceAndFlush(0);
+		fireEvent.keyDown(input, { key: 'Enter' });
+		expect(onChange).not.toHaveBeenCalled();
+	});
+
+	it('focusing a disabled field neither opens the list nor loads anything', () => {
+		const load = makeLoad();
+		render(<FieldAsyncSelect label="Country" disabled value={null} onChange={vi.fn()} loadOptions={load} />);
+		fireEvent.focus(screen.getByRole('combobox'));
+		act(() => { vi.advanceTimersByTime(1000); });
+		expect(load).not.toHaveBeenCalled();
+		expect(screen.getByRole('combobox')).toHaveAttribute('aria-expanded', 'false');
+	});
+
+	it('closing the list puts the selected label back instead of the half-typed query', async () => {
+		const { input } = await openWithOptions();
+		expect(input).toHaveValue('u');
+		fireEvent.keyDown(input, { key: 'Escape' });
+		expect(input).toHaveValue('');
+	});
+
+	it('the clear button gives the focus back to the input', () => {
+		render(<FieldAsyncSelect label="Country" value="us" onChange={vi.fn()} loadOptions={makeLoad()} />);
+		fireEvent.click(screen.getByRole('button', { name: /clear/i }));
+		expect(document.activeElement).toBe(screen.getByRole('combobox'));
+	});
+
+	it('the selected option is marked in the list', async () => {
+		render(<FieldAsyncSelect label="Country" value="ca" onChange={vi.fn()} loadOptions={makeLoad()} debounceMs={0} />);
+		fireEvent.change(screen.getByRole('combobox'), { target: { value: 'u' } });
+		await advanceAndFlush(0);
+		const options = screen.getAllByRole('option');
+		expect(options.map(o => o.getAttribute('aria-selected'))).toEqual(['false', 'true', 'false']);
+	});
+
+	it('the error text is announced and tied to the input', () => {
+		render(
+			<FieldAsyncSelect label="Country" error="Required" value={null} onChange={vi.fn()} loadOptions={makeLoad()} />,
+		);
+		const alert = screen.getByRole('alert');
+		expect(screen.getByRole('combobox')).toHaveAttribute('aria-invalid', 'true');
+		expect(screen.getByRole('combobox').getAttribute('aria-describedby')).toBe(alert.id);
+	});
+
+	it('carries the value in a hidden input only when it has a name', () => {
+		const { container, rerender } = render(
+			<FieldAsyncSelect label="Country" name="country" value="ca" onChange={vi.fn()} loadOptions={makeLoad()} />,
+		);
+		expect(container.querySelector('input[type="hidden"]')).toHaveAttribute('value', 'ca');
+		rerender(<FieldAsyncSelect label="Country" name="country" value={null} onChange={vi.fn()} loadOptions={makeLoad()} />);
+		expect(container.querySelector('input[type="hidden"]')).toHaveAttribute('value', '');
+		rerender(<FieldAsyncSelect label="Country" value="ca" onChange={vi.fn()} loadOptions={makeLoad()} />);
+		expect(container.querySelector('input[type="hidden"]')).toBeNull();
+	});
+});

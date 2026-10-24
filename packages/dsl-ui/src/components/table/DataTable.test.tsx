@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { RouterContext } from '@dsl-ui/RouterContext.js';
 import { ColumnHelpers, DataTable, useDataTableFilter } from './DataTable.js';
 import { FilterChips } from './FilterChips.js';
 import { StatusFilter } from './StatusFilter.js';
@@ -445,5 +446,55 @@ describe('DataTable row clicks', () => {
 		expect(error).toHaveBeenCalled();
 		expect(error.mock.calls[0]?.join(' ')).toContain('RouterContext');
 		error.mockRestore();
+	});
+
+	describe('navigateTo path template', () => {
+		function renderWithRouter(rowsToShow: Row[], navigateTo: string) {
+			const navigate = vi.fn();
+			render(
+				<RouterContext.Provider value={{ navigate, back: () => {} }}>
+					<DataTable rows={rowsToShow} columns={columns} navigateTo={navigateTo} />
+				</RouterContext.Provider>
+			);
+			return navigate;
+		}
+
+		it('navigates to the template filled with the clicked row, and only that row', () => {
+			const navigate = renderWithRouter(rows, '/x/{id}');
+
+			fireEvent.click(screen.getByText('Bob'));
+
+			expect(navigate).toHaveBeenCalledTimes(1);
+			expect(navigate).toHaveBeenCalledWith('/x/2');
+		});
+
+		it('percent-encodes the row value so an id with / ? # or a space stays one path segment', () => {
+			const navigate = renderWithRouter([{ id: 'a/b?c#d e', name: 'Odd', status: 200, method: 'GET' }], '/odd/{id}');
+
+			fireEvent.click(screen.getByText('Odd'));
+
+			expect(navigate).toHaveBeenCalledWith('/odd/a%2Fb%3Fc%23d%20e');
+		});
+
+		it('keeps a single-placeholder template as the whole target (task module: navigateTo "{href}")', () => {
+			const navigate = renderWithRouter([{ id: '1', name: 'Linked', status: 200, method: 'GET', href: '/modules/task/tasks/1?tab=notes' } as Row], '{href}');
+
+			fireEvent.click(screen.getByText('Linked'));
+
+			expect(navigate).toHaveBeenCalledWith('/modules/task/tasks/1?tab=notes');
+		});
+
+		it('does not navigate to a half-filled path when the clicked row lacks a field, and says why', () => {
+			const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+			const navigate = renderWithRouter([{ name: 'NoId', status: 200, method: 'GET' } as unknown as Row], '/missing-field/{id}');
+
+			fireEvent.click(screen.getByText('NoId'));
+
+			expect(navigate).not.toHaveBeenCalled();
+			const message = error.mock.calls.map(call => call.join(' ')).join('\n');
+			expect(message).toContain('navigateTo="/missing-field/{id}"');
+			expect(message).toContain('{id}');
+			expect(message).toContain('row keys: method, name, status');
+		});
 	});
 });

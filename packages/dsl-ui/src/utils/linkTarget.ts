@@ -3,6 +3,8 @@
  * cells): what a link target may look like and how a `{field}` template becomes one.
  */
 
+import { fillTemplate } from './templatedPath.js';
+
 const EXTERNAL_SCHEMES = /^(https?:|mailto:)/i;
 
 /**
@@ -31,24 +33,13 @@ export interface LinkPathResult {
 }
 
 /**
- * Fills the `{field}` placeholders of a link template from `row`. Values are percent-encoded, so the
- * same template works in a path segment (`/runs/{id}`) and in a query value (`?event={event}`).
- * A placeholder whose field is missing or empty is a problem, never an empty segment: `/runs//logs`
- * would be a link to another page.
+ * Fills the `{field}` placeholders of a link template from `row` (see `fillTemplate` for the encoding
+ * and whole-value rules). A placeholder whose field is missing or empty is a problem, never an empty
+ * segment: `/runs//logs` would be a link to another page. The target check below still guards a
+ * whole value taken from the row (`{url}` must not become `javascript:...`).
  */
 export function buildLinkPath(template: string, row: Record<string, unknown>, external = false): LinkPathResult {
-	let missing: string | undefined;
-	// An external template that is one placeholder (`{url}`) takes a whole URL from the row: encoding it
-	// would turn "https://" into "https%3A%2F%2F", and the scheme check below still guards the value.
-	const wholeValue = external && /^\{\w+\}$/.test(template);
-	const filled = template.replace(/\{(\w+)\}/g, (_, key: string) => {
-		const value = row[key];
-		if (value === undefined || value === null || value === '') {
-			missing ??= key;
-			return '';
-		}
-		return wholeValue ? String(value) : encodeURIComponent(String(value));
-	});
+	const { text: filled, missing } = fillTemplate(template, row);
 	if (missing !== undefined) {
 		return {
 			problem: `placeholder {${missing}} of "${template}" has no value in this row (row keys: ${Object.keys(row).sort().join(', ') || 'none'})`,
