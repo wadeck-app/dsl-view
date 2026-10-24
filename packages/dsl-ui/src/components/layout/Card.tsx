@@ -51,7 +51,9 @@ export function Card({
             onClick={onClick}
             role={isClickable ? 'button' : undefined}
             tabIndex={isClickable ? 0 : undefined}
-            onKeyDown={isClickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.(); } } : undefined}
+            // Only the card's own key presses count: Enter/Space typed in a field or pressed on a button inside the
+            // card bubble up here, and handling them would swallow the space in the field and click the card behind it.
+            onKeyDown={isClickable ? (e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onClick?.(); } } : undefined}
         >
             {header && (
                 <div className={`border-b border-border ${PADDING_CLASSES[padding]}`}>
