@@ -79,17 +79,24 @@ export function useDataTableSelection(): DataTableSelectionState | null {
 // --- Formatting helpers -------------------------------------------------------
 
 
+// Intl.DateTimeFormat#format throws a RangeError on an invalid date, which would take the whole table down for one
+// bad cell: such a value is shown as it came (visible, not hidden) instead.
+function formatDate(val: unknown, options: Intl.DateTimeFormatOptions): string {
+	const date = new Date(String(val));
+	return Number.isNaN(date.getTime()) ? String(val) : new Intl.DateTimeFormat(undefined, options).format(date);
+}
+
 function formatValue(val: unknown, format: ColumnValueFormat | undefined): string {
 	if (val === null || val === undefined) {
 		return '';
 	}
 	switch (format) {
 		case 'datetime':
-			return new Intl.DateTimeFormat(undefined, { dateStyle: 'short', timeStyle: 'short' }).format(new Date(String(val)));
+			return formatDate(val, { dateStyle: 'short', timeStyle: 'short' });
 		case 'date':
-			return new Intl.DateTimeFormat(undefined, { dateStyle: 'short' }).format(new Date(String(val)));
+			return formatDate(val, { dateStyle: 'short' });
 		case 'time':
-			return new Intl.DateTimeFormat(undefined, { timeStyle: 'short' }).format(new Date(String(val)));
+			return formatDate(val, { timeStyle: 'short' });
 		case 'bytes':
 			return formatBytes(Number(val));
 		case 'ms':
@@ -113,7 +120,9 @@ function applyFilters<T extends Record<string, unknown>>(
 		// over the generic branches below - it owns row-shape knowledge DataTable itself must not.
 		const customPredicate = predicates[key];
 		if (customPredicate) {
-			if (!customPredicate(row, value)) return false;
+			if (!customPredicate(row, value)) {
+				return false;
+			}
 			continue;
 		}
 		if (Array.isArray(value)) {
@@ -282,12 +291,20 @@ function normalizeColumn<T extends Record<string, unknown>>(col: RawYamlColumn, 
 	warnUnsupportedColumnKeys(col, index);
 	// Actions column
 	if (col.type === 'actions' || col.isActions) {
+		// An item that is not an object (`items: [null]`) cannot be rendered: drop it and say so, rather than crash the table.
+		const actions = ((col.items ?? col.actions ?? []) as unknown[]).filter((item, i) => {
+			const valid = item !== null && typeof item === 'object';
+			if (!valid) {
+				warnOnce(`[DataTable] actions column #${index}, item #${i}: ignored, an action item must be an object with a label and an action (got ${JSON.stringify(item)}).`);
+			}
+			return valid;
+		}) as ActionDef<T>[];
 		return {
 			key: '_actions',
 			label: '',
 			isActions: true,
 			width: col.width,
-			actions: (col.items ?? col.actions ?? []) as ActionDef<T>[],
+			actions,
 			render: () => null,
 		};
 	}
@@ -427,7 +444,8 @@ export class ColumnHelpers {
 			label,
 			format: 'bytes',
 			width: options.width,
-			render: row => formatBytes(Number(row[key])),
+			// formatValue keeps a missing size empty instead of printing "0 B", like a YAML `format: bytes` column.
+			render: row => formatValue(row[key], 'bytes'),
 		};
 	}
 
@@ -516,6 +534,10 @@ export interface DataTableProps<T extends Record<string, unknown>> {
 	/** @slot tag:filter */
 	filters?: React.ReactNode;
 	id?: string;
+	/**
+	 * Not used: DataTable does not paginate (the `Pagination` component does). Kept so existing pages that pass them
+	 * keep compiling; neither prop changes what is rendered.
+	 */
 	page?: number;
 	onPageChange?: (page: number) => void;
 	/** Sort column key. Empty string means unsorted. */
@@ -679,7 +701,9 @@ export function DataTable<T extends Record<string, unknown>>({
 	}, []);
 
 	const filteredRows = useMemo(() => {
-		if (Object.keys(filterState).length === 0) return rows;
+		if (Object.keys(filterState).length === 0) {
+			return rows;
+		}
 		return rows.filter(row => applyFilters(row, filterState, predicatesRef.current));
 	}, [rows, filterState]);
 
@@ -689,7 +713,9 @@ export function DataTable<T extends Record<string, unknown>>({
 	);
 
 	const sortedRows = useMemo(() => {
-		if (!sort) return filteredRows;
+		if (!sort) {
+			return filteredRows;
+		}
 		const { key, dir } = sort;
 		return [...filteredRows].sort((a, b) => {
 			const av = a[key];
@@ -777,7 +803,6 @@ export function DataTable<T extends Record<string, unknown>>({
 							{filters}
 						</div>
 					)}
-					{batchActionsPosition === 'bottom' && batchToolbar}
 					<table className="w-full text-sm" aria-busy={loading || refreshing || undefined}>
 						<thead>
 							<tr className={theadRowClass}>
@@ -787,7 +812,9 @@ export function DataTable<T extends Record<string, unknown>>({
 											<Checkbox
 												checked={allSelected}
 												ref={el => {
-													if (el) el.indeterminate = someSelected;
+													if (el) {
+														el.indeterminate = someSelected;
+													}
 												}}
 												onChange={() => toggleAll(currentPageIds)}
 												aria-label="Select all rows on this page"
@@ -951,8 +978,8 @@ export function DataTable<T extends Record<string, unknown>>({
 																			: item.condition;
 																		const val = Boolean(row[field]);
 																		if (negate ? val : !val) {
-									return null;
-								}
+																			return null;
+																		}
 																	}
 																	if (!item.icon) {
 																		// Loud, because the alternative is an invisible icon-only
@@ -1027,7 +1054,8 @@ export function DataTable<T extends Record<string, unknown>>({
 										</tr>
 										{expansion && expandedRow === stableKey && renderNode && (
 											<tr className="bg-bg-secondary">
-												<td colSpan={normalizedColumns.length + 1} className="px-3 py-2">
+												{/* Spans the expansion toggle column (always present here) and the selection column when shown. */}
+												<td colSpan={normalizedColumns.length + 1 + (selectable ? 1 : 0)} className="px-3 py-2">
 													{renderNode(expansion, { row })}
 												</td>
 											</tr>
@@ -1038,6 +1066,8 @@ export function DataTable<T extends Record<string, unknown>>({
 							)}
 						</tbody>
 					</table>
+					{/* In flow but after the rows: selecting a row must never push the rows down under the pointer. */}
+					{batchActionsPosition === 'bottom' && batchToolbar}
 				</div>
 				{batchActionsPosition === 'floating' && batchToolbar}
 			</DataTableFilterCtx.Provider>
