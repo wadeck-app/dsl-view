@@ -1,3 +1,5 @@
+import { formatBytes } from '@dsl-ui/utils/formatBytes.js';
+
 export type ChartYFormat = 'bytes' | 'number';
 export type ChartXFormat = 'date' | 'time' | 'datetime';
 
@@ -16,19 +18,6 @@ export const CHART_PALETTE: readonly string[] = [
 // An empty `color:` (YAML `color: ""`) is "no colour": an empty CSS colour would draw an invisible series.
 export function seriesColor(index: number, color: string | undefined): string {
 	return color || CHART_PALETTE[index % CHART_PALETTE.length]!;
-}
-
-function formatBytes(n: number): string {
-	if (n >= 1024 * 1024 * 1024) {
-		return `${(n / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-	}
-	if (n >= 1024 * 1024) {
-		return `${(n / (1024 * 1024)).toFixed(1)} MB`;
-	}
-	if (n >= 1024) {
-		return `${(n / 1024).toFixed(1)} KB`;
-	}
-	return String(n);
 }
 
 // Compact and locale-aware: 1753 -> "1.8K" (en). At most one decimal, so ticks stay short.

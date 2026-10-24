@@ -541,7 +541,7 @@ series:
   - { key: events, name: Events, type: bar, yAxisId: left }   # no `color` -> theme palette
 ```
 
-- `yFormat` defaults to `bytes` (1753 -> "1.7 KB") because byte charts exist (wdrive disk usage). A count must set `yFormat: number` (1753 -> "1.8K", locale-aware).
+- `yFormat` defaults to `bytes` (1753 -> "1.7 KB") because byte charts exist (wdrive disk usage). A count must set `yFormat: number` (1753 -> "1.8K", locale-aware). Bytes ticks use the same formatter as the `bytes` table column: values under 1 KB now read "512 B" (they were bare "512"), `TB` exists, negatives scale ("-2.0 KB"), and 1048575 reads "1.0 MB" instead of "1024.0 KB".
 - `sparkline` = no grid, no axes, no legend, tooltip kept, tight padding; the series still bind to their axes, which are only hidden.
 - A series without `color` takes the next entry of a theme palette (`--color-primary-solid`, then success, warning, danger, purple, cyan, orange), so it follows light and dark. An explicit `color` is used as is.
 
@@ -578,7 +578,8 @@ columns:
 - `href` makes the whole tile or badge a real `<a>`: router navigation without a page load, middle-click, new tab and copy link work. The `aria-label` is `label: value` (tile) or the badge label. Without `href` nothing changes.
 - An internal target must be an absolute app path with a single leading `/`. `external: true` opens an `http:`, `https:` or `mailto:` URL in a new tab with `rel="noopener noreferrer"`.
 - A target that breaks these rules (`javascript:`, `data:`, `//host`, a relative path) is ignored: the non-link form renders and an error is logged once naming the component.
-- Table templates (`to`, column `href`) fill `{field}` from the row, percent-encoded. A row whose placeholder is missing or empty gets no link (plain value, or no icon) and an error is logged once with the row's keys; there is never an empty path segment. With `external: true`, a template that is just `{url}` takes the whole URL from the row (still scheme-checked).
+- Table templates (`to`, column `href`, and `navigateTo`) fill `{field}` from the row's own fields, percent-encoded (an id `a/b?c` stays one segment). A row whose placeholder is missing or empty gets no link (plain value, or no icon) and an error is logged once with the row's keys; there is never an empty path segment. A `navigateTo` row click with a missing field does nothing and logs the same error, instead of opening a half-filled path.
+- A template that is just one placeholder (`navigateTo: '{href}'`, `to: '{href}'`, `{url}`) takes the whole target from the row, unencoded; internal targets must still be an absolute app path (not `//host`), and `external: true` targets are scheme-checked (http, https, mailto). Earlier versions spliced `navigateTo` values unencoded: pre-encode nothing, or the value is encoded twice.
 - Link column `icon` names: `arrow-right`, `chevron-right`, `external-link` (default), `eye`, `file-text`, `info`, `link`, `list`, `search`. An unknown name logs an error listing them and shows `external-link`. `label` is required (accessible name and tooltip; "Open" is used with a warning when missing).
 - `position: start` places the link right after the expansion chevron; link clicks do not trigger row clicks.
 - Registries generated before this version do not know the new keys: regenerate `entries.tsx` and restart the dev server fully.

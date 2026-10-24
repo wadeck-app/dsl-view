@@ -2,20 +2,27 @@ import { describe, expect, it } from 'vitest';
 import { CHART_PALETTE, formatXTick, formatYTick, seriesColor } from './chartFormat.js';
 
 describe('formatYTick', () => {
-	it('keeps the historical bytes format by default', () => {
-		expect(formatYTick(512)).toBe('512');
+	// Bytes ticks use the same formatter as the DataTable `bytes` column (utils/formatBytes).
+	it('formats bytes by default with the shared byte formatter', () => {
+		expect(formatYTick(512)).toBe('512 B');
 		expect(formatYTick(1753)).toBe('1.7 KB');
 		expect(formatYTick(5 * 1024 * 1024)).toBe('5.0 MB');
 		expect(formatYTick(3 * 1024 * 1024 * 1024)).toBe('3.0 GB');
+		expect(formatYTick(5 * 1024 ** 4)).toBe('5.0 TB');
 	});
 
 	it('switches unit exactly at each power-of-1024 boundary', () => {
-		expect(formatYTick(1023)).toBe('1023');
+		expect(formatYTick(1023)).toBe('1023 B');
 		expect(formatYTick(1024)).toBe('1.0 KB');
 		expect(formatYTick(1024 * 1024 - 1024)).toBe('1023.0 KB');
 		expect(formatYTick(1024 * 1024)).toBe('1.0 MB');
 		expect(formatYTick(1024 * 1024 * 1024 - 1024 * 1024)).toBe('1023.0 MB');
 		expect(formatYTick(1024 * 1024 * 1024)).toBe('1.0 GB');
+	});
+
+	it('moves up a unit when rounding would print 1024.0 of the lower one', () => {
+		expect(formatYTick(1024 * 1024 - 1)).toBe('1.0 MB');
+		expect(formatYTick(1024 * 1024 * 1024 - 1)).toBe('1.0 GB');
 	});
 
 	it('selects the tick format from yFormat', () => {
@@ -50,9 +57,9 @@ describe('formatYTick', () => {
 		expect(formatYTick(NaN, 'bytes')).toBe('NaN');
 	});
 
-	it('documents the current behaviour for zero and negative byte values (no unit scaling below zero)', () => {
-		expect(formatYTick(0)).toBe('0');
-		expect(formatYTick(-2048)).toBe('-2048');
+	it('scales negative byte values like positive ones and prints zero with its unit', () => {
+		expect(formatYTick(0)).toBe('0 B');
+		expect(formatYTick(-2048)).toBe('-2.0 KB');
 	});
 
 	it('appends yUnit', () => {
