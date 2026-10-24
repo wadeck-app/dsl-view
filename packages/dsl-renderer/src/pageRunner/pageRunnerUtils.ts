@@ -260,6 +260,10 @@ export function topoSortSources(specs: Record<string, SourceSpec>): string[] {
 		for (const paramValue of Object.values(spec.params ?? {})) {
 			const match = /^\$source\.([^.]+)\./.exec(paramValue);
 			if (match) {
+				// A typo in the source name would otherwise surface as "deps[key] is not iterable" from the walk below.
+				if (!Object.prototype.hasOwnProperty.call(specs, match[1])) {
+					throw new Error(`$sources.${key} reads $source.${match[1]}, which is not declared in $sources. Declared sources: ${Object.keys(specs).join(', ')}`);
+				}
 				deps[key].add(match[1]);
 			}
 		}
