@@ -1,0 +1,20 @@
+{
+	"$schema": "../../node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+	"testRunner": "vitest",
+	"vitest": { "configFile": "vitest.stryker.config.ts" },
+	"mutate": [
+		"src/utils/templatedPath.ts",
+		"src/utils/linkTarget.ts",
+		"src/utils/formatBytes.ts",
+		"src/components/display/chartFormat.ts",
+		"src/components/table/persistedFilterCodec.ts",
+		"src/components/form/timeStep.ts",
+		"src/components/display/initials.ts"
+	],
+	"concurrency": 1,
+	"coverageAnalysis": "perTest",
+	"reporters": ["clear-text", "progress"],
+	"tempDirName": ".stryker-tmp",
+	"cleanTempDir": true,
+	"timeoutMS": 60000
+}
