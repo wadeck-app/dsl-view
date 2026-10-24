@@ -158,6 +158,86 @@ describe('Form', () => {
 			rerender(<Form fields={<NameField />} actions={null} onSubmit={vi.fn().mockResolvedValue(undefined)} />);
 			expect(screen.getByLabelText('name')).toHaveValue('Alice');
 		});
+
+		// An "add" form is fed with constant defaults: the page reloads its sources after a successful save and the
+		// reload hands the same content in a new object. That reload is what clears the typed text.
+		describe('after a submit', () => {
+			const submitUi = (onSubmit: () => Promise<void>, initialData: Record<string, unknown>) => (
+				<Form fields={<NameField />} actions={null} onSubmit={onSubmit} initialData={initialData} />
+			);
+
+			it('a successful save followed by a reload with the same content resets the form to the server data', async () => {
+				const onSubmit = vi.fn().mockResolvedValue(undefined);
+				const { container, rerender } = render(submitUi(onSubmit, { name: '' }));
+				fireEvent.change(screen.getByLabelText('name'), { target: { value: 'label-1' } });
+				fireEvent.submit(formEl(container));
+				await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+				rerender(submitUi(onSubmit, { name: '' }));
+				expect(screen.getByLabelText('name')).toHaveValue('');
+			});
+
+			it('a reload that lands while the save is still running resets the form once the save succeeds', async () => {
+				let resolve!: () => void;
+				const onSubmit = vi.fn(() => new Promise<void>(r => { resolve = r; }));
+				const { container, rerender } = render(submitUi(onSubmit, { name: '' }));
+				fireEvent.change(screen.getByLabelText('name'), { target: { value: 'label-1' } });
+				fireEvent.submit(formEl(container));
+				rerender(submitUi(onSubmit, { name: '' }));
+				expect(screen.getByLabelText('name')).toHaveValue('label-1');
+				await act(async () => { resolve(); });
+				expect(screen.getByLabelText('name')).toHaveValue('');
+			});
+
+			it('a refused save keeps what was typed, also when the reload re-sends the same content', async () => {
+				const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+				const onSubmit = vi.fn().mockRejectedValue(new Error('refused'));
+				const { container, rerender } = render(submitUi(onSubmit, { name: '' }));
+				fireEvent.change(screen.getByLabelText('name'), { target: { value: 'label-1' } });
+				fireEvent.submit(formEl(container));
+				await waitFor(() => expect(error).toHaveBeenCalledTimes(1));
+				rerender(submitUi(onSubmit, { name: '' }));
+				expect(screen.getByLabelText('name')).toHaveValue('label-1');
+				error.mockRestore();
+			});
+
+			it('a refused save after an earlier successful one still keeps what was typed', async () => {
+				const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+				const onSubmit = vi.fn().mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('refused'));
+				const { container, rerender } = render(submitUi(onSubmit, { name: '' }));
+				fireEvent.change(screen.getByLabelText('name'), { target: { value: 'label-1' } });
+				fireEvent.submit(formEl(container));
+				await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+				await act(async () => {});
+				fireEvent.change(screen.getByLabelText('name'), { target: { value: 'label-2' } });
+				fireEvent.submit(formEl(container));
+				await waitFor(() => expect(error).toHaveBeenCalledTimes(1));
+				rerender(submitUi(onSubmit, { name: '' }));
+				expect(screen.getByLabelText('name')).toHaveValue('label-2');
+				error.mockRestore();
+			});
+
+			it('a successful save with no reload keeps the saved values on screen', async () => {
+				const onSubmit = vi.fn().mockResolvedValue(undefined);
+				const { container } = render(submitUi(onSubmit, { name: 'Alice' }));
+				fireEvent.change(screen.getByLabelText('name'), { target: { value: 'Bob' } });
+				fireEvent.submit(formEl(container));
+				await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+				await act(async () => {});
+				expect(screen.getByLabelText('name')).toHaveValue('Bob');
+			});
+
+			it('only the first reload after a save resets: edits typed afterwards survive a later poll', async () => {
+				const onSubmit = vi.fn().mockResolvedValue(undefined);
+				const { container, rerender } = render(submitUi(onSubmit, { name: '' }));
+				fireEvent.change(screen.getByLabelText('name'), { target: { value: 'label-1' } });
+				fireEvent.submit(formEl(container));
+				await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+				rerender(submitUi(onSubmit, { name: '' }));
+				fireEvent.change(screen.getByLabelText('name'), { target: { value: 'label-2' } });
+				rerender(submitUi(onSubmit, { name: '' }));
+				expect(screen.getByLabelText('name')).toHaveValue('label-2');
+			});
+		});
 	});
 
 	describe('action buttons inside the form', () => {

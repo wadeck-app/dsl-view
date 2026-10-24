@@ -54,6 +54,34 @@ export function Form({ fields, actions, onSubmit, initialData }: FormProps) {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [initialKey]);
 
+	// A save succeeded and the page has not re-sent the server data since. The next re-send, even with the same
+	// content, is the reload that follows the save: an "add" form fed with constant defaults is cleared by it.
+	const savedAwaitingReloadRef = useRef(false);
+	// The page re-sent the data while the save was still running (reloadSources inside the action).
+	const reloadedDuringSaveRef = useRef(false);
+	const latestInitialRef = useRef(initialData);
+	const isFirstIdentity = useRef(true);
+
+	useEffect(() => {
+		latestInitialRef.current = initialData;
+		if (isFirstIdentity.current) {
+			isFirstIdentity.current = false;
+			return;
+		}
+		if (initialData == null) {
+			return;
+		}
+		if (isSubmittingRef.current) {
+			reloadedDuringSaveRef.current = true;
+			return;
+		}
+		if (savedAwaitingReloadRef.current) {
+			savedAwaitingReloadRef.current = false;
+			setFormState(initialData);
+			setSavedState(initialData);
+		}
+	}, [initialData]);
+
 	const hasChanges = JSON.stringify(formState) !== JSON.stringify(savedState);
 
 	const onChange = useCallback((key: string, value: unknown) => {
@@ -67,10 +95,21 @@ export function Form({ fields, actions, onSubmit, initialData }: FormProps) {
 			return;
 		}
 		isSubmittingRef.current = true;
+		reloadedDuringSaveRef.current = false;
+		// A refused save must keep what was typed, even if an earlier save is still waiting for its reload.
+		savedAwaitingReloadRef.current = false;
 		setIsPending(true);
 		try {
 			await onSubmit(formState);
-			setSavedState(formState);
+			const refreshed = latestInitialRef.current;
+			if (reloadedDuringSaveRef.current && refreshed != null) {
+				// The reload already landed: show the server data now, nothing else will re-send it.
+				setFormState(refreshed);
+				setSavedState(refreshed);
+			} else {
+				setSavedState(formState);
+				savedAwaitingReloadRef.current = true;
+			}
 		} catch (submitError) {
 			// The handler reports the failure to the user (the page notifier) and rejects so the form keeps
 			// its values and stays unsaved. Swallowing it here avoids an unhandled rejection; the log keeps
