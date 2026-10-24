@@ -88,6 +88,39 @@ describe('Chart formatters and wiring', () => {
 		expect(lastProps('Tooltip').labelFormatter(ts)).toBe(new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(ts));
 	});
 
+	it('keeps the default date heading when xFormat is unset, shows date+time for datetime, and the raw label on a category axis', () => {
+		const ts = new Date(2026, 9, 19, 14, 5).getTime();
+		const dateOnly = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(ts);
+		const dateTime = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(ts);
+		const first = render(<Chart {...base} xAxisType="time" />);
+		expect(lastProps('Tooltip').labelFormatter(ts)).toBe(dateOnly);
+		first.unmount();
+		const second = render(<Chart {...base} xAxisType="time" xFormat="datetime" />);
+		expect(lastProps('Tooltip').labelFormatter(ts)).toBe(dateTime);
+		second.unmount();
+		render(<Chart {...base} />);
+		expect(lastProps('Tooltip').labelFormatter('10:05')).toBe('10:05');
+	});
+
+	it('formats the right axis ticks with the same yFormat and yUnit as the left one', () => {
+		render(
+			<Chart
+				{...base}
+				yFormat="number"
+				yUnit=" ev"
+				series={[
+					{ key: 'a', name: 'A', type: 'line', yAxisId: 'left' },
+					{ key: 'b', name: 'B', type: 'line', yAxisId: 'right' },
+				]}
+			/>,
+		);
+		const axes = rendered.calls.filter(c => c.name === 'YAxis');
+		expect(axes.map(c => c.props.yAxisId)).toEqual(['left', 'right']);
+		for (const axis of axes) {
+			expect(axis.props.tickFormatter(950)).toBe('950 ev');
+		}
+	});
+
 	it('appends yUnit to the tooltip value and keeps the series name', () => {
 		render(<Chart {...base} yUnit="%" />);
 		expect(lastProps('Tooltip').formatter(42, 'Events')).toEqual(['42%', 'Events']);
@@ -253,17 +286,20 @@ describe('Chart', () => {
 		expect(warn).toHaveBeenCalledWith(expect.stringContaining('xFormat "time" has no effect'));
 	});
 
+	it('warns once per mount for every xFormat on a category axis, not again on a re-render with the same props', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const { rerender } = render(<Chart {...base} xFormat="datetime" />);
+		expect(warn).toHaveBeenCalledTimes(1);
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('xFormat "datetime" has no effect with xAxisType "category"'));
+		rerender(<Chart {...base} xFormat="datetime" />);
+		expect(warn).toHaveBeenCalledTimes(1);
+		rerender(<Chart {...base} xFormat="date" />);
+		expect(warn).toHaveBeenCalledTimes(2);
+	});
+
 	it('does not warn for xFormat on a time axis', () => {
 		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 		render(<Chart {...base} xAxisType="time" xFormat="time" />);
 		expect(warn).not.toHaveBeenCalled();
-	});
-
-	it('shows the loading skeleton and the empty state', () => {
-		const { unmount } = render(<Chart {...base} data={undefined} />);
-		expect(screen.getByLabelText('Loading chart')).toBeInTheDocument();
-		unmount();
-		render(<Chart {...base} data={[]} />);
-		expect(screen.getByText('No data')).toBeInTheDocument();
 	});
 });

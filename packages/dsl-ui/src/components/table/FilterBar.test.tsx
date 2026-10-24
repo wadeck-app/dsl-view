@@ -72,6 +72,52 @@ describe('FilterBar', () => {
 		expect(onClearAll).toHaveBeenCalledTimes(1);
 	});
 
+	it('clicking an inactive chip calls onFilterChange with active=true and its own key and value', () => {
+		const onFilterChange = vi.fn();
+		render(<FilterBar filters={filters} onFilterChange={onFilterChange} />);
+		fireEvent.click(screen.getByText('Admin'));
+		expect(onFilterChange).toHaveBeenCalledExactlyOnceWith('type', 'admin', true);
+	});
+
+	it('a chip click without onFilterChange is harmless', () => {
+		render(<FilterBar filters={filters} />);
+		expect(() => fireEvent.click(screen.getByText('Admin'))).not.toThrow();
+	});
+
+	it('shows "Clear all" for an active search alone, and hides it again once the search is empty', () => {
+		const inactive: FilterBarFilter[] = [{ key: 'status', label: 'Active', value: 'active', active: false }];
+		const view = render(<FilterBar filters={inactive} search="abc" onSearchChange={vi.fn()} onClearAll={vi.fn()} />);
+		expect(screen.getByText('Clear all')).toBeInTheDocument();
+		view.rerender(<FilterBar filters={inactive} search="" onSearchChange={vi.fn()} onClearAll={vi.fn()} />);
+		expect(screen.queryByText('Clear all')).toBeNull();
+	});
+
+	it('shows "Clear all" for an active filter alone (no search configured)', () => {
+		render(<FilterBar filters={filters} onClearAll={vi.fn()} />);
+		expect(screen.getByText('Clear all')).toBeInTheDocument();
+	});
+
+	it('shows the current search text and reports typed text to onSearchChange', () => {
+		vi.useFakeTimers();
+		try {
+			const onSearchChange = vi.fn();
+			render(<FilterBar search="seed" onSearchChange={onSearchChange} />);
+			const input = screen.getByRole('searchbox');
+			expect(input).toHaveValue('seed');
+			fireEvent.change(input, { target: { value: 'seeds' } });
+			vi.advanceTimersByTime(300);
+			expect(onSearchChange).toHaveBeenCalledExactlyOnceWith('seeds');
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('keeps the chips in the given order and appends a custom className to the layout classes', () => {
+		const { container } = render(<FilterBar filters={filters} className="my-bar" />);
+		expect(screen.getAllByRole('button').map(b => b.textContent)).toEqual(['Active', 'Admin']);
+		expect(container.firstElementChild).toHaveClass('flex', 'my-bar');
+	});
+
 	it('does not render SearchBar when onSearchChange is not provided', () => {
 		render(<FilterBar filters={filters} />);
 		expect(screen.queryByRole('search')).toBeNull();

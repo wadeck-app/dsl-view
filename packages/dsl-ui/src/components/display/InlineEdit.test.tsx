@@ -165,4 +165,72 @@ describe('InlineEdit', () => {
         rerender(<InlineEdit value="Updated" onChange={() => {}} />);
         expect(screen.getByText('Updated')).toBeInTheDocument();
     });
+
+    it('puts the focus in the input as soon as editing starts', async () => {
+        const user = userEvent.setup();
+        render(<InlineEdit value="Hello" onChange={() => {}} />);
+        await user.click(screen.getByRole('button', { name: 'Edit' }));
+        expect(screen.getByRole('textbox', { name: 'Edit' })).toHaveFocus();
+    });
+
+    it('clearing the text and committing reports an empty string (it is a value, not "no change")', async () => {
+        const user = userEvent.setup();
+        const onChange = vi.fn();
+        render(<InlineEdit value="Hello" onChange={onChange} />);
+        await user.click(screen.getByRole('button', { name: 'Edit' }));
+        await user.clear(screen.getByRole('textbox', { name: 'Edit' }));
+        await user.keyboard('{Enter}');
+        expect(onChange).toHaveBeenCalledExactlyOnceWith('');
+    });
+
+    it('does not report anything when the text is unchanged on blur either', async () => {
+        const user = userEvent.setup();
+        const onChange = vi.fn();
+        render(<InlineEdit value="Hello" onChange={onChange} />);
+        await user.click(screen.getByRole('button', { name: 'Edit' }));
+        await user.tab();
+        expect(onChange).not.toHaveBeenCalled();
+        expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    });
+
+    it('hands the typed text (not the old value) to validate, and shows its message as an alert', async () => {
+        const user = userEvent.setup();
+        const validate = vi.fn((v: string) => (v === 'bad' ? 'Not allowed' : null));
+        const onChange = vi.fn();
+        render(<InlineEdit value="Hello" onChange={onChange} validate={validate} />);
+        await user.click(screen.getByRole('button', { name: 'Edit' }));
+        const input = screen.getByRole('textbox', { name: 'Edit' });
+        await user.clear(input);
+        await user.type(input, 'bad');
+        await user.keyboard('{Enter}');
+        expect(validate).toHaveBeenLastCalledWith('bad');
+        expect(screen.getByRole('alert')).toHaveTextContent('Not allowed');
+        expect(screen.getByRole('textbox', { name: 'Edit' })).toHaveValue('bad');
+        expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it('a new parent value does not overwrite what is being typed', async () => {
+        const user = userEvent.setup();
+        const { rerender } = render(<InlineEdit value="First" onChange={() => {}} />);
+        await user.click(screen.getByRole('button', { name: 'Edit' }));
+        const input = screen.getByRole('textbox', { name: 'Edit' });
+        await user.clear(input);
+        await user.type(input, 'mine');
+        rerender(<InlineEdit value="Remote" onChange={() => {}} />);
+        expect(screen.getByRole('textbox', { name: 'Edit' })).toHaveValue('mine');
+    });
+
+    it('shows the placeholder, or "Click to edit" when there is none, for an empty value', () => {
+        const withPlaceholder = render(<InlineEdit value="" onChange={() => {}} placeholder="Name" />);
+        expect(screen.getByText('Name')).toBeInTheDocument();
+        withPlaceholder.unmount();
+        render(<InlineEdit value="" onChange={() => {}} />);
+        expect(screen.getByText('Click to edit')).toBeInTheDocument();
+    });
+
+    it('a disabled editor is a disabled button and shows no edit pencil', () => {
+        const { container } = render(<InlineEdit value="Hello" onChange={() => {}} disabled />);
+        expect(screen.getByRole('button', { name: 'Edit' })).toBeDisabled();
+        expect(container.querySelector('svg')).toBeNull();
+    });
 });

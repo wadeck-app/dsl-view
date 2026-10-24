@@ -45,18 +45,57 @@ describe('ColumnHelpers', () => {
 		});
 	});
 
-	describe('date', () => {
-		it('formats datetime by default', () => {
-			const col = ColumnHelpers.date<LogEntry>('ts', 'Time');
-			expect(col.format).toBe('datetime');
-			const rendered = col.render(row);
-			expect(typeof rendered).toBe('string');
-			expect(String(rendered).length).toBeGreaterThan(0);
+	describe('text edge cases', () => {
+		it('renders a missing or null field as an empty string, and 0 / false as text', () => {
+			type Loose = { a?: string | null; n?: number; b?: boolean };
+			const a = ColumnHelpers.text<Loose>('a', 'A');
+			const n = ColumnHelpers.text<Loose>('n', 'N');
+			const b = ColumnHelpers.text<Loose>('b', 'B');
+			expect(a.render({})).toBe('');
+			expect(a.render({ a: null })).toBe('');
+			expect(n.render({ n: 0 })).toBe('0');
+			expect(b.render({ b: false })).toBe('false');
 		});
 
-		it('formats date when specified', () => {
-			const col = ColumnHelpers.date<LogEntry>('ts', 'Time', { format: 'date' });
+		it('keeps muted without turning on mono or truncate', () => {
+			const col = ColumnHelpers.text<LogEntry>('path', 'Path', { muted: true });
+			expect(col.muted).toBe(true);
+			expect(col.mono).toBeUndefined();
+			expect(col.truncate).toBeUndefined();
+		});
+	});
+
+	describe('date', () => {
+		// Built from local components: the expectations hold in any time zone and locale.
+		const local = new Date(2026, 0, 5, 14, 5);
+		const entry = { ts: local.toISOString() };
+		const render = (format?: 'date' | 'time' | 'datetime') =>
+			ColumnHelpers.date<{ ts: string }>('ts', 'Time', format ? { format } : {}).render(entry) as string;
+
+		it('formats datetime by default: both the date part and the time part appear', () => {
+			expect(ColumnHelpers.date<{ ts: string }>('ts', 'Time').format).toBe('datetime');
+			const rendered = render();
+			expect(rendered).toContain(render('date'));
+			expect(rendered).toContain(render('time'));
+		});
+
+		it('formats date when specified: no clock in it', () => {
+			const col = ColumnHelpers.date<{ ts: string }>('ts', 'Time', { format: 'date' });
 			expect(col.format).toBe('date');
+			expect(render('date')).not.toContain(':');
+			expect(render('date')).toMatch(/26/);
+		});
+
+		it('formats time when specified: the clock only', () => {
+			expect(render('time')).toMatch(/05/);
+			expect(render('time')).not.toMatch(/26/);
+		});
+
+		it('shows an unparsable date as it came and a missing one as empty, instead of throwing', () => {
+			const col = ColumnHelpers.date<{ ts?: string | null }>('ts', 'Time');
+			expect(col.render({ ts: 'not a date' })).toBe('not a date');
+			expect(col.render({ ts: null })).toBe('');
+			expect(col.render({})).toBe('');
 		});
 	});
 
@@ -72,6 +111,13 @@ describe('ColumnHelpers', () => {
 			expect(col.render({ size: 1024, name: 'test' })).toBe('1.0 KB');
 			expect(col.render({ size: 512, name: 'test' })).toBe('512 B');
 		});
+
+		it('keeps a missing size empty instead of printing "0 B"', () => {
+			const col = ColumnHelpers.bytes<{ size?: number | null }>('size', 'Size');
+			expect(col.render({})).toBe('');
+			expect(col.render({ size: null })).toBe('');
+			expect(col.render({ size: 0 })).toBe('0 B');
+		});
 	});
 
 	describe('number', () => {
@@ -84,6 +130,13 @@ describe('ColumnHelpers', () => {
 		it('renders plain number without format', () => {
 			const col = ColumnHelpers.number<LogEntry>('status', 'Status');
 			expect(col.render(row)).toBe('200');
+		});
+
+		it('renders zero with its unit and a missing value as empty (no "undefinedms")', () => {
+			const col = ColumnHelpers.number<{ n?: number | null }>('n', 'N', { format: 'ms' });
+			expect(col.render({ n: 0 })).toBe('0ms');
+			expect(col.render({})).toBe('');
+			expect(col.render({ n: null })).toBe('');
 		});
 	});
 

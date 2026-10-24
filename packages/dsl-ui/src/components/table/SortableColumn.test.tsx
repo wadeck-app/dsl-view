@@ -95,13 +95,24 @@ describe('SortableColumn', () => {
 		expect(onSort).toHaveBeenCalledTimes(1);
 	});
 
-	it('renders a clickable button inside the th', () => {
-		const { container } = render(
+	it('exposes a button named after the label (the icon is hidden from assistive technology)', () => {
+		render(
 			<table><thead><tr>
 				<SortableColumn label="Status" sortKey="status" currentSort={null} onSort={vi.fn()} />
 			</tr></thead></table>
 		);
-		expect(container.querySelector('th button')).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Status' })).toBeInTheDocument();
+	});
+
+	it('clicking the column that is already sorted still reports its key (toggling is the parent\'s job)', () => {
+		const onSort = vi.fn();
+		render(
+			<table><thead><tr>
+				<SortableColumn label="Name" sortKey="name" currentSort={{ key: 'name', dir: 'asc' }} onSort={onSort} />
+			</tr></thead></table>
+		);
+		fireEvent.click(screen.getByRole('button', { name: 'Name' }));
+		expect(onSort).toHaveBeenCalledExactlyOnceWith('name');
 	});
 
 	it('passes the sortKey (not the label) to onSort', () => {
@@ -159,14 +170,5 @@ describe('SortableColumn', () => {
 		expect(icon.getAttribute('class')).toContain(iconClass);
 		expect(icon).toHaveAttribute('aria-hidden', 'true');
 		expect(icon.getAttribute('class')!.split(/\s+/).includes('opacity-30')).toBe(dimmed);
-	});
-
-	it('renders a sort icon (svg) inside the button', () => {
-		const { container } = render(
-			<table><thead><tr>
-				<SortableColumn label="Name" sortKey="name" currentSort={null} onSort={vi.fn()} />
-			</tr></thead></table>
-		);
-		expect(container.querySelector('th button svg')).toBeInTheDocument();
 	});
 });

@@ -4,11 +4,20 @@ import { describe, expect, it, vi } from 'vitest';
 import { BulkActionsToolbar } from './BulkActionsToolbar.js';
 
 describe('BulkActionsToolbar', () => {
-	it('renders without crashing', () => {
-		const { container } = render(
-			<BulkActionsToolbar selectedCount={0} onClearSelection={vi.fn()} />
-		);
-		expect(container).toBeInTheDocument();
+	// A hidden toolbar stays in the DOM for its transition but must not exist for assistive technology.
+	it('is absent from the accessibility tree while nothing is selected, present once something is', () => {
+		const view = render(<BulkActionsToolbar selectedCount={0} onClearSelection={vi.fn()} />);
+		expect(screen.queryByRole('toolbar')).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Clear selection' })).toBeNull();
+		expect(screen.getByRole('toolbar', { hidden: true })).toBeInTheDocument();
+		view.rerender(<BulkActionsToolbar selectedCount={1} onClearSelection={vi.fn()} />);
+		expect(screen.getByRole('toolbar', { name: 'Bulk actions' })).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Clear selection' })).toBeInTheDocument();
+	});
+
+	it('treats a negative count as nothing selected', () => {
+		render(<BulkActionsToolbar selectedCount={-1} onClearSelection={vi.fn()} />);
+		expect(screen.getByTestId('bulk-actions-toolbar')).toHaveAttribute('aria-hidden', 'true');
 	});
 
 	it('is aria-hidden when selectedCount is 0', () => {

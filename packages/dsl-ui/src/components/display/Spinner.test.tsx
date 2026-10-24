@@ -32,3 +32,24 @@ describe('Spinner', () => {
         expect(svg).toHaveAttribute('height', '40');
     });
 });
+
+describe('Spinner label and size', () => {
+    it('defaults to the medium 24px size', () => {
+        render(<Spinner />);
+        expect(screen.getByRole('status')).toHaveAttribute('width', '24');
+        expect(screen.getByRole('status')).toHaveAttribute('height', '24');
+    });
+
+    it('shows the label as visible text but announces it once (the visible copy is hidden from assistive technology)', () => {
+        render(<Spinner label="Fetching data" />);
+        expect(screen.getByText('Fetching data')).toHaveAttribute('aria-hidden', 'true');
+        expect(screen.getByRole('status')).toHaveAttribute('aria-label', 'Fetching data');
+        expect(screen.getAllByRole('status')).toHaveLength(1);
+    });
+
+    it('shows no visible text without a label, while still announcing "Loading..."', () => {
+        const { container } = render(<Spinner />);
+        expect(container.textContent).toBe('');
+        expect(screen.getByRole('status')).toHaveAttribute('aria-label', 'Loading...');
+    });
+});

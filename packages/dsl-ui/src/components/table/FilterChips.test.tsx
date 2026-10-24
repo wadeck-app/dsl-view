@@ -17,7 +17,35 @@ describe('FilterChips', () => {
 		expect(screen.getByText('Gamma')).toBeInTheDocument();
 	});
 
-	it('all chips are active when value=[] - each chip has its color class', () => {
+	it('reads value=[] as every option active (state, not just styling)', () => {
+		render(<FilterChips bind="tag" options={options} value={[]} onChange={vi.fn()} />);
+		for (const label of ['Alpha', 'Beta', 'Gamma']) {
+			expect(screen.getByText(label)).toHaveAttribute('aria-pressed', 'true');
+		}
+	});
+
+	it('clicking a chip while value=[] (all active) deselects just that one and keeps the others in option order', () => {
+		const onChange = vi.fn();
+		render(<FilterChips bind="tag" options={options} value={[]} onChange={onChange} />);
+		fireEvent.click(screen.getByText('Beta'));
+		expect(onChange).toHaveBeenCalledExactlyOnceWith(['a', 'c']);
+	});
+
+	it('a subset marks exactly its chips pressed and ignores a value that is not an option', () => {
+		render(<FilterChips bind="tag" options={options} value={['b', 'ghost']} onChange={vi.fn()} />);
+		expect(screen.getByText('Alpha')).toHaveAttribute('aria-pressed', 'false');
+		expect(screen.getByText('Beta')).toHaveAttribute('aria-pressed', 'true');
+		expect(screen.getByText('Gamma')).toHaveAttribute('aria-pressed', 'false');
+	});
+
+	it('cannot deselect the only option either when value=[] reads as all active', () => {
+		const onChange = vi.fn();
+		render(<FilterChips bind="tag" options={[{ value: 'a', label: 'Alpha' }]} value={[]} onChange={onChange} />);
+		fireEvent.click(screen.getByText('Alpha'));
+		expect(onChange).not.toHaveBeenCalled();
+	});
+
+	it('each chip has its color class when active', () => {
 		render(<FilterChips bind="tag" options={options} value={[]} onChange={vi.fn()} />);
 		// violations-suppress: tailwind/no-raw-color-class asserting chipColors.ts palette output - raw classes are the expected value
 		// The hue token, not bg-blue-100: the raw pair carried a dark: variant, which cannot be nested.

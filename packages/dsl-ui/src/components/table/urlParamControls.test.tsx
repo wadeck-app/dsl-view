@@ -41,17 +41,41 @@ describe('SearchBar urlParam mode', () => {
 		expect(onChange).not.toHaveBeenCalled();
 	});
 
-	it('fails loudly when neither urlParam nor value/onChange is given', () => {
-		const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
-		expect(() => render(<SearchBar />)).toThrow(/needs either "urlParam" or both "value" and "onChange"/);
-		spy.mockRestore();
+	// Default debounce (300 ms) is what a YAML page gets: a keystroke must not hit the URL (and refetch) before it expires.
+	it('debounces the url write with the default delay and writes only the last text', () => {
+		vi.useFakeTimers();
+		try {
+			const { service, set } = serviceWith({});
+			render(
+				<UrlParamContext.Provider value={service}>
+					<SearchBar urlParam="q" />
+				</UrlParamContext.Provider>
+			);
+			const input = screen.getByRole('searchbox');
+			fireEvent.change(input, { target: { value: 'b' } });
+			fireEvent.change(input, { target: { value: 'bi' } });
+			vi.advanceTimersByTime(299);
+			expect(set).not.toHaveBeenCalled();
+			vi.advanceTimersByTime(1);
+			expect(set).toHaveBeenCalledTimes(1);
+			expect(set).toHaveBeenCalledWith('q', 'bi', { replace: true });
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 
-	it('fails loudly (no silent fallback) when urlParam is set without a RouterProvider', () => {
-		const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
-		expect(() => render(<SearchBar urlParam="q" />)).toThrow(/requires UrlParamContext/);
-		spy.mockRestore();
+	it('the clear button writes an empty string to the url param immediately', () => {
+		const { service, set } = serviceWith({ q: 'billing' });
+		render(
+			<UrlParamContext.Provider value={service}>
+				<SearchBar urlParam="q" />
+			</UrlParamContext.Provider>
+		);
+		fireEvent.click(screen.getByRole('button', { name: 'Clear search' }));
+		expect(set).toHaveBeenCalledExactlyOnceWith('q', '', { replace: true });
 	});
+
+	// The props-error and missing-context errors are asserted once, in SearchBar.test.tsx (misconfiguration).
 });
 
 describe('CompactSelect urlParam mode', () => {

@@ -28,12 +28,31 @@ describe('formatYTick', () => {
 		expect(formatYTick(5, 'number', undefined)).toBe('5');
 	});
 
+	// The implementation formats with the host locale. Expected values are written as locale-independent
+	// patterns (decimal separator "." or ","), never computed with the same Intl call as the code under test.
 	it('formats counts compactly with yFormat number', () => {
-		const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 });
 		expect(formatYTick(950, 'number')).toBe('950');
-		expect(formatYTick(1753, 'number')).toBe(compact.format(1753));
+		expect(formatYTick(1753, 'number')).toMatch(/^1[.,]8\D*$/);
 		expect(formatYTick(1753, 'number')).not.toMatch(/KB/);
-		expect(formatYTick(2_500_000, 'number')).toMatch(/2[.,]5/);
+		expect(formatYTick(1753, 'number').length).toBeLessThan('1753'.length + 2);
+		expect(formatYTick(2_500_000, 'number')).toMatch(/^2[.,]5\D*$/);
+	});
+
+	it('keeps at most one decimal and no unit for zero and sub-thousand counts', () => {
+		expect(formatYTick(0, 'number')).toBe('0');
+		expect(formatYTick(999, 'number')).toBe('999');
+		expect(formatYTick(1050, 'number')).toMatch(/^1(?:[.,]1)?\D*$/);
+	});
+
+	it('accepts numeric strings as values and rejects non-finite numbers as text', () => {
+		expect(formatYTick('2048')).toBe('2.0 KB');
+		expect(formatYTick(Infinity, 'number')).toBe('Infinity');
+		expect(formatYTick(NaN, 'bytes')).toBe('NaN');
+	});
+
+	it('documents the current behaviour for zero and negative byte values (no unit scaling below zero)', () => {
+		expect(formatYTick(0)).toBe('0');
+		expect(formatYTick(-2048)).toBe('-2048');
 	});
 
 	it('appends yUnit', () => {
@@ -61,8 +80,56 @@ describe('formatXTick', () => {
 		expect(formatXTick(ts, 'time', 'datetime')).toContain(time);
 	});
 
+	// Each format must carry exactly its own parts: date has no clock, time has no date, datetime has both.
+	it('keeps the parts of each format apart', () => {
+		const date = formatXTick(ts, 'time', 'date');
+		const time = formatXTick(ts, 'time', 'time');
+		const dateTime = formatXTick(ts, 'time', 'datetime');
+		expect(date).toBe(formatXTick(ts, 'time'));
+		expect(date).not.toContain(time);
+		expect(time).not.toContain(date);
+		expect(dateTime).toContain(date.replace(/\.$/, ''));
+		expect(dateTime).toContain(time);
+		expect(dateTime.length).toBeGreaterThan(Math.max(date.length, time.length));
+	});
+
+	it('renders the same instant given as a timestamp, a Date-parsable string or a Date number identically', () => {
+		const iso = new Date(ts).toISOString();
+		expect(formatXTick(iso, 'time', 'datetime')).toBe(formatXTick(ts, 'time', 'datetime'));
+	});
+
+	it('uses the local time zone, not UTC: the clock text follows getHours/getMinutes', () => {
+		const local = new Date(2026, 0, 5, 23, 59);
+		const text = formatXTick(local.getTime(), 'time', 'time');
+		expect(text).toMatch(/11|23/);
+		expect(text).toMatch(/59/);
+	});
+
 	it('returns an unparsable time value as is', () => {
 		expect(formatXTick('not a date', 'time', 'time')).toBe('not a date');
+	});
+});
+
+// The documented order (consumer reference, Chart): accent, success, warning, danger, purple, cyan, orange.
+// Series are coloured by position, so reordering would recolour every existing chart.
+describe('CHART_PALETTE', () => {
+	it('keeps the documented order, as theme variables rather than fixed colours', () => {
+		expect(CHART_PALETTE).toEqual([
+			'var(--color-primary-solid)',
+			'var(--color-success)',
+			'var(--color-warning)',
+			'var(--color-danger)',
+			'var(--color-hue-purple-text)',
+			'var(--color-hue-cyan-text)',
+			'var(--color-hue-orange-text)',
+		]);
+		for (const entry of CHART_PALETTE) {
+			expect(entry).toMatch(/^var\(--color-[a-z-]+\)$/);
+		}
+	});
+
+	it('has no duplicate, so neighbouring series never share a colour', () => {
+		expect(new Set(CHART_PALETTE).size).toBe(CHART_PALETTE.length);
 	});
 });
 

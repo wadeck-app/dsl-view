@@ -48,6 +48,42 @@ describe('JsonViewer', () => {
 		expect(no.container.querySelector('pre')!.textContent).toBe('false');
 	});
 
+	it('re-indents compact JSON text exactly (two spaces, nested arrays one item per line)', () => {
+		const { container } = render(<JsonViewer row={{ payload: '{"a":1,"b":[1,2]}' }} field="payload" />);
+		expect(container.querySelector('pre')!.textContent).toBe('{\n  "a": 1,\n  "b": [\n    1,\n    2\n  ]\n}');
+	});
+
+	it('shows truncated or invalid JSON raw instead of throwing or hiding it', () => {
+		const { container } = render(<JsonViewer row={{ payload: '{"a":' }} field="payload" />);
+		expect(container.querySelector('pre')!.textContent).toBe('{"a":');
+	});
+
+	it('shows JSON scalars given as text in their JSON form', () => {
+		const str = render(<JsonViewer row={{ p: '"x"' }} field="p" />);
+		expect(str.container.querySelector('pre')!.textContent).toBe('"x"');
+		str.unmount();
+		const num = render(<JsonViewer row={{ p: '42' }} field="p" />);
+		expect(num.container.querySelector('pre')!.textContent).toBe('42');
+	});
+
+	it('renders markup in the payload as text, never as elements', () => {
+		const { container } = render(<JsonViewer row={{ payload: '<img src=x onerror=alert(1)><script>1</script>' }} field="payload" />);
+		expect(container.querySelector('img, script')).toBeNull();
+		expect(container.querySelector('pre')!.textContent).toBe('<img src=x onerror=alert(1)><script>1</script>');
+	});
+
+	it('shows nothing when there is no row at all', () => {
+		const { container } = render(<JsonViewer field="payload" />);
+		expect(container.querySelector('pre')!.textContent).toBe('');
+	});
+
+	it('treats an empty maxHeight like no maxHeight (no inline style, no extra scroll class)', () => {
+		const { container } = render(<JsonViewer row={{ payload: '{"a":1}' }} field="payload" maxHeight="" />);
+		const pre = container.querySelector('pre') as HTMLElement;
+		expect(pre.style.maxHeight).toBe('');
+		expect(pre.className).not.toContain('overflow-y-auto');
+	});
+
 	it('has no inline max-height by default', () => {
 		render(<JsonViewer row={{ payload: '{"a":1}' }} field="payload" />);
 		const pre = screen.getByText(/"a": 1/).closest('pre');

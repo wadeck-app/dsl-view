@@ -69,6 +69,51 @@ describe('resetUrlParams', () => {
 		expect(params.has('page')).toBe(false);
 	});
 
+	it('SearchBar: the clear button also removes page, and empties the param', () => {
+		const { router, updates } = renderAt(
+			'/history?page=3&event=order&status=failed',
+			<SearchBar urlParam="event" resetUrlParams={['page']} debounceMs={0} />
+		);
+		fireEvent.click(screen.getByRole('button', { name: 'Clear search' }));
+		const params = new URLSearchParams(router.state.location.search);
+		expect(params.get('event') ?? '').toBe('');
+		expect(params.get('status')).toBe('failed');
+		expect(params.has('page')).toBe(false);
+		expect(updates).toHaveLength(1);
+	});
+
+	it('SearchBar: follows a url change made elsewhere (back button, link) without writing it back', async () => {
+		const { router, updates } = renderAt('/history?event=order', <SearchBar urlParam="event" resetUrlParams={['page']} debounceMs={0} />);
+		expect(screen.getByRole('searchbox')).toHaveValue('order');
+		await act(async () => {
+			await router.navigate('/history?event=refund&page=2');
+		});
+		expect(screen.getByRole('searchbox')).toHaveValue('refund');
+		// The sync is read-only: page=2 stays, the bar did not rewrite the URL by itself.
+		expect(new URLSearchParams(router.state.location.search).get('page')).toBe('2');
+		expect(updates.every(update => update.action !== 'REPLACE')).toBe(true);
+	});
+
+	it('CompactSelect: going back to the empty choice clears the param and still removes page', () => {
+		const { router } = renderAt(
+			'/history?page=3&status=failed',
+			<CompactSelect
+				urlParam="status"
+				resetUrlParams={['page']}
+				value=""
+				options={[{ value: 'failed', label: 'Failed' }]}
+				onChange={() => {}}
+				ariaLabel="Status"
+				placeholder="Any"
+			/>
+		);
+		expect(screen.getByRole('combobox', { name: 'Status' })).toHaveValue('failed');
+		fireEvent.change(screen.getByRole('combobox', { name: 'Status' }), { target: { value: '' } });
+		const params = new URLSearchParams(router.state.location.search);
+		expect(params.get('status') ?? '').toBe('');
+		expect(params.has('page')).toBe(false);
+	});
+
 	it('without resetUrlParams the other params are untouched (existing behaviour)', () => {
 		const { router } = renderAt('/history?page=3', <SearchBar urlParam="event" debounceMs={0} />);
 		fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'order' } });
