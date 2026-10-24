@@ -45,14 +45,21 @@ export function FieldTags({
 	const [inputValue, setInputValue] = useState('');
 	const inputRef = useRef<HTMLInputElement>(null);
 	const id = useId();
+	const errorId = `${id}-error`;
 
 	const canAdd = maxTags === undefined || value.length < maxTags;
 
 	function addTag(raw: string) {
 		const tag = raw.trim();
-		if (!tag) return;
-		if (!allowDuplicates && value.includes(tag)) return;
-		if (!canAdd) return;
+		if (!tag) {
+			return;
+		}
+		if (!allowDuplicates && value.includes(tag)) {
+			return;
+		}
+		if (!canAdd) {
+			return;
+		}
 		onChange([...value, tag]);
 		setInputValue('');
 	}
@@ -129,11 +136,13 @@ export function FieldTags({
 					className={INPUT_CLASS}
 					autoComplete="off"
 					aria-required={required}
+					aria-invalid={error ? true : undefined}
+					aria-describedby={error ? errorId : undefined}
 				/>
 			</div>
 
 			{error && (
-				<p className="mt-1 text-xs text-danger" role="alert">
+				<p id={errorId} className="mt-1 text-xs text-danger" role="alert">
 					{error}
 				</p>
 			)}

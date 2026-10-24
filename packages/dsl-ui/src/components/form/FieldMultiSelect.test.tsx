@@ -213,6 +213,175 @@ describe('FieldMultiSelect', () => {
 		expect(onChange).toHaveBeenCalledWith(['apple']);
 	});
 
+	describe('selection and display', () => {
+		it('a selected value that matches no option is shown as its raw value', () => {
+			render(<FieldMultiSelect label="Fruits" options={options} value={['kiwi']} onChange={vi.fn()} />);
+			expect(screen.getByText('kiwi')).toBeInTheDocument();
+			expect(screen.getByRole('button', { name: 'Remove kiwi' })).toBeInTheDocument();
+		});
+
+		it('pills keep the order of the value, not the order of the options', () => {
+			render(<FieldMultiSelect label="Fruits" options={options} value={['date', 'apple']} onChange={vi.fn()} />);
+			expect(screen.getAllByRole('button', { name: /^Remove / }).map(b => b.getAttribute('aria-label'))).toEqual([
+				'Remove Date',
+				'Remove Apple',
+			]);
+		});
+
+		it('selecting appends to the value and removing keeps the others in order', () => {
+			const onChange = vi.fn();
+			render(<FieldMultiSelect label="Fruits" options={options} value={['date', 'apple']} onChange={onChange} />);
+			fireEvent.click(screen.getByRole('combobox'));
+			fireEvent.click(screen.getByRole('option', { name: /Banana/ }));
+			expect(onChange).toHaveBeenLastCalledWith(['date', 'apple', 'banana']);
+			fireEvent.click(screen.getByRole('option', { name: /Date/ }));
+			expect(onChange).toHaveBeenLastCalledWith(['apple']);
+		});
+
+		it('options report their selected state to assistive tech', () => {
+			render(<FieldMultiSelect label="Fruits" options={options} value={['banana']} onChange={vi.fn()} />);
+			fireEvent.click(screen.getByRole('combobox'));
+			expect(screen.getAllByRole('option').map(o => o.getAttribute('aria-selected'))).toEqual(['false', 'true', 'false', 'false']);
+			expect(screen.getByRole('listbox')).toHaveAttribute('aria-multiselectable', 'true');
+			expect(screen.getByRole('listbox', { name: 'Fruits' })).toBeInTheDocument();
+		});
+
+		it('is controlled: clicking an option does not select it by itself', () => {
+			render(<FieldMultiSelect label="Fruits" options={options} value={[]} onChange={vi.fn()} />);
+			fireEvent.click(screen.getByRole('combobox'));
+			fireEvent.click(screen.getByRole('option', { name: /Apple/ }));
+			expect(screen.getByText('Select...')).toBeInTheDocument();
+		});
+
+		it('with the limit reached, a blocked option cannot be selected and the others stay as they are', () => {
+			const onChange = vi.fn();
+			render(<FieldMultiSelect label="Fruits" options={options} value={['apple', 'banana']} onChange={onChange} maxSelected={2} />);
+			fireEvent.click(screen.getByRole('combobox'));
+			fireEvent.click(screen.getByRole('option', { name: /Cherry/ }));
+			expect(onChange).not.toHaveBeenCalled();
+			expect(screen.getByRole('option', { name: /Cherry/ })).toBeDisabled();
+			expect(screen.getByRole('option', { name: /Apple/ })).toBeEnabled();
+		});
+
+		it('below the limit nothing is blocked', () => {
+			render(<FieldMultiSelect label="Fruits" options={options} value={['apple']} onChange={vi.fn()} maxSelected={2} />);
+			fireEvent.click(screen.getByRole('combobox'));
+			expect(screen.getAllByRole('option').filter(o => (o as HTMLButtonElement).disabled)).toHaveLength(0);
+		});
+
+		it('clicking the pill remove or clear-all button does not open the list', () => {
+			render(<FieldMultiSelect label="Fruits" options={options} value={['apple']} onChange={vi.fn()} />);
+			fireEvent.click(screen.getByRole('button', { name: 'Remove Apple' }));
+			fireEvent.click(screen.getByRole('button', { name: 'Clear all' }));
+			expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+		});
+	});
+
+	describe('keyboard', () => {
+		const combo = () => screen.getByRole('combobox');
+
+		it('Enter and Space on the closed field open it without selecting anything', () => {
+			const onChange = vi.fn();
+			render(<FieldMultiSelect label="Fruits" options={options} value={[]} onChange={onChange} />);
+			fireEvent.keyDown(combo(), { key: 'Enter' });
+			expect(screen.getByRole('listbox')).toBeInTheDocument();
+			expect(onChange).not.toHaveBeenCalled();
+			fireEvent.keyDown(combo(), { key: 'Escape' });
+			fireEvent.keyDown(combo(), { key: ' ' });
+			expect(screen.getByRole('listbox')).toBeInTheDocument();
+			expect(onChange).not.toHaveBeenCalled();
+		});
+
+		it('ArrowDown / ArrowUp move the active option and stop at the ends', () => {
+			render(<FieldMultiSelect label="Fruits" options={options} value={[]} onChange={vi.fn()} />);
+			fireEvent.keyDown(combo(), { key: 'ArrowDown' });
+			const active = () => screen.getAllByRole('option').findIndex(o => o.getAttribute('data-active') === 'true');
+			expect(active()).toBe(0);
+			fireEvent.keyDown(combo(), { key: 'ArrowUp' });
+			expect(active()).toBe(0);
+			for (let i = 0; i < 6; i++) {
+				fireEvent.keyDown(combo(), { key: 'ArrowDown' });
+			}
+			expect(active()).toBe(3);
+		});
+
+		it('Enter and Space toggle the active option, and a second Enter removes it again', () => {
+			const onChange = vi.fn();
+			const { rerender } = render(<FieldMultiSelect label="Fruits" options={options} value={[]} onChange={onChange} />);
+			fireEvent.keyDown(combo(), { key: 'ArrowDown' });
+			fireEvent.keyDown(combo(), { key: 'ArrowDown' });
+			fireEvent.keyDown(combo(), { key: ' ' });
+			expect(onChange).toHaveBeenLastCalledWith(['banana']);
+			rerender(<FieldMultiSelect label="Fruits" options={options} value={['banana']} onChange={onChange} />);
+			fireEvent.keyDown(combo(), { key: 'Enter' });
+			expect(onChange).toHaveBeenLastCalledWith([]);
+		});
+
+		it('hovering an option makes it the active one for the next Enter', () => {
+			const onChange = vi.fn();
+			render(<FieldMultiSelect label="Fruits" options={options} value={[]} onChange={onChange} />);
+			fireEvent.click(combo());
+			fireEvent.mouseEnter(screen.getByRole('option', { name: /Cherry/ }));
+			fireEvent.keyDown(combo(), { key: 'Enter' });
+			expect(onChange).toHaveBeenCalledExactlyOnceWith(['cherry']);
+		});
+
+		it('Escape closes the list, keeps the focus on the field and does not change the value', () => {
+			const onChange = vi.fn();
+			render(<FieldMultiSelect label="Fruits" options={options} value={[]} onChange={onChange} />);
+			// A keyboard user is on the field when pressing the keys.
+			combo().focus();
+			fireEvent.keyDown(combo(), { key: 'ArrowDown' });
+			fireEvent.keyDown(combo(), { key: 'Escape' });
+			expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+			expect(document.activeElement).toBe(combo());
+			expect(onChange).not.toHaveBeenCalled();
+		});
+
+		it('exposes the open state through aria-expanded', () => {
+			render(<FieldMultiSelect label="Fruits" options={options} value={[]} onChange={vi.fn()} />);
+			expect(combo()).toHaveAttribute('aria-expanded', 'false');
+			fireEvent.click(combo());
+			expect(combo()).toHaveAttribute('aria-expanded', 'true');
+			fireEvent.click(combo());
+			expect(combo()).toHaveAttribute('aria-expanded', 'false');
+		});
+
+		it('Enter with no options does nothing', () => {
+			const onChange = vi.fn();
+			render(<FieldMultiSelect label="Fruits" options={[]} value={[]} onChange={onChange} />);
+			fireEvent.keyDown(combo(), { key: 'ArrowDown' });
+			fireEvent.keyDown(combo(), { key: 'Enter' });
+			expect(onChange).not.toHaveBeenCalled();
+		});
+	});
+
+	describe('disabled', () => {
+		it('cannot be opened with the mouse or the keyboard, even when it holds the focus', () => {
+			render(<FieldMultiSelect label="Fruits" options={options} value={[]} onChange={vi.fn()} disabled />);
+			const trigger = screen.getByRole('combobox');
+			fireEvent.click(trigger);
+			trigger.focus();
+			fireEvent.keyDown(trigger, { key: 'ArrowDown' });
+			fireEvent.keyDown(trigger, { key: 'Enter' });
+			expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+		});
+
+		it('offers no way to edit the selection through the pills', () => {
+			render(<FieldMultiSelect label="Fruits" options={options} value={['apple']} onChange={vi.fn()} disabled />);
+			expect(screen.getByText('Apple')).toBeInTheDocument();
+			expect(screen.queryByRole('button', { name: 'Remove Apple' })).not.toBeInTheDocument();
+			expect(screen.queryByRole('button', { name: 'Clear all' })).not.toBeInTheDocument();
+		});
+	});
+
+	it('renders no hidden input without a name', () => {
+		const { container } = render(
+			<FieldMultiSelect label="Fruits" options={options} value={['apple']} onChange={vi.fn()} />,
+		);
+		expect(container.querySelectorAll('input[type="hidden"]')).toHaveLength(0);
+	});
+
 	it('renders hidden inputs for form submission when name provided', () => {
 		const { container } = render(
 			<FieldMultiSelect

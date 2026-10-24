@@ -56,7 +56,9 @@ export function FieldMultiSelect({
 		if (value.includes(optValue)) {
 			onChange(value.filter(v => v !== optValue));
 		} else {
-			if (maxSelected !== undefined && value.length >= maxSelected) return;
+			if (maxSelected !== undefined && value.length >= maxSelected) {
+				return;
+			}
 			onChange([...value, optValue]);
 		}
 	}
@@ -72,11 +74,17 @@ export function FieldMultiSelect({
 	}
 
 	function handleContainerClick() {
-		if (disabled) return;
+		if (disabled) {
+			return;
+		}
 		setOpen(o => !o);
 	}
 
 	function handleContainerKeyDown(e: React.KeyboardEvent) {
+		// tabIndex -1 keeps a disabled field focusable by mouse: it must still not react to the keyboard.
+		if (disabled) {
+			return;
+		}
 		if (!open) {
 			if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
 				e.preventDefault();
@@ -147,24 +155,29 @@ export function FieldMultiSelect({
 								{selectedLabels.map((lab, i) => (
 									<span key={value[i]} className={PILL_CLASS}>
 										{lab}
-										<button
-											type="button"
-											aria-label={`Remove ${lab}`}
-											onClick={e => removeTag(value[i], e)}
-											className="hover:text-danger focus:outline-none leading-none"
-										>
-											{/* @formatter:off */}×{/* @formatter:on */}
-										</button>
+										{/* A disabled field must not be editable through its pills (same as FieldTags). */}
+										{!disabled && (
+											<button
+												type="button"
+												aria-label={`Remove ${lab}`}
+												onClick={e => removeTag(value[i], e)}
+												className="hover:text-danger focus:outline-none leading-none"
+											>
+												{/* @formatter:off */}×{/* @formatter:on */}
+											</button>
+										)}
 									</span>
 								))}
-								<button
-									type="button"
-									aria-label="Clear all"
-									onClick={clearAll}
-									className="ml-auto text-muted hover:text-danger focus:outline-none text-xs leading-none"
-								>
-									{/* @formatter:off */}✕{/* @formatter:on */}
-								</button>
+								{!disabled && (
+									<button
+										type="button"
+										aria-label="Clear all"
+										onClick={clearAll}
+										className="ml-auto text-muted hover:text-danger focus:outline-none text-xs leading-none"
+									>
+										{/* @formatter:off */}✕{/* @formatter:on */}
+									</button>
+								)}
 							</>
 						)}
 					</div>
