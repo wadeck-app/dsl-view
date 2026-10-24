@@ -89,6 +89,47 @@ describe('InviteTokenWidget', () => {
 		await waitFor(() => expect(mockToast.success).toHaveBeenCalledWith('Token copied to clipboard'));
 	});
 
+	it('the two modes are exclusive: a token hides Generate, no token hides Copy and the token block', () => {
+		const { rerender } = renderWidget({ inviteToken: 'abc-123', onGenerateToken: vi.fn() });
+		expect(screen.queryByText('Generate invite token')).not.toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument();
+		rerender(
+			<MockToastProvider>
+				<InviteTokenWidget inviteToken={null} onGenerateToken={vi.fn()} />
+			</MockToastProvider>
+		);
+		expect(screen.queryByRole('button', { name: 'Copy' })).not.toBeInTheDocument();
+		expect(screen.queryByText('abc-123')).not.toBeInTheDocument();
+	});
+
+	it('an empty token counts as no token', () => {
+		renderWidget({ inviteToken: '', onGenerateToken: vi.fn() });
+		expect(screen.getByText('Generate invite token')).toBeInTheDocument();
+		expect(screen.queryByRole('button', { name: 'Copy' })).not.toBeInTheDocument();
+	});
+
+	it('a pending generation does not fire onGenerateToken again', () => {
+		const onGenerateToken = vi.fn();
+		renderWidget({ inviteToken: null, onGenerateToken, isPending: true });
+		fireEvent.click(screen.getByRole('button'));
+		expect(onGenerateToken).not.toHaveBeenCalled();
+	});
+
+	it('success and error feedback are exclusive', async () => {
+		renderWidget({ inviteToken: 'abc-123', onGenerateToken: vi.fn() });
+		fireEvent.click(screen.getByText('Copy'));
+		await waitFor(() => expect(mockToast.success).toHaveBeenCalledTimes(1));
+		expect(mockToast.error).not.toHaveBeenCalled();
+	});
+
+	it('says so when the clipboard API does not exist (insecure context) instead of throwing', () => {
+		Object.defineProperty(navigator, 'clipboard', { value: undefined, writable: true, configurable: true });
+		renderWidget({ inviteToken: 'abc-123', onGenerateToken: vi.fn() });
+		expect(() => fireEvent.click(screen.getByText('Copy'))).not.toThrow();
+		expect(mockToast.error).toHaveBeenCalledExactlyOnceWith('Failed to copy - please copy manually');
+		expect(mockToast.success).not.toHaveBeenCalled();
+	});
+
 	it('shows error toast when clipboard.writeText rejects', async () => {
 		Object.defineProperty(navigator, 'clipboard', {
 			value: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },

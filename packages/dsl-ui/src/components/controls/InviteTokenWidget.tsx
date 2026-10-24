@@ -21,7 +21,15 @@ export function InviteTokenWidget({ inviteToken, onGenerateToken, isPending = fa
 	const toast = useToast();
 
 	function handleCopy() {
-		if (!inviteToken) return;
+		if (!inviteToken) {
+			return;
+		}
+		// navigator.clipboard is undefined outside secure contexts (plain http on a LAN host): say so
+		// instead of throwing a TypeError nobody sees.
+		if (!navigator.clipboard) {
+			toast.error('Failed to copy - please copy manually');
+			return;
+		}
 		navigator.clipboard.writeText(inviteToken).then(
 			() => toast.success('Token copied to clipboard'),
 			() => toast.error('Failed to copy - please copy manually')

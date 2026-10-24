@@ -70,6 +70,22 @@ describe('FieldReadOnly', () => {
 		await waitFor(() => expect(mockToast.success).toHaveBeenCalledWith('Copied to clipboard'));
 	});
 
+	it('copies exactly the value, once, with exclusive success feedback', async () => {
+		renderField({ label: 'Token', value: 'a b\nc', copyable: true });
+		fireEvent.click(screen.getByText('Copy'));
+		await waitFor(() => expect(mockToast.success).toHaveBeenCalledTimes(1));
+		expect(navigator.clipboard.writeText).toHaveBeenCalledExactlyOnceWith('a b\nc');
+		expect(mockToast.error).not.toHaveBeenCalled();
+	});
+
+	it('says so when the clipboard API does not exist (insecure context) instead of throwing', () => {
+		Object.defineProperty(navigator, 'clipboard', { value: undefined, writable: true, configurable: true });
+		renderField({ label: 'Token', value: 'abc-123', copyable: true });
+		expect(() => fireEvent.click(screen.getByText('Copy'))).not.toThrow();
+		expect(mockToast.error).toHaveBeenCalledExactlyOnceWith('Failed to copy - please copy manually');
+		expect(mockToast.success).not.toHaveBeenCalled();
+	});
+
 	it('shows error toast when clipboard.writeText rejects', async () => {
 		Object.defineProperty(navigator, 'clipboard', {
 			value: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },

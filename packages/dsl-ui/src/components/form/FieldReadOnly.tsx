@@ -24,6 +24,12 @@ export function FieldReadOnly({ label, description, value, mono = false, copyabl
 	const toast = useToast();
 
 	function handleCopy() {
+		// navigator.clipboard is undefined outside secure contexts (plain http on a LAN host): say so
+		// instead of throwing a TypeError nobody sees.
+		if (!navigator.clipboard) {
+			toast.error('Failed to copy - please copy manually');
+			return;
+		}
 		navigator.clipboard.writeText(value).then(
 			() => toast.success('Copied to clipboard'),
 			() => toast.error('Failed to copy - please copy manually')
