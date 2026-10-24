@@ -217,7 +217,7 @@ export const MarkdownNodeSchema = baseNode.extend({
 export const PageHeaderNodeSchema = baseNode.extend({
 	title: z.string(),
 	subtitle: z.string().optional(),
-	icon: dsl(z.union([z.unknown(), z.string()])).optional(),
+	icon: dsl(z.union([z.unknown(), z.unknown()])).optional(),
 	headerActions: dsl(z.array(z.unknown())).optional(),
 	size: dsl(z.enum(['default', 'sm'])).optional(),
 });

@@ -1,7 +1,8 @@
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 
 import { FieldWrapper } from './FieldWrapper.js';
+import { usableOptions } from '@dsl-ui/utils/usableOptions.js';
 
 const inputClass =
 	'block w-full rounded border border-border bg-surface text-content px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed';
@@ -41,12 +42,14 @@ export interface FieldAutocompleteProps {
 export function FieldAutocomplete({
 	label,
 	description,
-	options,
+	options: optionsProp,
 	value,
 	onChange,
 	placeholder,
 	disabled,
 }: FieldAutocompleteProps) {
+	// Memoised on the list itself: the sync effect below depends on `options`, a fresh array each render would loop it.
+	const options = useMemo(() => usableOptions(optionsProp, 'FieldAutocomplete.options'), [optionsProp]);
 	const [inputValue, setInputValue] = useState(() => {
 		const match = options.find(o => o.value === value);
 		return match ? match.label : value;

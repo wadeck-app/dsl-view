@@ -2,6 +2,7 @@ import { Search, X } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 
 import { useOptionalUrlParam } from '@dsl-ui/context/UrlParamContext.js';
+import { warnUnknownChoice } from '@dsl-ui/utils/warnUnknownChoice.js';
 import { Button } from '../controls/_Button.js';
 
 // @formatter:off
@@ -59,7 +60,9 @@ export function SearchBar({ urlParam, resetUrlParams, value: valueProp, onChange
 	const onChange = urlParam != null ? setUrlValue : onChangeProp!;
 	const [localValue, setLocalValue] = useState(value);
 	const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-	const sizeClasses = SIZE_CLASSES[size];
+	// An unknown size (`size: large`, an empty value) has no classes: use the default and say which are allowed.
+	warnUnknownChoice('SearchBar', 'size', size, SIZE_CLASSES);
+	const sizeClasses = SIZE_CLASSES[size] ?? SIZE_CLASSES.md;
 	const searchIconClass = `pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-muted ${sizeClasses.icon}`;
 	const searchInputClass = `w-full appearance-none rounded border border-border bg-surface text-content placeholder-muted focus:outline-none focus:ring-1 focus:ring-border ${sizeClasses.input}`;
 

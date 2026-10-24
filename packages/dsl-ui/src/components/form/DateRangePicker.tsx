@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import type { FieldControlProps } from './FieldWrapper.js';
+import { validDateFormat } from '@dsl-ui/utils/validDateFormat.js';
 import { buildCalendarGrid } from './calendarUtils.js';
 import {
 	addMonths,
@@ -22,6 +23,8 @@ import { CalendarRange, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 const triggerClass =
 	'flex items-center gap-2 w-full rounded border border-border bg-surface text-content px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-left';
+
+const DEFAULT_DATE_FORMAT = 'MMM d, yyyy';
 
 const PANEL_CLASS = 'z-50 bg-surface border border-border rounded shadow-md p-4';
 
@@ -99,13 +102,15 @@ export function DateRangePicker({
 	minDate,
 	maxDate,
 	placeholder = 'Select a date range...',
-	dateFormat = 'MMM d, yyyy',
+	dateFormat: dateFormatProp,
 	open: controlledOpen,
 	onOpenChange,
 	// Collected, so every member of FieldControlProps reaches the trigger. See the same comment in
 	// DatePicker: FieldWrapper clones these in, and destructuring only our own props dropped them.
 	...control
 }: DateRangePickerProps) {
+	// An unusable format (moment-style `YYYY-MM-DD`, empty) would make date-fns throw on every render.
+	const dateFormat = validDateFormat(dateFormatProp, DEFAULT_DATE_FORMAT, 'DateRangePicker.dateFormat');
 	const isControlled = controlledOpen !== undefined;
 	const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
 	const open = isControlled ? controlledOpen : uncontrolledOpen;

@@ -4,9 +4,12 @@ import * as Popover from '@radix-ui/react-popover';
 import { addMonths, format, isAfter, isBefore, isEqual, isSameMonth, isSameYear, isToday, parse, startOfMonth, subMonths } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { FieldControlProps } from './FieldWrapper.js';
+import { validDateFormat } from '@dsl-ui/utils/validDateFormat.js';
 
 const inputClass =
 	'block w-full rounded border border-border bg-surface text-content px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed';
+
+const DEFAULT_DATE_FORMAT = 'MMM d, yyyy';
 
 const CALENDAR_CLASS = 'z-50 bg-surface border border-border rounded shadow-md p-4 w-80';
 
@@ -37,7 +40,7 @@ export function DatePicker({
 	maxDate,
 	placeholder = 'Select a date...',
 	disabled,
-	dateFormat = 'MMM d, yyyy',
+	dateFormat: dateFormatProp,
 	/*
 	 * Collected rather than named one by one so every current and future member of FieldControlProps
 	 * reaches the input. FieldWrapper cloneElement's these onto its first child, and this component
@@ -47,6 +50,8 @@ export function DatePicker({
 	 */
 	...control
 }: DatePickerProps) {
+	// An unusable format (moment-style `YYYY-MM-DD`, empty) would make date-fns throw on every render.
+	const dateFormat = validDateFormat(dateFormatProp, DEFAULT_DATE_FORMAT, 'DatePicker.dateFormat');
 	const [open, setOpen] = useState(false);
 	const [displayMonth, setDisplayMonth] = useState<Date>(() => {
 		if (value) return value;
