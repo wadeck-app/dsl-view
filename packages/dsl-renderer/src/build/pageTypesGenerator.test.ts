@@ -455,6 +455,12 @@ describe('pageTypesGenerator contract loading from dsl.config.yaml', () => {
 		]);
 	});
 
+	it('returns null (not undefined) when every declared adapter kind is skipped as not implemented', async () => {
+		vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const contracts = [{ package: 'whatever', export: 'ROUTES', adapter: 'openapi' }] as unknown as Parameters<typeof loadAdapterFromConfig>[0]['contracts'];
+		expect(await loadAdapterFromConfig({ contracts }, appRoot)).toBeNull();
+	});
+
 	it('loads no adapter without contracts, or with an empty list', async () => {
 		expect(await loadAdapterFromConfig({}, appRoot)).toBeNull();
 		expect(await loadAdapterFromConfig({ contracts: [] }, appRoot)).toBeNull();
