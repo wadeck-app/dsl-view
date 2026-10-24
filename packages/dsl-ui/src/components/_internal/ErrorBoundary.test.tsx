@@ -72,6 +72,111 @@ describe('ErrorBoundary', () => {
 		expect(screen.queryByRole('alert')).toBeNull();
 	});
 
+	describe('resetKeys', () => {
+		// Throws only for the "bad" record, so changing the key to a good one must recover.
+		function Record({ id }: { id: string }): React.ReactElement {
+			if (id === 'bad') throw new Error('bad record');
+			return <p>record {id}</p>;
+		}
+
+		it('a crashed boundary tries its children again when a reset key changes', () => {
+			silenceReactErrorLog();
+			const { rerender } = render(
+				<ErrorBoundary resetKeys={['bad']}>
+					<Record id="bad" />
+				</ErrorBoundary>
+			);
+			expect(screen.getByRole('alert')).toHaveTextContent('bad record');
+
+			rerender(
+				<ErrorBoundary resetKeys={['good']}>
+					<Record id="good" />
+				</ErrorBoundary>
+			);
+
+			expect(screen.getByText('record good')).toBeInTheDocument();
+			expect(screen.queryByRole('alert')).toBeNull();
+		});
+
+		it('stays on the error when the keys are unchanged, also when the keys array is a new array with the same entries', () => {
+			silenceReactErrorLog();
+			const { rerender } = render(
+				<ErrorBoundary resetKeys={['bad']}>
+					<Record id="bad" />
+				</ErrorBoundary>
+			);
+
+			rerender(
+				<ErrorBoundary resetKeys={['bad']}>
+					<Record id="good" />
+				</ErrorBoundary>
+			);
+
+			expect(screen.getByRole('alert')).toHaveTextContent('bad record');
+			expect(screen.queryByText('record good')).toBeNull();
+		});
+
+		it('without resetKeys a crashed boundary never resets on its own (previous behaviour)', () => {
+			silenceReactErrorLog();
+			const { rerender } = render(
+				<ErrorBoundary>
+					<Record id="bad" />
+				</ErrorBoundary>
+			);
+
+			rerender(
+				<ErrorBoundary>
+					<Record id="good" />
+				</ErrorBoundary>
+			);
+
+			expect(screen.getByRole('alert')).toHaveTextContent('bad record');
+		});
+
+		it('a key change that still crashes retries once and then keeps the fallback instead of looping', () => {
+			const consoleError = silenceReactErrorLog();
+			const { rerender } = render(
+				<ErrorBoundary resetKeys={['bad']}>
+					<Record id="bad" />
+				</ErrorBoundary>
+			);
+			consoleError.mockClear();
+
+			rerender(
+				<ErrorBoundary resetKeys={['bad2']}>
+					<Record id="bad" />
+				</ErrorBoundary>
+			);
+
+			expect(screen.getByRole('alert')).toHaveTextContent('bad record');
+			const own = consoleError.mock.calls.filter(call => call[0] === '[ErrorBoundary] Uncaught error:');
+			expect(own).toHaveLength(1);
+		});
+
+		it('a length change counts as a change, and NaN keys are equal to themselves', () => {
+			silenceReactErrorLog();
+			const { rerender } = render(
+				<ErrorBoundary resetKeys={[Number.NaN]}>
+					<Record id="bad" />
+				</ErrorBoundary>
+			);
+
+			rerender(
+				<ErrorBoundary resetKeys={[Number.NaN]}>
+					<Record id="good" />
+				</ErrorBoundary>
+			);
+			expect(screen.getByRole('alert')).toHaveTextContent('bad record');
+
+			rerender(
+				<ErrorBoundary resetKeys={[Number.NaN, 'extra']}>
+					<Record id="good" />
+				</ErrorBoundary>
+			);
+			expect(screen.getByText('record good')).toBeInTheDocument();
+		});
+	});
+
 	it('the Reload button reloads the page', async () => {
 		silenceReactErrorLog();
 		const reload = vi.fn();
