@@ -1,7 +1,7 @@
 import { format } from 'date-fns';
 
-import { reportOnce } from '@dsl-ui/components/dev/reportOnce.js';
 import { getErrorMessage } from '@dsl-ui/utils/errors.js';
+import { reportAuthoringMistake } from '@dsl-ui/utils/devDiagnostics.js';
 
 // A fixed date: only whether date-fns accepts the format matters, never what it prints.
 const PROBE_DATE = new Date(2000, 0, 1);
@@ -27,7 +27,7 @@ export function validDateFormat(candidate: string | undefined, fallback: string,
 		return candidate;
 	} catch (error) {
 		const reason = getErrorMessage(error).split('\n')[0];
-		reportOnce(`[${where}] cannot format dates with ${JSON.stringify(candidate)} (${reason}); using ${JSON.stringify(fallback)} instead.`, console.error);
+		reportAuthoringMistake(`[${where}] cannot format dates with ${JSON.stringify(candidate)} (${reason}); using ${JSON.stringify(fallback)} instead.`, console.error);
 		return fallback;
 	}
 }

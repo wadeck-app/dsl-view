@@ -1,8 +1,8 @@
 import React from 'react';
 
 import { iconByName } from '../display/iconByName.js';
-import { reportOnce } from '../dev/reportOnce.js';
 import { Button } from './_Button.js';
+import { reportAuthoringError, reportAuthoringMistake } from '@dsl-ui/utils/devDiagnostics.js';
 
 export interface ActionButtonProps {
 	/**
@@ -76,7 +76,7 @@ export function ActionButton({
 	const unwired = !onAction;
 	React.useEffect(() => {
 		if (unwired) {
-			console.error(
+			reportAuthoringError(
 				`[ActionButton] "${label}" cannot run action "${action}": render it inside a GenericPageRunner (it provides onAction) or pass onAction.`
 			);
 		}
@@ -85,7 +85,7 @@ export function ActionButton({
 	const iconOnlyWithoutIcon = iconOnly && !icon;
 	React.useEffect(() => {
 		if (iconOnlyWithoutIcon) {
-			reportOnce(`[ActionButton] "${label}": iconOnly needs an icon name, showing the label instead.`, console.error);
+			reportAuthoringMistake(`[ActionButton] "${label}": iconOnly needs an icon name, showing the label instead.`, console.error);
 		}
 	}, [iconOnlyWithoutIcon, label]);
 

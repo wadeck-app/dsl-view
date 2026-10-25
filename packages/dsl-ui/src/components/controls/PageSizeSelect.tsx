@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 
 import { useOptionalUrlParam } from '@dsl-ui/context/UrlParamContext.js';
-import { reportOnce } from '@dsl-ui/components/dev/reportOnce.js';
+import { reportAuthoringMistake } from '@dsl-ui/utils/devDiagnostics.js';
 
 const selectClass =
 	'rounded border border-border bg-surface px-2 py-1 text-sm text-content cursor-pointer';
@@ -44,7 +44,7 @@ export function PageSizeSelect({ urlParam, resetUrlParams, value, options: optio
 	const [urlSize, setUrlSize] = useOptionalUrlParam(urlParam, { resetUrlParams });
 	const defaultSize = defaultProp !== undefined && options.includes(defaultProp) ? defaultProp : undefined;
 	if (defaultProp !== undefined && defaultSize === undefined) {
-		reportOnce(`[PageSizeSelect] default ${String(defaultProp)} is not one of the offered sizes (${options.join(', ')}) and is ignored.`);
+		reportAuthoringMistake(`[PageSizeSelect] default ${String(defaultProp)} is not one of the offered sizes (${options.join(', ')}) and is ignored.`);
 	}
 	// A page size in the URL is what the sources read: fill an absent one with the default instead of only showing it.
 	const missingInUrl = urlParam != null && urlSize === null;
@@ -91,7 +91,7 @@ function usableSizes(options: readonly unknown[]): number[] {
 		.map(option => (typeof option === 'string' && option.trim() !== '' ? Number(option) : option))
 		.filter((option): option is number => typeof option === 'number' && Number.isFinite(option));
 	if (sizes.length !== options.length) {
-		reportOnce(`[PageSizeSelect] ${options.length - sizes.length} of ${options.length} option(s) are not numbers and are left out: write the page sizes as numbers, e.g. [10, 25, 50].`);
+		reportAuthoringMistake(`[PageSizeSelect] ${options.length - sizes.length} of ${options.length} option(s) are not numbers and are left out: write the page sizes as numbers, e.g. [10, 25, 50].`);
 	}
 	return sizes;
 }

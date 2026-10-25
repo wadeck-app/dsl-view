@@ -13,6 +13,7 @@ import {
 } from 'recharts';
 import { formatXTick, formatYTick, seriesColor } from './chartFormat.js';
 import type { ChartXFormat, ChartYFormat } from './chartFormat.js';
+import { reportAuthoringMistake } from '@dsl-ui/utils/devDiagnostics.js';
 
 // @formatter:off
 const emptyStateClass = 'flex items-center justify-center rounded-lg border border-border bg-surface text-sm text-muted';
@@ -95,7 +96,7 @@ export function Chart({
 
 	React.useEffect(() => {
 		if (xFormat !== undefined && xAxisType !== 'time') {
-			console.warn(`[Chart] xFormat "${xFormat}" has no effect with xAxisType "${xAxisType}": use xAxisType: time with real timestamps.`);
+			reportAuthoringMistake(`[Chart] xFormat "${xFormat}" has no effect with xAxisType "${xAxisType}": use xAxisType: time with real timestamps.`);
 		}
 	}, [xFormat, xAxisType]);
 

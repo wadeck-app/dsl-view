@@ -1,4 +1,5 @@
 import React from 'react';
+import { devWarn } from './devMode.js';
 
 interface LazyErrorBoundaryState {
 	error: Error | null;
@@ -34,7 +35,7 @@ class LazyErrorBoundary extends React.Component<{ children: React.ReactNode }, L
 // fallback per @registryLazy component instead - see dsl-renderer-consumer-reference.md.
 function LazyBoundaryFallback(): null {
 	React.useEffect(() => {
-		console.warn(
+		devWarn(
 			'[LazyBoundary] A @registryLazy component is fetching its chunk - rendering nothing visible in its slot until it resolves.'
 		);
 	}, []);

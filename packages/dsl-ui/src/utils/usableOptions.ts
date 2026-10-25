@@ -1,4 +1,4 @@
-import { reportOnce } from '@dsl-ui/components/dev/reportOnce.js';
+import { reportAuthoringMistake } from '@dsl-ui/utils/devDiagnostics.js';
 
 /**
  * The entries of a `{ value, label }` option list a component can really show. An entry that is not a map or has
@@ -11,7 +11,7 @@ export function usableOptions<T extends { label: string }>(options: readonly T[]
 	const usable = options.filter((option) => option !== null && typeof option === 'object' && typeof option.label === 'string');
 	const dropped = options.length - usable.length;
 	if (dropped > 0) {
-		reportOnce(`[${where}] ${dropped} of ${options.length} option(s) have no text label and are left out: write each option as { value, label }.`);
+		reportAuthoringMistake(`[${where}] ${dropped} of ${options.length} option(s) have no text label and are left out: write each option as { value, label }.`);
 	}
 	return usable;
 }

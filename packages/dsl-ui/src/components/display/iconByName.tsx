@@ -24,7 +24,7 @@ import {
 	X,
 } from 'lucide-react';
 
-import { reportOnce } from '../dev/reportOnce.js';
+import { reportAuthoringMistake } from '@dsl-ui/utils/devDiagnostics.js';
 
 // The icons a YAML view may name (`icon: external-link`). YAML cannot pass a React node, so this is the
 // whole vocabulary: add an entry here when a view needs another icon.
@@ -71,7 +71,7 @@ export function iconByName(name: string | undefined, where: string, className = 
 	const key = name ?? 'external-link';
 	const Icon = ICON_LOOKUP[key];
 	if (!Icon) {
-		reportOnce(`[${where}] unknown icon "${key}": showing "external-link". Supported icons: ${ICON_NAMES.join(', ')}.`, console.error);
+		reportAuthoringMistake(`[${where}] unknown icon "${key}": showing "external-link". Supported icons: ${ICON_NAMES.join(', ')}.`, console.error);
 	}
 	const Resolved = Icon ?? ExternalLink;
 	return <Resolved className={className} aria-hidden="true" />;
@@ -85,7 +85,7 @@ export function iconByName(name: string | undefined, where: string, className = 
 export function iconComponentByName(name: string, where: string): IconComponent | undefined {
 	const Icon = ICON_LOOKUP[name];
 	if (!Icon) {
-		reportOnce(`[${where}] unknown icon "${name}": no icon is shown. Supported icons: ${ICON_NAMES.join(', ')}.`, console.error);
+		reportAuthoringMistake(`[${where}] unknown icon "${name}": no icon is shown. Supported icons: ${ICON_NAMES.join(', ')}.`, console.error);
 	}
 	return Icon;
 }

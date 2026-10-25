@@ -6,6 +6,7 @@ import type { CompiledDslArtifact } from './compiledDslArtifact.js';
 import { COMPILED_DSL_FORMAT_VERSION } from './compiledDslArtifact.js';
 import type { ComponentRegistry } from './ComponentRegistry.js';
 import { DslRenderer, omitNavKeys, resolveExpressionValue } from './engine/DslRenderer.js';
+import { devWarn } from './engine/devMode.js';
 import { ActionBanner } from './ActionBanner.js';
 import { NotifierContext, useBannerNotifier } from './notifier.js';
 import type { BrainRegistry } from './pageRunner/brainsTypes.js';
@@ -54,7 +55,7 @@ export interface GenericPageRunnerProps {
 // hand-authored lazy entry with no Suspense ancestor of its own - see prop doc above.
 function SuspenseFallbackNotConfiguredWarning(): null {
 	React.useEffect(() => {
-		console.warn(
+		devWarn(
 			'[GenericPageRunner] A lazily-loaded component is fetching its chunk and no `suspenseFallback` prop was passed - rendering nothing visible. ' +
 				'Pass `suspenseFallback` to show a loading state, or pass `null` explicitly to silence this warning.'
 		);

@@ -1,6 +1,8 @@
 import '@testing-library/jest-dom';
 import { afterEach, vi } from 'vitest';
 
+import { resetReportedMessages } from '@dsl-ui/components/dev/reportOnce.js';
+
 // A test that fails before its own `vi.useRealTimers()` would leave fake timers installed for every
 // following test in the file; always go back to the real clock. Persisted state (the A/B dock, filters, theme)
 // and the URL are also reset so one test cannot pre-seed the next one.
@@ -9,6 +11,9 @@ afterEach(() => {
     localStorage.clear();
     sessionStorage.clear();
     window.history.replaceState(null, '', '/');
+    // Once-per-message reports (authoring warnings) are remembered per module: without this a report made by one test
+    // silences the same report in the next one and passes or fails depending on the order.
+    resetReportedMessages();
 });
 
 // Radix primitives use ResizeObserver internally

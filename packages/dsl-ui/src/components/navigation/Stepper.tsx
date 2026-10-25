@@ -2,6 +2,7 @@ import { Check } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
 import { Button } from '../controls/_Button.js';
+import { reportAuthoringMistake } from '@dsl-ui/utils/devDiagnostics.js';
 
 const navClass = 'flex items-center justify-between border-t border-border pt-4';
 
@@ -52,17 +53,18 @@ export function Stepper({ steps: stepsProp, onComplete, onCancel, completedLabel
 	const isFirst = currentStep === 0;
 	const isLast = currentStep === steps.length - 1;
 	const hasSteps = steps.length > 0;
-	const problem = Array.isArray(received)
-		? hasSteps
-			? null
-			: '[Stepper] received no steps and renders nothing.'
-		: `[Stepper] expected "steps" to be an array of { label, items } but received ${describeReceived(received)}; rendering nothing.`;
+	// Only the KIND of problem is kept in render: the message strings live inside the effect, at the call of the
+	// dev-only reporter, so a production bundle drops them with it.
+	const receivedKind = describeReceived(received);
+	const problem: 'empty' | 'shape' | null = Array.isArray(received) ? (hasSteps ? null : 'empty') : 'shape';
 
 	useEffect(() => {
-		if (problem) {
-			console.warn(problem);
+		if (problem === 'empty') {
+			reportAuthoringMistake('[Stepper] received no steps and renders nothing.');
+		} else if (problem === 'shape') {
+			reportAuthoringMistake(`[Stepper] expected "steps" to be an array of { label, items } but received ${receivedKind}; rendering nothing.`);
 		}
-	}, [problem]);
+	}, [problem, receivedKind]);
 
 	function handleNext() {
 		if (isLast) {

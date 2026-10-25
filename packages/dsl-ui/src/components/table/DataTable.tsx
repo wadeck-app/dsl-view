@@ -30,6 +30,7 @@ import { AppLink } from '../navigation/AppLink.js';
 import { formatBytes } from '@dsl-ui/utils/formatBytes.js';
 import { buildLinkPath } from '@dsl-ui/utils/linkTarget.js';
 import { RouterContext } from '@dsl-ui/RouterContext.js';
+import { reportAuthoringError, reportAuthoringMistake } from '@dsl-ui/utils/devDiagnostics.js';
 import { fillTemplate, fillTextTemplate } from '@dsl-ui/utils/templatedPath.js';
 
 import { getColumnFormat, registeredColumnFormatNames } from './columnFormats.js';
@@ -292,7 +293,7 @@ function warnUnsupportedColumnKeys(col: Record<string, unknown>, index: number):
 			continue;
 		}
 		const hint = key === '$type' && col[key] === 'actions' ? ' Actions columns are written `type: actions` (no `$`).' : '';
-		warnOnce(
+		reportAuthoringError(
 			`[DataTable] column ${where}: unknown key "${key}" is ignored.${hint} Supported keys for ${isLink ? 'a link' : isActions ? 'an actions' : 'a data'} column: ${describeKeys(allowed)}.`
 		);
 	}
@@ -303,7 +304,7 @@ function warnUnsupportedColumnKeys(col: Record<string, unknown>, index: number):
 			}
 			for (const key of Object.keys(item)) {
 				if (!(DATA_TABLE_ACTION_ITEM_KEYS as readonly string[]).includes(key)) {
-					warnOnce(
+					reportAuthoringError(
 						`[DataTable] actions column ${where}, item #${i}: unknown key "${key}" is ignored. Supported keys: ${describeKeys(DATA_TABLE_ACTION_ITEM_KEYS)}.`
 					);
 				}
@@ -318,7 +319,7 @@ function badgeVariantFor(value: unknown, map: Record<string, string>, where: str
 		return undefined;
 	}
 	if (!(BADGE_VARIANTS as readonly string[]).includes(variant)) {
-		warnOnce(`[DataTable] column ${where}: badge variant "${variant}" is not one of ${BADGE_VARIANTS.join(', ')}; showing the neutral variant.`);
+		reportAuthoringError(`[DataTable] column ${where}: badge variant "${variant}" is not one of ${BADGE_VARIANTS.join(', ')}; showing the neutral variant.`);
 		return 'default';
 	}
 	return variant as BadgeVariant;
@@ -335,10 +336,10 @@ function normalizeLinkColumn<T extends Record<string, unknown>>(col: RawYamlColu
 	const where = `link column #${index}`;
 	const template = col.to;
 	if (typeof template !== 'string' || template === '') {
-		warnOnce(`[DataTable] ${where}: a link column needs \`to\` (a path template such as /modules/flow/executions/{executionId}).`);
+		reportAuthoringError(`[DataTable] ${where}: a link column needs \`to\` (a path template such as /modules/flow/executions/{executionId}).`);
 	}
 	if (col.label === undefined || col.label === '') {
-		warnOnce(`[DataTable] ${where}: a link column needs a \`label\`, it is the accessible name of the icon-only link. Using "Open".`);
+		reportAuthoringError(`[DataTable] ${where}: a link column needs a \`label\`, it is the accessible name of the icon-only link. Using "Open".`);
 	}
 	const label = col.label || 'Open';
 	const external = col.external === true;
@@ -355,7 +356,7 @@ function normalizeLinkColumn<T extends Record<string, unknown>>(col: RawYamlColu
 			}
 			const link = buildLinkPath(template, row, external);
 			if (!link.href) {
-				warnOnce(`[DataTable] ${where}: link not rendered: ${link.problem}.`);
+				reportAuthoringError(`[DataTable] ${where}: link not rendered: ${link.problem}.`);
 				return null;
 			}
 			return (
@@ -387,7 +388,7 @@ function normalizeColumn<T extends Record<string, unknown>>(col: RawYamlColumn, 
 			.filter((item, i) => {
 				const valid = item !== null && typeof item === 'object';
 				if (!valid) {
-					warnOnce(`[DataTable] actions column #${index}, item #${i}: ignored, an action item must be an object with a label and an action (got ${JSON.stringify(item)}).`);
+					reportAuthoringError(`[DataTable] actions column #${index}, item #${i}: ignored, an action item must be an object with a label and an action (got ${JSON.stringify(item)}).`);
 				}
 				return valid;
 			})
@@ -423,7 +424,7 @@ function normalizeColumn<T extends Record<string, unknown>>(col: RawYamlColumn, 
 			if (!customFormat) {
 				const registeredNames = registeredColumnFormatNames();
 				const supported = [...COLUMN_FORMATS, ...registeredNames].join(', ');
-				warnOnce(
+				reportAuthoringError(
 					`[DataTable] column ${where}: unknown format "${col.format}" is ignored. Supported formats: ${supported}. ` +
 						`An app-specific format must be registered with registerColumnFormat before the page renders.`
 				);
@@ -458,7 +459,7 @@ function normalizeColumn<T extends Record<string, unknown>>(col: RawYamlColumn, 
 		const link = buildLinkPath(hrefTemplate, row, external);
 		if (!link.href) {
 			// A link that cannot be built shows the plain value: a dead anchor would hide the authoring mistake.
-			warnOnce(`[DataTable] column ${where}: href ignored: ${link.problem}.`);
+			reportAuthoringError(`[DataTable] column ${where}: href ignored: ${link.problem}.`);
 			return content;
 		}
 		return (
@@ -469,7 +470,7 @@ function normalizeColumn<T extends Record<string, unknown>>(col: RawYamlColumn, 
 	};
 	const titleTemplate = col.title;
 	if (titleTemplate !== undefined && typeof titleTemplate !== 'string') {
-		warnOnce(`[DataTable] column ${where}: \`title\` must be a text template such as "{lastSeenAt}", got ${JSON.stringify(titleTemplate)}; no tooltip.`);
+		reportAuthoringError(`[DataTable] column ${where}: \`title\` must be a text template such as "{lastSeenAt}", got ${JSON.stringify(titleTemplate)}; no tooltip.`);
 	}
 	return {
 		key: field,
@@ -775,9 +776,8 @@ export function DataTable<T extends Record<string, unknown>>({
 		? (row: T) => {
 				if (!router) {
 					// Loud, because the alternative is a dead click. See onRowClick.
-					console.error(
-						'[DataTable] navigateTo="%s" needs a RouterContext, and none is mounted: the row click does nothing. Wrap the app in RouterProvider, or pass onRowClick instead.',
-						navigateTo
+					reportAuthoringError(
+						`[DataTable] navigateTo="${navigateTo}" needs a RouterContext, and none is mounted: the row click does nothing. Wrap the app in RouterProvider, or pass onRowClick instead.`
 					);
 					return;
 				}
@@ -1171,9 +1171,8 @@ export function DataTable<T extends Record<string, unknown>>({
 																	if (!item.icon) {
 																		// Loud, because the alternative is an invisible icon-only
 																		// button - see IconButton's required `icon` prop below.
-																		console.warn(
-																			'[DataTable] action "%s" has no icon: falling back to a text button. Row actions render icon-only; pass an `icon` to use that.',
-																			item.action
+																		reportAuthoringMistake(
+																			`[DataTable] action "${item.action}" has no icon: falling back to a text button. Row actions render icon-only; pass an \`icon\` to use that.`
 																		);
 																		return (
 																			<Button

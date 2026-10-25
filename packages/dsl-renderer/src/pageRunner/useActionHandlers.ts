@@ -1,5 +1,6 @@
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { devError, devWarn } from '../engine/devMode.js';
 
 import { KNOWN_ACTION_KEYS } from '../dslKeys.js';
 import { getErrorMessage } from '../errors.js';
@@ -130,7 +131,7 @@ export function useActionHandlers(params: {
 			}
 			for (const key of Object.keys(rawSpec)) {
 				if (!(KNOWN_ACTION_KEYS as readonly string[]).includes(key)) {
-					console.error(`[GenericPageRunner] $actions.${name}: unknown action key "${key}". Known keys: ${KNOWN_ACTION_KEYS.join(', ')}`);
+					devError(`[GenericPageRunner] $actions.${name}: unknown action key "${key}". Known keys: ${KNOWN_ACTION_KEYS.join(', ')}`);
 				}
 			}
 		}
@@ -282,7 +283,7 @@ export function useActionHandlers(params: {
 						const warnKey = `${actionName}:inert`;
 						if (!lenientWarnedRef.current.has(warnKey)) {
 							lenientWarnedRef.current.add(warnKey);
-							console.warn(
+							devWarn(
 								`[GenericPageRunner] $actions.${actionName} has neither a url nor a resultKey: running it does nothing. Fix $actions.${actionName}`
 							);
 						}
@@ -353,12 +354,12 @@ export function useActionHandlers(params: {
 			try {
 				const rawSpec = $actions?.[actionName];
 				if (!rawSpec) {
-					console.warn(`[GenericPageRunner] No action spec found for "${actionName}" - check $actions in YAML`);
+					devWarn(`[GenericPageRunner] No action spec found for "${actionName}" - check $actions in YAML`);
 					return;
 				}
 				spec = normalizeAction(rawSpec);
 				if (!spec.url) {
-					console.warn(`[GenericPageRunner] Batch action "${actionName}" has no url - skipping fetcher`);
+					devWarn(`[GenericPageRunner] Batch action "${actionName}" has no url - skipping fetcher`);
 					return;
 				}
 				if (!begin(actionName, `${actionName}:batch`, BATCH_ROW_KEY)) {

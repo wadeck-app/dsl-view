@@ -1,6 +1,8 @@
 import { RefreshCw } from 'lucide-react';
 import React from 'react';
 
+import { reportAuthoringError } from '@dsl-ui/utils/devDiagnostics.js';
+
 const refreshButtonClass =
 	'flex items-center gap-1 rounded border border-border bg-surface px-2 py-1 text-xs text-muted hover:text-content disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer';
 
@@ -41,7 +43,7 @@ export function RefreshButton({ onClick, loading = false, source, label = 'Refre
 	const unwired = !onClick && !onRefresh;
 	React.useEffect(() => {
 		if (unwired) {
-			console.error(
+			reportAuthoringError(
 				'[RefreshButton] Nothing to refresh: render it inside a GenericPageRunner (it provides `$refresh`) or pass `onClick`.'
 			);
 		}

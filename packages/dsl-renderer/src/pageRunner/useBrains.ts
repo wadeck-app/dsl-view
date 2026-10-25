@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { devWarn } from '../engine/devMode.js';
 
 import { getErrorMessage } from '../errors.js';
 import type { Notify } from '../notifier.js';
@@ -387,7 +388,7 @@ export function useBrains(params: {
 			// say so once instead of letting an author believe the failure is silenced.
 			if ('$notify' in rawSpec && !warnedRetiredNotify.current.has(brainId)) {
 				warnedRetiredNotify.current.add(brainId);
-				console.warn(
+				devWarn(
 					`[useBrains] brain "${brainId}": the "$notify" key is no longer supported and is ignored, a failed brain is always reported to the user. Remove it.`
 				);
 			}

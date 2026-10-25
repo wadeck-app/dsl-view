@@ -5,6 +5,7 @@
 //
 // Valid values are returned untouched: the helper only intervenes for a value of the wrong kind.
 
+import { devWarn } from './devMode.js';
 import { describeReceived, schemaWarnedProps } from './propWarnings.js';
 
 export type PropKind = 'string' | 'primitive' | 'array' | 'object' | 'function';
@@ -23,7 +24,8 @@ function warnOnce(where: string, expected: string, value: unknown): void {
 		return;
 	}
 	warned.add(id);
-	console.warn(`[${where}] expected ${expected} but received ${describeReceived(value)}; the value is ignored.`);
+	// An authoring/data-shape mistake the developer fixes in the page: development and test builds only.
+	devWarn(`[${where}] expected ${expected} but received ${describeReceived(value)}; the value is ignored.`);
 }
 
 /**

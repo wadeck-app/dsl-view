@@ -1,8 +1,8 @@
 import React from 'react';
 
-import { reportOnce } from '../dev/reportOnce.js';
 import { iconComponentByName } from './iconByName.js';
 import type { IconComponent, IconName } from './iconByName.js';
+import { reportAuthoringMistake } from '@dsl-ui/utils/devDiagnostics.js';
 
 export interface PageHeaderProps {
 	title: string;
@@ -18,12 +18,9 @@ export interface PageHeaderProps {
 }
 
 // Each layout renders only some of the props. Dropping the others silently hides authoring mistakes, so say so once.
-const warned = new Set<string>();
 function warnIgnored(layout: string, ignored: string[]): void {
-	const message = `[PageHeader] ${layout} does not render ${ignored.join(', ')}: it is ignored.`;
-	if (ignored.length > 0 && !warned.has(message)) {
-		warned.add(message);
-		console.warn(message);
+	if (ignored.length > 0) {
+		reportAuthoringMistake(`[PageHeader] ${layout} does not render ${ignored.join(', ')}: it is ignored.`);
 	}
 }
 
@@ -81,6 +78,6 @@ function resolveHeaderIcon(icon: unknown): IconComponent | undefined {
 	if (isComponentType(icon)) {
 		return icon;
 	}
-	reportOnce(`[PageHeader] icon expects an icon name or an icon component but received ${Array.isArray(icon) ? 'a list' : typeof icon === 'object' ? 'a map' : typeof icon}: no icon is shown.`, console.error);
+	reportAuthoringMistake(`[PageHeader] icon expects an icon name or an icon component but received ${Array.isArray(icon) ? 'a list' : typeof icon === 'object' ? 'a map' : typeof icon}: no icon is shown.`, console.error);
 	return undefined;
 }

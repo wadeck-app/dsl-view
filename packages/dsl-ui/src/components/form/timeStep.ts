@@ -1,4 +1,4 @@
-import { reportOnce } from '../dev/reportOnce.js';
+import { reportAuthoringMistake } from '@dsl-ui/utils/devDiagnostics.js';
 
 export interface HoursAndMinutes {
 	hours: number;
@@ -9,7 +9,7 @@ export interface HoursAndMinutes {
 // reported and replaced by 1: silently stepping by 0 or NaN would leave the buttons doing nothing.
 export function normalizeMinuteStep(step: number): number {
 	if (Number.isInteger(step) && step >= 1) return step;
-	reportOnce(`[TimePicker] minuteStep must be a whole number of minutes (1 or more), got ${String(step)}: using 1.`);
+	reportAuthoringMistake(`[TimePicker] minuteStep must be a whole number of minutes (1 or more), got ${String(step)}: using 1.`);
 	return 1;
 }
 

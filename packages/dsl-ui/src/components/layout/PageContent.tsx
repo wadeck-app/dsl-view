@@ -1,4 +1,5 @@
 import React from 'react';
+import { reportAuthoringMistake } from '@dsl-ui/utils/devDiagnostics.js';
 
 // Semantic content-width steps, from narrowest to widest. Raw Tailwind
 // classes must never appear in DSL YAML - pages select one of these names.
@@ -36,7 +37,7 @@ export function PageContent({ sections, maxWidth = 'xl' }: PageContentProps) {
 	// A width name from YAML can be mistyped; without this the class list would silently contain "undefined".
 	const widthClass = MAX_WIDTH_CLASSES[maxWidth];
 	if (widthClass === undefined) {
-		console.error(`[PageContent] unknown maxWidth "${String(maxWidth)}". Valid widths: ${Object.keys(MAX_WIDTH_CLASSES).join(', ')}. Using "xl".`);
+		reportAuthoringMistake(`[PageContent] unknown maxWidth "${String(maxWidth)}". Valid widths: ${Object.keys(MAX_WIDTH_CLASSES).join(', ')}. Using "xl".`, console.error);
 	}
 	return (
 		<div className={`mx-auto w-full ${widthClass ?? MAX_WIDTH_CLASSES.xl} p-4`}>
