@@ -48,4 +48,8 @@ describe('chip color palettes', () => {
 		expect(DEFAULT_CHIP_COLORS.inactive).not.toContain('hue-');
 		expect(tokens(DEFAULT_CHIP_COLORS.active)).toContain('bg-muted-bg');
 	});
+
+	it('the default inactive chip is a bordered, muted chip that darkens its border on hover', () => {
+		expect(tokens(DEFAULT_CHIP_COLORS.inactive)).toEqual(expect.arrayContaining(['border-border', 'text-muted', 'hover:border-content']));
+	});
 });

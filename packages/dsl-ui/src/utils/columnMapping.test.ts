@@ -97,6 +97,37 @@ describe('resolveColumn', () => {
 	});
 });
 
+describe('resolveColumn: every declared key reaches the column, per format', () => {
+	it.each(['datetime', 'date', 'time'] as const)('%s: the format and width are forwarded, and each truthy flag is kept', format => {
+		const col = resolveColumn({ field: 'ts', label: 'T', format, width: 9, mono: true, muted: true, truncate: true, sortable: true });
+		expect(strip(col)).toStrictEqual({ key: 'ts', label: 'T', format, width: 9, mono: true, muted: true, truncate: true, sortable: true });
+		// the format drives the rendered text: a time column must not print a date
+		expect(col.render({ ts: '2026-10-25T13:45:00Z' })).toBe(resolveColumn({ field: 'ts', label: 'T', format }).render({ ts: '2026-10-25T13:45:00Z' }));
+	});
+
+	it('date and time render differently, so a dropped format would show', () => {
+		const row = { ts: '2026-10-25T13:45:00' };
+		const date = resolveColumn({ field: 'ts', label: 'T', format: 'date' }).render(row);
+		const time = resolveColumn({ field: 'ts', label: 'T', format: 'time' }).render(row);
+		const datetime = resolveColumn({ field: 'ts', label: 'T', format: 'datetime' }).render(row);
+		expect(new Set([date, time, datetime]).size).toBe(3);
+	});
+
+	it('ms: width, mono, muted, truncate and sortable are all kept', () => {
+		const col = resolveColumn({ field: 'd', label: 'D', format: 'ms', width: 7, mono: true, muted: true, truncate: true, sortable: true });
+		expect(strip(col)).toStrictEqual({ key: 'd', label: 'D', format: 'ms', width: 7, mono: true, muted: true, truncate: true, sortable: true });
+	});
+
+	it('bytes: the width is forwarded', () => {
+		expect(resolveColumn({ field: 's', label: 'S', format: 'bytes', width: 11 }).width).toBe(11);
+	});
+
+	it('text: a falsy sortable leaves no sortable key on the column', () => {
+		expect('sortable' in resolveColumn({ field: 'n', label: 'N', sortable: false })).toBe(false);
+		expect('sortable' in resolveColumn({ field: 'n', label: 'N' })).toBe(false);
+	});
+});
+
 describe('resolveColumns', () => {
 	it('maps an array of YAML columns in order', () => {
 		const cols = resolveColumns([

@@ -9,7 +9,12 @@
 		"src/components/display/chartFormat.ts",
 		"src/components/table/persistedFilterCodec.ts",
 		"src/components/form/timeStep.ts",
-		"src/components/display/initials.ts"
+		"src/components/display/initials.ts",
+		"src/utils/chipColors.ts",
+		"src/utils/columnMapping.ts",
+		"src/utils/formatDate.ts",
+		"src/utils/resolveIcon.ts",
+		"src/components/display/iconByName.tsx"
 	],
 	"concurrency": 1,
 	"coverageAnalysis": "perTest",

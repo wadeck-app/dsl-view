@@ -21,6 +21,7 @@ export default defineConfig({
 			'src/utils/chipColors.test.ts',
 			'src/utils/formatDate.test.ts',
 			'src/utils/resolveIcon.test.ts',
+			'src/utils/resolveIcon.guard.test.ts',
 			'src/components/display/chartFormat.test.ts',
 			'src/components/display/initials.test.ts',
 			'src/components/display/iconByName.test.tsx',
