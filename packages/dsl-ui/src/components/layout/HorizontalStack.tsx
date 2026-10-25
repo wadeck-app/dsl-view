@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { fillClasses, joinClasses } from '@dsl-ui/utils/fillClasses.js';
 import { warnUnknownChoice } from '@dsl-ui/utils/warnUnknownChoice.js';
 
 type TailwindGap = 'gap-0' | 'gap-0.5' | 'gap-1' | 'gap-1.5' | 'gap-2' | 'gap-2.5' | 'gap-3' | 'gap-4' | 'gap-5' | 'gap-6' | 'gap-7' | 'gap-8' | 'gap-9' | 'gap-10' | 'gap-12' | 'gap-16';
@@ -30,6 +31,13 @@ export interface HorizontalStackProps {
 	gap?: TailwindGap;
 	align?: TailwindAlign;
 	justify?: TailwindJustify;
+	/**
+	 * Takes the height its parent gives it (a dashboard tile) instead of the height of its content. Children that
+	 * should follow set `fill` themselves, or `align: items-stretch` to stretch every child. The parent needs a
+	 * definite height.
+	 * @default false
+	 */
+	fill?: boolean;
 	/** @slot tag:layout, tag:table, tag:form, tag:display, tag:composite, tag:atomic */
 	children: React.ReactNode;
 	/**
@@ -46,12 +54,12 @@ export interface HorizontalStackProps {
  * IN SCOPE: horizontal flex container with configurable gap, alignment, and justification.
  * OUT OF SCOPE: business-specific layouts - use PageHeader.headerActions for header+button patterns.
  */
-export function HorizontalStack({ gap = 'gap-3', align = 'items-center', justify, children, itemSizes }: HorizontalStackProps) {
+export function HorizontalStack({ gap = 'gap-3', align = 'items-center', justify, fill = false, children, itemSizes }: HorizontalStackProps) {
 	warnUnknownChoice('HorizontalStack', 'gap', gap, GAP_CHOICES);
 	warnUnknownChoice('HorizontalStack', 'align', align, ALIGN_CHOICES);
 	warnUnknownChoice('HorizontalStack', 'justify', justify, JUSTIFY_CHOICES);
 	itemSizes?.forEach(size => warnUnknownChoice('HorizontalStack', 'itemSizes', size, ITEM_SIZE_CLASSES));
-	const containerClass = ['flex', gap, align, justify].filter(Boolean).join(' ');
+	const containerClass = joinClasses('flex', gap, align, justify, fillClasses(fill));
 	if (!itemSizes || itemSizes.every(size => !size)) {
 		return <div className={containerClass}>{children}</div>;
 	}

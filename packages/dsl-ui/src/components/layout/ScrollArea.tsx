@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { fillClasses } from '@dsl-ui/utils/fillClasses.js';
+
 export interface ScrollAreaProps {
 	children: React.ReactNode;
 	/**
@@ -16,6 +18,12 @@ export interface ScrollAreaProps {
 	scheme?: 'auto' | 'dark' | 'light';
 	/** Scroll axis. Locking the cross axis stops a stray wide child scrolling the whole pane. */
 	axis?: 'vertical' | 'horizontal' | 'both';
+	/**
+	 * Takes the height its parent gives it (a dashboard tile) and scrolls its content inside it, instead of growing with
+	 * the content. The parent needs a definite height.
+	 * @default false
+	 */
+	fill?: boolean;
 	className?: string;
 }
 
@@ -49,10 +57,11 @@ export function ScrollArea({
 	children,
 	scheme = 'auto',
 	axis = 'vertical',
+	fill = false,
 	className = '',
 }: ScrollAreaProps): React.ReactElement {
 	return (
-		<div className={`min-h-0 ${AXIS_CLS[axis]} ${SCHEME_CLS[scheme]} ${className}`.trim().replace(/\s+/g, ' ')}>
+		<div className={`min-h-0 ${AXIS_CLS[axis]} ${SCHEME_CLS[scheme]} ${fillClasses(fill)} ${className}`.trim().replace(/\s+/g, ' ')}>
 			{children}
 		</div>
 	);

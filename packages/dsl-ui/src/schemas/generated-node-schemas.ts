@@ -208,6 +208,7 @@ export const ChartNodeSchema = baseNode.extend({
 	variant: dsl(z.enum(['default', 'sparkline'])).default('default'),
 	showLegend: dsl(z.boolean()).optional(),
 	height: dsl(z.number()).default(300),
+	fill: dsl(z.boolean()).default(false),
 	series: dsl(z.array(ChartSeriesConfigSchema)),
 });
 
@@ -531,6 +532,7 @@ export const CardNodeSchema = baseNode.extend({
 	border: dsl(z.boolean()).optional(),
 	header: dsl(z.array(z.unknown())).optional(),
 	footer: dsl(z.array(z.unknown())).optional(),
+	fill: dsl(z.boolean()).default(false),
 });
 
 export const CardActionsNodeSchema = baseNode.extend({
@@ -559,6 +561,7 @@ export const HorizontalStackNodeSchema = baseNode.extend({
 	gap: dsl(z.enum(['gap-0', 'gap-0.5', 'gap-1', 'gap-1.5', 'gap-2', 'gap-2.5', 'gap-3', 'gap-4', 'gap-5', 'gap-6', 'gap-7', 'gap-8', 'gap-9', 'gap-10', 'gap-12', 'gap-16'])).optional(),
 	align: dsl(z.enum(['items-start', 'items-center', 'items-end', 'items-stretch', 'items-baseline'])).optional(),
 	justify: dsl(z.enum(['justify-start', 'justify-center', 'justify-end', 'justify-between', 'justify-around', 'justify-evenly'])).optional(),
+	fill: dsl(z.boolean()).default(false),
 	items: dsl(z.array(z.unknown())).optional(),
 	itemSizes: dsl(z.array(z.enum(['fixed', 'flex']).optional())).optional(),
 });
@@ -584,11 +587,13 @@ export const ScrollAreaNodeSchema = baseNode.extend({
 	items: dsl(z.array(z.unknown())).optional(),
 	scheme: dsl(z.enum(['auto', 'dark', 'light'])).optional(),
 	axis: dsl(z.enum(['vertical', 'horizontal', 'both'])).optional(),
+	fill: dsl(z.boolean()).default(false),
 	className: z.string().optional(),
 });
 
 export const SectionNodeSchema = baseNode.extend({
 	title: z.string().optional(),
+	fill: dsl(z.boolean()).default(false),
 	items: dsl(z.array(z.unknown())).optional(),
 });
 
@@ -607,6 +612,9 @@ export const StatTileNodeSchema = baseNode.extend({
 	className: z.string().optional(),
 	href: z.string().optional(),
 	external: dsl(z.boolean()).optional(),
+	nowrap: dsl(z.boolean()).default(false),
+	compact: dsl(z.boolean()).default(false),
+	fill: dsl(z.boolean()).default(false),
 });
 
 export const TableRowActionsNodeSchema = baseNode.extend({
@@ -624,6 +632,7 @@ export const ThemeScopeNodeSchema = baseNode.extend({
 
 export const VerticalStackNodeSchema = baseNode.extend({
 	gap: dsl(z.enum(['gap-0', 'gap-0.5', 'gap-1', 'gap-1.5', 'gap-2', 'gap-2.5', 'gap-3', 'gap-4', 'gap-5', 'gap-6', 'gap-7', 'gap-8', 'gap-9', 'gap-10', 'gap-12', 'gap-16'])).optional(),
+	fill: dsl(z.boolean()).default(false),
 	items: dsl(z.array(z.unknown())).optional(),
 });
 

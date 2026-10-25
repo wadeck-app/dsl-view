@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { fillClasses, joinClasses } from '@dsl-ui/utils/fillClasses.js';
 import { warnUnknownChoice } from '@dsl-ui/utils/warnUnknownChoice.js';
 
 type TailwindGap = 'gap-0' | 'gap-0.5' | 'gap-1' | 'gap-1.5' | 'gap-2' | 'gap-2.5' | 'gap-3' | 'gap-4' | 'gap-5' | 'gap-6' | 'gap-7' | 'gap-8' | 'gap-9' | 'gap-10' | 'gap-12' | 'gap-16';
@@ -14,6 +15,12 @@ const GAP_CHOICES: Record<TailwindGap, true> = {
 
 export interface VerticalStackProps {
 	gap?: TailwindGap;
+	/**
+	 * Takes the height its parent gives it (a dashboard tile) instead of the height of its content, so children that
+	 * also `fill` (a Chart, a nested stack, a Card) share the room left. The parent needs a definite height.
+	 * @default false
+	 */
+	fill?: boolean;
 	/** @slot tag:layout, tag:table, tag:form, tag:display, tag:composite, tag:atomic */
 	children: React.ReactNode;
 }
@@ -22,7 +29,7 @@ export interface VerticalStackProps {
  * @registryCategory disposition
  * @registryTags layout
  */
-export function VerticalStack({ gap = 'gap-4', children }: VerticalStackProps) {
+export function VerticalStack({ gap = 'gap-4', fill = false, children }: VerticalStackProps) {
 	warnUnknownChoice('VerticalStack', 'gap', gap, GAP_CHOICES);
-	return <div className={`flex flex-col ${gap}`}>{children}</div>;
+	return <div className={joinClasses('flex flex-col', gap, fillClasses(fill))}>{children}</div>;
 }

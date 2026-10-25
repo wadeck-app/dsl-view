@@ -303,3 +303,67 @@ describe('Chart', () => {
 		expect(warn).not.toHaveBeenCalled();
 	});
 });
+
+describe('Chart fill', () => {
+	const FILL = ['h-full', 'min-h-0', 'flex-1'];
+
+	it('stretches the card and measures the plot inside a box that takes the room left, never below the floor', () => {
+		const { container } = render(<Chart {...base} fill />);
+		const card = container.firstElementChild as HTMLElement;
+		expect(card).toHaveClass(...FILL, 'flex', 'flex-col', 'p-4');
+		const plotBox = card.firstElementChild as HTMLElement;
+		expect(plotBox).toHaveClass('flex-1', 'min-h-0', 'w-full');
+		// 64 is the floor when `height` is not set: a tile cannot be squeezed to nothing.
+		expect(plotBox).toHaveStyle({ minHeight: '64px' });
+		expect(plotBox).toContainElement(screen.getByTestId('ResponsiveContainer'));
+		// A percentage: the box above is what gives it a definite height.
+		expect(propsOf('ResponsiveContainer')['height']).toBe('100%');
+	});
+
+	it('uses `height` as the floor under the parent room', () => {
+		const { container } = render(<Chart {...base} fill height={180} />);
+		expect((container.firstElementChild as HTMLElement).firstElementChild).toHaveStyle({ minHeight: '180px' });
+	});
+
+	it('keeps the compact card and fills it for a sparkline', () => {
+		const { container } = render(<Chart {...base} fill variant="sparkline" />);
+		expect(container.firstElementChild).toHaveClass(...FILL, 'p-2');
+	});
+
+	it('without fill nothing changes: an exact pixel height, no flex card, no plot box', () => {
+		const { container } = render(<Chart {...base} height={180} />);
+		const card = container.firstElementChild as HTMLElement;
+		FILL.forEach(name => expect(card).not.toHaveClass(name));
+		expect(card).not.toHaveClass('flex');
+		expect(card.firstElementChild).toBe(screen.getByTestId('ResponsiveContainer'));
+		expect(propsOf('ResponsiveContainer')['height']).toBe(180);
+	});
+
+	it('fill false (explicit) behaves like the default', () => {
+		const { container } = render(<Chart {...base} fill={false} />);
+		expect(container.firstElementChild).not.toHaveClass('h-full');
+		expect(propsOf('ResponsiveContainer')['height']).toBe(300);
+	});
+
+	it('the loading placeholder and the empty state fill too, with the floor instead of an exact height', () => {
+		const loading = render(<Chart {...base} data={undefined} fill />);
+		const bar = screen.getByRole('status', { name: 'Loading chart' });
+		expect(bar).toHaveClass(...FILL);
+		expect(bar.style.minHeight).toBe('64px');
+		expect(bar.style.height).toBe('');
+		loading.unmount();
+		render(<Chart {...base} data={[]} fill height={90} />);
+		const empty = screen.getByText('No data');
+		expect(empty).toHaveClass(...FILL);
+		expect(empty.style.minHeight).toBe('90px');
+		expect(empty.style.height).toBe('');
+	});
+
+	it('does not fill for a value that is not the boolean true', () => {
+		const { container } = render(<Chart {...base} fill={'yes' as unknown as boolean} />);
+		// Not even half of it: the flex card must not appear without the sizing classes.
+		expect(container.firstElementChild).not.toHaveClass('h-full');
+		expect(container.firstElementChild).not.toHaveClass('flex');
+		expect(propsOf('ResponsiveContainer')['height']).toBe(300);
+	});
+});

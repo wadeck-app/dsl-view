@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { fillClasses, joinClasses } from '@dsl-ui/utils/fillClasses.js';
+
 export interface CardProps {
     /** @slot tag:layout, tag:display, tag:composite */
     children: React.ReactNode;
@@ -10,6 +12,13 @@ export interface CardProps {
     header?: React.ReactNode;
     footer?: React.ReactNode;
     onClick?: () => void;
+    /**
+     * Takes the height its parent gives it (a dashboard tile) instead of the height of its content: the body grows and a
+     * child that also `fill`s (a Chart, a stack) shares the room left between header and footer. The parent needs a
+     * definite height.
+     * @default false
+     */
+    fill?: boolean;
 }
 
 const PADDING_CLASSES: Record<NonNullable<CardProps['padding']>, string> = {
@@ -44,7 +53,10 @@ export function Card({
     header,
     footer,
     onClick,
+    fill: fillProp = false,
 }: CardProps) {
+    // Only the boolean true switches it on: a YAML string like "yes" must not half-apply the layout.
+    const fill = fillProp === true;
     const isClickable = onClick !== undefined;
 
     const base = [
@@ -52,6 +64,7 @@ export function Card({
         border ? 'border border-border' : '',
         shadow ? 'shadow-sm' : '',
         isClickable ? 'cursor-pointer hover:shadow-md transition-shadow' : '',
+        fill ? `flex flex-col ${fillClasses(fill)}` : '',
         className,
     ]
         .filter(Boolean)
@@ -68,13 +81,13 @@ export function Card({
             onKeyDown={isClickable ? (e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onClick?.(); } } : undefined}
         >
             {header && (
-                <div className={`border-b border-border ${PADDING_CLASSES[padding]}`}>
+                <div className={joinClasses('border-b border-border', PADDING_CLASSES[padding], fill && 'shrink-0')}>
                     {header}
                 </div>
             )}
-            <div className={PADDING_CLASSES[padding]}>{children}</div>
+            <div className={joinClasses(PADDING_CLASSES[padding], fill && 'flex min-h-0 flex-1 flex-col')}>{children}</div>
             {footer && (
-                <div className={`border-t border-border ${PADDING_CLASSES[padding]}`}>
+                <div className={joinClasses('border-t border-border', PADDING_CLASSES[padding], fill && 'shrink-0')}>
                     {footer}
                 </div>
             )}

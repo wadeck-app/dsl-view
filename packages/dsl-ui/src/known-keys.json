@@ -121,6 +121,7 @@
 	"Card": {
 		"knownKeys": [
 			"border",
+			"fill",
 			"footer",
 			"header",
 			"items",
@@ -144,6 +145,7 @@
 	"Chart": {
 		"knownKeys": [
 			"data",
+			"fill",
 			"height",
 			"series",
 			"showLegend",
@@ -669,6 +671,7 @@
 	"HorizontalStack": {
 		"knownKeys": [
 			"align",
+			"fill",
 			"gap",
 			"itemSizes",
 			"items",
@@ -865,6 +868,7 @@
 	"ScrollArea": {
 		"knownKeys": [
 			"axis",
+			"fill",
 			"items",
 			"scheme"
 		]
@@ -883,6 +887,7 @@
 	},
 	"Section": {
 		"knownKeys": [
+			"fill",
 			"items",
 			"title"
 		],
@@ -932,11 +937,14 @@
 	},
 	"StatTile": {
 		"knownKeys": [
+			"compact",
 			"external",
+			"fill",
 			"href",
 			"icon",
 			"label",
 			"loading",
+			"nowrap",
 			"trend",
 			"value"
 		]
@@ -1048,6 +1056,7 @@
 	},
 	"VerticalStack": {
 		"knownKeys": [
+			"fill",
 			"gap",
 			"items"
 		],

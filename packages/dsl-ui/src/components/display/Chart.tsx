@@ -14,6 +14,11 @@ import {
 import { formatXTick, formatYTick, seriesColor } from './chartFormat.js';
 import type { ChartXFormat, ChartYFormat } from './chartFormat.js';
 import { reportAuthoringMistake } from '@dsl-ui/utils/devDiagnostics.js';
+import { fillClasses, joinClasses } from '@dsl-ui/utils/fillClasses.js';
+
+// What a `fill` chart keeps when its parent gives it no usable height (a ResponsiveContainer measuring 0 draws nothing).
+const FILL_FALLBACK_HEIGHT = 64;
+const DEFAULT_HEIGHT = 300;
 
 // @formatter:off
 const emptyStateClass = 'flex items-center justify-center rounded-lg border border-border bg-surface text-sm text-muted';
@@ -68,8 +73,18 @@ export interface ChartProps {
 	variant?: 'default' | 'sparkline';
 	/** Show the legend. Defaults to true, and to false for `variant: sparkline`. */
 	showLegend?: boolean;
-	/** @default 300 */
+	/**
+	 * Height in pixels. With `fill` it is only the floor under the room the parent gives (64 unless set).
+	 * @default 300
+	 */
 	height?: number;
+	/**
+	 * Takes the height its parent gives it (a dashboard tile) instead of a fixed `height`: the plot uses what is left
+	 * once any sibling that does not fill has taken its share. The parent needs a definite height, otherwise the chart
+	 * stays at its floor (`height`, 64 by default).
+	 * @default false
+	 */
+	fill?: boolean;
 	series: ChartSeriesConfig[];
 }
 
@@ -87,9 +102,16 @@ export function Chart({
 	yUnit,
 	variant = 'default',
 	showLegend,
-	height = 300,
+	height,
+	fill: fillProp = false,
 	series,
 }: ChartProps) {
+	// Only the boolean true switches it on: a YAML string like "yes" must not half-apply the layout.
+	const fill = fillProp === true;
+	// The floor in `fill` mode, the plot height otherwise.
+	const sizeHint = height ?? (fill ? FILL_FALLBACK_HEIGHT : DEFAULT_HEIGHT);
+	// Fixed: an exact height. Fill: the parent's room, never below the floor.
+	const boxStyle = fill ? { minHeight: sizeHint } : { height: sizeHint };
 	const hasRightAxis = series.some(s => s.yAxisId === 'right');
 	const sparkline = variant === 'sparkline';
 	const legend = showLegend ?? !sparkline;
@@ -104,8 +126,8 @@ export function Chart({
 	if (data === undefined) {
 		return (
 			<div
-				className="animate-pulse motion-reduce:animate-none rounded-lg bg-bg-secondary"
-				style={{ height }}
+				className={joinClasses('animate-pulse motion-reduce:animate-none rounded-lg bg-bg-secondary', fillClasses(fill))}
+				style={boxStyle}
 				role="status"
 				aria-busy="true"
 				aria-label="Loading chart"
@@ -117,8 +139,8 @@ export function Chart({
 	if (data.length === 0) {
 		return (
 			<div
-				className={emptyStateClass}
-				style={{ height }}
+				className={joinClasses(emptyStateClass, fillClasses(fill))}
+				style={boxStyle}
 			>
 				No data
 			</div>
@@ -130,10 +152,8 @@ export function Chart({
 	// The tooltip heading carries the full moment when the axis only shows the time of day.
 	const tooltipX = (value: unknown): string => formatXTick(value, xAxisType, xFormat === 'time' ? 'datetime' : xFormat);
 
-	return (
-		<div className={sparkline ? compactContainerClass : containerClass}>
-			<ResponsiveContainer width="100%" height={height}>
-				<ComposedChart data={data as Record<string, unknown>[]} margin={sparkline ? { top: 4, right: 4, bottom: 4, left: 4 } : undefined}>
+	const plot = (
+		<ComposedChart data={data as Record<string, unknown>[]} margin={sparkline ? { top: 4, right: 4, bottom: 4, left: 4 } : undefined}>
 					{!sparkline && <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />}
 					<XAxis dataKey={xAxisKey} hide={sparkline} tickFormatter={tickX} tick={TICK_STYLE} tickLine={false} />
 					<YAxis
@@ -183,7 +203,23 @@ export function Chart({
 						return <Line key={key} {...restProps} dot={false} />;
 					})}
 				</ComposedChart>
-			</ResponsiveContainer>
+	);
+
+	return (
+		<div className={joinClasses(sparkline ? compactContainerClass : containerClass, fill && 'flex flex-col', fillClasses(fill))}>
+			{fill ? (
+				// The plot's own box: it takes what the card leaves (`flex-1 min-h-0`) but never less than the floor, and gives the
+				// ResponsiveContainer the definite height it needs to measure (a percentage of an auto-height parent is 0).
+				<div className="min-h-0 w-full flex-1" style={{ minHeight: sizeHint }}>
+					<ResponsiveContainer width="100%" height="100%">
+						{plot}
+					</ResponsiveContainer>
+				</div>
+			) : (
+				<ResponsiveContainer width="100%" height={sizeHint}>
+					{plot}
+				</ResponsiveContainer>
+			)}
 		</div>
 	);
 }

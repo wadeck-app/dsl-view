@@ -1,5 +1,6 @@
 import React from 'react';
 import { Skeleton } from '../display/Skeleton.js';
+import { fillClasses, joinClasses } from '@dsl-ui/utils/fillClasses.js';
 import { AppLink, usableLinkTarget } from '../navigation/AppLink.js';
 
 export interface StatTileTrend {
@@ -27,6 +28,23 @@ export interface StatTileProps {
     href?: string;
     /** Opens `href` as an external URL in a new tab. */
     external?: boolean;
+    /**
+     * Keeps the figure on ONE line, a unit included ("68.6 kg"): it is cut with an ellipsis, and the full text stays in
+     * the tooltip, when the tile is too narrow. Off by default because a long text value should wrap.
+     * @default false
+     */
+    nowrap?: boolean;
+    /**
+     * Tighter padding and a smaller figure, for a tile one or two grid rows high.
+     * @default false
+     */
+    compact?: boolean;
+    /**
+     * Takes the height its parent gives it (a dashboard tile) instead of the height of its content. The parent needs a
+     * definite height.
+     * @default false
+     */
+    fill?: boolean;
 }
 
 const TREND_COLOR: Record<StatTileTrend['direction'], string> = {
@@ -49,8 +67,8 @@ const LINK_CLASSES =
  * @registryCategory disposition
  * @registryTags stat kpi metric dashboard
  */
-export function StatTile({ label, value, trend, icon, loading = false, className = '', href, external = false }: StatTileProps) {
-    const base = `rounded-lg bg-surface border border-border shadow-sm p-4 flex flex-col gap-2 ${className}`;
+export function StatTile({ label, value, trend, icon, loading = false, className = '', href, external = false, nowrap = false, compact = false, fill = false }: StatTileProps) {
+    const base = joinClasses('rounded-lg bg-surface border border-border shadow-sm flex flex-col', compact ? 'p-2.5 gap-1' : 'p-4 gap-2', fillClasses(fill), className);
     const target = usableLinkTarget(href, external, 'StatTile');
 
     if (loading) {
@@ -72,7 +90,12 @@ export function StatTile({ label, value, trend, icon, loading = false, className
                 </div>
             )}
             <p className="text-sm text-muted">{label}</p>
-            <p className="text-2xl font-bold text-content">{value}</p>
+            <p
+                className={joinClasses('font-bold text-content', compact ? 'text-xl' : 'text-2xl', nowrap && 'whitespace-nowrap overflow-hidden text-ellipsis')}
+                title={nowrap ? String(value) : undefined}
+            >
+                {value}
+            </p>
             {trend && (
                 <div className={`flex items-center gap-1 text-sm font-medium ${TREND_COLOR[trend.direction]}`}>
                     <span aria-hidden="true">{TREND_ICON[trend.direction]}</span>
