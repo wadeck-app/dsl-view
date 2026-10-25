@@ -83,6 +83,8 @@ and the element gets an attribute with nothing behind it.
 
 `text-on-solid` (`--color-on-solid`) is the text on `bg-primary` / `bg-success` / `bg-danger` fills. The preset falls back to white when the token is missing, which is right for light; an app with its own palette copy must add the token, and a dev build warns once per page until it does (`utils/onSolidToken.ts`). The check reads `:root`, so a token defined only on a nested `ThemeScope` still warns.
 
+Contrast is pinned in `theme.test.ts` (>= 4.5:1): white ink on the light accents (`--color-primary`, `--color-primary-solid` and its hover, `--color-success`, `--color-danger`), the dark ink on the dark accents, and the accent used as text on the light surface (`--color-primary`, `--color-success-text`, `--color-danger-text`). The light accents are the Tailwind 600/700 shades (`#2563eb`, `#15803d`), not 500: white on `#3b82f6` was 3.68:1 and on `#16a34a` 3.30:1. A change to an accent token that drops under 4.5:1 fails that test. `_Button`'s `hover:bg-success/80` and `hover:bg-danger/80` blend with the page and are not pinned.
+
 ## Performance
 
 A static scope costs one style resolution. Nesting is free — variables shadow.
