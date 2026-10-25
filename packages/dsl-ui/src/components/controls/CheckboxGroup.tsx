@@ -1,5 +1,6 @@
 import React from 'react';
 import { Checkbox } from './Checkbox.js';
+import { classFor } from '@dsl-ui/utils/warnUnknownChoice.js';
 
 export interface CheckboxOption {
 	value: string;
@@ -48,7 +49,7 @@ export function CheckboxGroup({
 	return (
 		<fieldset className="border-0 p-0 m-0">
 			{label && <legend className={LEGEND_CLASS}>{label}</legend>}
-			<div className={ORIENTATION_CLASS[orientation]}>
+			<div className={classFor('CheckboxGroup', 'orientation', orientation, ORIENTATION_CLASS, 'vertical')}>
 				{options.map((opt) => (
 					<label
 						key={opt.value}

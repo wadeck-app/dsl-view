@@ -1,5 +1,6 @@
 import * as RadixProgress from '@radix-ui/react-progress';
 import React from 'react';
+import { classFor } from '@dsl-ui/utils/warnUnknownChoice.js';
 
 export interface ProgressProps {
     value: number;
@@ -66,10 +67,10 @@ export function Progress({
         <RadixProgress.Root
             value={value}
             max={max}
-            className={`${TRACK_WIDTH[layout]} overflow-hidden rounded-full bg-muted-bg ${TRACK_HEIGHT[size]}`}
+            className={`${classFor('Progress', 'layout', layout, TRACK_WIDTH, 'stacked')} overflow-hidden rounded-full bg-muted-bg ${classFor('Progress', 'size', size, TRACK_HEIGHT, 'md')}`}
         >
             <RadixProgress.Indicator
-                className={`h-full transition-all duration-300 ${INDICATOR_CLASSES[variant]}`}
+                className={`h-full transition-all duration-300 ${classFor('Progress', 'variant', variant, INDICATOR_CLASSES, 'default')}`}
                 style={{ width: `${pct}%` }}
             />
         </RadixProgress.Root>

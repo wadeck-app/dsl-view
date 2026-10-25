@@ -13,7 +13,7 @@ export * from './NavBar.js';
 export * from './TableRowActions.js';
 export * from './CardActions.js';
 export * from './DialogFooter.js';
-export * from './PageHeader.js';
+export * from './PageSection.js';
 export * from './ScrollArea.js';
 export * from './ThemeScope.js';
 export * from './accent.js';

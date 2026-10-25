@@ -1,5 +1,6 @@
 import React from 'react';
 import { ExternalLink } from 'lucide-react';
+import { classFor } from '@dsl-ui/utils/warnUnknownChoice.js';
 
 type LinkVariant = 'default' | 'muted' | 'danger';
 
@@ -26,7 +27,7 @@ export function Link({ href, label, external = false, variant = 'default' }: Lin
 	return (
 		<a
 			href={href}
-			className={`inline-flex items-center text-sm transition-colors ${VARIANT_CLASSES[variant]}`}
+			className={`inline-flex items-center text-sm transition-colors ${classFor('Link', 'variant', variant, VARIANT_CLASSES, 'default')}`}
 			{...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
 		>
 			{label}

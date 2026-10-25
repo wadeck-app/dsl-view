@@ -1,5 +1,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
+import { classFor } from '@dsl-ui/utils/warnUnknownChoice.js';
 
 export interface TagProps {
     label: string;
@@ -25,7 +26,7 @@ const COLOR_CLASSES: Record<NonNullable<TagProps['color']>, string> = {
  */
 export function Tag({ label, color = 'default', onRemove }: TagProps) {
     return (
-        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${COLOR_CLASSES[color]}`}>
+        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${classFor('Tag', 'color', color, COLOR_CLASSES, 'default')}`}>
             {label}
             {onRemove && (
                 <button

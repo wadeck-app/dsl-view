@@ -1,24 +1,22 @@
 import React from 'react';
 
-export interface PageSectionProps {
-	title: string;
-	actions?: React.ReactNode;
-	children?: React.ReactNode;
-	className?: string;
-}
+import { reportAuthoringMistake } from '@dsl-ui/utils/devDiagnostics.js';
+import { PageSection as RealPageSection } from './PageSection.js';
+import type { PageSectionProps } from './PageSection.js';
+
+export type { PageSectionProps };
 
 /**
- * @registryCategory disposition
- * @registryTags page-section page header title
+ * Compatibility path only. This file was named `PageHeader.tsx` although it holds `PageSection` (the registry's
+ * `PageHeader` is `display/PageHeader`). Generated entries committed by consumers before the rename deep-import
+ * `dist/components/layout/PageHeader.js`; keep this so they still build. No `@registryCategory` here on purpose:
+ * the registry entry is `layout/PageSection`.
+ *
+ * @deprecated import from `layout/PageSection.js` (regenerate `src/generated/entries.tsx`).
  */
-export function PageSection({ title, actions, children, className = '' }: PageSectionProps) {
-	return (
-		<div className={['flex flex-col mb-6', className].filter(Boolean).join(' ')}>
-			<div className="flex items-center justify-between">
-				<h2 className="text-lg font-semibold">{title}</h2>
-				{actions && <div>{actions}</div>}
-			</div>
-			{children}
-		</div>
+export function PageSection(props: PageSectionProps) {
+	reportAuthoringMistake(
+		'[PageSection] imported from "dsl-ui/dist/components/layout/PageHeader.js", a deprecated path: regenerate src/generated/entries.tsx (it now imports "layout/PageSection.js"). This path will be removed.',
 	);
+	return <RealPageSection {...props} />;
 }

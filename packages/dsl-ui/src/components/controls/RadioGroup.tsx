@@ -1,5 +1,6 @@
 import React from 'react';
 import * as RadixRadioGroup from '@radix-ui/react-radio-group';
+import { classFor } from '@dsl-ui/utils/warnUnknownChoice.js';
 
 export interface RadioOption {
 	value: string;
@@ -46,7 +47,7 @@ export function RadioGroup({
 		<fieldset className="border-0 p-0 m-0">
 			{label && <legend className={LEGEND_CLASS}>{label}</legend>}
 			<RadixRadioGroup.Root value={value} onValueChange={onChange} orientation={orientation}>
-				<div className={ORIENTATION_CLASS[orientation]}>
+				<div className={classFor('RadioGroup', 'orientation', orientation, ORIENTATION_CLASS, 'vertical')}>
 					{options.map((opt) => (
 						<label
 							key={opt.value}

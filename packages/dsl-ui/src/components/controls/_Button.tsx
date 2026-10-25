@@ -7,6 +7,7 @@ import { useWarnMissingOnSolidToken } from '@dsl-ui/utils/onSolidToken.js';
 
 import { Tooltip } from '../overlay/Tooltip.js';
 import { useButtonContext } from './buttonContext.js';
+import { classFor } from '@dsl-ui/utils/warnUnknownChoice.js';
 
 type Variant = 'primary' | 'secondary' | 'danger' | 'danger-outline' | 'neutral' | 'success' | 'ghost' | 'link' | 'chip';
 type Size = 'sm' | 'md' | 'icon' | 'icon-field' | 'icon-sm' | 'icon-xs' | 'none';
@@ -88,7 +89,7 @@ const SHAPE_CLASSES: Record<Shape, string> = {
  * distinct button sizings.
  */
 export function buttonClasses(variant: Variant = 'primary', size: Size = 'md', className = ''): string {
-	return [BASE, VARIANT_CLASSES[variant], SIZE_CLASSES[size], className].filter(Boolean).join(' ');
+	return [BASE, classFor('Button', 'variant', variant, VARIANT_CLASSES, 'primary'), classFor('Button', 'size', size, SIZE_CLASSES, 'md'), className].filter(Boolean).join(' ');
 }
 
 // Leading underscore on the filename (guiding-principles.md §2/§29): Button is never an
@@ -124,7 +125,7 @@ export function Button({
 			// action button must not; ButtonSave opts in with an explicit type="submit".
 			type={props.type ?? 'button'}
 			disabled={isDisabled}
-			className={[BASE, !isStack && VARIANT_CLASSES[resolvedVariant], !isStack && SIZE_CLASSES[resolvedSize], SHAPE_CLASSES[shape], className]
+			className={[BASE, !isStack && classFor('Button', 'variant', resolvedVariant, VARIANT_CLASSES, 'primary'), !isStack && classFor('Button', 'size', resolvedSize, SIZE_CLASSES, 'md'), classFor('Button', 'shape', shape, SHAPE_CLASSES, 'default'), className]
 				.filter(Boolean)
 				.join(' ')}
 		>

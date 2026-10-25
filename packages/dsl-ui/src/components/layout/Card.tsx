@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { fillClasses, joinClasses } from '@dsl-ui/utils/fillClasses.js';
+import { classFor } from '@dsl-ui/utils/warnUnknownChoice.js';
 
 export interface CardProps {
     /** @slot tag:layout, tag:display, tag:composite */
@@ -81,13 +82,13 @@ export function Card({
             onKeyDown={isClickable ? (e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onClick?.(); } } : undefined}
         >
             {header && (
-                <div className={joinClasses('border-b border-border', PADDING_CLASSES[padding], fill && 'shrink-0')}>
+                <div className={joinClasses('border-b border-border', classFor('Card', 'padding', padding, PADDING_CLASSES, 'md'), fill && 'shrink-0')}>
                     {header}
                 </div>
             )}
-            <div className={joinClasses(PADDING_CLASSES[padding], fill && 'flex min-h-0 flex-1 flex-col')}>{children}</div>
+            <div className={joinClasses(classFor('Card', 'padding', padding, PADDING_CLASSES, 'md'), fill && 'flex min-h-0 flex-1 flex-col')}>{children}</div>
             {footer && (
-                <div className={joinClasses('border-t border-border', PADDING_CLASSES[padding], fill && 'shrink-0')}>
+                <div className={joinClasses('border-t border-border', classFor('Card', 'padding', padding, PADDING_CLASSES, 'md'), fill && 'shrink-0')}>
                     {footer}
                 </div>
             )}

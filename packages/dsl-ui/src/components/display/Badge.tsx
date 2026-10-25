@@ -3,6 +3,7 @@ import React from 'react';
 import { useWarnMissingOnSolidToken } from '@dsl-ui/utils/onSolidToken.js';
 
 import { AppLink, usableLinkTarget } from '../navigation/AppLink.js';
+import { classFor } from '@dsl-ui/utils/warnUnknownChoice.js';
 
 export type BadgeVariant = 'default' | 'primary' | 'success' | 'warning' | 'danger' | 'info';
 
@@ -68,8 +69,8 @@ const LINK_CLASSES =
 export function Badge({ label, variant = 'default', tone = 'solid', size = 'sm', href, external = false }: BadgeProps) {
     // Only the solid fills of these variants paint text-on-solid.
     useWarnMissingOnSolidToken(tone !== 'subtle' && (variant === 'primary' || variant === 'success' || variant === 'danger'));
-    const variantClasses = tone === 'subtle' ? SUBTLE_CLASSES[variant] : SOLID_CLASSES[variant];
-    const classes = `inline-flex items-center rounded-full font-medium ${variantClasses} ${SIZE_CLASSES[size]}`;
+    const variantClasses = classFor('Badge', 'variant', variant, tone === 'subtle' ? SUBTLE_CLASSES : SOLID_CLASSES, 'default');
+    const classes = `inline-flex items-center rounded-full font-medium ${variantClasses} ${classFor('Badge', 'size', size, SIZE_CLASSES, 'sm')}`;
     const target = usableLinkTarget(href, external, 'Badge');
     if (target) {
         return (

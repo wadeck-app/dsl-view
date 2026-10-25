@@ -5,6 +5,7 @@ import ReactDOM from 'react-dom';
 import { focusFirstIn, trapTab } from '@dsl-ui/utils/focusTrap.js';
 
 import { Button } from '../controls/_Button.js';
+import { classFor } from '@dsl-ui/utils/warnUnknownChoice.js';
 
 export const DrawerCloseContext = createContext<(() => void) | null>(null);
 
@@ -39,13 +40,13 @@ const SIDE_HEIGHT_CLASSES: Record<'sm' | 'md' | 'lg', string> = {
 
 function getPanelPositionClasses(side: 'left' | 'right' | 'bottom', size: 'sm' | 'md' | 'lg'): string {
 	if (side === 'right') {
-		return `top-0 right-0 h-full ${SIDE_WIDTH_CLASSES[size]}`;
+		return `top-0 right-0 h-full ${classFor('Drawer', 'size', size, SIDE_WIDTH_CLASSES, 'md')}`;
 	}
 	if (side === 'left') {
-		return `top-0 left-0 h-full ${SIDE_WIDTH_CLASSES[size]}`;
+		return `top-0 left-0 h-full ${classFor('Drawer', 'size', size, SIDE_WIDTH_CLASSES, 'md')}`;
 	}
 	// bottom
-	return `bottom-0 left-0 right-0 ${SIDE_HEIGHT_CLASSES[size]}`;
+	return `bottom-0 left-0 right-0 ${classFor('Drawer', 'size', size, SIDE_HEIGHT_CLASSES, 'md')}`;
 }
 
 function getTranslateClass(side: 'left' | 'right' | 'bottom', open: boolean): string {

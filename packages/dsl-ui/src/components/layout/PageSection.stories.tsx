@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 import React from 'react';
 
 import { Button } from '../controls/_Button.js';
-import { PageSection } from './PageHeader.js';
+import { PageSection } from './PageSection.js';
 
 const meta: Meta<typeof PageSection> = {
 	title: 'Layout/PageSection',

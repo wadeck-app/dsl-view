@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { PageSection } from './PageHeader.js';
+import { PageSection } from './PageSection.js';
 
 describe('PageSection', () => {
 	it('renders title in a heading element', () => {

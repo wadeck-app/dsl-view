@@ -132,4 +132,25 @@ describe('theme.css solid-fill ink', () => {
 		const ratio = contrast(tokenValue(darkBody, '--color-on-solid'), tokenValue(darkBody, accent));
 		expect(ratio).toBeGreaterThanOrEqual(4.5);
 	});
+
+	// Light: white ink on the 500/600 accents was 3.68:1 (primary) and 3.30:1 (success), under WCAG AA for
+	// normal text. The light accents are the 600/700 shades so the ink stays white.
+	it.each(['--color-primary', '--color-primary-solid', '--color-success', '--color-danger'])('keeps light --color-on-solid readable (4.5:1) on %s', accent => {
+		const ratio = contrast(tokenValue(lightBody, '--color-on-solid'), tokenValue(lightBody, accent));
+		expect(ratio).toBeGreaterThanOrEqual(4.5);
+	});
+
+	// _Button's primary variant is white text on --color-primary-solid in BOTH themes (it does not use on-solid).
+	it('keeps white text on the primary button fill readable (4.5:1) in both themes, hover included', () => {
+		for (const body of [lightBody, darkBody]) {
+			for (const token of ['--color-primary-solid', '--color-primary-solid-hover']) {
+				expect(contrast('#ffffff', tokenValue(body, token))).toBeGreaterThanOrEqual(4.5);
+			}
+		}
+	});
+
+	// Text-coloured uses of the same accents sit on the page surface.
+	it.each(['--color-primary', '--color-success-text', '--color-danger-text'])('keeps light %s readable (4.5:1) as text on the surface', token => {
+		expect(contrast(tokenValue(lightBody, token), tokenValue(lightBody, '--color-surface'))).toBeGreaterThanOrEqual(4.5);
+	});
 });
