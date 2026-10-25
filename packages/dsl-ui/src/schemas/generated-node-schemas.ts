@@ -839,6 +839,7 @@ export const DataTableNodeSchema = baseNode.extend({
 	expandLabel: z.string().optional(),
 	collapseLabel: z.string().optional(),
 	fontMono: dsl(z.boolean()).optional(),
+	fill: dsl(z.boolean()).default(false),
 });
 
 const FilterBarFilterSchema = z.object({

@@ -32,6 +32,8 @@ import { buildLinkPath } from '@dsl-ui/utils/linkTarget.js';
 import { RouterContext } from '@dsl-ui/RouterContext.js';
 import { reportAuthoringError, reportAuthoringMistake } from '@dsl-ui/utils/devDiagnostics.js';
 import { fillTemplate, fillTextTemplate } from '@dsl-ui/utils/templatedPath.js';
+import { fillClasses } from '@dsl-ui/utils/fillClasses.js';
+import { useOverflowsY } from '@dsl-ui/utils/useOverflowsY.js';
 
 import { getColumnFormat, registeredColumnFormatNames } from './columnFormats.js';
 import type { ColumnFormatRenderer } from './columnFormats.js';
@@ -551,6 +553,13 @@ const batchToolbarClass = 'flex items-center gap-3 border-b border-primary bg-pr
 const floatingBatchToolbarClass =
 	'fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-lg border border-primary bg-primary-light px-4 py-2.5 shadow-lg';
 const theadRowClass = 'border-b border-border text-left text-sm text-muted';
+// `fill`: the header cells stay on screen while the rows scroll under them. A row border does not travel with a sticky
+// cell, so the line under the header is drawn as an inset shadow of the cell itself. z-10 sits above the rows and below
+// the portaled menus and the floating batch bar (z-50). Static strings so Tailwind keeps them.
+const stickyHeaderCellClass = 'sticky top-0 z-10 bg-surface shadow-[inset_0_-1px_0_var(--color-border)]';
+function headerCellClass(base: string, fills: boolean): string {
+	return fills ? `${base} ${stickyHeaderCellClass}` : base;
+}
 // @formatter:on
 
 export class ColumnHelpers {
@@ -709,6 +718,14 @@ export interface DataTableProps<T extends Record<string, unknown>> {
 	collapseLabel?: string;
 	/** When true, applies font-mono to the entire table area. */
 	fontMono?: boolean;
+	/**
+	 * Takes the height its parent gives it (a dashboard tile) instead of the height of its rows. The filters, the header
+	 * row and a 'bottom' batch bar keep their own height; the rows take what is left and scroll inside it, under a header
+	 * row that stays on screen. Rows never stretch to share the room: a table shorter than the tile leaves blank space
+	 * under its last row. The parent needs a definite height.
+	 * @default false
+	 */
+	fill?: boolean;
 }
 
 /**
@@ -745,6 +762,7 @@ export function DataTable<T extends Record<string, unknown>>({
 	expandLabel = 'Expand row',
 	collapseLabel = 'Collapse row',
 	fontMono = false,
+	fill = false,
 }: DataTableProps<T>) {
 	// Ties each expansion toggle (aria-controls) to the panel row it opens.
 	const expansionIdBase = `${useId()}-expansion`;
@@ -916,11 +934,18 @@ export function DataTable<T extends Record<string, unknown>>({
 	const allSelected = currentPageIds.length > 0 && currentPageIds.every(id => selectedIds.includes(id));
 	const someSelected = selectedIds.length > 0 && !allSelected;
 
+	// `fill`: the rows scroll in their own region. Only the boolean true switches it on (a YAML "yes" must not).
+	const fills = fill === true;
+	// The region joins the tab order only while it actually scrolls: that is when a keyboard user cannot reach the
+	// hidden rows otherwise; a table that fits would only get a useless tab stop.
+	const { ref: scrollRef, overflows: scrolls } = useOverflowsY<HTMLDivElement>(fills && !loading, [sortedRows.length, expandedRow, loading]);
+	const emptyBody = !loading && sortedRows.length === 0;
+
 	// position:fixed for 'floating' escapes layout entirely, so it never shifts the table
 	// regardless of where in the DOM it renders - 'bottom' stays in flow, after </table>.
 	const batchToolbar = selectable && selectedIds.length > 0 && batchActions.length > 0 && (
 		<div
-			className={batchActionsPosition === 'floating' ? floatingBatchToolbarClass : batchToolbarClass}
+			className={batchActionsPosition === 'floating' ? floatingBatchToolbarClass : fills ? `${batchToolbarClass} shrink-0` : batchToolbarClass}
 			role="toolbar"
 			aria-label="Batch actions"
 		>
@@ -952,27 +977,38 @@ export function DataTable<T extends Record<string, unknown>>({
 			<DataTableFilterCtx.Provider value={{ filters: filterState, setFilter, registerFilterPredicate, tableId: id }}>
 				<div
 					className={[
-						'overflow-x-auto rounded border border-border bg-surface',
+						// A filling table scrolls its rows in the region below, not the whole box.
+						fills ? 'flex flex-col overflow-hidden' : 'overflow-x-auto',
+						'rounded border border-border bg-surface',
 						fontMono ? 'font-mono' : '',
+						fillClasses(fill),
 					]
 						.filter(Boolean)
 						.join(' ')}
 				>
 					{filtersTop && (
-						<div className={filtersTopRowClass}>
+						<div className={fills ? `${filtersTopRowClass} shrink-0` : filtersTopRowClass}>
 							{filtersTop}
 						</div>
 					)}
 					{filters && (
-						<div className="flex flex-wrap gap-2 border-b border-border px-3 py-2">
+						<div className={fills ? 'flex shrink-0 flex-wrap gap-2 border-b border-border px-3 py-2' : 'flex flex-wrap gap-2 border-b border-border px-3 py-2'}>
 							{filters}
 						</div>
 					)}
-					<table className="w-full text-sm" aria-busy={loading || refreshing || undefined}>
+					{/* ONE scroll box for both axes when filling, so the sticky header also follows a horizontal scroll. */}
+					<div
+						ref={scrollRef}
+						className={fills ? (loading ? 'min-h-0 flex-1 overflow-hidden' : 'min-h-0 flex-1 overflow-auto') : undefined}
+						tabIndex={scrolls ? 0 : undefined}
+						role={scrolls ? 'region' : undefined}
+						aria-label={scrolls ? 'Table rows' : undefined}
+					>
+					<table className={fills && emptyBody ? 'h-full w-full text-sm' : 'w-full text-sm'} aria-busy={loading || refreshing || undefined}>
 						<thead>
 							<tr className={theadRowClass}>
 								{selectable && (
-									<th className="w-8 px-3 py-2">
+									<th className={headerCellClass('w-8 px-3 py-2', fills)}>
 										<div className="flex items-center justify-center">
 											<Checkbox
 												checked={allSelected}
@@ -988,12 +1024,12 @@ export function DataTable<T extends Record<string, unknown>>({
 										</div>
 									</th>
 								)}
-								{expansion && <th className="w-8" />}
+								{expansion && <th className={headerCellClass('w-8', fills)} />}
 								{normalizedColumns.map(col => {
 									if (col.isLink) {
 										// Icon-only column: no visible header, but the name stays available to assistive tech.
 										return (
-											<th key={col.key} className="w-8 px-1 py-2" style={col.width ? { width: `${col.width * 4}px` } : undefined}>
+											<th key={col.key} className={headerCellClass('w-8 px-1 py-2', fills)} style={col.width ? { width: `${col.width * 4}px` } : undefined}>
 												<span className="sr-only">{col.label}</span>
 											</th>
 										);
@@ -1008,7 +1044,7 @@ export function DataTable<T extends Record<string, unknown>>({
 										return (
 											<th
 												key={col.key}
-												className="px-3 py-2 font-normal whitespace-nowrap"
+												className={headerCellClass('px-3 py-2 font-normal whitespace-nowrap', fills)}
 												style={col.width ? { width: `${col.width * 4}px` } : undefined}
 											>
 												<span className="inline-flex items-center gap-1 select-none">
@@ -1039,7 +1075,7 @@ export function DataTable<T extends Record<string, unknown>>({
 									return (
 										<th
 											key={col.key}
-											className="px-3 py-2 font-normal whitespace-nowrap"
+											className={headerCellClass('px-3 py-2 font-normal whitespace-nowrap', fills)}
 											style={col.width ? { width: `${col.width * 4}px` } : undefined}
 										>
 											{col.label}
@@ -1075,9 +1111,9 @@ export function DataTable<T extends Record<string, unknown>>({
 									</tr>
 								))
 							) : sortedRows.length === 0 ? (
-								<tr>
+								<tr className={fills ? 'h-full' : undefined}>
 									<td colSpan={normalizedColumns.length + (expansion ? 1 : 0) + (selectable ? 1 : 0)}>
-										<div className="flex flex-col items-center justify-center py-16 text-muted">
+										<div className={fills ? 'flex flex-col items-center justify-center py-6 text-muted' : 'flex flex-col items-center justify-center py-16 text-muted'}>
 											{emptyMessage}
 										</div>
 									</td>
@@ -1252,6 +1288,7 @@ export function DataTable<T extends Record<string, unknown>>({
 							)}
 						</tbody>
 					</table>
+					</div>
 					{/* In flow but after the rows: selecting a row must never push the rows down under the pointer. */}
 					{batchActionsPosition === 'bottom' && batchToolbar}
 				</div>
