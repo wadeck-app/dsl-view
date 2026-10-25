@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 
+import { useWarnMissingOnSolidToken } from '@dsl-ui/utils/onSolidToken.js';
+
 import { Spinner } from '../display/Spinner.js';
 
 const inputClass =
@@ -68,6 +70,8 @@ export function FieldAsyncSelect({
 	const [options, setOptions] = useState<FieldAsyncSelectOption[]>([]);
 	const [isLoading, setIsLoading] = useState(false);
 	const [isOpen, setIsOpen] = useState(false);
+	// The active option of the open list is the text-on-solid fill.
+	useWarnMissingOnSolidToken(isOpen);
 	const [activeIndex, setActiveIndex] = useState(-1);
 	/** True once at least one loadOptions call has resolved. Used to gate the
 	 *  "no options" message so it does not appear while the first load is pending. */

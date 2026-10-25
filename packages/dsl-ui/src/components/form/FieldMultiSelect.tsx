@@ -1,6 +1,8 @@
 import React, { useId, useRef, useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 
+import { useWarnMissingOnSolidToken } from '@dsl-ui/utils/onSolidToken.js';
+
 const PILL_CLASS =
 	'inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2 py-0.5 text-xs font-medium';
 
@@ -48,6 +50,8 @@ export function FieldMultiSelect({
 	maxSelected,
 }: FieldMultiSelectProps) {
 	const [open, setOpen] = useState(false);
+	// The active option of the open list is the text-on-solid fill.
+	useWarnMissingOnSolidToken(open);
 	const [activeIndex, setActiveIndex] = useState(0);
 	const containerRef = useRef<HTMLDivElement>(null);
 	const id = useId();

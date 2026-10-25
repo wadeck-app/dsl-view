@@ -79,6 +79,10 @@ need no token. A raw colour class is fine; a raw colour class behind a `dark:` v
 Write hue classes out in full. Tailwind scans source text, so `bg-hue-${hue}-bg` produces no rule
 and the element gets an attribute with nothing behind it.
 
+## Ink on solid fills
+
+`text-on-solid` (`--color-on-solid`) is the text on `bg-primary` / `bg-success` / `bg-danger` fills. The preset falls back to white when the token is missing, which is right for light; an app with its own palette copy must add the token, and a dev build warns once per page until it does (`utils/onSolidToken.ts`). The check reads `:root`, so a token defined only on a nested `ThemeScope` still warns.
+
 ## Performance
 
 A static scope costs one style resolution. Nesting is free — variables shadow.

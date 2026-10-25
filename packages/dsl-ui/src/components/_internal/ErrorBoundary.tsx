@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { warnMissingOnSolidToken } from '@dsl-ui/utils/onSolidToken.js';
+
 export interface ErrorBoundaryProps {
 	children: React.ReactNode;
 	fallback?: React.ReactNode;
@@ -33,6 +35,8 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 	}
 
 	componentDidCatch(error: Error, info: React.ErrorInfo): void {
+		// The default fallback paints a text-on-solid Reload button.
+		if (!this.props.fallback) warnMissingOnSolidToken();
 		console.error('[ErrorBoundary] Uncaught error:', error, info.componentStack);
 	}
 

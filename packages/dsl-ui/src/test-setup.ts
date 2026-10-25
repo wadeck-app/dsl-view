@@ -3,6 +3,10 @@ import { afterEach, vi } from 'vitest';
 
 import { resetReportedMessages } from '@dsl-ui/components/dev/reportOnce.js';
 
+// jsdom loads no stylesheet, so the theme token is absent. Define it so suites do not print the missing-token warning;
+// onSolidToken.test.ts removes it on purpose.
+document.documentElement.style.setProperty('--color-on-solid', '#ffffff');
+
 // A test that fails before its own `vi.useRealTimers()` would leave fake timers installed for every
 // following test in the file; always go back to the real clock. Persisted state (the A/B dock, filters, theme)
 // and the URL are also reset so one test cannot pre-seed the next one.

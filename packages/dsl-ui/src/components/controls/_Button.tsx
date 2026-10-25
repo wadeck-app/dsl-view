@@ -3,6 +3,8 @@ import type { ButtonHTMLAttributes } from 'react';
 
 import { Loader2 } from 'lucide-react';
 
+import { useWarnMissingOnSolidToken } from '@dsl-ui/utils/onSolidToken.js';
+
 import { Tooltip } from '../overlay/Tooltip.js';
 import { useButtonContext } from './buttonContext.js';
 
@@ -113,6 +115,7 @@ export function Button({
 	// 'stack' shape callers (option-picker style buttons) own their full color and sizing via className -
 	// SIZE_CLASSES/VARIANT_CLASSES would fight with their custom padding and active/inactive color classes.
 	const isStack = shape === 'stack';
+	useWarnMissingOnSolidToken(!isStack && (resolvedVariant === 'danger' || resolvedVariant === 'success'));
 	const btn = (
 		// violations-suppress: react/no-raw-button Button IS the atomic wrapper - this is intentional
 		<button

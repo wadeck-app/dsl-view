@@ -22,6 +22,7 @@ const MODULES = [
 	'components/form/timeStep.js',
 	'utils/usableOptions.js',
 	'components/form/Form.js',
+	'utils/onSolidToken.js',
 ];
 
 const MARKERS: Record<string, string> = {
@@ -37,6 +38,7 @@ const MARKERS: Record<string, string> = {
 	'RefreshButton without a source': 'it provides `$refresh`',
 	'TimePicker minuteStep': 'minuteStep must be a whole number',
 	'options without a label (usableOptions)': 'have no text label',
+	'missing --color-on-solid token': 'falls back to white meanwhile',
 };
 
 // Problems that come from the data or the environment at run time keep reporting in production: dropping them would

@@ -1,6 +1,8 @@
 import * as RadixAvatar from '@radix-ui/react-avatar';
 import React from 'react';
 
+import { useWarnMissingOnSolidToken } from '@dsl-ui/utils/onSolidToken.js';
+
 export interface AvatarProps {
     src?: string;
     alt?: string;
@@ -21,6 +23,7 @@ const FALLBACK_CLASS = 'w-full h-full flex items-center justify-center bg-primar
  * @registryTags avatar user profile image
  */
 export function Avatar({ src, alt, fallback, size = 'md' }: AvatarProps) {
+    useWarnMissingOnSolidToken();
     return (
         <RadixAvatar.Root className={`inline-flex items-center justify-center rounded-full overflow-hidden flex-shrink-0 ${SIZE_CLASSES[size]}`}>
             {src && (
