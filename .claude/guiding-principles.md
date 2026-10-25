@@ -23,6 +23,8 @@
 - `dsl-ui` contains only generic UI components. A component with a product concept in its name, props, copy, endpoint or data shape is domain code: it belongs in the requesting project's own library (e.g. `dsl-ui-wdrive`), never here.
 - A component that names a product concept is rejected or extracted. A domain-neutral component with a single consumer is accepted only while its API carries no product vocabulary, endpoint or data shape.
 - Check this rule before accepting a handoff from a peer session, and answer "put it in your project's library" when it fails. App-specific column formats stay in the app (see the `DataTable` header).
+- I (the dsl-view agent) stay agnostic of application logic. I integrate only components with no business logic; a convenient, urgent or already-requested component with domain logic is still refused.
+- When a peer asks for one, I do not build it: I point them to the local-fork process in the root `README.md` (keep it in their own library, mark it `@dsl-view-candidate`, propose it only once mature and generic). I never ask a peer to hand me a domain component "to host for everyone".
 - Current extraction candidates and their consumers: `.claude/plans/2026-10-24_extract-business-components.md`.
 
 ## Theming
