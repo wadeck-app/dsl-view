@@ -623,6 +623,36 @@ series:
 - `sparkline` = no grid, no axes, no legend, tooltip kept, tight padding; the series still bind to their axes, which are only hidden.
 - A series without `color` takes the next entry of a theme palette (`--color-primary-solid`, then success, warning, danger, purple, cyan, orange), so it follows light and dark. An explicit `color` is used as is.
 
+## Filling a dashboard tile
+
+A dashboard tile is a box of fixed height; the widget has to take it, whatever its content. `fill: true` (default `false`) on `VerticalStack`, `HorizontalStack`, `Card`, `Section`, `ScrollArea`, `StatTile` and `Chart` makes that element take the room its parent gives (`h-full min-h-0 flex-1`): inside a flex parent it takes what its siblings leave, otherwise 100% of the parent height.
+
+```yaml
+$type: Card
+fill: true
+items:
+  - $type: VerticalStack
+    fill: true
+    gap: gap-2
+    items:
+      - { $type: StatTile, label: Last hour, value: $sources.stats.lastHour, compact: true, nowrap: true }
+      - $type: Chart
+        fill: true                 # the plot takes what the stat tile leaves
+        data: $sources.stats.perHour
+        xAxisKey: hour
+        xAxisType: category
+        yFormat: number
+        series: [{ key: events, name: Events, type: bar }]
+```
+
+- The chain must be unbroken from a box with a DEFINITE height: the host gives the widget root a container with a height (`h-full` up to the tile, or a fixed height), and every container between the tile and the element that fills sets `fill` itself. One container without it and the elements below revert to their content height.
+- `DslRenderer` adds no element between a container and its children, so `fill` on a child acts on the container you wrote.
+- `Chart` keeps a floor under the room it is given: `height` when set, otherwise 64px. A tile shorter than the floor clips the chart (the card has `overflow-hidden`) instead of drawing a 0px chart; set `height` to change the floor. Without `fill`, `height` is the exact plot height (default 300), unchanged.
+- `HorizontalStack` stretches its children vertically only with `align: items-stretch`; a child in an `itemSizes` wrapper fills only if the wrapper stretches.
+- `Card` with `fill`: the body grows between header and footer and is itself a column, so a `fill` child inside it stretches. `ScrollArea` with `fill` scrolls its content inside the room left.
+- Only the boolean `true` switches it on; `fill: "yes"` is ignored (with the usual schema warning in development).
+- `StatTile`: `nowrap: true` keeps the figure, unit included ("68.6 kg"), on one line and cuts it with an ellipsis (the full text is the tooltip); `compact: true` uses tighter padding and a smaller figure. Both default to `false`: a long text value still wraps.
+
 ## DataTable columns
 
 ```yaml
@@ -757,6 +787,7 @@ First published version containing the change (`dsl-ui` and `dsl-renderer` share
 | `2026.10.24-251` | `notify: false` on a `$actions` entry now silences the success message only: a failure is always shown (with `errorPrefix`), logged and passed to `onActionError`. The `$notify` key of a `$brains` entry is retired: a failed brain is always shown, and the key is ignored with a one-time `console.warn` naming the brain. Before, both hid failures (a failed mutation looked like a successful one). No YAML in capability-framework, app-core, queue, task, flow or orchestrator used either key. No regeneration needed. |
 | `2026.10.24-254` | Generated `entries.tsx` references a `<Name>NodeSchema` only when the library's `generated-node-schemas` exports it (`DeleteButton` and `RouterProvider` have none): before, a consumer's production build printed `"DeleteButtonNodeSchema" is not exported by ...` (harmless at runtime, the lookup is guarded). Regenerate `entries.tsx` and restart the dev server fully to silence it. Rollup's `INVALID_ANNOTATION` warnings about zod stay: see Pitfalls. |
 | `2026.10.24-253` | `Tooltip` points its single element child at the tooltip text (`aria-describedby`) and also shows on keyboard focus, so a disabled `Button` / `ActionButton` / `ButtonSave` exposes its `disabledReason` as its accessible description (a disabled control cannot take focus, so before it was reachable by mouse hover only). A test locating such a button by `getByRole('button', { name })` is unchanged; one asserting the button has no `aria-describedby` would break (none found). No regeneration needed. |
+| `2026.10.25-262` | New `fill: true` (default `false`, no change without it) on `VerticalStack`, `HorizontalStack`, `Card`, `Section`, `ScrollArea`, `StatTile` and `Chart` so a widget takes the height of its dashboard tile (see "Filling a dashboard tile"); `Chart` keeps a 64px floor (`height`) under the room it is given. `StatTile` gains `nowrap` (figure and unit on one line, ellipsis, full text as tooltip) and `compact`. |
 | `2026.10.25-260` | The inline action banner and dsl-ui's `ToastProvider` stack newest first, fold an identical notification that follows the previous one into `×N` (a success restarts its timer), show five at most and fold the older ones behind a "+N more" / "Show fewer" control. Before, the banner silently dropped everything beyond the three most recent, errors included; a test counting separate identical alerts now sees one alert with `×2`. |
 | `2026.10.25-258` | **Authoring-mistake warnings are development-only**: an unknown `gap` / `size` / icon / date format, a malformed column spec or option list, a prop of the wrong shape (`coerceProp`), a missing action spec, `Stepper` / `ActionButton` / `RefreshButton` misuse and similar no longer print in a production console nor ship their message strings in a production bundle (`process.env.NODE_ENV` guard; `test` still reports). Problems from data or the environment at run time keep reporting everywhere (failed loads and actions, clipboard refusal, a rejected `onSubmit`, a stale compiled artifact). A production check that grepped for these messages stops seeing them. No regeneration needed. |
 
