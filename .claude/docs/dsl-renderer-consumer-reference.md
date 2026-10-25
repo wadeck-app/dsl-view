@@ -315,7 +315,7 @@ items:
 
 **Action feedback** (every `$actions` call that sent a request, and every failed `$brains` entry):
 - Success -> `{ kind: 'success', message }`, failure -> `{ kind: 'error', message, status? }`, both with `action` = the `$actions` name or brain id. The failure message is the fetcher's `Error.message` (put the actionable server text there); `status` is the Error's numeric `status` when present.
-- No host setup needed: without a notifier the runner shows an inline banner above the page (`role="status"` for success, auto-dismissed after 5 s; `role="alert"` for errors, dismissed by the user). Feedback is never console-only.
+- No host setup needed: without a notifier the runner shows an inline banner above the page (`role="status"` for success, auto-dismissed after 5 s; `role="alert"` for errors, dismissed by the user). Newest first; an identical notification right after the previous one folds into it (`×3`); at most five show at once and the older ones wait behind a "+N more" control (an error is folded, never dropped). Feedback is never console-only.
 - To route feedback to your toast stack, wrap the runner (or the whole app) once:
 
 ```tsx
@@ -324,7 +324,7 @@ items:
 </NotifierProvider>
 ```
 
-  dsl-ui's `ToastProvider` fits this mapping: `toast.error` stays until dismissed and is `role="alert"`; success and info auto-dismiss after 4 s and are `role="status"`.
+  dsl-ui's `ToastProvider` fits this mapping: `toast.error` stays until dismissed and is `role="alert"`; success and info auto-dismiss after 4 s and are `role="status"`. The stack follows the same rules as the inline banner (newest first, identical toasts fold into `×N` and restart the timer, five shown, the rest behind "+N more").
 
   Types: `Notify = (n: Notification) => void`, `Notification = { kind: 'success' | 'error'; message: string; status?: number; action?: string }`. A provider replaces the banner. Widgets use `useNotifier()`, which throws outside a runner or provider. `onActionError` still fires for row and batch failures, in addition to the notifier.
 - No feedback for an action that sent no request (no `url`, or `confirm` declined).
@@ -757,6 +757,7 @@ First published version containing the change (`dsl-ui` and `dsl-renderer` share
 | `2026.10.24-251` | `notify: false` on a `$actions` entry now silences the success message only: a failure is always shown (with `errorPrefix`), logged and passed to `onActionError`. The `$notify` key of a `$brains` entry is retired: a failed brain is always shown, and the key is ignored with a one-time `console.warn` naming the brain. Before, both hid failures (a failed mutation looked like a successful one). No YAML in capability-framework, app-core, queue, task, flow or orchestrator used either key. No regeneration needed. |
 | `2026.10.24-254` | Generated `entries.tsx` references a `<Name>NodeSchema` only when the library's `generated-node-schemas` exports it (`DeleteButton` and `RouterProvider` have none): before, a consumer's production build printed `"DeleteButtonNodeSchema" is not exported by ...` (harmless at runtime, the lookup is guarded). Regenerate `entries.tsx` and restart the dev server fully to silence it. Rollup's `INVALID_ANNOTATION` warnings about zod stay: see Pitfalls. |
 | `2026.10.24-253` | `Tooltip` points its single element child at the tooltip text (`aria-describedby`) and also shows on keyboard focus, so a disabled `Button` / `ActionButton` / `ButtonSave` exposes its `disabledReason` as its accessible description (a disabled control cannot take focus, so before it was reachable by mouse hover only). A test locating such a button by `getByRole('button', { name })` is unchanged; one asserting the button has no `aria-describedby` would break (none found). No regeneration needed. |
+| Unreleased | The inline action banner and dsl-ui's `ToastProvider` stack newest first, fold an identical notification that follows the previous one into `×N` (a success restarts its timer), show five at most and fold the older ones behind a "+N more" / "Show fewer" control. Before, the banner silently dropped everything beyond the three most recent, errors included; a test counting separate identical alerts now sees one alert with `×2`. |
 | Unreleased | **Authoring-mistake warnings are development-only**: an unknown `gap` / `size` / icon / date format, a malformed column spec or option list, a prop of the wrong shape (`coerceProp`), a missing action spec, `Stepper` / `ActionButton` / `RefreshButton` misuse and similar no longer print in a production console nor ship their message strings in a production bundle (`process.env.NODE_ENV` guard; `test` still reports). Problems from data or the environment at run time keep reporting everywhere (failed loads and actions, clipboard refusal, a rejected `onSubmit`, a stale compiled artifact). A production check that grepped for these messages stops seeing them. No regeneration needed. |
 
 ## Pitfalls

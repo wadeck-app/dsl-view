@@ -42,6 +42,7 @@ export function ActionBannerEntry({ item, onDismiss }: { item: BannerItem; onDis
 			<span>
 				{item.message}
 				{item.status !== undefined ? ` (HTTP ${item.status})` : ''}
+				{item.count !== undefined && item.count > 1 ? ` ×${item.count}` : ''}
 			</span>
 			{/* violations-suppress: react/no-raw-button - dsl-renderer cannot import dsl-ui's Button (dependency direction) */}
 			<button

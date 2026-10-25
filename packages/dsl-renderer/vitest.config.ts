@@ -30,6 +30,9 @@ export default defineConfig({
 		environment: 'jsdom',
 		globals: true,
 		setupFiles: ['./src/test-setup.ts'],
+		// The generator tests parse real component sources with ts-morph (1 to 3 s each on a quiet machine). On a busy
+		// one (several agents and CI jobs at once) the default 5 s made a different one of them time out on each run.
+		testTimeout: 20_000,
 		// A spy, stubbed env var or global left over by a failing test would otherwise leak into the next
 		// test and make it fail for an unrelated reason, hiding the first real failure.
 		restoreMocks: true,

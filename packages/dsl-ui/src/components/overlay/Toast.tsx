@@ -7,6 +7,8 @@ interface ToastItem {
 	id: number;
 	message: string;
 	variant: ToastVariant;
+	/** How many identical toasts in a row this one stands for. */
+	count: number;
 }
 
 interface ToastContextValue {
@@ -35,6 +37,12 @@ const variantIcons: Record<ToastVariant, React.ReactNode> = {
 const dismissButtonClass =
 	'shrink-0 rounded opacity-60 hover:opacity-100 transition-opacity cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-current';
 
+// Toasts shown at once; the older ones wait behind the "+N more" control (an error is folded, never dropped).
+export const MAX_VISIBLE_TOASTS = 5;
+
+const moreButtonClass =
+	'pointer-events-auto self-end rounded text-xs underline text-muted hover:text-content cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-current';
+
 let nextId = 0;
 
 export interface ToastProviderProps {
@@ -48,18 +56,38 @@ export interface ToastProviderProps {
  */
 export function ToastProvider({ children }: ToastProviderProps) {
 	const [toasts, setToasts] = useState<ToastItem[]>([]);
+	const [expanded, setExpanded] = useState(false);
+	// The latest list, readable synchronously: the timers below are side effects, which do not belong in a state updater.
+	const toastsRef = useRef<ToastItem[]>([]);
 	const timers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
 
-	const dismiss = useCallback((id: number) => {
-		setToasts(prev => prev.filter(t => t.id !== id));
-		clearTimeout(timers.current.get(id));
-		timers.current.delete(id);
+	const commit = useCallback((next: ToastItem[]) => {
+		toastsRef.current = next;
+		setToasts(next);
 	}, []);
+
+	const dismiss = useCallback(
+		(id: number) => {
+			commit(toastsRef.current.filter(t => t.id !== id));
+			clearTimeout(timers.current.get(id));
+			timers.current.delete(id);
+		},
+		[commit]
+	);
 
 	const add = useCallback(
 		(message: string, variant: ToastVariant) => {
 			const id = ++nextId;
-			setToasts(prev => [...prev, { id, message, variant }]);
+			const current = toastsRef.current;
+			const last = current[current.length - 1];
+			// An identical toast right after the previous one folds into it (x2, x3...) and restarts its timer.
+			if (last && last.message === message && last.variant === variant) {
+				clearTimeout(timers.current.get(last.id));
+				timers.current.delete(last.id);
+				commit([...current.slice(0, -1), { ...last, id, count: last.count + 1 }]);
+			} else {
+				commit([...current, { id, message, variant, count: 1 }]);
+			}
 			if (variant !== 'error') {
 				timers.current.set(
 					id,
@@ -67,7 +95,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
 				);
 			}
 		},
-		[dismiss]
+		[dismiss, commit]
 	);
 
 	useEffect(() => {
@@ -85,6 +113,12 @@ export function ToastProvider({ children }: ToastProviderProps) {
 		[add]
 	);
 
+	// Newest first; beyond the cap the older toasts fold behind one control.
+	const newestFirst = [...toasts].reverse();
+	const hidden = expanded ? 0 : Math.max(0, newestFirst.length - MAX_VISIBLE_TOASTS);
+	const shownToasts = hidden > 0 ? newestFirst.slice(0, MAX_VISIBLE_TOASTS) : newestFirst;
+	const canCollapse = expanded && newestFirst.length > MAX_VISIBLE_TOASTS;
+
 	return (
 		<ToastContext.Provider value={ctx}>
 			{children}
@@ -93,7 +127,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
 				aria-atomic="false"
 				className="fixed bottom-4 right-4 flex flex-col gap-2 z-50 pointer-events-none"
 			>
-				{toasts.map(toast => (
+				{shownToasts.map(toast => (
 					<div
 						key={toast.id}
 						role={toast.variant === 'error' ? 'alert' : 'status'}
@@ -103,7 +137,10 @@ export function ToastProvider({ children }: ToastProviderProps) {
 						].join(' ')}
 					>
 						{variantIcons[toast.variant]}
-						<span className="flex-1">{toast.message}</span>
+						<span className="flex-1">
+							{toast.message}
+							{toast.count > 1 ? ` ×${toast.count}` : ''}
+						</span>
 						{/* violations-suppress: react/no-raw-button - Toast dismiss is a notification primitive, not a navigation action */}
 						<button
 							onClick={() => dismiss(toast.id)}
@@ -114,6 +151,12 @@ export function ToastProvider({ children }: ToastProviderProps) {
 						</button>
 					</div>
 				))}
+				{(hidden > 0 || canCollapse) && (
+					// violations-suppress: react/no-raw-button - folds the toast stack, a notification primitive
+					<button type="button" aria-expanded={expanded} onClick={() => setExpanded(value => !value)} className={moreButtonClass}>
+						{expanded ? 'Show fewer' : `+${hidden} more`}
+					</button>
+				)}
 			</div>
 		</ToastContext.Provider>
 	);

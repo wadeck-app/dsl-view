@@ -111,7 +111,8 @@ describe('action feedback: default inline banner (no host notifier)', () => {
 		fireEvent.click(screen.getByText('batch'));
 		expect((await screen.findByRole('alert')).textContent).toContain('boom');
 		fireEvent.click(screen.getByText('form'));
-		await waitFor(() => expect(screen.getAllByRole('alert')).toHaveLength(2));
+		// The second identical failure folds into the first entry (×2): both reached the banner, none was lost.
+		await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('boom (HTTP 500) ×2'));
 	});
 
 	it('can be dismissed', async () => {
@@ -150,7 +151,8 @@ describe('action feedback: default inline banner (no host notifier)', () => {
 		fireEvent.click(screen.getByText('batch'));
 		expect((await screen.findByRole('alert')).textContent).toContain('boom');
 		fireEvent.click(screen.getByText('form'));
-		await waitFor(() => expect(screen.getAllByRole('alert')).toHaveLength(2));
+		// The second identical failure folds into the first entry (×2): both reached the banner, none was lost.
+		await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('boom (HTTP 500) ×2'));
 	});
 
 	it('gives no success feedback for a local action that sent no request (confirm declined or no url)', async () => {

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import React from 'react';
 
@@ -13,15 +13,39 @@ afterEach(() => {
 });
 
 describe('useBannerNotifier', () => {
-	it('numbers notifications in order and keeps only the three most recent', () => {
+	it('numbers notifications in order and drops none of them (the banner decides how many to show)', () => {
 		const { result } = renderHook(() => useBannerNotifier());
 		act(() => {
-			for (const message of ['one', 'two', 'three', 'four']) {
+			for (const message of ['one', 'two', 'three', 'four', 'five', 'six', 'seven']) {
 				result.current.notify({ kind: 'error', message });
 			}
 		});
-		expect(result.current.items.map(i => i.message)).toEqual(['two', 'three', 'four']);
-		expect(result.current.items.map(i => i.id)).toEqual([2, 3, 4]);
+		expect(result.current.items.map(i => i.message)).toEqual(['one', 'two', 'three', 'four', 'five', 'six', 'seven']);
+		expect(result.current.items.map(i => i.id)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+	});
+
+	it('folds an identical notification right after the previous one into a count and gives it a fresh id', () => {
+		const { result } = renderHook(() => useBannerNotifier());
+		act(() => {
+			result.current.notify({ kind: 'error', message: 'Boom', status: 503, action: 'a' });
+			result.current.notify({ kind: 'error', message: 'Boom', status: 503, action: 'a' });
+			result.current.notify({ kind: 'error', message: 'Boom', status: 503, action: 'a' });
+		});
+		expect(result.current.items).toStrictEqual([{ kind: 'error', message: 'Boom', status: 503, action: 'a', id: 3, count: 3 }]);
+	});
+
+	it('does not fold notifications that differ by kind, message, status or action, nor ones separated by another', () => {
+		const { result } = renderHook(() => useBannerNotifier());
+		act(() => {
+			result.current.notify({ kind: 'error', message: 'Boom', status: 503, action: 'a' });
+			result.current.notify({ kind: 'success', message: 'Boom', status: 503, action: 'a' });
+			result.current.notify({ kind: 'success', message: 'Other', status: 503, action: 'a' });
+			result.current.notify({ kind: 'success', message: 'Other', status: 500, action: 'a' });
+			result.current.notify({ kind: 'success', message: 'Other', status: 500, action: 'b' });
+			result.current.notify({ kind: 'error', message: 'Boom', status: 503, action: 'a' });
+		});
+		expect(result.current.items).toHaveLength(6);
+		expect(result.current.items.every(i => (i.count ?? 1) === 1)).toBe(true);
 	});
 
 	it('dismisses exactly the requested item and never reuses its id', () => {
@@ -124,13 +148,70 @@ describe('ActionBanner', () => {
 		expect(container.innerHTML).toBe('');
 	});
 
-	it('renders every item inside the banner container', () => {
+	it('renders every item inside the banner container, newest first', () => {
 		render(<ActionBanner items={[item({ id: 1, message: 'a', kind: 'error' }), item({ id: 2, message: 'b', kind: 'error' })]} onDismiss={vi.fn()} />);
 		const banner = screen.getByTestId('action-banner');
-		// Which items, in which order (oldest first), not just how many.
+		// Which items, in which order (newest first), not just how many.
 		expect(Array.from(banner.querySelectorAll('[data-action-feedback]')).map(el => el.textContent)).toEqual([
-			expect.stringContaining('a'),
 			expect.stringContaining('b'),
+			expect.stringContaining('a'),
 		]);
+		expect(screen.queryByRole('button', { name: /more|fewer/i })).toBeNull();
+	});
+
+	const many = (n: number) => Array.from({ length: n }, (_, i) => item({ id: i + 1, message: `m${i + 1}`, kind: 'error' }));
+	const shownMessages = () => Array.from(screen.getByTestId('action-banner').querySelectorAll('[data-action-feedback]')).map(el => el.textContent);
+
+	it('shows exactly five entries at once and folds the older ones behind a "+N more" control', () => {
+		render(<ActionBanner items={many(5)} onDismiss={vi.fn()} />);
+		expect(shownMessages()).toHaveLength(5);
+		expect(screen.queryByRole('button', { name: /more/i })).toBeNull();
+
+		cleanup();
+		render(<ActionBanner items={many(8)} onDismiss={vi.fn()} />);
+		expect(shownMessages()).toEqual(['m8', 'm7', 'm6', 'm5', 'm4'].map(m => expect.stringContaining(m)));
+		const more = screen.getByRole('button', { name: '+3 more' });
+		expect(more.getAttribute('aria-expanded')).toBe('false');
+	});
+
+	it('shows every folded entry once expanded, and folds them again', () => {
+		render(<ActionBanner items={many(7)} onDismiss={vi.fn()} />);
+		fireEvent.click(screen.getByRole('button', { name: '+2 more' }));
+		expect(shownMessages()).toHaveLength(7);
+		const fewer = screen.getByRole('button', { name: 'Show fewer' });
+		expect(fewer.getAttribute('aria-expanded')).toBe('true');
+		fireEvent.click(fewer);
+		expect(shownMessages()).toHaveLength(5);
+	});
+
+	it('dismissing a shown entry brings the next older one into view', () => {
+		const { rerender } = render(<ActionBanner items={many(6)} onDismiss={vi.fn()} />);
+		expect(shownMessages()).not.toContain(expect.stringContaining('m1'));
+		rerender(<ActionBanner items={many(6).slice(1)} onDismiss={vi.fn()} />);
+		expect(shownMessages()).toHaveLength(5);
+		expect(screen.queryByRole('button', { name: /more/i })).toBeNull();
+	});
+});
+
+describe('ActionBannerEntry count', () => {
+	it('shows ×N for a folded entry and nothing for a single one', () => {
+		const { rerender } = render(<ActionBannerEntry item={item({ kind: 'error', message: 'Boom', count: 3 })} onDismiss={vi.fn()} />);
+		expect(screen.getByRole('alert').textContent).toContain('Boom ×3');
+		rerender(<ActionBannerEntry item={item({ kind: 'error', message: 'Boom', count: 1 })} onDismiss={vi.fn()} />);
+		expect(screen.getByRole('alert').textContent).not.toMatch(/×\d/);
+		rerender(<ActionBannerEntry item={item({ kind: 'error', message: 'Boom' })} onDismiss={vi.fn()} />);
+		expect(screen.getByRole('alert').textContent).not.toMatch(/×\d/);
+	});
+
+	it('restarts the auto-dismiss of a success when the same message arrives again (new id)', () => {
+		vi.useFakeTimers();
+		const onDismiss = vi.fn();
+		const { rerender } = render(<ActionBannerEntry item={item({ id: 1 })} onDismiss={onDismiss} />);
+		vi.advanceTimersByTime(4000);
+		rerender(<ActionBannerEntry item={item({ id: 2, count: 2 })} onDismiss={onDismiss} />);
+		vi.advanceTimersByTime(4000);
+		expect(onDismiss).not.toHaveBeenCalled();
+		vi.advanceTimersByTime(1000);
+		expect(onDismiss).toHaveBeenCalledWith(2);
 	});
 });

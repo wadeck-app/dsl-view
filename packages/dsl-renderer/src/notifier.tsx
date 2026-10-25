@@ -41,18 +41,34 @@ export function useNotifier(): Notify {
 	return notify;
 }
 
-const MAX_BANNER_ITEMS = 3;
-
 export interface BannerItem extends Notification {
 	id: number;
+	/** How many identical notifications in a row this entry stands for (absent = 1). */
+	count?: number;
 }
 
+function sameNotification(a: Notification, b: Notification): boolean {
+	return a.kind === b.kind && a.message === b.message && a.status === b.status && a.action === b.action;
+}
+
+/**
+ * Items are kept in arrival order. An identical notification right after the previous one folds into it (`count`)
+ * instead of adding a line, and gets a new id so a success restarts its auto-dismiss. Nothing is dropped here: how
+ * many are SHOWN is the banner's job (it collapses the older ones behind a "+N more" control), so an error never
+ * disappears unread.
+ */
 export function useBannerNotifier(): { items: BannerItem[]; notify: Notify; dismiss: (id: number) => void } {
 	const [items, setItems] = useState<BannerItem[]>([]);
 	const nextId = useRef(1);
 	const notify = useCallback<Notify>(notification => {
 		const id = nextId.current++;
-		setItems(prev => [...prev, { ...notification, id }].slice(-MAX_BANNER_ITEMS));
+		setItems(prev => {
+			const last = prev[prev.length - 1];
+			if (last && sameNotification(last, notification)) {
+				return [...prev.slice(0, -1), { ...last, id, count: (last.count ?? 1) + 1 }];
+			}
+			return [...prev, { ...notification, id }];
+		});
 	}, []);
 	const dismiss = useCallback((id: number) => {
 		setItems(prev => prev.filter(item => item.id !== id));
