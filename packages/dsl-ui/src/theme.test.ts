@@ -100,3 +100,36 @@ describe('theme.css', () => {
 		}
 	});
 });
+
+// The ink of a solid accent fill (Badge, Button, Avatar, selected options). Hard-coded `text-white` was
+// 1.74:1 on the dark success green, 2.77:1 on the dark danger red and 2.54:1 on the dark primary blue,
+// because the dark accents are the LIGHT 300/400 shades. The token lets each theme pick the readable ink.
+function luminance(hex: string): number {
+	const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(v => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+	return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+}
+
+function contrast(a: string, b: string): number {
+	const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+	return (hi! + 0.05) / (lo! + 0.05);
+}
+
+function tokenValue(body: string, token: string): string {
+	const match = new RegExp(`${token}\\s*:\\s*(#[0-9a-fA-F]{6})\\s*;`).exec(body);
+	if (!match) {
+		throw new Error(`${token} is not a 6-digit hex in the rule body`);
+	}
+	return match[1]!;
+}
+
+describe('theme.css solid-fill ink', () => {
+	it('declares --color-on-solid in both themes', () => {
+		expect(tokensIn(lightBody)).toContain('--color-on-solid');
+		expect(tokensIn(darkBody)).toContain('--color-on-solid');
+	});
+
+	it.each(['--color-primary', '--color-success', '--color-danger'])('keeps dark --color-on-solid readable (4.5:1) on %s', accent => {
+		const ratio = contrast(tokenValue(darkBody, '--color-on-solid'), tokenValue(darkBody, accent));
+		expect(ratio).toBeGreaterThanOrEqual(4.5);
+	});
+});

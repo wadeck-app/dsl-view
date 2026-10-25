@@ -55,7 +55,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 					<button
 						type="button"
 						onClick={() => window.location.reload()}
-						className="cursor-pointer rounded bg-danger px-3.5 py-1.5 text-sm text-white"
+						className="cursor-pointer rounded bg-danger px-3.5 py-1.5 text-sm text-on-solid"
 					>
 						Reload
 					</button>

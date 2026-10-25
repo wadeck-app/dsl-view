@@ -121,7 +121,7 @@ describe('Badge href', () => {
 		);
 		const link = screen.getByRole('link', { name: 'Relay connected' });
 		expect(link).toHaveAttribute('href', '/modules/queue/webhooks');
-		expect(link).toHaveClass('inline-flex', 'rounded-full', 'bg-success', 'text-white', 'px-2');
+		expect(link).toHaveClass('inline-flex', 'rounded-full', 'bg-success', 'text-on-solid', 'px-2');
 		expect(link.className).toContain('hover:opacity-80');
 		expect(link.className).toContain('focus-visible:ring-2');
 	});

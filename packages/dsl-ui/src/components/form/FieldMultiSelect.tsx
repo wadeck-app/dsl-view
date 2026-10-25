@@ -221,7 +221,7 @@ export function FieldMultiSelect({
 										className={[
 											'w-4 h-4 flex-shrink-0 rounded border flex items-center justify-center text-xs',
 											isSelected
-												? 'bg-primary border-primary text-white'
+												? 'bg-primary border-primary text-on-solid'
 												: 'border-border',
 										].join(' ')}
 									>

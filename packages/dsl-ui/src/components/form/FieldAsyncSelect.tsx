@@ -407,7 +407,7 @@ export function FieldAsyncSelect({
 											onClick={() => handleSelect(opt)}
 											className={`w-full text-left px-3 py-2 text-sm cursor-pointer ${
 												i === activeIndex
-													? 'bg-primary text-white'
+													? 'bg-primary text-on-solid'
 													: value === opt.value
 														? 'bg-muted-bg text-content font-medium'
 														: 'text-content hover:bg-muted-bg'

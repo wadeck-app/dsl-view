@@ -15,12 +15,12 @@ describe('Badge', () => {
 
     it('applies primary variant classes', () => {
         const { container } = render(<Badge label="x" variant="primary" />);
-        expect(container.firstChild).toHaveClass('bg-primary', 'text-white');
+        expect(container.firstChild).toHaveClass('bg-primary', 'text-on-solid');
     });
 
     it('applies success variant classes', () => {
         const { container } = render(<Badge label="x" variant="success" />);
-        expect(container.firstChild).toHaveClass('bg-success', 'text-white');
+        expect(container.firstChild).toHaveClass('bg-success', 'text-on-solid');
     });
 
     it('applies warning variant classes', () => {
@@ -30,7 +30,7 @@ describe('Badge', () => {
 
     it('applies danger variant classes', () => {
         const { container } = render(<Badge label="x" variant="danger" />);
-        expect(container.firstChild).toHaveClass('bg-danger', 'text-white');
+        expect(container.firstChild).toHaveClass('bg-danger', 'text-on-solid');
     });
 
     it('applies info variant classes', () => {

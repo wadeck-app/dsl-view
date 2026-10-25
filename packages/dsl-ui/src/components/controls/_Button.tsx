@@ -34,11 +34,11 @@ const VARIANT_CLASSES: Record<Variant, string> = {
 		'border border-transparent bg-[var(--color-primary-solid)] text-white hover:bg-[var(--color-primary-solid-hover)] focus-visible:ring-[var(--color-primary-solid)]',
 	secondary:
 		'border border-border bg-surface text-content hover:bg-bg-secondary focus-visible:ring-border',
-	danger: 'border border-transparent bg-danger text-white hover:bg-danger/80 focus-visible:ring-danger',
+	danger: 'border border-transparent bg-danger text-on-solid hover:bg-danger/80 focus-visible:ring-danger',
 	'danger-outline': 'border border-danger text-danger hover:bg-danger-bg focus-visible:ring-danger',
 	neutral:
 		'border border-transparent bg-muted-bg text-content hover:bg-bg-secondary focus-visible:ring-border',
-	success: 'border border-transparent bg-success text-white hover:bg-success/80 focus-visible:ring-success',
+	success: 'border border-transparent bg-success text-on-solid hover:bg-success/80 focus-visible:ring-success',
 	ghost: 'border border-transparent text-muted hover:bg-muted-bg hover:text-content focus-visible:ring-border',
 	// Deliberately excluded: `link` is text, not a box, so it drops padding and border.
 	link: 'text-primary hover:underline focus-visible:ring-primary px-0 py-0',

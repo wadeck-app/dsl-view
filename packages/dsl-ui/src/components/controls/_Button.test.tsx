@@ -149,3 +149,15 @@ describe('icon-field size', () => {
 		expect((container.firstElementChild as HTMLElement).className).toContain('h-[2.375rem]');
 	});
 });
+
+// The dark danger and success fills are light shades (#f87171, #4ade80): white ink on them is 2.77:1 and 1.74:1.
+// `text-on-solid` is the token each theme resolves to a readable ink (theme.test.ts pins the ratio).
+describe('Button ink on a solid accent fill', () => {
+	it.each(['danger', 'success'] as const)('%s uses the on-solid token, not white', variant => {
+		const { container } = render(<Button variant={variant}>Label</Button>);
+
+		const classes = (container.firstElementChild as HTMLElement).className.split(' ');
+		expect(classes).toContain('text-on-solid');
+		expect(classes).not.toContain('text-white');
+	});
+});

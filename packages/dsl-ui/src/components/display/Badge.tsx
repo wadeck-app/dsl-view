@@ -31,12 +31,12 @@ export interface BadgeProps {
 // @formatter:off
 const SOLID_CLASSES: Record<BadgeVariant, string> = {
     default:  'bg-surface border border-border text-content',
-    primary:  'bg-primary text-white',
-    success:  'bg-success text-white',
+    primary:  'bg-primary text-on-solid',
+    success:  'bg-success text-on-solid',
     // Warning has no readable solid form: white on the amber fill fails contrast, so it uses
     // its subtle pair in both tones.
     warning:  'bg-warning-bg text-warning-text border border-warning-text/20',
-    danger:   'bg-danger text-white',
+    danger:   'bg-danger text-on-solid',
     info:     'bg-info-bg text-info-text',
 };
 

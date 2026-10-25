@@ -16,7 +16,7 @@ const colors: Record<string, string> = preset.theme.extend.colors;
 
 /** Token each colour maps to, e.g. bg-secondary -> bg-secondary. */
 function mappedToken(value: string): string | null {
-	return /var\(--color-([\w-]+)\)/.exec(value)?.[1] ?? null;
+	return /var\(--color-([\w-]+)[,)]/.exec(value)?.[1] ?? null;
 }
 
 describe('tailwind-preset', () => {
@@ -78,5 +78,22 @@ describe('tailwind-preset', () => {
 		const tsx = fs.readdirSync(srcDir, { recursive: true })
 			.filter(f => String(f).endsWith('.tsx'));
 		expect(tsx.length).toBeGreaterThan(50);
+	});
+});
+
+// Tailwind's default ring offset is a literal #fff. Every `ring-offset-*` focus ring (Button, Badge link, Switch,
+// Slider, RadioGroup) drew a white 1px halo around a focused control on a dark surface. A token follows the theme;
+// in light it resolves to #ffffff, exactly what the default was.
+describe('tailwind-preset ring offset', () => {
+	it('paints the focus-ring offset with the surface token, not the literal white default', () => {
+		expect(preset.theme.extend.ringOffsetColor.DEFAULT).toBe('var(--color-surface)');
+	});
+});
+
+// An app that kept its own copy of the palette has no --color-on-solid; without a fallback `text-on-solid` would
+// resolve to nothing and inherit the page ink, unreadable on a solid badge. The fallback is the old hard-coded white.
+describe('tailwind-preset on-solid ink', () => {
+	it('falls back to white for a palette that predates --color-on-solid', () => {
+		expect(preset.theme.extend.colors['on-solid']).toBe('var(--color-on-solid, #ffffff)');
 	});
 });

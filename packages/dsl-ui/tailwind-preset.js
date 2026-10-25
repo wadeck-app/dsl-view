@@ -67,6 +67,8 @@ export default {
 				'primary-solid': 'var(--color-primary-solid)',
 				'primary-solid-hover': 'var(--color-primary-solid-hover)',
 				'primary-light': 'var(--color-primary-light)',
+				// Fallback = the white that was hard-coded before the token, for an app whose own palette copy lacks it.
+				'on-solid': 'var(--color-on-solid, #ffffff)',
 				border: 'var(--color-border)',
 				bg: 'var(--color-bg)',
 				surface: 'var(--color-surface)',
@@ -104,6 +106,9 @@ export default {
 				'hue-cyan': 'var(--color-hue-cyan-text)',
 				'hue-cyan-bg': 'var(--color-hue-cyan-bg)',
 			},
+			// Tailwind's default ring offset is a literal #fff: a focused control on a dark surface got a white
+			// halo. Surface is white in light (unchanged) and the card colour in dark.
+			ringOffsetColor: { DEFAULT: 'var(--color-surface)' },
 		},
 	},
 	safelist: [

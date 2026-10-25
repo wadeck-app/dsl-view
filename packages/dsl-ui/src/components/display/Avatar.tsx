@@ -14,7 +14,7 @@ const SIZE_CLASSES: Record<NonNullable<AvatarProps['size']>, string> = {
     lg: 'w-12 h-12 text-base',
 };
 
-const FALLBACK_CLASS = 'w-full h-full flex items-center justify-center bg-primary text-white font-medium uppercase';
+const FALLBACK_CLASS = 'w-full h-full flex items-center justify-center bg-primary text-on-solid font-medium uppercase';
 
 /**
  * @registryCategory atomic
