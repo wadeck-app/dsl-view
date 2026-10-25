@@ -322,7 +322,7 @@ describe('extractKnownKeys', () => {
 			]);
 			const readKeys = [...new Set([...output.matchAll(/node\['([^']+)'\]/g)].map((m) => m[1]!))].sort();
 			expect(readKeys).toEqual(knownKeys);
-			expect(output).toContain(`${name}Entry.knownKeys = ${JSON.stringify(knownKeys)};`);
+			expect(output).toContain(`${name}Entry.knownKeys = process.env.NODE_ENV !== 'production' ? ${JSON.stringify(knownKeys)} : [];`);
 		}
 	});
 

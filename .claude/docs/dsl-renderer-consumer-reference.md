@@ -526,7 +526,20 @@ import { findUnknownKeys } from '@wadeck-app/dsl-renderer/build/unknownKeys';
 const diagnostics = findUnknownKeys(parsedYamlDoc, manifest, { skipType: (t) => t.includes(':') });
 ```
 
-`findUnknownKeys` is the same walk `compileDslDocument` uses (a registry is also a valid manifest). `known-keys.json` is regenerated with `npm run generate-known-keys` in `packages/dsl-ui`; a test fails when it is stale.
+The manifest has keys only, no prop-value schemas (zod schemas do not survive JSON, and a JSON Schema round trip would lose refinements). To also judge literal prop values (`invalid-prop-value`, `missing-required-prop`), attach the schemas the package already exports; `DslKeysEntry` accepts a `propSchema`:
+
+```ts
+import * as schemas from '@wadeck-app/dsl-ui/src/schemas/generated-node-schemas.ts';
+
+const withSchemas = Object.fromEntries(
+  Object.entries(manifest).map(([name, entry]) => [name, { ...entry, propSchema: (schemas as Record<string, any>)[`${name}NodeSchema`] }])
+);
+findUnknownKeys(parsedYamlDoc, withSchemas, { skipType: (t) => t.includes(':') });
+```
+
+Checked against the real manifest: 89 of 91 components have a schema; the rest are checked for keys only.
+
+`findUnknownKeys` is the same walk `compileDslDocument` uses (a registry is also a valid manifest). It throws when given a generated registry loaded under `NODE_ENV=production` (production entries carry empty `knownKeys` lists): run the check with `NODE_ENV=development`, or pass the manifest. `known-keys.json` is regenerated with `npm run generate-known-keys` in `packages/dsl-ui`; a test fails when it is stale.
 
 ### Example: a page with an error
 

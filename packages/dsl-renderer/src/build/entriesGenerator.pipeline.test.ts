@@ -314,7 +314,8 @@ describe('component discovery', () => {
 describe('metadata block', () => {
 	it('emits slots, known keys and contexts per entry, and nothing for empty metadata', () => {
 		expect(out).toContain('CardEntry.allowedChildren = {"items":["layout","atomic"],"footer":["atomic"]};');
-		expect(out).toContain('CardEntry.knownKeys = ["aria-label","footer","items","title"];');
+		// Dev-only data: a production build folds the ternary to the empty list (see entriesGenerator.productionBundle.test.ts).
+		expect(out).toContain(`CardEntry.knownKeys = process.env.NODE_ENV !== 'production' ? ["aria-label","footer","items","title"] : [];`);
 		expect(out).toContain('EmptyEntry.knownKeys = [];');
 		expect(out).not.toContain('EmptyEntry.allowedChildren');
 		expect(out).not.toContain('EmptyEntry.providesContext');

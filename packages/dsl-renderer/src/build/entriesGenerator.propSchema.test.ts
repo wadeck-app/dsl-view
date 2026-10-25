@@ -102,7 +102,10 @@ describe('generated entries and node schemas', () => {
 
 		expect(out).not.toContain('nodeSchemas0');
 		expect(out).not.toContain('propSchema');
-		expect(out).not.toContain('process');
+		// The only reader of `process` left is the dev-only known-keys list, and the declaration is there because it is read.
+		const processLines = out.split('\n').filter((line) => line.includes('process'));
+		expect(processLines.length).toBeGreaterThan(1);
+		expect(processLines.every((line) => line.startsWith('declare const process') || /^\w+Entry\.knownKeys = process\.env\.NODE_ENV !== 'production' \?/.test(line))).toBe(true);
 		expect(out).not.toContain('pickPropSchema');
 		expect(out).not.toContain('isDevelopment');
 	});

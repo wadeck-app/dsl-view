@@ -1107,7 +1107,14 @@ ${usesProcessEnv ? PROCESS_ENV_DECLARATION : ''}`;
 				lines.push(`${entryVar}.itemKeys = ${JSON.stringify(c.itemKeys)};`);
 			}
 			if (c.knownKeys) {
-				lines.push(`${entryVar}.knownKeys = ${JSON.stringify(c.knownKeys)};`);
+				// Authoring-check data (unknown-key warning, compiler): the exact expression bundlers replace folds the ternary to `[]` in
+				// a production build and the key list is dropped. The array stays present because `computeRegistryFingerprint` reads
+				// whether `knownKeys` exists, and a production fingerprint must equal the one the compiler computed from the full registry.
+				lines.push(
+					c.knownKeys.length > 0
+						? `${entryVar}.knownKeys = process.env.NODE_ENV !== 'production' ? ${JSON.stringify(c.knownKeys)} : [];`
+						: `${entryVar}.knownKeys = [];`
+				);
 			}
 			if (c.providesContext.length > 0) {
 				lines.push(`${entryVar}.providesContext = ${JSON.stringify(c.providesContext)};`);
@@ -1138,7 +1145,7 @@ ${metadataLines}
 
 	const generated = moduleLevelText + entriesBody;
 	const coerceHelpers = ['coerceDate', 'coerceProp', 'coerceStringList', 'resolveExpressionsDeep'].filter(helper => generated.includes(`${helper}(`));
-	return buildHeader(coerceHelpers, generated.includes('process.env.NODE_ENV')) + moduleLevelText + '\n' + entriesBody + tail;
+	return buildHeader(coerceHelpers, (generated + tail).includes('process.env.NODE_ENV')) + moduleLevelText + '\n' + entriesBody + tail;
 }
 
 // ─── Vite plugin ──────────────────────────────────────────────────────────────

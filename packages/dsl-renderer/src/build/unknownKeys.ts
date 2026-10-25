@@ -281,6 +281,24 @@ function findUnknownActionKeys($actions: unknown, diagnostics: CompiledDslDiagno
 	}
 }
 
+// Generated entries drop their key lists in a production build (`knownKeys = []`, see entriesGenerator). Walking such a
+// registry would report every authored key as unknown, or, worse, none: refuse, and say how to get the real lists.
+// Heuristic on purpose (the entries can be bundled, so no identity marker survives): production AND at least two entries
+// with a key list AND all of them empty. A shipped JSON manifest carries real lists, so it never matches.
+function assertKeysNotStripped(manifest: DslKeysManifest): void {
+	if (typeof process === 'undefined' || process.env['NODE_ENV'] !== 'production') {
+		return;
+	}
+	const lists = Object.values(manifest).flatMap((entry) => (entry.knownKeys === undefined ? [] : [entry.knownKeys]));
+	if (lists.length >= 2 && lists.every((list) => list.length === 0)) {
+		throw new Error(
+			'[findUnknownKeys] The component registry was loaded with NODE_ENV=production, which strips the known-keys lists ' +
+				'from generated entries, so no authored key can be checked. Run the check with NODE_ENV=development, ' +
+				'or pass the known-keys.json manifest instead of the registry.'
+		);
+	}
+}
+
 /**
  * Static check of one parsed DSL page against a manifest (a registry or the shipped known-keys JSON).
  * Page-level keys ($sources, $actions, $route, $vars, $brains, $nav*) are stripped first, like the runtime does.
@@ -293,6 +311,7 @@ export function findUnknownKeys(
 	manifest: DslKeysManifest,
 	options?: { skipType?: (type: string) => boolean }
 ): CompiledDslDiagnostic[] {
+	assertKeysNotStripped(manifest);
 	const diagnostics: CompiledDslDiagnostic[] = [];
 	if (!doc || typeof doc !== 'object' || Array.isArray(doc)) {
 		diagnostics.push({
