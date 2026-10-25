@@ -16,6 +16,18 @@ export function fillClasses(fill: unknown): string {
 	return fill === true ? FILL_CLASSES : '';
 }
 
+// The wrapper `HorizontalStack` puts around an item that has a size (`itemSizes`). A wrapper is a flex child of a row:
+// - `self-stretch` takes the full height of the row whatever its `align` (the unwrapped children keep theirs);
+// - `flex flex-col min-h-0` makes it a column, so a `fill` child (`flex-1`) grows inside it instead of keeping its
+//   content height.
+// Static for the same reason as FILL_CLASSES.
+export const FILL_ITEM_CLASSES = 'self-stretch flex flex-col min-h-0';
+
+/** `FILL_ITEM_CLASSES` when the row fills (`fill` is exactly `true`), otherwise nothing. */
+export function fillItemClasses(fill: unknown): string {
+	return fill === true ? FILL_ITEM_CLASSES : '';
+}
+
 /** Joins class names, dropping empty ones. */
 export function joinClasses(...parts: Array<string | false | undefined>): string {
 	return parts.filter(Boolean).join(' ');

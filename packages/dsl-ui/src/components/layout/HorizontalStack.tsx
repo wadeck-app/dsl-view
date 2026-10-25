@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { fillClasses, joinClasses } from '@dsl-ui/utils/fillClasses.js';
+import { fillClasses, fillItemClasses, joinClasses } from '@dsl-ui/utils/fillClasses.js';
 import { warnUnknownChoice } from '@dsl-ui/utils/warnUnknownChoice.js';
 
 type TailwindGap = 'gap-0' | 'gap-0.5' | 'gap-1' | 'gap-1.5' | 'gap-2' | 'gap-2.5' | 'gap-3' | 'gap-4' | 'gap-5' | 'gap-6' | 'gap-7' | 'gap-8' | 'gap-9' | 'gap-10' | 'gap-12' | 'gap-16';
@@ -33,8 +33,9 @@ export interface HorizontalStackProps {
 	justify?: TailwindJustify;
 	/**
 	 * Takes the height its parent gives it (a dashboard tile) instead of the height of its content. Children that
-	 * should follow set `fill` themselves, or `align: items-stretch` to stretch every child. The parent needs a
-	 * definite height.
+	 * should follow set `fill` themselves, or `align: items-stretch` to stretch every child. The wrapper of an item
+	 * that has a size (`itemSizes`) always stretches to the row and hosts its child as a column, so a `fill` child
+	 * grows there whatever `align` is. The parent needs a definite height.
 	 * @default false
 	 */
 	fill?: boolean;
@@ -68,7 +69,7 @@ export function HorizontalStack({ gap = 'gap-3', align = 'items-center', justify
 		<div className={containerClass}>
 			{items.map((child, i) => {
 				const size = itemSizes[i];
-				return size ? <div key={i} className={ITEM_SIZE_CLASSES[size]}>{child}</div> : child;
+				return size ? <div key={i} className={joinClasses(ITEM_SIZE_CLASSES[size], fillItemClasses(fill)) || undefined}>{child}</div> : child;
 			})}
 		</div>
 	);

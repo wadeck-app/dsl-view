@@ -62,6 +62,37 @@ describe('HorizontalStack fill', () => {
 		const { container } = render(<HorizontalStack><p>x</p></HorizontalStack>);
 		expect(container.firstElementChild?.className).toBe('flex gap-3 items-center');
 	});
+
+	describe('sized items (itemSizes) of a filling row', () => {
+		it('stretch to the row and become a column, whatever the row alignment, so a filling child grows inside', () => {
+			const { container } = render(<HorizontalStack fill itemSizes={['fixed', 'flex', undefined]}><p>a</p><p>b</p><p>c</p></HorizontalStack>);
+			const [fixed, flex, plain] = Array.from(container.firstElementChild?.children ?? []);
+			expect(fixed).toHaveClass('self-stretch', 'flex', 'flex-col', 'min-h-0');
+			expect(flex).toHaveClass('self-stretch', 'flex', 'flex-col', 'min-h-0');
+			// The wrapper keeps its width behaviour.
+			expect(fixed).toHaveClass('w-80', 'shrink-0');
+			expect(flex).toHaveClass('flex-1', 'min-w-0');
+			// A child with no itemSizes entry is still not wrapped and is not touched.
+			expect(plain.tagName).toBe('P');
+			expect(plain).toHaveTextContent('c');
+			// The row keeps the alignment it was given for the unwrapped children.
+			expect(container.firstElementChild).toHaveClass('items-center');
+		});
+
+		it('keep exactly their width classes when the row does not fill', () => {
+			const { container } = render(<HorizontalStack itemSizes={['fixed', 'flex']}><p>a</p><p>b</p></HorizontalStack>);
+			const [fixed, flex] = Array.from(container.firstElementChild?.children ?? []);
+			expect(fixed.className).toBe('w-80 shrink-0');
+			expect(flex.className).toBe('flex-1 min-w-0');
+		});
+
+		it('are not affected by a fill value that is not the boolean true', () => {
+			const { container } = render(
+				<HorizontalStack fill={'yes' as unknown as boolean} itemSizes={['fixed']}><p>a</p></HorizontalStack>,
+			);
+			expect(container.firstElementChild?.firstElementChild?.className).toBe('w-80 shrink-0');
+		});
+	});
 });
 
 describe('Card fill', () => {

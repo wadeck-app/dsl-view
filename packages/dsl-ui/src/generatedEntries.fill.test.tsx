@@ -97,6 +97,38 @@ describe('fill through the generated registry', () => {
 		expect(chartCard.querySelector('.recharts-responsive-container')).not.toBeNull();
 	});
 
+	it('a row with itemSizes keeps the chain: each sized wrapper stretches and hosts its filling child as a direct child', async () => {
+		const { container } = render(
+			<MemoryRouter>
+				<DslRenderer
+					registry={registry}
+					node={{
+						$type: 'HorizontalStack',
+						fill: true,
+						itemSizes: ['fixed', 'flex'],
+						items: [
+							{ $type: 'Card', fill: true, items: [{ $type: 'StatTile', label: 'Last hour', value: '18' }] },
+							{ $type: 'Card', fill: true, items: [{ $type: 'StatTile', label: 'Total', value: '210' }] },
+						],
+					}}
+				/>
+			</MemoryRouter>,
+		);
+		const row = container.firstElementChild as HTMLElement;
+		FILL.forEach(name => expect(row).toHaveClass(name));
+		// The row keeps its default alignment: the wrappers stretch by themselves.
+		expect(row).toHaveClass('items-center');
+		const [fixed, flex] = Array.from(row.children) as HTMLElement[];
+		expect(fixed).toHaveClass('w-80', 'shrink-0', 'self-stretch', 'flex', 'flex-col', 'min-h-0');
+		expect(flex).toHaveClass('flex-1', 'min-w-0', 'self-stretch', 'flex', 'flex-col', 'min-h-0');
+		for (const wrapper of [fixed, flex]) {
+			expect(wrapper.children).toHaveLength(1);
+			FILL.forEach(name => expect(wrapper.firstElementChild).toHaveClass(name));
+		}
+		expect(fixed).toHaveTextContent('Last hour');
+		expect(flex).toHaveTextContent('Total');
+	});
+
 	it('the figure of a YAML-authored nowrap tile keeps its unit on one line', async () => {
 		const { container } = render(
 			<MemoryRouter>

@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 import React from 'react';
 import { Chart } from '../display/Chart.js';
 import { Card } from './Card.js';
+import { HorizontalStack } from './HorizontalStack.js';
 import { ScrollArea } from './ScrollArea.js';
 import { StatTile } from './StatTile.js';
 import { VerticalStack } from './VerticalStack.js';
@@ -36,6 +37,23 @@ export const CardWithChartFillsTheTile: Story = {
 					<Chart fill data={data} xAxisKey="hour" xAxisType="category" yFormat="number" series={series} />
 				</VerticalStack>
 			</Card>
+		</Tile>
+	),
+};
+
+// A row with sized items (itemSizes) inside the tile, default alignment (items-center): each sized wrapper stretches to
+// the row by itself, so the filling cards and the chart take the whole height.
+export const RowWithSizedItemsFillsTheTile: Story = {
+	render: () => (
+		<Tile width={420} height={250}>
+			<HorizontalStack fill gap="gap-2" itemSizes={['fixed', 'flex']}>
+				<Card fill>
+					<StatTile label="Last hour" value="18" compact />
+				</Card>
+				<Card fill>
+					<Chart fill data={data} xAxisKey="hour" xAxisType="category" yFormat="number" series={series} />
+				</Card>
+			</HorizontalStack>
 		</Tile>
 	),
 };
