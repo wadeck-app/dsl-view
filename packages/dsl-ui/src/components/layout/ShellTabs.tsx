@@ -1,8 +1,14 @@
 import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { initialsOf } from '../display/initials.js';
 import type { ShellItem, ShellLinkProps } from './AppShell.js';
 
 // The tab is as tall as the top bar (self-stretch), so the current highlight fills it from top to bottom.
-const TAB = 'flex shrink-0 items-center gap-1.5 self-stretch whitespace-nowrap px-4 text-sm transition-colors';
+const TAB_BASE = 'flex shrink-0 items-center gap-1.5 self-stretch whitespace-nowrap transition-colors';
+// By density of the bar: normal, small (barOnScroll 'shrink', once scrolled), icons (barOnScroll 'icons', once scrolled).
+const TAB_SIZE: Record<TabDensity, string> = { normal: 'px-4 text-sm', small: 'px-2 text-xs', icons: 'px-3 text-sm' };
+
+/** How much of a tab is drawn: all of it, a smaller version, or the icon only (the name stays for assistive technology). */
+export type TabDensity = 'normal' | 'small' | 'icons';
 const TAB_CURRENT = 'font-semibold text-content';
 const TAB_OTHER = 'font-medium text-muted hover:bg-muted-bg hover:text-content';
 // Highlight color of a current tab without its own accent: the theme accent.
@@ -67,13 +73,15 @@ export interface ShellTabsProps {
 	 * host's (language), so without it no control is rendered and the cut-off tabs stay reachable by scrolling only.
 	 */
 	moreLabel?: string;
+	/** Default `normal`. */
+	density?: TabDensity;
 }
 
 /**
  * The top bar's tabs. They scroll instead of wrapping; the current tab is brought into view, and with `moreLabel` a
  * disclosure lists the tabs that are cut off.
  */
-export function ShellTabs({ tabs, tabsLabel, renderLink, moreLabel }: ShellTabsProps): React.ReactElement {
+export function ShellTabs({ tabs, tabsLabel, renderLink, moreLabel, density = 'normal' }: ShellTabsProps): React.ReactElement {
 	const navRef = useRef<HTMLElement>(null);
 	const moreRef = useRef<HTMLDivElement>(null);
 	const buttonRef = useRef<HTMLButtonElement>(null);
@@ -176,15 +184,27 @@ export function ShellTabs({ tabs, tabsLabel, renderLink, moreLabel }: ShellTabsP
 					<React.Fragment key={tab.id}>
 						{renderLink({
 							href: tab.href,
-							className: `${TAB} ${tab.current ? TAB_CURRENT : TAB_OTHER}`,
+							className: `${TAB_BASE} ${TAB_SIZE[density]} ${tab.current ? TAB_CURRENT : TAB_OTHER}`,
 							style: tab.current ? currentTabStyle(tab.accent ?? THEME_ACCENT) : undefined,
 							'aria-current': tab.current,
-							children: (
-								<>
-									{tab.icon}
-									{tab.label}
-								</>
-							),
+							// Icons only: the tooltip says what the icon is, and the name stays in the DOM for assistive technology.
+							title: density === 'icons' ? tab.label : undefined,
+							children:
+								density === 'icons' ? (
+									<>
+										{tab.icon ?? (
+											<span aria-hidden="true" className="text-xs font-semibold">
+												{initialsOf(tab.label)}
+											</span>
+										)}
+										<span className="sr-only">{tab.label}</span>
+									</>
+								) : (
+									<>
+										{tab.icon}
+										{tab.label}
+									</>
+								),
 						})}
 					</React.Fragment>
 				))}

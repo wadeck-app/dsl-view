@@ -149,3 +149,25 @@ export const LongPageTallMenu: Story = {
 		</AppShell>
 	),
 };
+
+function LongPage({ barOnScroll }: { barOnScroll: 'steady' | 'shrink' | 'hide' | 'icons' }) {
+	return (
+		<AppShell brand="my-app" tabs={tabs('queue')} tabsLabel="Modules" menu={TALL_MENU} barOnScroll={barOnScroll} actions={<span className="text-sm text-muted">actions</span>}>
+			<div className="p-6 text-content">
+				<h1 className="text-xl font-semibold">barOnScroll = {barOnScroll}</h1>
+				{Array.from({ length: 60 }, (_, i) => (
+					<p key={i} className="mt-4 text-muted">
+						Paragraph {i + 1}. Scroll down, then up. Hover or Tab into the bar to expand it.
+					</p>
+				))}
+			</div>
+		</AppShell>
+	);
+}
+
+/** After the first scroll the bar is 1.5rem with smaller text; full again at the top, on hover and on focus. */
+export const BarShrink: Story = { render: () => <LongPage barOnScroll="shrink" /> };
+/** The bar slides away when scrolling down and returns after scrolling up a little; the menu then sticks to the top. */
+export const BarHide: Story = { render: () => <LongPage barOnScroll="hide" /> };
+/** After the first scroll the bar is a 2rem strip of icons (tooltips carry the names). */
+export const BarIcons: Story = { render: () => <LongPage barOnScroll="icons" /> };
