@@ -98,3 +98,29 @@ describe('usesTwelveHourClock', () => {
 		expect(usesTwelveHourClock(make({ locale: 'en-US', preset: 'iso', hourCycle: '12h' }))).toBe(false);
 	});
 });
+
+describe('DateFormatProvider when only the weekday names setting changes', () => {
+	function Weekdays() {
+		return <span data-testid="w">{useDateFormat().weekdays().join(',')}</span>;
+	}
+	const shown = () => screen.getByTestId('w').textContent;
+
+	it.each([
+		['short to long', 'short', 'long', 'Mon,Tue,Wed,Thu,Fri,Sat,Sun', 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday'],
+		['long to short', 'long', 'short', 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday', 'Mon,Tue,Wed,Thu,Fri,Sat,Sun'],
+	] as const)('hands out the new default weekday names, %s', (_name, from, to, before, after) => {
+		const settings = { locale: 'en-GB', weekStart: 'monday' } as const;
+		const view = render(
+			<DateFormatProvider formatter={make({ ...settings, weekdayStyle: from })}>
+				<Weekdays />
+			</DateFormatProvider>,
+		);
+		expect(shown()).toBe(before);
+		view.rerender(
+			<DateFormatProvider formatter={make({ ...settings, weekdayStyle: to })}>
+				<Weekdays />
+			</DateFormatProvider>,
+		);
+		expect(shown()).toBe(after);
+	});
+});

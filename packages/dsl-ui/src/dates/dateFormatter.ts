@@ -93,10 +93,12 @@ export function createDateFormatter(settings: DateSettings): DateFormatter {
 	const timeZone = resolveTimeZone(settings.timeZone);
 	const firstDayOfWeek = resolveFirstDay(settings.weekStart, locale);
 	const iso = settings.preset === 'iso';
-	const key = JSON.stringify([locale, timeZone, firstDayOfWeek, settings.preset, settings.hourCycle]);
+	// Read once: the closures below must not follow a later mutation of the caller's object, and the key must cover every field they use.
+	const { hourCycle, weekdayStyle } = settings;
+	const key = JSON.stringify([locale, timeZone, firstDayOfWeek, settings.preset, hourCycle, weekdayStyle]);
 
 	// The 12h/24h choice only exists for the language conventions; "iso" is a 24h clock.
-	const hourOptions: Intl.DateTimeFormatOptions = iso || settings.hourCycle === '24h' ? { hourCycle: 'h23' } : settings.hourCycle === '12h' ? { hourCycle: 'h12' } : {};
+	const hourOptions: Intl.DateTimeFormatOptions = iso || hourCycle === '24h' ? { hourCycle: 'h23' } : hourCycle === '12h' ? { hourCycle: 'h12' } : {};
 
 	const cache = new Map<string, Intl.DateTimeFormat>();
 	const intl = (options: Intl.DateTimeFormatOptions, forLocale: string = locale): Intl.DateTimeFormat => {
@@ -189,7 +191,7 @@ export function createDateFormatter(settings: DateSettings): DateFormatter {
 		return rtf.format(Math.round(seconds / (365 * 86400)), 'year');
 	};
 
-	const weekdays = (style: NameStyle = settings.weekdayStyle): string[] => {
+	const weekdays = (style: NameStyle = weekdayStyle): string[] => {
 		const names = Array.from({ length: 7 }, (_, day) => intl({ weekday: style, timeZone: 'UTC' }).format(new Date(REFERENCE_SUNDAY + day * DAY_MS)));
 		return Array.from({ length: 7 }, (_, i) => names[(firstDayOfWeek + i) % 7] as string);
 	};

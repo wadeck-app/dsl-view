@@ -140,3 +140,78 @@ describe('createDateFormatter: resolved values', () => {
 		expect(createDateFormatter({ ...DEFAULT_DATE_SETTINGS }).key).toBe(createDateFormatter({ ...DEFAULT_DATE_SETTINGS }).key);
 	});
 });
+
+// Everything a formatter can print, for a fixed instant. Two formatters whose probes differ MUST have different keys: a
+// DateFormatProvider keeps the old formatter as long as the key is unchanged.
+function probe(f: ReturnType<typeof formatter>): string {
+	return JSON.stringify([
+		f.format(INSTANT, 'short'),
+		f.format(INSTANT, 'medium'),
+		f.format(INSTANT, 'long'),
+		f.exact(INSTANT),
+		f.relative(INSTANT - 3 * 3600 * 1000, INSTANT),
+		f.weekdays(),
+		f.months(),
+		f.intl({ hour: 'numeric', minute: '2-digit' }).format(INSTANT),
+		f.firstDayOfWeek,
+	]);
+}
+
+describe('createDateFormatter: the key covers every setting that changes the output', () => {
+	const base: DateSettings = { ...DEFAULT_DATE_SETTINGS, locale: 'en-GB', timeZone: 'UTC', weekStart: 'monday', weekdayStyle: 'short' };
+	// One pair per DateSettings field: only that field differs, and it changes what the formatter prints.
+	const changing: Record<keyof DateSettings, Partial<DateSettings>> = {
+		locale: { locale: 'fr-FR' },
+		timeZone: { timeZone: 'Asia/Tokyo' },
+		weekStart: { weekStart: 'sunday' },
+		preset: { preset: 'iso' },
+		hourCycle: { hourCycle: '12h' },
+		weekdayStyle: { weekdayStyle: 'long' },
+	};
+
+	it('lists every field of DateSettings (a new field must be added here, and to the key if it changes the output)', () => {
+		expect(Object.keys(changing).sort()).toStrictEqual(Object.keys(DEFAULT_DATE_SETTINGS).sort());
+	});
+
+	it.each(Object.entries(changing))('%s: the output changes, so the key changes', (_field, change) => {
+		const a = createDateFormatter(base);
+		const b = createDateFormatter({ ...base, ...change });
+		expect(probe(b)).not.toBe(probe(a));
+		expect(b.key).not.toBe(a.key);
+	});
+
+	it.each([
+		['short to long', 'short', 'long'],
+		['long to short', 'long', 'short'],
+		['narrow to short', 'narrow', 'short'],
+	] as const)('weekdayStyle %s: the default of weekdays() follows, in both directions', (_name, from, to) => {
+		const a = createDateFormatter({ ...base, weekdayStyle: from });
+		const b = createDateFormatter({ ...base, weekdayStyle: to });
+		expect(a.weekdays()).toStrictEqual(a.weekdays(from));
+		expect(b.weekdays()).toStrictEqual(b.weekdays(to));
+		expect(a.weekdays()).not.toStrictEqual(b.weekdays());
+		expect(a.key).not.toBe(b.key);
+	});
+
+	it('does not read the settings object after creation (a later mutation changes neither output nor key)', () => {
+		const settings = { ...base };
+		const f = createDateFormatter(settings);
+		const before = [f.weekdays(), f.key];
+		settings.weekdayStyle = 'long';
+		expect([f.weekdays(), f.key]).toStrictEqual(before);
+	});
+
+	it('keeps the key when the settings differ but resolve to the same values', () => {
+		const same = (a: Partial<DateSettings>, b: Partial<DateSettings>): void => {
+			const fa = createDateFormatter({ ...base, ...a });
+			const fb = createDateFormatter({ ...base, ...b });
+			expect(probe(fb)).toBe(probe(fa));
+			expect(fb.key).toBe(fa.key);
+		};
+		// en-GB weeks start on Monday
+		same({ weekStart: 'auto' }, { weekStart: 'monday' });
+		same({ timeZone: 'local' }, { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
+		vi.stubGlobal('navigator', { languages: ['en-GB'], language: 'en-GB' });
+		same({ locale: 'auto' }, { locale: 'en-GB' });
+	});
+});
