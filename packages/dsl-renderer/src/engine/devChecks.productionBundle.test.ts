@@ -19,13 +19,17 @@ const MARKERS: Record<string, string> = {
 	'unknown key check (warnUnknownKeys)': "A container's children must be a list of nodes",
 	'missing $ctx. prefix check (warnCtxPrefix)': 'which does not exist, so it resolves to undefined',
 	'unknown directive alert (DslRenderer)': 'unknown DSL directive:',
+	'shouldNotifyLoadFailure: callback not a function': 'prop must be a function (failure)',
+	'shouldNotifyLoadFailure: callback threw': 'callback threw while deciding',
+	'shouldNotifyLoadFailure: callback not boolean': 'callback must return a boolean',
+	'shouldNotifyLoadFailure: suppressed failure named': 'was not announced',
 };
 
 async function bundleOf(nodeEnv: 'production' | 'development'): Promise<string> {
 	const result = await build({
 		stdin: {
-			contents: `import { DslRenderer, renderChildren, resolveExpressionValue } from ${JSON.stringify(rendererIndex)};
-console.log(DslRenderer, renderChildren, resolveExpressionValue);`,
+			contents: `import { DslRenderer, GenericPageRunner, renderChildren, resolveExpressionValue } from ${JSON.stringify(rendererIndex)};
+console.log(DslRenderer, GenericPageRunner, renderChildren, resolveExpressionValue);`,
 			resolveDir: here,
 			sourcefile: 'consumer-main.ts',
 			loader: 'ts',

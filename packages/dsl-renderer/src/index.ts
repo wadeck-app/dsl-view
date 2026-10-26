@@ -13,6 +13,7 @@ export { NotifierProvider, useNotifier } from './notifier.js';
 export type { Notification, Notify, NotifierProviderProps } from './notifier.js';
 export type { GenericPageRunnerProps } from './GenericPageRunner.js';
 export type { ActionErrorInfo, ActionSpec, Fetcher } from './pageRunner/pageRunnerUtils.js';
+export type { LoadFailure, LoadFailureTrigger, ShouldNotifyLoadFailure, SourceError } from './pageRunner/loadFailureNotice.js';
 export { computeRegistryFingerprint } from './registryHash.js';
 export { COMPILED_DSL_FORMAT_VERSION } from './compiledDslArtifact.js';
 export type { CompiledDslArtifact, CompiledDslDiagnostic } from './compiledDslArtifact.js';

@@ -1,5 +1,5 @@
 import { load as parseYaml } from 'js-yaml';
-import React, { useContext, useEffect, useMemo } from 'react';
+import React, { useContext, useEffect, useMemo, useRef } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 
 import type { CompiledDslArtifact } from './compiledDslArtifact.js';
@@ -13,7 +13,8 @@ import type { BrainRegistry } from './pageRunner/brainsTypes.js';
 import { useActionHandlers } from './pageRunner/useActionHandlers.js';
 import { useBrains } from './pageRunner/useBrains.js';
 import { useOutputs } from './pageRunner/useOutputs.js';
-import { notifyLoadFailure } from './pageRunner/pageRunnerUtils.js';
+import { reportLoadFailure } from './pageRunner/loadFailureNotice.js';
+import type { ShouldNotifyLoadFailure } from './pageRunner/loadFailureNotice.js';
 import type { ActionErrorInfo, Fetcher, PageSpec } from './pageRunner/pageRunnerUtils.js';
 import { computeRegistryFingerprint } from './registryHash.js';
 import { useSourceLoader } from './pageRunner/useSourceLoader.js';
@@ -40,6 +41,21 @@ export interface GenericPageRunnerProps {
 	 * user (e.g. a toast). Independent of the notifier: it is called in addition to it.
 	 */
 	onActionError?: (error: Error, info: ActionErrorInfo) => void;
+	/**
+	 * Decides whether a failed `$sources` load raises the "Could not load the data: ..." notification. Return `false`
+	 * when the page already tells the user (its own alert for that source); default (prop absent) and `true`: notify.
+	 *
+	 * Asked once per failure that would be notified (a poll that keeps failing with the same message is asked once;
+	 * `$refresh` always). Covers the first load, poll ticks, URL-param refetches and `$refresh` / `RefreshButton`; it is
+	 * NOT asked for reloads started by an action (`reloadSources`) or a brain (`$reload`), whose failure is reported as
+	 * that action's or brain's failure.
+	 *
+	 * Never hides a failure from the page: whatever you return, `$ctx.$sourceErrors.<source>` holds
+	 * `{ message, status? }` until that source loads again, and development logs once per source that the
+	 * notification was skipped. A callback that throws, returns a non-boolean or is not a function is reported
+	 * (development) and the failure is notified.
+	 */
+	shouldNotifyLoadFailure?: ShouldNotifyLoadFailure;
 	/**
 	 * Backstop fallback for a hand-authored `ComponentRegistryEntry` using bare `React.lazy`
 	 * with no `Suspense` ancestor of its own. Generated `@registryLazy` entries never reach
@@ -95,6 +111,7 @@ function PageRunner({
 	fetcher,
 	brainRegistry,
 	onActionError,
+	shouldNotifyLoadFailure,
 	suspenseFallback,
 }: GenericPageRunnerProps) {
 	const doc = useMemo(() => {
@@ -146,14 +163,18 @@ function PageRunner({
 	const { vars, setVar, seedFrom } = useVars(varsDecl as Record<string, unknown> | undefined);
 	const { outputs, publishOutput } = useOutputs();
 
-	const { sourceData, loading, initialLoading, isRefreshing, loadSources, mountedRef, invalidateSourceCache } = useSourceLoader({
+	// Sources already named in the development message about a failure the host chose not to announce.
+	const namedSuppressedSources = useRef(new Set<string>());
+
+	const { sourceData, sourceErrors, sourceOfFailure, loading, initialLoading, isRefreshing, loadSources, mountedRef, invalidateSourceCache } = useSourceLoader({
 		$sources,
 		searchParams,
 		routeParams,
 		getToken,
 		fetcher,
 		// A failed load leaves the sources undefined, which a table would otherwise present as "empty": say it failed.
-		onLoadError: error => notifyLoadFailure(notify, error),
+		onLoadError: (error, { source, trigger }) =>
+			reportLoadFailure({ notify, error, source, trigger, shouldNotify: shouldNotifyLoadFailure, namedSources: namedSuppressedSources.current }),
 	});
 
 	const { namedHandlers, onAction, onBatchAction, extras, actionPending, actionPendingRows } = useActionHandlers({
@@ -189,12 +210,21 @@ function PageRunner({
 			await loadSources(true, {}, source === undefined ? undefined : new Set([source]), true);
 		} catch (error) {
 			console.error('[GenericPageRunner] refresh failed:', error);
-			notifyLoadFailure(notify, error);
+			reportLoadFailure({
+				notify,
+				error,
+				source: sourceOfFailure(error) ?? source,
+				trigger: 'refresh',
+				shouldNotify: shouldNotifyLoadFailure,
+				namedSources: namedSuppressedSources.current,
+			});
 		}
 	};
 
 	const baseCtx: Record<string, unknown> = {
 		...sourceData,
+		// Sources whose latest load failed: `{ [source]: { message, status? } }`. Lets a page show its own alert when the host mutes the notification.
+		$sourceErrors: sourceErrors,
 		$refresh: refresh,
 		loading,
 		// True only until the first load finishes: components that default their `loading` from the page (@ctxDefault) read this,

@@ -354,7 +354,7 @@ export function notifySuccess(notify: Notify, actionName: string, spec: ActionSp
 }
 
 /** The numeric HTTP status the fetcher's thrown Error carries, if any. */
-function errorStatus(error: unknown): number | undefined {
+export function errorStatus(error: unknown): number | undefined {
 	const status = typeof error === 'object' && error !== null ? (error as { status?: unknown }).status : undefined;
 	return typeof status === 'number' ? status : undefined;
 }

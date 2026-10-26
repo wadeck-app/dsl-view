@@ -13,6 +13,8 @@ import {
 	topoSortSources,
 } from './pageRunnerUtils.js';
 import type { Fetcher, PageSpec, SourceSpec } from './pageRunnerUtils.js';
+import { toSourceError } from './loadFailureNotice.js';
+import type { LoadFailureTrigger, SourceError } from './loadFailureNotice.js';
 
 export function useSourceLoader(params: {
 	$sources: PageSpec['$sources'];
@@ -22,11 +24,16 @@ export function useSourceLoader(params: {
 	fetcher: Fetcher;
 	/**
 	 * Called when a load fails (initial, poll or a URL-param refetch), once per distinct message until a load
-	 * succeeds again, so a failing poll does not repeat the same notification every tick.
+	 * succeeds again, so a failing poll does not repeat the same notification every tick. `source` is the first
+	 * source whose request failed in that load, when known.
 	 */
-	onLoadError?: (error: unknown) => void;
+	onLoadError?: (error: unknown, info: { source: string | undefined; trigger: LoadFailureTrigger }) => void;
 }): {
 	sourceData: Record<string, unknown>;
+	/** Sources whose latest load failed, until a later load of that source succeeds. A failed source is also absent from `sourceData`. */
+	sourceErrors: Record<string, SourceError>;
+	/** The source whose request failed first in the load that rejected with `error`; `undefined` for any other error. */
+	sourceOfFailure: (error: unknown) => string | undefined;
 	loading: boolean;
 	/** True only until the first non-polled load has finished (success or failure): no data yet, as opposed to a refetch that keeps the previous data. */
 	initialLoading: boolean;
@@ -55,15 +62,25 @@ export function useSourceLoader(params: {
 		onLoadErrorRef.current = onLoadError;
 	}, [onLoadError]);
 	const lastReportedErrorRef = useRef<string | null>(null);
-	const reportLoadError = useCallback((err: unknown) => {
-		const message = getErrorMessage(err);
-		console.error('[useSourceLoader] load failed:', message);
-		if (lastReportedErrorRef.current === message) {
-			return;
-		}
-		lastReportedErrorRef.current = message;
-		onLoadErrorRef.current?.(err);
+	// The failing source of the most recent rejected load, kept with its error so a caller holding only the error can name it.
+	const lastFailureRef = useRef<{ error: unknown; source: string } | null>(null);
+	const sourceOfFailure = useCallback((error: unknown): string | undefined => {
+		const last = lastFailureRef.current;
+		return last !== null && last.error === error ? last.source : undefined;
 	}, []);
+	const [sourceErrors, setSourceErrors] = useState<Record<string, SourceError>>({});
+	const reportLoadError = useCallback(
+		(err: unknown, trigger: LoadFailureTrigger) => {
+			const message = getErrorMessage(err);
+			console.error('[useSourceLoader] load failed:', message);
+			if (lastReportedErrorRef.current === message) {
+				return;
+			}
+			lastReportedErrorRef.current = message;
+			onLoadErrorRef.current?.(err, { source: sourceOfFailure(err), trigger });
+		},
+		[sourceOfFailure]
+	);
 
 	const mountedRef = useRef(true);
 	useEffect(() => {
@@ -124,6 +141,8 @@ export function useSourceLoader(params: {
 			const sortedKeys = topoSortSources(specsToLoad);
 
 			const loadSeq = ++loadSeqRef.current;
+			// The first request to fail in this load (the one the rejection carries).
+			let firstFailure: { error: unknown; source: string } | null = null;
 			for (const key of Object.keys(specsToLoad)) {
 				latestLoadBySourceRef.current[key] = loadSeq;
 			}
@@ -155,7 +174,7 @@ export function useSourceLoader(params: {
 				const levels = topoLevels(sortedKeys, depsMap);
 				for (const level of levels) {
 					await Promise.all(
-						level.map(async key => {
+						level.map(key => (async () => {
 							const spec = specsToLoad[key];
 
 							let resolvedUrl = spec.url;
@@ -220,7 +239,18 @@ export function useSourceLoader(params: {
 							}
 
 							accumulated[key] = data;
-						})
+						})().catch((error: unknown) => {
+							firstFailure ??= { error, source: key };
+							// A newer load owns this source: its answer decides, a stale failure must not mark it.
+							if (mountedRef.current && latestLoadBySourceRef.current[key] === loadSeq) {
+								const failed = toSourceError(error);
+								setSourceErrors(prev => {
+									const before = prev[key];
+									return before !== undefined && before.message === failed.message && before.status === failed.status ? prev : { ...prev, [key]: failed };
+								});
+							}
+							throw error;
+						}))
 					);
 					// If the component unmounted while this level was in-flight, bail out early.
 					if (!mountedRef.current) {
@@ -250,7 +280,24 @@ export function useSourceLoader(params: {
 						return next;
 					});
 				}
+				// Sources that answered are healthy again.
+				const healthy = Object.keys(current);
+				setSourceErrors(prev => {
+					if (!healthy.some(key => key in prev)) {
+						return prev;
+					}
+					const next = { ...prev };
+					for (const key of healthy) {
+						delete next[key];
+					}
+					return next;
+				});
 				lastReportedErrorRef.current = null;
+			} catch (error) {
+				if (firstFailure !== null && (firstFailure as { error: unknown }).error === error) {
+					lastFailureRef.current = firstFailure;
+				}
+				throw error;
 			} finally {
 				if (isPolled) {
 					pendingPollsRef.current -= 1;
@@ -274,7 +321,7 @@ export function useSourceLoader(params: {
 
 	// Initial load - catch errors so the rejection is handled and loading resets to false
 	useEffect(() => {
-		void loadSources(false, {}).catch(reportLoadError);
+		void loadSources(false, {}).catch(error => reportLoadError(error, 'initial'));
 	}, [loadSources, reportLoadError]);
 
 	useEffect(() => {
@@ -321,7 +368,7 @@ export function useSourceLoader(params: {
 			// We pass an empty ctx snapshot here; for richer $ctx support during polls
 			// a ref to the live ctx could be passed instead.
 			const id = setInterval(() => {
-				void loadSources(true, {}, undefined, true).catch(reportLoadError);
+				void loadSources(true, {}, undefined, true).catch(error => reportLoadError(error, 'poll'));
 			}, intervalMs);
 			intervals.push(id);
 		}
@@ -367,7 +414,7 @@ export function useSourceLoader(params: {
 		if (urlParamDependentSources.size === 0) {
 			return;
 		}
-		void loadSources(true, {}, urlParamDependentSources).catch(reportLoadError);
+		void loadSources(true, {}, urlParamDependentSources).catch(error => reportLoadError(error, 'params'));
 	// routeParams is a new object each render from useParams - stringify to stabilize comparison
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [searchParams, JSON.stringify(routeParams), urlParamDependentSources, loadSources, reportLoadError]);
@@ -376,5 +423,5 @@ export function useSourceLoader(params: {
 		sourceManagerRef.current.invalidateSource(sourceKey);
 	}, []);
 
-	return { sourceData, loading, initialLoading: loading && !loadedOnce, isRefreshing, loadSources, mountedRef, invalidateSourceCache };
+	return { sourceData, sourceErrors, sourceOfFailure, loading, initialLoading: loading && !loadedOnce, isRefreshing, loadSources, mountedRef, invalidateSourceCache };
 }
