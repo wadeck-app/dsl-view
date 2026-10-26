@@ -1,7 +1,7 @@
 import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { classFor } from '@dsl-ui/utils/warnUnknownChoice.js';
 import { APP_SHELL_BAR_HEIGHT, APP_SHELL_BAR_HEIGHT_VAR, APP_SHELL_MENU_WIDTH_VAR } from './shellMenuWidth.js';
-import { MENU_FIXED_WIDTH, type ShellMenuVariant } from './shellMenuVariants.js';
+import { MENU_FIXED_WIDTH, MENU_ICONS_ONLY_BELOW_REM, type ShellMenuVariant } from './shellMenuVariants.js';
 import { isFixedWidthVariant, menuFitKey, MENU_VARIANTS, ShellSideMenu } from './ShellSideMenu.js';
 import { ShellTabs } from './ShellTabs.js';
 import { useBarHeight } from './useBarHeight.js';
@@ -59,11 +59,18 @@ export { MENU_VARIANT_AB_OPTIONS, type ShellMenuVariant } from './shellMenuVaria
  *   first paint, and again when the entries change, the window is resized or a web font finishes loading. Separators and
  *   their captions do not count.
  * - `resizable`: starts at 15rem; a handle on the right edge (cursor `col-resize`, visible on hover and focus, 6px hit
- *   area, pointer captured while dragging) resizes it live between 10rem and 28rem; double-click resets to 15rem. The handle
- *   is a focusable `role="separator"` (`aria-valuenow` in rem): Left/Right move 1rem, Home/End go to the limits. Name it
- *   with `resizeLabel` (opt-in, the text is the host's; without it the handle takes `menu.label` and development warns).
- *   The width is kept in localStorage `app-shell.menu-width` (a number of rem, for example `17.5`); a stored value that
- *   is not a number between 10 and 28 is ignored with a development warning.
+ *   area, pointer captured while dragging) resizes it live from 3.5rem to 60% of the window, and never so wide that less
+ *   than 20rem is left for the content (a window so small that this falls under 3.5rem gets 3.5rem). The limits follow
+ *   the window: `aria-valuemin/max/now` are the current ones, updated on resize. Under 6rem the menu shows icons only
+ *   (initials for an entry with no icon), the label as `title` on the link; between the limits a label too long for the
+ *   room is cut with an ellipsis (never wrapped, no horizontal scrollbar) and gets a `title` with the whole text, a
+ *   separator caption too. Double-click resets to 15rem (held between the limits). The handle is a focusable
+ *   `role="separator"` (`aria-valuenow` in rem): Left/Right move 1rem, Home/End go to the limits. Name it with
+ *   `resizeLabel` (opt-in, the text is the host's; without it the handle takes `menu.label` and development warns).
+ *   The width is the user's preference, kept in localStorage `app-shell.menu-width` (a positive number of rem, for example
+ *   `17.5`). A stored value outside the current limits is shown held between them WITHOUT being rewritten (shrink the
+ *   window and enlarge it again: the preference comes back); it changes only when the user drags, uses the keys or resets.
+ *   A stored value that is not a positive number is ignored with a development warning (15rem).
  * The variable follows the live value, also while dragging, with no CSS transition (content, dock and sticky bars follow
  * without lag). An entry wider than the menu is cut and its label gets a `title` with the whole text. An unknown value
  * (including the removed `compact`, `rail`, `toggle`, `drawer`, `accent`, `slim`, `cards`, `tiles`, `flyout`,
@@ -190,6 +197,8 @@ export function AppShell({ brand, tabs, tabsLabel, menu, actions, renderLink = d
 	const fitRem = useFitMenuWidth(variant === 'fit', asideRef, menuFitKey(menu));
 	const resize = useResizableMenuWidth(variant === 'resizable');
 	const menuWidth = isFixedWidthVariant(variant) ? MENU_FIXED_WIDTH[variant] : variant === 'fit' ? `${fitRem}rem` : `${resize.rem}rem`;
+	// A `resizable` menu under 6rem has no room for a label: icons (or initials) only, the label as tooltip.
+	const iconsOnly = variant === 'resizable' && resize.rem < MENU_ICONS_ONLY_BELOW_REM;
 
 	// Published for floating tools mounted outside the shell (see the doc above); removed with the last mounted shell.
 	useEffect(() => {
@@ -245,7 +254,7 @@ export function AppShell({ brand, tabs, tabsLabel, menu, actions, renderLink = d
 				{actions}
 			</header>
 			<div className="flex min-h-0 flex-1">
-				<ShellSideMenu menu={menu} renderLink={renderLink} width={menuWidth} asideRef={asideRef} resize={variant === 'resizable' ? resize : undefined} resizeLabel={resizeLabel} />
+				<ShellSideMenu menu={menu} renderLink={renderLink} width={menuWidth} asideRef={asideRef} resize={variant === 'resizable' ? resize : undefined} resizeLabel={resizeLabel} iconsOnly={iconsOnly} />
 				<main id={mainId} tabIndex={-1} className="min-w-0 flex-1 focus:outline-none">
 					{children}
 				</main>

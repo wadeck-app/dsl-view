@@ -222,8 +222,14 @@ export const MenuFluid: Story = { render: () => <MenuVariantDemo menuVariant="fl
 export const MenuFit: Story = { render: () => <MenuVariantDemo menuVariant="fit" menu={WITH_LONG_ENTRY} /> };
 /** As wide as the longest entry, here a short list: the 10rem minimum. */
 export const MenuFitShort: Story = { render: () => <MenuVariantDemo menuVariant="fit" menu={SHORT_MENU} /> };
-/** Drag the right edge, or focus the handle and use Left/Right/Home/End; double-click resets. Kept in localStorage `app-shell.menu-width`. */
-export const MenuResizable: Story = { render: () => <MenuVariantDemo menuVariant="resizable" menu={WITH_LONG_ENTRY} /> };
+// The last entry has no icon: under 6rem it gets initials.
+const RESIZABLE_MENU: ShellMenu = { ...WITH_LONG_ENTRY, items: [...WITH_LONG_ENTRY.items, { id: 'noicon', label: 'Entry without an icon', href: '#/queue/noicon' }] };
+/**
+ * Drag the right edge, or focus the handle and use Left/Right/Home/End; double-click resets. From 3.5rem (icons only
+ * under 6rem) to 60% of the window, never leaving less than 20rem for the content; long labels are cut with an ellipsis.
+ * Resize the window: the limits follow, the preference is kept in localStorage `app-shell.menu-width`.
+ */
+export const MenuResizable: Story = { render: () => <MenuVariantDemo menuVariant="resizable" menu={RESIZABLE_MENU} /> };
 
 function MenuAbDemo() {
 	// The host's way to compare the variants: one A/B test, the dock shows the one-line hint of each as a tooltip.

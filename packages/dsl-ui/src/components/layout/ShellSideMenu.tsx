@@ -1,8 +1,9 @@
 import React, { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { reportAuthoringMistake } from '@dsl-ui/utils/devDiagnostics.js';
 import type { ShellItem, ShellLinkProps, ShellMenu, ShellMenuEntry, ShellSeparator } from './AppShell.js';
-import { MENU_FIXED_WIDTH, MENU_RESIZE_MAX_REM, MENU_RESIZE_MIN_REM, MENU_RESIZE_STEP_REM, MENU_VARIANT_AB_OPTIONS, type ShellMenuVariant } from './shellMenuVariants.js';
-import { clampResizeRem, rootFontPx, type ResizableMenuWidth } from './useMenuWidth.js';
+import { initialsOf } from '../display/initials.js';
+import { MENU_FIXED_WIDTH, MENU_RESIZE_STEP_REM, MENU_VARIANT_AB_OPTIONS, type ShellMenuVariant } from './shellMenuVariants.js';
+import { rootFontPx, type ResizableMenuWidth } from './useMenuWidth.js';
 
 /** The values `menuVariant` accepts, as a lookup (for the unknown-value warning). */
 export const MENU_VARIANTS = Object.fromEntries(Object.keys(MENU_VARIANT_AB_OPTIONS).map((variant) => [variant, variant])) as Readonly<Record<ShellMenuVariant, ShellMenuVariant>>;
@@ -55,9 +56,34 @@ const TRANSITION = 'transition-colors motion-reduce:transition-none';
 const ROW_CURRENT = 'bg-primary-light font-medium text-primary';
 const ROW_OTHER = 'text-muted hover:bg-muted-bg hover:text-content';
 const ITEM = `flex items-center gap-2 rounded-md px-3 py-2 text-sm ${TRANSITION}`;
-const CAPTION = 'px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-muted';
+// `truncate`: a caption longer than the menu is cut with an ellipsis (its `title` has the whole text), never wrapped.
+const CAPTION = 'truncate px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-muted';
+// Icons only (the menu is under 6rem wide): the icon or initials centered, no side padding to eat the room.
+const ITEM_ICON_ONLY = `flex items-center justify-center rounded-md px-0 py-2 text-sm ${TRANSITION}`;
 
-function itemLink(item: ShellItem, renderLink: (props: ShellLinkProps) => React.ReactElement): React.ReactElement {
+function itemLink(item: ShellItem, renderLink: (props: ShellLinkProps) => React.ReactElement, iconsOnly: boolean): React.ReactElement {
+	if (iconsOnly) {
+		return renderLink({
+			href: item.href,
+			className: `${ITEM_ICON_ONLY} ${item.current ? ROW_CURRENT : ROW_OTHER} ${FOCUS}`,
+			'aria-current': item.current,
+			// The tooltip says what the icon is; the name stays in the DOM for assistive technology.
+			title: item.label,
+			children: (
+				<>
+					{item.icon !== undefined && item.icon !== null ? (
+						item.icon
+					) : (
+						// Initials stand in for the icon, like the top bar's icon strip.
+						<span aria-hidden="true" className="text-[0.625rem] font-semibold leading-none">
+							{initialsOf(item.label)}
+						</span>
+					)}
+					<span className="sr-only">{item.label}</span>
+				</>
+			),
+		});
+	}
 	return renderLink({
 		href: item.href,
 		className: `${ITEM} ${item.current ? ROW_CURRENT : ROW_OTHER} ${FOCUS}`,
@@ -102,7 +128,18 @@ function useTruncationTitles(navRef: RefObject<HTMLElement | null>, width: strin
 }
 
 /** The links and separators of the menu. Arrow keys, Home and End move between links; separators are never focusable. */
-export function ShellMenuNav({ menu, renderLink, width }: { menu: ShellMenu; renderLink: (props: ShellLinkProps) => React.ReactElement; width: string }): React.ReactElement {
+export function ShellMenuNav({
+	menu,
+	renderLink,
+	width,
+	iconsOnly = false,
+}: {
+	menu: ShellMenu;
+	renderLink: (props: ShellLinkProps) => React.ReactElement;
+	width: string;
+	/** Icons (or initials) only, the label as tooltip; separators are a bare rule. */
+	iconsOnly?: boolean;
+}): React.ReactElement {
 	const navRef = useRef<HTMLElement>(null);
 	const entries = normalizeMenuEntries(menu.items);
 	const currentId = entries.find((e) => !isSeparator(e) && e.current)?.id;
@@ -110,7 +147,7 @@ export function ShellMenuNav({ menu, renderLink, width }: { menu: ShellMenu; ren
 	useEffect(() => {
 		navRef.current?.querySelector('[aria-current]')?.scrollIntoView?.({ block: 'nearest' });
 	}, [currentId]);
-	useTruncationTitles(navRef, width, menuFitKey(menu));
+	useTruncationTitles(navRef, width, `${menuFitKey(menu)}${iconsOnly ? '' : ''}`);
 
 	const onKeyDown = (event: React.KeyboardEvent<HTMLElement>): void => {
 		if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key) || event.altKey || event.ctrlKey || event.metaKey) {
@@ -139,15 +176,20 @@ export function ShellMenuNav({ menu, renderLink, width }: { menu: ShellMenu; ren
 					if (entry.label === undefined) {
 						return <div key={entry.id} role="separator" className="my-1 h-px shrink-0 bg-border" />;
 					}
+					if (iconsOnly) {
+						// No room for the caption: a rule that keeps its name for assistive technology.
+						return <div key={entry.id} role="separator" aria-label={entry.label} className="my-1 h-px shrink-0 bg-border" />;
+					}
 					return (
 						<div key={entry.id} role="separator" aria-label={entry.label}>
-							<div aria-hidden="true" className={CAPTION}>
+							{/* `data-menu-label`: gets a `title` with the whole text when it is cut. */}
+							<div aria-hidden="true" data-menu-label="" className={CAPTION}>
 								{entry.label}
 							</div>
 						</div>
 					);
 				}
-				return <React.Fragment key={entry.id}>{itemLink(entry, renderLink)}</React.Fragment>;
+				return <React.Fragment key={entry.id}>{itemLink(entry, renderLink, iconsOnly)}</React.Fragment>;
 			})}
 		</nav>
 	);
@@ -161,16 +203,16 @@ export function ShellMenuNav({ menu, renderLink, width }: { menu: ShellMenu; ren
 const FRAME = 'sticky flex h-[calc(100vh-var(--app-shell-bar-height))] shrink-0 self-start flex-col supports-[height:100dvh]:h-[calc(100dvh-var(--app-shell-bar-height))] border-r border-border bg-surface';
 
 /** The key presses of the handle and the value each one gives (rem), or `undefined` for a key it does not handle. */
-function nextRemForKey(key: string, rem: number): number | undefined {
+function nextRemForKey(key: string, rem: number, bounds: { min: number; max: number }): number | undefined {
 	switch (key) {
 		case 'ArrowLeft':
 			return rem - MENU_RESIZE_STEP_REM;
 		case 'ArrowRight':
 			return rem + MENU_RESIZE_STEP_REM;
 		case 'Home':
-			return MENU_RESIZE_MIN_REM;
+			return bounds.min;
 		case 'End':
-			return MENU_RESIZE_MAX_REM;
+			return bounds.max;
 		default:
 			return undefined;
 	}
@@ -179,7 +221,7 @@ function nextRemForKey(key: string, rem: number): number | undefined {
 /**
  * The drag handle on the right edge of the `resizable` menu: a focusable vertical separator (the "window splitter"
  * pattern) with a 6px hit area. The pointer is captured on press, so a drag keeps following it over an iframe or a field.
- * Keys: Left/Right 1rem, Home/End the limits. Double-click: back to the default width.
+ * Keys: Left/Right 1rem, Home/End the limits (as they are now: they follow the window). Double-click: back to the default width.
  */
 function ResizeHandle({ resize, label }: { resize: ResizableMenuWidth; label: string }): React.ReactElement {
 	// The pointer, where the drag started, the width it started from, and the last width it gave.
@@ -207,8 +249,8 @@ function ResizeHandle({ resize, label }: { resize: ResizableMenuWidth; label: st
 			aria-orientation="vertical"
 			aria-label={label}
 			aria-valuenow={resize.rem}
-			aria-valuemin={MENU_RESIZE_MIN_REM}
-			aria-valuemax={MENU_RESIZE_MAX_REM}
+			aria-valuemin={resize.min}
+			aria-valuemax={resize.max}
 			aria-valuetext={`${resize.rem}rem`}
 			tabIndex={0}
 			data-dragging={dragging ? 'true' : undefined}
@@ -226,7 +268,7 @@ function ResizeHandle({ resize, label }: { resize: ResizableMenuWidth; label: st
 				if (current === null || event.pointerId !== current.pointerId) {
 					return;
 				}
-				current.rem = clampResizeRem(current.startRem + (event.clientX - current.startX) / rootFontPx());
+				current.rem = resize.clamp(current.startRem + (event.clientX - current.startX) / rootFontPx());
 				resize.move(current.rem);
 			}}
 			onPointerUp={end}
@@ -237,7 +279,7 @@ function ResizeHandle({ resize, label }: { resize: ResizableMenuWidth; label: st
 				if (event.altKey || event.ctrlKey || event.metaKey) {
 					return;
 				}
-				const next = nextRemForKey(event.key, resize.rem);
+				const next = nextRemForKey(event.key, resize.rem, resize);
 				if (next === undefined) {
 					return;
 				}
@@ -263,6 +305,7 @@ export function ShellSideMenu({
 	asideRef,
 	resize,
 	resizeLabel,
+	iconsOnly = false,
 }: {
 	menu: ShellMenu;
 	renderLink: (props: ShellLinkProps) => React.ReactElement;
@@ -271,6 +314,8 @@ export function ShellSideMenu({
 	asideRef: RefObject<HTMLElement | null>;
 	resize?: ResizableMenuWidth;
 	resizeLabel?: string;
+	/** Show icons (or initials) only: the `resizable` menu under 6rem. */
+	iconsOnly?: boolean;
 }): React.ReactElement {
 	const missingLabel = resize !== undefined && (resizeLabel === undefined || resizeLabel === '');
 	useEffect(() => {
@@ -283,9 +328,10 @@ export function ShellSideMenu({
 
 	return (
 		<aside ref={asideRef} data-testid="shell-menu" style={{ top: 'var(--app-shell-bar-height)', width: 'var(--app-shell-menu-width)' }} className={FRAME}>
-			<div data-menu-scroller="" className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
+			{/* overflow-x-hidden: scrolls vertically only. A label is cut by `truncate`, so nothing may ask for a horizontal scrollbar. */}
+			<div data-menu-scroller="" className={`flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overflow-x-hidden ${iconsOnly ? 'p-1.5' : 'p-3'}`}>
 				<h2 className="sr-only">{menu.title}</h2>
-				<ShellMenuNav menu={menu} renderLink={renderLink} width={width} />
+				<ShellMenuNav menu={menu} renderLink={renderLink} width={width} iconsOnly={iconsOnly} />
 			</div>
 			{resize !== undefined && <ResizeHandle resize={resize} label={missingLabel || resizeLabel === undefined ? menu.label : resizeLabel} />}
 		</aside>

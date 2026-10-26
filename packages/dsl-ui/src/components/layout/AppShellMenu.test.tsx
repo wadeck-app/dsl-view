@@ -114,7 +114,7 @@ describe('A/B options of the variants', () => {
 		['wide', ['19rem']],
 		['fluid', ['12rem', '16vw', '22rem']],
 		['fit', ['10rem', '24rem']],
-		['resizable', ['15rem', '10rem', '28rem']],
+		['resizable', ['15rem', '3.5rem', '6rem', '60%', '20rem']],
 	] as const)('the hint of %s states its width', (variant, parts) => {
 		for (const part of parts) {
 			expect(MENU_VARIANT_AB_OPTIONS[variant].hint).toContain(part);
@@ -586,8 +586,9 @@ describe('menuVariant resizable', () => {
 			expect(menuWidth()).toBe('15rem');
 			expect(handle()).toHaveAttribute('aria-orientation', 'vertical');
 			expect(handle()).toHaveAttribute('aria-valuenow', '15');
-			expect(handle()).toHaveAttribute('aria-valuemin', '10');
-			expect(handle()).toHaveAttribute('aria-valuemax', '28');
+			expect(handle()).toHaveAttribute('aria-valuemin', '3.5');
+			// 1024px window: 60% is 38.4rem, the window minus 20rem of content is 44rem.
+			expect(handle()).toHaveAttribute('aria-valuemax', '38.4');
 			expect(handle()).toHaveAttribute('aria-valuetext', '15rem');
 			expect(handle()).toHaveAttribute('tabindex', '0');
 		});
@@ -664,17 +665,17 @@ describe('menuVariant resizable', () => {
 			expect(menuWidth()).toBe('17rem');
 		});
 
-		it('stays between 10rem and 28rem, exactly at the bounds', () => {
+		it('stays between 3.5rem and 38.4rem (1024px window), exactly at the bounds', () => {
 			mount();
 			fireEvent.pointerDown(handle(), { pointerId: 7, clientX: 240, button: 0 });
-			fireEvent.pointerMove(handle(), { pointerId: 7, clientX: 240 + 13 * 16 });
-			expect(menuWidth()).toBe('28rem');
-			fireEvent.pointerMove(handle(), { pointerId: 7, clientX: 240 + 13 * 16 + 500 });
-			expect(menuWidth()).toBe('28rem');
-			fireEvent.pointerMove(handle(), { pointerId: 7, clientX: 240 - 5 * 16 });
-			expect(menuWidth()).toBe('10rem');
+			fireEvent.pointerMove(handle(), { pointerId: 7, clientX: 240 + 23.4 * 16 });
+			expect(menuWidth()).toBe('38.4rem');
+			fireEvent.pointerMove(handle(), { pointerId: 7, clientX: 240 + 23.4 * 16 + 500 });
+			expect(menuWidth()).toBe('38.4rem');
+			fireEvent.pointerMove(handle(), { pointerId: 7, clientX: 240 - 11.5 * 16 });
+			expect(menuWidth()).toBe('3.5rem');
 			fireEvent.pointerMove(handle(), { pointerId: 7, clientX: -900 });
-			expect(menuWidth()).toBe('10rem');
+			expect(menuWidth()).toBe('3.5rem');
 		});
 
 		it('writes the storage once, when the drag ends, not on every move', () => {
@@ -772,37 +773,38 @@ describe('menuVariant resizable', () => {
 			expect(localStorage.getItem(STORAGE_KEY)).toBe('14');
 		});
 
-		it('Home goes to 10rem and End to 28rem; the arrows stop there', () => {
+		it('Home goes to 3.5rem and End to 38.4rem; the arrows stop there', () => {
 			mount();
 			press('Home');
-			expect(menuWidth()).toBe('10rem');
+			expect(menuWidth()).toBe('3.5rem');
 			press('ArrowLeft');
-			expect(menuWidth()).toBe('10rem');
+			expect(menuWidth()).toBe('3.5rem');
 			press('End');
-			expect(menuWidth()).toBe('28rem');
+			expect(menuWidth()).toBe('38.4rem');
 			press('ArrowRight');
-			expect(menuWidth()).toBe('28rem');
-			expect(handle()).toHaveAttribute('aria-valuenow', '28');
+			expect(menuWidth()).toBe('38.4rem');
+			expect(handle()).toHaveAttribute('aria-valuenow', '38.4');
 		});
 
 		it('steps from a fractional width and clamps instead of overshooting', () => {
-			localStorage.setItem(STORAGE_KEY, '27.5');
+			localStorage.setItem(STORAGE_KEY, '38');
 			mount();
 			press('ArrowRight');
-			expect(menuWidth()).toBe('28rem');
+			expect(menuWidth()).toBe('38.4rem');
 		});
 
 		it('prevents the default of the keys it handles only, and ignores them with a modifier', () => {
 			mount();
 			expect(press('ArrowRight')).toBe(false);
 			expect(press('Home')).toBe(false);
+			expect(press('End')).toBe(false);
 			expect(press('a')).toBe(true);
 			expect(press('ArrowUp')).toBe(true);
 			expect(press('ArrowRight', { ctrlKey: true })).toBe(true);
 			expect(press('ArrowRight', { altKey: true })).toBe(true);
 			expect(press('ArrowRight', { metaKey: true })).toBe(true);
-			// Only the Home before them moved it (to 10rem): none of the ignored presses did.
-			expect(menuWidth()).toBe('10rem');
+			// Only the Home and End before them moved it (End last, to 38.4rem): none of the ignored presses did.
+			expect(menuWidth()).toBe('38.4rem');
 		});
 
 		it('is reachable with Tab: a tab stop, not inside the entries', () => {
@@ -828,7 +830,7 @@ describe('menuVariant resizable', () => {
 			expect(handle()).toHaveAttribute('aria-valuenow', '21');
 		});
 
-		it.each(['15', '10', '28', '17.5', '0010', '12.25'])('accepts "%s"', (stored) => {
+		it.each(['15', '10', '28', '17.5', '0010', '12.25', '3.5', '9.99', '28.01'])('accepts "%s"', (stored) => {
 			localStorage.setItem(STORAGE_KEY, stored);
 			const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 			mount();
@@ -836,7 +838,7 @@ describe('menuVariant resizable', () => {
 			expect(warn).not.toHaveBeenCalled();
 		});
 
-		it.each(['abc', '', ' ', '9.99', '28.01', '0', '-12', 'NaN', 'Infinity', '15rem', '1e1', '15px', '0x10', '[15]', ' 15', '15 '])('ignores the garbage "%s" with a warning that names the key and the fix, and uses 15rem', (stored) => {
+		it.each(['abc', '', ' ', '0', '-12', 'NaN', 'Infinity', '15rem', '1e1', '15px', '0x10', '[15]', ' 15', '15 '])('ignores the garbage "%s" with a warning that names the key and the fix, and uses 15rem', (stored) => {
 			localStorage.setItem(STORAGE_KEY, stored);
 			const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 			mount();
@@ -845,8 +847,8 @@ describe('menuVariant resizable', () => {
 			const message = String(warn.mock.calls[0]![0]);
 			expect(message).toContain(STORAGE_KEY);
 			expect(message).toContain(`"${stored}"`);
-			expect(message).toContain('10');
-			expect(message).toContain('28');
+			expect(message).toContain('number of rem');
+			expect(message).toContain('17.5');
 			// The bad value is left alone until the user changes the width.
 			expect(localStorage.getItem(STORAGE_KEY)).toBe(stored);
 		});
@@ -894,6 +896,292 @@ describe('menuVariant resizable', () => {
 			const message = String(error.mock.calls[0]![0]);
 			expect(message).toContain('SecurityError');
 			expect(message).toContain(STORAGE_KEY);
+		});
+	});
+
+	describe('bounds follow the window', () => {
+		const press = (key: string) => fireEvent.keyDown(handle(), { key });
+		// innerWidth is read from the window object: set it, then tell the page with a resize event.
+		const resizeWindow = (width: number) => {
+			vi.stubGlobal('innerWidth', width);
+			act(() => {
+				window.dispatchEvent(new Event('resize'));
+			});
+		};
+
+		// width px / 16 = rem; max = min(60% of the window, window - 20rem), never under 3.5rem (min wins).
+		it.each([
+			[1024, '38.4'],
+			[900, '33.75'],
+			[700, '23.75'],
+			[400, '5'],
+			[336, '3.5'],
+			[320, '3.5'],
+			[100, '3.5'],
+		])('window of %ipx: the maximum is %srem', (width, max) => {
+			vi.stubGlobal('innerWidth', width);
+			mount();
+			expect(handle()).toHaveAttribute('aria-valuemin', '3.5');
+			expect(handle()).toHaveAttribute('aria-valuemax', max);
+			press('End');
+			expect(menuWidth()).toBe(`${max}rem`);
+			press('Home');
+			expect(menuWidth()).toBe('3.5rem');
+		});
+
+		it('uses the root font size to turn the window into rem: 20px per rem, 1024px is 51.2rem', () => {
+			document.documentElement.style.fontSize = '20px';
+			mount();
+			// 60% of 51.2 is 30.72, 51.2 - 20 is 31.2.
+			expect(handle()).toHaveAttribute('aria-valuemax', '30.72');
+		});
+
+		it('updates aria-valuemin/max/now and the variable when the window is resized, and restores the preference when it grows back', () => {
+			localStorage.setItem(STORAGE_KEY, '30');
+			mount();
+			expect(menuWidth()).toBe('30rem');
+			resizeWindow(700);
+			expect(handle()).toHaveAttribute('aria-valuemax', '23.75');
+			expect(handle()).toHaveAttribute('aria-valuenow', '23.75');
+			expect(handle()).toHaveAttribute('aria-valuetext', '23.75rem');
+			expect(menuWidth()).toBe('23.75rem');
+			resizeWindow(400);
+			expect(menuWidth()).toBe('5rem');
+			expect(handle()).toHaveAttribute('aria-valuenow', '5');
+			resizeWindow(1024);
+			expect(handle()).toHaveAttribute('aria-valuemax', '38.4');
+			expect(menuWidth()).toBe('30rem');
+			expect(handle()).toHaveAttribute('aria-valuenow', '30');
+		});
+
+		it('never writes the storage when the window is resized: the preference stays as the user left it', () => {
+			localStorage.setItem(STORAGE_KEY, '30');
+			const setItem = vi.spyOn(Storage.prototype, 'setItem');
+			const removeItem = vi.spyOn(Storage.prototype, 'removeItem');
+			mount();
+			resizeWindow(400);
+			expect(menuWidth()).toBe('5rem');
+			expect(localStorage.getItem(STORAGE_KEY)).toBe('30');
+			resizeWindow(1024);
+			expect(setItem).not.toHaveBeenCalled();
+			expect(removeItem).not.toHaveBeenCalled();
+		});
+
+		it('clamps a stored value to the bounds on load, silently, and leaves it stored', () => {
+			const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			localStorage.setItem(STORAGE_KEY, '50');
+			const first = mount();
+			expect(menuWidth()).toBe('38.4rem');
+			expect(localStorage.getItem(STORAGE_KEY)).toBe('50');
+			first.unmount();
+			localStorage.setItem(STORAGE_KEY, '1');
+			mount();
+			expect(menuWidth()).toBe('3.5rem');
+			expect(localStorage.getItem(STORAGE_KEY)).toBe('1');
+			expect(warn).not.toHaveBeenCalled();
+		});
+
+		it('stores a new value only when the user acts: a key press stores the (clamped) result', () => {
+			localStorage.setItem(STORAGE_KEY, '30');
+			vi.stubGlobal('innerWidth', 700);
+			mount();
+			expect(menuWidth()).toBe('23.75rem');
+			expect(localStorage.getItem(STORAGE_KEY)).toBe('30');
+			press('ArrowLeft');
+			expect(menuWidth()).toBe('22.75rem');
+			expect(localStorage.getItem(STORAGE_KEY)).toBe('22.75');
+			resizeWindow(1024);
+			expect(menuWidth()).toBe('22.75rem');
+		});
+
+		it('a drag is limited by the current bounds, and the window can change under it', () => {
+			vi.stubGlobal('innerWidth', 700);
+			mount();
+			drag(240, 240 + 400);
+			expect(menuWidth()).toBe('23.75rem');
+			resizeWindow(400);
+			expect(menuWidth()).toBe('5rem');
+			expect(handle()).toHaveAttribute('aria-valuenow', '5');
+			fireEvent.pointerMove(handle(), { pointerId: 7, clientX: 240 - 100 * 16 });
+			expect(menuWidth()).toBe('3.5rem');
+		});
+
+		it('double-click goes back to 15rem, held between the current bounds', () => {
+			localStorage.setItem(STORAGE_KEY, '22');
+			vi.stubGlobal('innerWidth', 400);
+			mount();
+			fireEvent.doubleClick(handle());
+			expect(menuWidth()).toBe('5rem');
+			expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+			resizeWindow(1024);
+			expect(menuWidth()).toBe('15rem');
+			resizeWindow(320);
+			expect(menuWidth()).toBe('3.5rem');
+		});
+
+		it('removes its window listener on unmount, and has none when the variant is not resizable', () => {
+			const add = vi.spyOn(window, 'addEventListener');
+			const other = shell({ menuVariant: 'classic' });
+			const others = add.mock.calls.filter(([type]) => type === 'resize').length;
+			other.unmount();
+			add.mockClear();
+			const view = mount();
+			const resizeListeners = add.mock.calls.filter(([type]) => type === 'resize').map(([, listener]) => listener);
+			// One more than a variant that is not resizable (the bounds).
+			expect(resizeListeners).toHaveLength(others + 1);
+			const remove = vi.spyOn(window, 'removeEventListener');
+			view.unmount();
+			const removed = remove.mock.calls.filter(([type]) => type === 'resize').map(([, listener]) => listener);
+			for (const listener of resizeListeners) {
+				expect(removed).toContain(listener);
+			}
+		});
+	});
+
+	describe('icons only under 6rem', () => {
+		const iconsOnlyAt = (stored: string) => {
+			localStorage.setItem(STORAGE_KEY, stored);
+			mount();
+		};
+
+		it('shows the labels at 6rem and at 15rem: icon, label text, no tooltip on the link', () => {
+			iconsOnlyAt('6');
+			const link = screen.getByRole('link', { name: 'Overview' });
+			expect(link).toHaveTextContent('Overview');
+			expect(link).not.toHaveAttribute('title');
+			expect(within(link).getByText('Overview').className).not.toContain('sr-only');
+			expect(screen.getByText('Admin')).toBeInTheDocument();
+		});
+
+		it('shows icons only just under 6rem: the icon, a title on the link, the label kept for assistive technology', () => {
+			iconsOnlyAt('5.99');
+			const link = screen.getByRole('link', { name: 'Overview' });
+			expect(link).toHaveAttribute('title', 'Overview');
+			expect(within(link).getByTestId('icon-overview')).toBeInTheDocument();
+			expect(classes(within(link).getByText('Overview'))).toContain('sr-only');
+			expect(link.querySelector('[data-menu-label]')).toBeNull();
+		});
+
+		it('uses initials for an entry with no icon, hidden from assistive technology', () => {
+			iconsOnlyAt('3.5');
+			const link = screen.getByRole('link', { name: 'Jobs' });
+			expect(link).toHaveAttribute('title', 'Jobs');
+			const initials = within(link).getByText('JO');
+			expect(initials).toHaveAttribute('aria-hidden', 'true');
+			expect(classes(within(link).getByText('Jobs'))).toContain('sr-only');
+			// An entry with an icon does not get initials.
+			expect(within(screen.getByRole('link', { name: 'Overview' })).queryByText('OV')).toBeNull();
+		});
+
+		it('keeps the separators as a rule with their caption as the accessible name only', () => {
+			iconsOnlyAt('3.5');
+			const separator = screen.getByRole('separator', { name: 'Admin' });
+			expect(separator).toBeInTheDocument();
+			expect(separator).toHaveTextContent('');
+			expect(screen.queryByText('Admin')).toBeNull();
+		});
+
+		it('follows the width live: a drag under 6rem switches to icons and back', () => {
+			mount();
+			expect(screen.getByRole('link', { name: 'Jobs' })).not.toHaveAttribute('title');
+			drag(240, 240 - 10 * 16);
+			expect(menuWidth()).toBe('5rem');
+			expect(screen.getByRole('link', { name: 'Jobs' })).toHaveAttribute('title', 'Jobs');
+			fireEvent.pointerMove(handle(), { pointerId: 7, clientX: 240 - 9 * 16 });
+			expect(menuWidth()).toBe('6rem');
+			expect(screen.getByRole('link', { name: 'Jobs' })).not.toHaveAttribute('title');
+		});
+
+		it('is decided by the width shown, not the stored one: a small window gives icons, a big one gives the labels back', () => {
+			localStorage.setItem(STORAGE_KEY, '30');
+			mount();
+			expect(screen.getByRole('link', { name: 'Jobs' })).not.toHaveAttribute('title');
+			vi.stubGlobal('innerWidth', 400);
+			act(() => {
+				window.dispatchEvent(new Event('resize'));
+			});
+			expect(screen.getByRole('link', { name: 'Jobs' })).toHaveAttribute('title', 'Jobs');
+			vi.stubGlobal('innerWidth', 1024);
+			act(() => {
+				window.dispatchEvent(new Event('resize'));
+			});
+			expect(screen.getByRole('link', { name: 'Jobs' })).not.toHaveAttribute('title');
+		});
+
+		it('keeps the arrow keys between the links', () => {
+			iconsOnlyAt('3.5');
+			const links = within(nav()).getAllByRole('link');
+			links[0]!.focus();
+			fireEvent.keyDown(links[0]!, { key: 'ArrowDown' });
+			expect(document.activeElement).toBe(links[1]);
+		});
+
+		it('the other variants never show icons only', () => {
+			for (const menuVariant of ['classic', 'narrow', 'wide', 'fluid', 'fit'] as const) {
+				const { unmount } = shell({ menuVariant });
+				expect(screen.getByRole('link', { name: 'Jobs' })).not.toHaveAttribute('title');
+				unmount();
+			}
+		});
+	});
+
+	describe('an excerpt, never a scrollbar', () => {
+		const LONG = 'A rather long page title';
+		const LONG_CAPTION = 'A rather long group caption';
+		const longMenu: ShellMenu = {
+			title: 'Queue',
+			label: 'Queue pages',
+			items: [
+				{ id: 'a', label: LONG, href: '/a', current: 'page' },
+				{ kind: 'separator', id: 's', label: LONG_CAPTION },
+				{ id: 'b', label: 'Ok', href: '/b' },
+			],
+		};
+
+		// 10px per character; 90px of padding and icon around a label, 24px around a caption (px-3).
+		beforeEach(() => {
+			vi.spyOn(Element.prototype, 'scrollWidth', 'get').mockImplementation(function (this: Element) {
+				return this.hasAttribute('data-menu-label') ? (this.textContent ?? '').length * 10 : 0;
+			});
+			vi.spyOn(Element.prototype, 'clientWidth', 'get').mockImplementation(function (this: Element) {
+				if (!this.hasAttribute('data-menu-label')) return 0;
+				// The variable as CSS would inherit it: from the nearest ancestor that declares it.
+				let node: HTMLElement | null = this as HTMLElement;
+				while (node && node.style.getPropertyValue(VAR) === '') node = node.parentElement;
+				return parseFloat(node?.style.getPropertyValue(VAR) ?? '') * 16 - (this.closest('a') ? 90 : 24);
+			});
+		});
+
+		it('cuts a long label with an ellipsis (no wrapping) and gives the whole text as title', () => {
+			localStorage.setItem(STORAGE_KEY, '8');
+			mount({ menu: longMenu });
+			const label = screen.getByRole('link', { name: LONG }).querySelector('[data-menu-label]')!;
+			expect(classes(label)).toContain('truncate');
+			expect(label).toHaveAttribute('title', LONG);
+			expect(screen.getByRole('link', { name: 'Ok' }).querySelector('[data-menu-label]')).not.toHaveAttribute('title');
+		});
+
+		it('cuts a long separator caption the same way', () => {
+			localStorage.setItem(STORAGE_KEY, '8');
+			mount({ menu: longMenu });
+			const caption = screen.getByText(LONG_CAPTION);
+			expect(classes(caption)).toContain('truncate');
+			expect(caption).toHaveAttribute('title', LONG_CAPTION);
+		});
+
+		it('takes the title away when the menu is wide enough again, and from a caption that fits', () => {
+			localStorage.setItem(STORAGE_KEY, '8');
+			mount({ menu: longMenu });
+			fireEvent.keyDown(handle(), { key: 'End' });
+			expect(screen.getByText(LONG_CAPTION)).not.toHaveAttribute('title');
+			expect(screen.getByRole('link', { name: LONG }).querySelector('[data-menu-label]')).not.toHaveAttribute('title');
+		});
+
+		it('has no horizontal scroll: the scrolling box scrolls vertically only', () => {
+			mount({ menu: longMenu });
+			expect(classes(scroller())).toEqual(expect.arrayContaining(['overflow-y-auto', 'overflow-x-hidden']));
+			expect(classes(scroller())).not.toContain('overflow-x-auto');
+			expect(classes(scroller())).not.toContain('overflow-x-scroll');
 		});
 	});
 

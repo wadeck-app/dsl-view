@@ -19,9 +19,15 @@ export const MENU_DEFAULT_REM = 15;
 /** `fit` limits, in rem. */
 export const MENU_FIT_MIN_REM = 10;
 export const MENU_FIT_MAX_REM = 24;
-/** `resizable` limits and keyboard step, in rem. */
-export const MENU_RESIZE_MIN_REM = 10;
-export const MENU_RESIZE_MAX_REM = 28;
+/**
+ * `resizable` limits and keyboard step. The minimum is fixed; the maximum follows the window: `MENU_RESIZE_MAX_SHARE` of
+ * it, and never so much that less than `MENU_RESIZE_CONTENT_MIN_REM` is left for the content (when the window is so small
+ * that the maximum falls under the minimum, the minimum wins). Under `MENU_ICONS_ONLY_BELOW_REM` the menu shows icons only.
+ */
+export const MENU_RESIZE_MIN_REM = 3.5;
+export const MENU_RESIZE_MAX_SHARE = 0.6;
+export const MENU_RESIZE_CONTENT_MIN_REM = 20;
+export const MENU_ICONS_ONLY_BELOW_REM = 6;
 export const MENU_RESIZE_STEP_REM = 1;
 
 /** `label` and `hint` of each variant, in the shape `useAbTest({ options })` takes (the hint is the dock's tooltip). */
@@ -31,5 +37,5 @@ export const MENU_VARIANT_AB_OPTIONS: Readonly<Record<ShellMenuVariant, { label:
 	wide: { label: 'Wide', hint: 'Fixed 19rem. Same look as classic, room for long labels.' },
 	fluid: { label: 'Fluid', hint: 'Follows the window: 16vw, never under 12rem nor over 22rem. Same look as classic.' },
 	fit: { label: 'Fit to content', hint: 'As wide as the longest entry (icon, label, padding), between 10rem and 24rem; measured again when the entries change.' },
-	resizable: { label: 'Resizable', hint: 'Starts at 15rem; drag the right edge (or Left/Right, Home/End; double-click resets) between 10rem and 28rem. Remembered.' },
+	resizable: { label: 'Resizable', hint: 'Starts at 15rem; drag the right edge (or Left/Right, Home/End; double-click resets) from 3.5rem (icons only under 6rem) to 60% of the window, always leaving 20rem for the content. Long labels are cut. Remembered.' },
 };
