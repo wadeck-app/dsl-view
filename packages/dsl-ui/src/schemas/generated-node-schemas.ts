@@ -212,6 +212,13 @@ export const ChartNodeSchema = baseNode.extend({
 	series: dsl(z.array(ChartSeriesConfigSchema)),
 });
 
+export const DateTextNodeSchema = baseNode.extend({
+	value: dsl(z.union([z.unknown(), z.string(), z.number()])),
+	dateStyle: z.unknown().optional(),
+	part: z.unknown().optional(),
+	relative: dsl(z.boolean()).optional(),
+});
+
 export const FetchSpinnerNodeSchema = baseNode.extend({
 	loading: dsl(z.boolean()),
 });
@@ -787,6 +794,10 @@ export const BulkActionsToolbarNodeSchema = baseNode.extend({
 	items: dsl(z.array(z.unknown())).optional(),
 });
 
+const ColumnRenderContextSchema = z.object({
+	dates: z.unknown(),
+});
+
 const ActionDefSchema = z.object({
 	label: z.string(),
 	icon: z.array(z.unknown()).optional(),
@@ -801,6 +812,7 @@ const TableColumnSchema = z.object({
 	mono: z.boolean().optional(),
 	muted: z.boolean().optional(),
 	format: z.enum(['datetime', 'date', 'time', 'bytes', 'ms']).optional(),
+	dateStyle: z.unknown().optional(),
 	width: z.number().optional(),
 	truncate: z.boolean().optional(),
 	nowrap: z.boolean().optional(),

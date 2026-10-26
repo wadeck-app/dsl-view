@@ -3,6 +3,9 @@ import * as Popover from '@radix-ui/react-popover';
 import type { FieldControlProps } from './FieldWrapper.js';
 import { validDateFormat } from '@dsl-ui/utils/validDateFormat.js';
 import { buildCalendarGrid } from './calendarUtils.js';
+import { formatDay, formatDayLong, formatDayNumber, formatMonthTitle } from './calendarFormat.js';
+import { useDateFormat } from '@dsl-ui/dates/DateFormatContext.js';
+import type { DateFormatter } from '@dsl-ui/dates/dateFormatter.js';
 import {
 	addMonths,
 	endOfMonth,
@@ -24,8 +27,6 @@ import { CalendarRange, ChevronLeft, ChevronRight, X } from 'lucide-react';
 const triggerClass =
 	'flex items-center gap-2 w-full rounded border border-border bg-surface text-content px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-left';
 
-const DEFAULT_DATE_FORMAT = 'MMM d, yyyy';
-
 const PANEL_CLASS = 'z-50 bg-surface border border-border rounded shadow-md p-4';
 
 export interface DateRange {
@@ -43,6 +44,7 @@ export interface DateRangePickerProps extends Partial<FieldControlProps> {
 	minDate?: Date;
 	maxDate?: Date;
 	placeholder?: string;
+	/** date-fns format of the trigger text. Without it the range follows the date settings (`DateFormatProvider`: "24 Oct 2026" in English `en-GB`). */
 	dateFormat?: string;
 	/** Controlled open state (for testing and external control) */
 	open?: boolean;
@@ -61,13 +63,13 @@ const PRESETS = [
 
 type PresetKey = (typeof PRESETS)[number]['key'];
 
-function getPresetRange(key: PresetKey): DateRange | null {
+function getPresetRange(key: PresetKey, weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6): DateRange | null {
 	const today = new Date();
 	switch (key) {
 		case 'today':
 			return { from: today, to: today };
 		case 'this-week':
-			return { from: startOfWeek(today), to: endOfWeek(today) };
+			return { from: startOfWeek(today, { weekStartsOn }), to: endOfWeek(today, { weekStartsOn }) };
 		case 'this-month':
 			return { from: startOfMonth(today), to: endOfMonth(today) };
 		case 'last-30':
@@ -79,14 +81,15 @@ function getPresetRange(key: PresetKey): DateRange | null {
 }
 
 
-function formatRange(range: DateRange, dateFormat: string): string {
+function formatRange(range: DateRange, customFormat: string | undefined, formatter: DateFormatter): string {
 	const { from, to } = range;
+	const show = (day: Date): string => (customFormat !== undefined ? format(day, customFormat) : formatDay(formatter, day));
 	if (!from && !to) return '';
-	if (from && !to) return format(from, dateFormat);
-	if (!from && to) return format(to, dateFormat);
+	if (from && !to) return show(from);
+	if (!from && to) return show(to);
 	// Both set
-	if (isEqual(from!, to!)) return format(from!, dateFormat);
-	return `${format(from!, dateFormat)} – ${format(to!, dateFormat)}`;
+	if (isEqual(from!, to!)) return show(from!);
+	return `${show(from!)} – ${show(to!)}`;
 }
 
 /**
@@ -109,8 +112,10 @@ export function DateRangePicker({
 	// DatePicker: FieldWrapper clones these in, and destructuring only our own props dropped them.
 	...control
 }: DateRangePickerProps) {
-	// An unusable format (moment-style `YYYY-MM-DD`, empty) would make date-fns throw on every render.
-	const dateFormat = validDateFormat(dateFormatProp, DEFAULT_DATE_FORMAT, 'DateRangePicker.dateFormat');
+	const formatter = useDateFormat();
+	// An unusable format (moment-style `YYYY-MM-DD`, empty) would make date-fns throw on every render: it is reported and
+	// the range follows the date settings instead. No `dateFormat` at all means the same, silently.
+	const customFormat = dateFormatProp === undefined ? undefined : validDateFormat(dateFormatProp, '', 'DateRangePicker.dateFormat') || undefined;
 	const isControlled = controlledOpen !== undefined;
 	const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
 	const open = isControlled ? controlledOpen : uncontrolledOpen;
@@ -172,7 +177,7 @@ export function DateRangePicker({
 
 	function handlePreset(key: PresetKey) {
 		setActivePreset(key);
-		const range = getPresetRange(key);
+		const range = getPresetRange(key, formatter.firstDayOfWeek as 0 | 1 | 2 | 3 | 4 | 5 | 6);
 		if (range) {
 			onChange?.(range);
 			setPendingFrom(null);
@@ -208,7 +213,7 @@ export function DateRangePicker({
 
 	const displayRange = getDisplayRange();
 	const hasValue = value.from !== null || value.to !== null;
-	const triggerText = hasValue ? formatRange(value, dateFormat) : null;
+	const triggerText = hasValue ? formatRange(value, customFormat, formatter) : null;
 
 	return (
 		<Popover.Root open={open} onOpenChange={handleOpenChange}>
@@ -333,7 +338,8 @@ function CalendarPanel({
 	onDateLeave,
 	isDateOutOfBounds,
 }: CalendarPanelProps) {
-	const weeks = buildCalendarGrid(month);
+	const formatter = useDateFormat();
+	const weeks = buildCalendarGrid(month, formatter.firstDayOfWeek);
 	const { from, to } = displayRange;
 
 	function isInRange(date: Date): boolean {
@@ -365,7 +371,7 @@ function CalendarPanel({
 					<ChevronLeft className="w-4 h-4" />
 				</button>
 				<h2 className="font-semibold text-sm text-content">
-					{format(month, 'MMMM yyyy')}
+					{formatMonthTitle(formatter, month)}
 				</h2>
 				<button
 					type="button"
@@ -380,8 +386,8 @@ function CalendarPanel({
 
 			{/* Weekday headers */}
 			<div className="grid grid-cols-7 gap-0 text-center">
-				{['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
-					<div key={day} className="text-xs font-medium text-muted h-7 flex items-center justify-center">
+				{formatter.weekdays('narrow').map((day, index) => (
+					<div key={index} className="text-xs font-medium text-muted h-7 flex items-center justify-center">
 						{day}
 					</div>
 				))}
@@ -415,7 +421,7 @@ function CalendarPanel({
 								onMouseEnter={() => !outOfBounds && onDateHover(date)}
 								onMouseLeave={onDateLeave}
 								disabled={outOfBounds}
-								aria-label={format(date, 'MMMM d, yyyy')}
+								aria-label={formatDayLong(formatter, date)}
 								aria-pressed={rangeStart || rangeEnd}
 								className={`
 									w-8 h-8 rounded-full text-sm font-medium transition-colors
@@ -427,7 +433,7 @@ function CalendarPanel({
 									${isTodayDate && !rangeStart && !rangeEnd ? 'border-2 border-primary' : ''}
 								`}
 							>
-								{format(date, 'd')}
+								{formatDayNumber(formatter, date)}
 							</button>
 						</div>
 					);

@@ -9,7 +9,8 @@ const PROBE_DATE = new Date(2000, 0, 1);
 /**
  * The date-fns format string to use. A DSL author often writes a moment-style format (`YYYY-MM-DD`, `DD/MM/YYYY`) or an
  * empty one; date-fns throws on those, and since the picker formats its value on every render that would take the whole
- * page down. An unusable format is reported once with date-fns' own explanation and replaced by `fallback`.
+ * page down. An unusable format is reported once with date-fns' own explanation and replaced by `fallback`
+ * (an empty `fallback` means "the format of the date settings": the caller then writes the date through `DateFormatter`).
  *
  * @param candidate what the node declared (`undefined` means "the default": no report)
  * @param where `Component.prop`, used in the report
@@ -27,7 +28,7 @@ export function validDateFormat(candidate: string | undefined, fallback: string,
 		return candidate;
 	} catch (error) {
 		const reason = getErrorMessage(error).split('\n')[0];
-		reportAuthoringMistake(`[${where}] cannot format dates with ${JSON.stringify(candidate)} (${reason}); using ${JSON.stringify(fallback)} instead.`, console.error);
+		reportAuthoringMistake(`[${where}] cannot format dates with ${JSON.stringify(candidate)} (${reason}); using ${fallback === '' ? 'the format of the date settings' : JSON.stringify(fallback)} instead.`, console.error);
 		return fallback;
 	}
 }

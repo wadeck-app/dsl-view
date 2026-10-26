@@ -13,6 +13,7 @@ import {
 } from 'recharts';
 import { formatXTick, formatYTick, seriesColor } from './chartFormat.js';
 import type { ChartXFormat, ChartYFormat } from './chartFormat.js';
+import { useDateFormat } from '@dsl-ui/dates/DateFormatContext.js';
 import { reportAuthoringMistake } from '@dsl-ui/utils/devDiagnostics.js';
 import { fillClasses, joinClasses } from '@dsl-ui/utils/fillClasses.js';
 
@@ -53,8 +54,8 @@ export interface ChartProps {
 	xAxisKey: string;
 	xAxisType: 'time' | 'category';
 	/**
-	 * How `xAxisType: time` ticks render: date (Jan 5), time (HH:MM) or datetime. Always the viewer's local
-	 * time zone. Has no effect on a category axis (a console warning says so).
+	 * How `xAxisType: time` ticks render: date (5 Jan), time (HH:MM) or datetime, in the language, clock and time zone of the date settings
+	 * (`DateFormatProvider`; English `en-GB`, local zone by default). Has no effect on a category axis (a console warning says so).
 	 * @default 'date'
 	 */
 	xFormat?: ChartXFormat;
@@ -106,6 +107,7 @@ export function Chart({
 	fill: fillProp = false,
 	series,
 }: ChartProps) {
+	const dates = useDateFormat();
 	// Only the boolean true switches it on: a YAML string like "yes" must not half-apply the layout.
 	const fill = fillProp === true;
 	// The floor in `fill` mode, the plot height otherwise.
@@ -147,10 +149,10 @@ export function Chart({
 		);
 	}
 
-	const tickX = (value: unknown): string => formatXTick(value, xAxisType, xFormat);
+	const tickX = (value: unknown): string => formatXTick(value, xAxisType, xFormat, dates);
 	const tickY = (value: unknown): string => formatYTick(value, yFormat, yUnit);
 	// The tooltip heading carries the full moment when the axis only shows the time of day.
-	const tooltipX = (value: unknown): string => formatXTick(value, xAxisType, xFormat === 'time' ? 'datetime' : xFormat);
+	const tooltipX = (value: unknown): string => formatXTick(value, xAxisType, xFormat === 'time' ? 'datetime' : xFormat, dates);
 
 	const plot = (
 		<ComposedChart data={data as Record<string, unknown>[]} margin={sparkline ? { top: 4, right: 4, bottom: 4, left: 4 } : undefined}>

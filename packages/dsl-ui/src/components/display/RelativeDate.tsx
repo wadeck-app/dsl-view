@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 
-import { format as dateFnsFormat } from 'date-fns';
+import { useDateFormat } from '@dsl-ui/dates/DateFormatContext.js';
+import { getDefaultDateFormatter } from '@dsl-ui/dates/DateFormatContext.js';
+import type { DateFormatter } from '@dsl-ui/dates/dateFormatter.js';
+import { reportAuthoringMistake } from '@dsl-ui/utils/devDiagnostics.js';
 
 import { Tooltip } from '../overlay/Tooltip.js';
 
@@ -9,35 +12,18 @@ export interface RelativeDateProps {
 	className?: string;
 	/** @default true - updates label every 60s */
 	live?: boolean;
-	/** @default true - shows absolute date in Tooltip on hover */
+	/** @default true - shows the exact timestamp (ISO 8601 with offset and zone, from the date settings) in a Tooltip on hover */
 	tooltip?: boolean;
-	/** date-fns format string for the tooltip, default 'PPP p' */
+	/** @deprecated Ignored: the tooltip is the exact timestamp of the date settings (`DateFormatProvider`), not a date-fns format. */
 	format?: string;
 }
 
-export function getRelativeLabel(date: Date): string {
-	const now = Date.now();
-	const diffMs = now - date.getTime();
-	const diffSec = Math.floor(diffMs / 1000);
-	const diffMin = Math.floor(diffSec / 60);
-	const diffHour = Math.floor(diffMin / 60);
-	const diffDay = Math.floor(diffHour / 24);
-	const diffWeek = Math.floor(diffDay / 7);
-	const diffMonth = Math.floor(diffDay / 30);
-	const diffYear = Math.floor(diffDay / 365);
-
-	if (diffSec < 0) return 'in the future';
-	if (diffSec < 60) return 'just now';
-	if (diffMin < 60) return `${diffMin} ${diffMin === 1 ? 'minute' : 'minutes'} ago`;
-	if (diffHour < 24) return `${diffHour} ${diffHour === 1 ? 'hour' : 'hours'} ago`;
-	if (diffDay < 2) return 'yesterday';
-	if (diffDay < 7) return `${diffDay} days ago`;
-	if (diffDay < 14) return 'last week';
-	if (diffDay < 30) return `${diffWeek} weeks ago`;
-	if (diffDay < 60) return 'last month';
-	if (diffDay < 365) return `${diffMonth} months ago`;
-	if (diffDay < 730) return 'last year';
-	return `${diffYear} years ago`;
+/**
+ * "5 minutes ago", "yesterday", "in 2 hours", in the language of the date settings (English `en-GB` without a
+ * `DateFormatProvider`). A date less than 45 seconds away reads "now".
+ */
+export function getRelativeLabel(date: Date | string | number, formatter: DateFormatter = getDefaultDateFormatter()): string {
+	return formatter.relative(date);
 }
 
 /**
@@ -49,27 +35,34 @@ export function RelativeDate({
 	className,
 	live = true,
 	tooltip = true,
-	format = 'PPP p',
+	format,
 }: RelativeDateProps) {
+	const formatter = useDateFormat();
 	const dateObj = date instanceof Date ? date : new Date(date);
-	const [label, setLabel] = useState(() => getRelativeLabel(dateObj));
+	const [label, setLabel] = useState(() => getRelativeLabel(date, formatter));
 
 	useEffect(() => {
-		setLabel(getRelativeLabel(dateObj));
+		if (format !== undefined) {
+			reportAuthoringMistake('[RelativeDate] `format` is ignored: the tooltip is the exact timestamp of the date settings. Remove it, or show the date with DateText.');
+		}
+	}, [format !== undefined]);
+
+	useEffect(() => {
+		setLabel(getRelativeLabel(date, formatter));
 
 		if (!live) return;
 
 		const id = setInterval(() => {
-			setLabel(getRelativeLabel(dateObj));
+			setLabel(getRelativeLabel(date, formatter));
 		}, 60000);
 
 		return () => clearInterval(id);
-	}, [dateObj.getTime(), live]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [dateObj.getTime(), live, formatter.key]);
 
-	// toISOString and the tooltip format both throw a RangeError on an invalid date, which would take the whole page
-	// down for one bad cell. Show the value as it came (visible, not hidden) and say so in the console.
+	// toISOString throws a RangeError on an invalid date, which would take the whole page down for one bad cell. Show the
+	// value as it came (visible, not hidden); the formatter has said so in the console.
 	if (Number.isNaN(dateObj.getTime())) {
-		console.warn(`[RelativeDate] "${String(date)}" is not a valid date; showing it as is.`);
 		return <span className={['text-content text-sm', className].filter(Boolean).join(' ')}>{String(date)}</span>;
 	}
 
@@ -81,8 +74,7 @@ export function RelativeDate({
 	);
 
 	if (tooltip) {
-		const absoluteDate = dateFnsFormat(dateObj, format);
-		return <Tooltip content={absoluteDate}>{timeEl}</Tooltip>;
+		return <Tooltip content={formatter.exact(dateObj)}>{timeEl}</Tooltip>;
 	}
 
 	return timeEl;

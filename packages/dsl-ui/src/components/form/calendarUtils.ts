@@ -4,18 +4,20 @@ import { eachDayOfInterval, endOfMonth, startOfMonth } from 'date-fns';
  * Builds a 6-or-fewer row calendar grid for a given month.
  * Pads the first week with trailing days from the previous month and the last week with leading days from the next month.
  * Returns an array of weeks, each week being an array of 7 Date values.
+ *
+ * @param firstDayOfWeek the first column: 0 = Sunday ... 6 = Saturday (`DateFormatter.firstDayOfWeek`).
  */
-export function buildCalendarGrid(month: Date): Date[][] {
+export function buildCalendarGrid(month: Date, firstDayOfWeek = 0): Date[][] {
 	const days = eachDayOfInterval({ start: startOfMonth(month), end: endOfMonth(month) });
 
 	const firstDay = startOfMonth(month);
-	const dayOfWeek = firstDay.getDay();
+	const dayOfWeek = (firstDay.getDay() - firstDayOfWeek + 7) % 7;
 	const prevDays = Array.from({ length: dayOfWeek }, (_, i) =>
 		new Date(month.getFullYear(), month.getMonth(), -(dayOfWeek - i - 1)),
 	);
 
 	const lastDay = endOfMonth(month);
-	const lastDayOfWeek = lastDay.getDay();
+	const lastDayOfWeek = (lastDay.getDay() - firstDayOfWeek + 7) % 7;
 	const nextDays = Array.from({ length: 6 - lastDayOfWeek }, (_, i) =>
 		new Date(month.getFullYear(), month.getMonth() + 1, i + 1),
 	);

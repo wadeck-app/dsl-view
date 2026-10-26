@@ -27,12 +27,15 @@ import { Skeleton } from '../display/Skeleton.js';
 import type { BadgeVariant } from '../display/Badge.js';
 import { iconByName } from '../display/iconByName.js';
 import { AppLink } from '../navigation/AppLink.js';
+import { getDefaultDateFormatter, useDateFormat } from '@dsl-ui/dates/DateFormatContext.js';
+import type { DateFormatter, DateInput, DatePart, DateStyle } from '@dsl-ui/dates/dateFormatter.js';
 import { formatBytes } from '@dsl-ui/utils/formatBytes.js';
 import { buildLinkPath } from '@dsl-ui/utils/linkTarget.js';
 import { RouterContext } from '@dsl-ui/RouterContext.js';
 import { reportAuthoringError, reportAuthoringMistake } from '@dsl-ui/utils/devDiagnostics.js';
 import { fillTemplate, fillTextTemplate } from '@dsl-ui/utils/templatedPath.js';
 import { fillClasses } from '@dsl-ui/utils/fillClasses.js';
+import { classFor } from '@dsl-ui/utils/warnUnknownChoice.js';
 import { useOverflowsY } from '@dsl-ui/utils/useOverflowsY.js';
 
 import { getColumnFormat, registeredColumnFormatNames } from './columnFormats.js';
@@ -87,24 +90,29 @@ export function useDataTableSelection(): DataTableSelectionState | null {
 // --- Formatting helpers -------------------------------------------------------
 
 
-// Intl.DateTimeFormat#format throws a RangeError on an invalid date, which would take the whole table down for one
-// bad cell: such a value is shown as it came (visible, not hidden) instead.
-function formatDate(val: unknown, options: Intl.DateTimeFormatOptions): string {
-	const date = new Date(String(val));
-	return Number.isNaN(date.getTime()) ? String(val) : new Intl.DateTimeFormat(undefined, options).format(date);
+/** What a column's `render` and `cellTitle` are given besides the row: the formatter of the date settings. */
+export interface ColumnRenderContext {
+	dates: DateFormatter;
 }
 
-function formatValue(val: unknown, format: ColumnValueFormat | undefined): string {
+const DATE_PARTS: Readonly<Record<string, DatePart>> = { datetime: 'datetime', date: 'date', time: 'time' };
+const DATE_STYLES: Readonly<Record<DateStyle, DateStyle>> = { short: 'short', medium: 'medium', long: 'long' };
+
+// A text or a number goes to the formatter as it is; anything else is shown as its text (the formatter warns once about it).
+function asDateInput(val: unknown): DateInput {
+	return typeof val === 'number' || val instanceof Date ? val : String(val);
+}
+
+function formatValue(val: unknown, format: ColumnValueFormat | undefined, dateStyle: DateStyle = 'short', dates: DateFormatter = getDefaultDateFormatter()): string {
 	if (val === null || val === undefined) {
 		return '';
 	}
 	switch (format) {
 		case 'datetime':
-			return formatDate(val, { dateStyle: 'short', timeStyle: 'short' });
 		case 'date':
-			return formatDate(val, { dateStyle: 'short' });
 		case 'time':
-			return formatDate(val, { timeStyle: 'short' });
+			// An empty cell stays empty (it is not an invalid date).
+			return val === '' ? '' : dates.format(asDateInput(val), dateStyle, DATE_PARTS[format]);
 		case 'bytes':
 			return formatBytes(Number(val));
 		case 'ms':
@@ -113,6 +121,11 @@ function formatValue(val: unknown, format: ColumnValueFormat | undefined): strin
 		default:
 			return String(val);
 	}
+}
+
+// The exact instant, as the tooltip of a date cell. No tooltip for an empty cell.
+function exactTitle(val: unknown, dates: DateFormatter): string | undefined {
+	return val === null || val === undefined || val === '' ? undefined : dates.exact(asDateInput(val));
 }
 
 function applyFilters<T extends Record<string, unknown>>(
@@ -176,8 +189,10 @@ export interface DataTableColumnSpec {
 	muted?: boolean;
 	/** Click-to-sort header. */
 	sortable?: boolean;
-	/** datetime | date | time | bytes | ms, or a format the app registered with registerColumnFormat. */
+	/** datetime | date | time | bytes | ms, or a format the app registered with registerColumnFormat. Dates follow the date settings (`DateFormatProvider`) and carry the exact timestamp as their tooltip. */
 	format?: string;
+	/** Length of a `datetime | date | time` cell: `short` (default, 24/10/2026, 18:38) | `medium` | `long`. */
+	dateStyle?: 'short' | 'medium' | 'long';
 	/** Shows the value as a Badge: map of cell value to badge variant (default | primary | success | warning | danger | info). Values not in the map stay plain text. */
 	badge?: Record<string, string>;
 	/**
@@ -241,7 +256,7 @@ const NON_YAML_COLUMN_KEYS = ['render', 'isActions', 'actions'];
 
 // MUST list the same keys as DataTableColumnSpec / DataTableActionsColumnSpec / DataTableActionItemSpec: a test
 // compares them with what the build tooling extracts from those interfaces.
-export const DATA_TABLE_COLUMN_KEYS = ['field', 'key', 'label', 'width', 'truncate', 'nowrap', 'mono', 'muted', 'sortable', 'format', 'badge', 'href', 'external', 'title'] as const;
+export const DATA_TABLE_COLUMN_KEYS = ['field', 'key', 'label', 'width', 'truncate', 'nowrap', 'mono', 'muted', 'sortable', 'format', 'dateStyle', 'badge', 'href', 'external', 'title'] as const;
 export const DATA_TABLE_ACTIONS_COLUMN_KEYS = ['type', 'items', 'width'] as const;
 export const DATA_TABLE_LINK_COLUMN_KEYS = ['type', 'to', 'label', 'icon', 'position', 'external', 'width'] as const;
 export const DATA_TABLE_ACTION_ITEM_KEYS = ['label', 'action', 'variant', 'condition', 'icon'] as const;
@@ -377,6 +392,9 @@ function normalizeLinkColumn<T extends Record<string, unknown>>(col: RawYamlColu
 	};
 }
 
+// Used when a column is rendered outside DataTable (a test, a custom table): the documented default date formatter.
+const DEFAULT_RENDER_CONTEXT = (): ColumnRenderContext => ({ dates: getDefaultDateFormatter() });
+
 function normalizeColumn<T extends Record<string, unknown>>(col: RawYamlColumn, index = 0): TableColumn<T> {
 	// Already a proper TableColumn (has render function)
 	if (typeof col.render === 'function') {
@@ -433,8 +451,13 @@ function normalizeColumn<T extends Record<string, unknown>>(col: RawYamlColumn, 
 			}
 		}
 	}
+	const isDateFormat = format === 'datetime' || format === 'date' || format === 'time';
+	if (col.dateStyle !== undefined && !isDateFormat) {
+		reportAuthoringMistake(`[DataTable] column ${where}: dateStyle has no effect without format: datetime, date or time.`);
+	}
+	const dateStyle = classFor('DataTable', `column ${where} dateStyle`, col.dateStyle, DATE_STYLES, 'short') as DateStyle;
 	const badge = col.badge;
-	const renderValue = (row: T): React.ReactNode => {
+	const renderValue = (row: T, ctx: ColumnRenderContext): React.ReactNode => {
 		const value = row[field];
 		if (badge) {
 			const variant = badgeVariantFor(value, badge, where);
@@ -447,14 +470,14 @@ function normalizeColumn<T extends Record<string, unknown>>(col: RawYamlColumn, 
 			return customFormat(value, row);
 		}
 		if (format) {
-			return formatValue(value, format as ColumnValueFormat);
+			return formatValue(value, format as ColumnValueFormat, dateStyle, ctx.dates);
 		}
 		return String(value ?? '');
 	};
 	const hrefTemplate = col.href;
 	const external = col.external === true;
-	const render = (row: T): React.ReactNode => {
-		const content = renderValue(row);
+	const render = (row: T, ctx: ColumnRenderContext = DEFAULT_RENDER_CONTEXT()): React.ReactNode => {
+		const content = renderValue(row, ctx);
 		if (hrefTemplate === undefined) {
 			return content;
 		}
@@ -478,13 +501,20 @@ function normalizeColumn<T extends Record<string, unknown>>(col: RawYamlColumn, 
 		key: field,
 		label: col.label ?? field,
 		width: col.width,
-		cellTitle: typeof titleTemplate === 'string' ? (row: T) => fillTextTemplate(titleTemplate, row) : undefined,
+		// An explicit title wins; a date cell otherwise carries the exact timestamp.
+		cellTitle:
+			typeof titleTemplate === 'string'
+				? (row: T) => fillTextTemplate(titleTemplate, row)
+				: isDateFormat
+					? (row: T, ctx: ColumnRenderContext = DEFAULT_RENDER_CONTEXT()) => exactTitle(row[field], ctx.dates)
+					: undefined,
 		truncate: col.truncate,
 		nowrap: col.nowrap,
 		mono: col.mono,
 		muted: col.muted,
 		sortable: col.sortable,
 		format,
+		dateStyle: isDateFormat ? dateStyle : undefined,
 		render,
 	};
 }
@@ -506,11 +536,14 @@ export interface ActionDef<T extends Record<string, unknown>> {
 export interface TableColumn<T extends Record<string, unknown>> {
 	key: string;
 	label: string;
-	render: (row: T) => React.ReactNode;
+	/** `ctx` carries the date formatter; omitted by a caller outside DataTable, the documented default formatter is used. */
+	render: (row: T, ctx?: ColumnRenderContext) => React.ReactNode;
 	mono?: boolean;
 	/** When true, renders in muted text (text-muted) regardless of format. */
 	muted?: boolean;
 	format?: ColumnFormat;
+	/** Length of a date/time cell (default `short`). */
+	dateStyle?: DateStyle;
 	width?: number;
 	truncate?: boolean;
 	/** When true, the cell never wraps (a long value widens the column instead of breaking mid-word). */
@@ -519,7 +552,7 @@ export interface TableColumn<T extends Record<string, unknown>> {
 	isActions?: boolean;
 	actions?: ActionDef<T>[];
 	/** Tooltip of a cell, from the column's `title` template. Undefined: no explicit tooltip for this row. */
-	cellTitle?: (row: T) => string | undefined;
+	cellTitle?: (row: T, ctx?: ColumnRenderContext) => string | undefined;
 	/** An icon-only link column (`type: link`): no header text, narrow cell. */
 	isLink?: boolean;
 	/** Where a link column sits: `start` moves it right after the expansion chevron. */
@@ -535,6 +568,7 @@ interface TextOptions {
 
 interface DateOptions {
 	format?: 'datetime' | 'date' | 'time';
+	dateStyle?: DateStyle;
 	width?: number;
 }
 
@@ -577,13 +611,18 @@ export class ColumnHelpers {
 
 	static date<T extends Record<string, unknown>>(key: keyof T & string, label: string, options: DateOptions = {}): TableColumn<T> {
 		const fmt = options.format ?? 'datetime';
-		return {
+		const column: TableColumn<T> = {
 			key,
 			label,
 			format: fmt,
 			width: options.width,
-			render: row => formatValue(row[key], fmt),
+			render: (row, ctx) => formatValue(row[key], fmt, options.dateStyle, ctx?.dates),
+			cellTitle: (row, ctx) => exactTitle(row[key], ctx?.dates ?? getDefaultDateFormatter()),
 		};
+		if (options.dateStyle !== undefined) {
+			column.dateStyle = options.dateStyle;
+		}
+		return column;
 	}
 
 	static bytes<T extends Record<string, unknown>>(key: keyof T & string, label: string, options: ByteOptions = {}): TableColumn<T> {
@@ -766,6 +805,9 @@ export function DataTable<T extends Record<string, unknown>>({
 }: DataTableProps<T>) {
 	// Ties each expansion toggle (aria-controls) to the panel row it opens.
 	const expansionIdBase = `${useId()}-expansion`;
+	const dates = useDateFormat();
+	// Date cells read the formatter of the date settings; a change of it re-renders the rows (render is called below).
+	const renderContext = useMemo<ColumnRenderContext>(() => ({ dates }), [dates]);
 	// Normalize columns: accept either proper TableColumn[] (from ColumnHelpers) or raw YAML
 	// column defs (from DSL entriesGenerator). This allows declarative YAML to drive DataTable
 	// without requiring ColumnHelpers in every call site.
@@ -1181,7 +1223,7 @@ export function DataTable<T extends Record<string, unknown>>({
 															className="w-8 px-1 py-1.5 text-center"
 															style={col.width ? { width: `${col.width * 4}px` } : undefined}
 														>
-															{col.render(row)}
+															{col.render(row, renderContext)}
 														</td>
 													);
 												}
@@ -1242,7 +1284,7 @@ export function DataTable<T extends Record<string, unknown>>({
 														</td>
 													);
 												}
-												const rendered = col.render(row);
+												const rendered = col.render(row, renderContext);
 												// Muted for metadata formats or explicit muted:true columns
 												const isMuted =
 													col.muted === true ||
@@ -1267,7 +1309,7 @@ export function DataTable<T extends Record<string, unknown>>({
 															.filter(Boolean)
 															.join(' ')}
 														style={col.width ? { width: `${col.width * 4}px` } : undefined}
-														title={col.cellTitle?.(row) ?? (col.truncate && typeof rendered === 'string' ? rendered : undefined)}
+														title={col.cellTitle?.(row, renderContext) ?? (col.truncate && typeof rendered === 'string' ? rendered : undefined)}
 													>
 														{rendered}
 													</td>

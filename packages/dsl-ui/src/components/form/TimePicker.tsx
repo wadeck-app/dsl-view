@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { ChevronDown, ChevronUp, Clock } from 'lucide-react';
 import type { FieldControlProps } from './FieldWrapper.js';
+import { usesTwelveHourClock, useDateFormat } from '@dsl-ui/dates/DateFormatContext.js';
 import { normalizeMinuteStep, stepMinutesDown, stepMinutesUp } from './timeStep.js';
 
 const triggerClass =
@@ -38,6 +39,7 @@ function formatDisplayTime(value: string | null, is12Hour: boolean): string {
 export interface TimePickerProps extends Partial<FieldControlProps> {
 	value: string | null;
 	onChange?: (value: string | null) => void;
+	/** 12h clock with an AM/PM toggle. Without it the clock follows the date settings (`DateFormatProvider`: 24h in English `en-GB`). */
 	is12Hour?: boolean;
 	/** Increment step for minutes (default 1) */
 	minuteStep?: number;
@@ -56,7 +58,7 @@ export interface TimePickerProps extends Partial<FieldControlProps> {
 export function TimePicker({
 	value,
 	onChange,
-	is12Hour = false,
+	is12Hour: is12HourProp,
 	minuteStep = 1,
 	disabled,
 	placeholder = 'Select a time...',
@@ -66,6 +68,8 @@ export function TimePicker({
 	// DatePicker: FieldWrapper clones these in, and destructuring only our own props dropped them.
 	...control
 }: TimePickerProps) {
+	const formatter = useDateFormat();
+	const is12Hour = is12HourProp ?? usesTwelveHourClock(formatter);
 	const isControlled = controlledOpen !== undefined;
 	const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
 	const open = isControlled ? controlledOpen : uncontrolledOpen;

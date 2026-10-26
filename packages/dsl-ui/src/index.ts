@@ -9,6 +9,7 @@ export * from './components/navigation/index.js';
 export * from './components/overlay/index.js';
 export * from './components/table/index.js';
 
+export * from './dates/index.js';
 export { RouterContext } from './RouterContext.js';
 export { UrlParamContext, useUrlParam, useOptionalUrlParam } from './context/UrlParamContext.js';
 export type { UrlParamService } from './context/UrlParamContext.js';

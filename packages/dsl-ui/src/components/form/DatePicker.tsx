@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { buildCalendarGrid } from './calendarUtils.js';
+import { formatDay, formatDayNumber, formatMonthTitle, parseDay } from './calendarFormat.js';
+import { useDateFormat } from '@dsl-ui/dates/DateFormatContext.js';
 import * as Popover from '@radix-ui/react-popover';
 import { addMonths, format, isAfter, isBefore, isEqual, isSameMonth, isSameYear, isToday, parse, startOfMonth, subMonths } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -8,8 +10,6 @@ import { validDateFormat } from '@dsl-ui/utils/validDateFormat.js';
 
 const inputClass =
 	'block w-full rounded border border-border bg-surface text-content px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed';
-
-const DEFAULT_DATE_FORMAT = 'MMM d, yyyy';
 
 const CALENDAR_CLASS = 'z-50 bg-surface border border-border rounded shadow-md p-4 w-80';
 
@@ -23,6 +23,10 @@ export interface DatePickerProps extends Partial<FieldControlProps> {
 	maxDate?: Date;
 	placeholder?: string;
 	disabled?: boolean;
+	/**
+	 * date-fns format of the text field (and of what is typed into it). Without it the field follows the date settings
+	 * (`DateFormatProvider`: "24 Oct 2026" in English `en-GB`) and accepts `yyyy-MM-dd` or exactly that text.
+	 */
 	dateFormat?: string;
 }
 
@@ -50,26 +54,30 @@ export function DatePicker({
 	 */
 	...control
 }: DatePickerProps) {
-	// An unusable format (moment-style `YYYY-MM-DD`, empty) would make date-fns throw on every render.
-	const dateFormat = validDateFormat(dateFormatProp, DEFAULT_DATE_FORMAT, 'DatePicker.dateFormat');
+	const formatter = useDateFormat();
+	// An unusable format (moment-style `YYYY-MM-DD`, empty) would make date-fns throw on every render: it is reported and
+	// the field follows the date settings instead. No `dateFormat` at all means the same, silently.
+	const customFormat = dateFormatProp === undefined ? undefined : validDateFormat(dateFormatProp, '', 'DatePicker.dateFormat') || undefined;
+	const showDay = (day: Date): string => (customFormat !== undefined ? format(day, customFormat) : formatDay(formatter, day));
 	const [open, setOpen] = useState(false);
 	const [displayMonth, setDisplayMonth] = useState<Date>(() => {
 		if (value) return value;
 		return new Date();
 	});
 	const [inputValue, setInputValue] = useState(() => {
-		return value ? format(value, dateFormat) : '';
+		return value ? showDay(value) : '';
 	});
 	const [focusedDate, setFocusedDate] = useState<Date | null>(value);
 	const calendarRef = useRef<HTMLDivElement>(null);
 
 	// Update input display when value changes externally
 	useEffect(() => {
-		setInputValue(value ? format(value, dateFormat) : '');
+		setInputValue(value ? showDay(value) : '');
 		if (value) {
 			setFocusedDate(value);
 		}
-	}, [value, dateFormat]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [value, customFormat, formatter.key]);
 
 	// Follow the value to its month when the value changes. This must depend on `value` only: depending on
 	// `displayMonth` too snapped the calendar back to the selected month right after every Previous/Next click
@@ -96,9 +104,9 @@ export function DatePicker({
 			onChange?.(null);
 		} else {
 			try {
-				const parsed = parse(text, dateFormat, new Date());
+				const parsed = customFormat !== undefined ? parse(text, customFormat, new Date()) : parseDay(formatter, text);
 				// Check if parsed date is valid
-				if (!Number.isNaN(parsed.getTime())) {
+				if (parsed !== undefined && !Number.isNaN(parsed.getTime())) {
 					if (!isDisabledDate(parsed)) {
 						onChange?.(parsed);
 						setDisplayMonth(parsed);
@@ -172,7 +180,7 @@ export function DatePicker({
 		}
 	}
 
-	const weeks = buildCalendarGrid(displayMonth);
+	const weeks = buildCalendarGrid(displayMonth, formatter.firstDayOfWeek);
 
 	return (
 		<Popover.Root open={open} onOpenChange={setOpen}>
@@ -211,7 +219,7 @@ export function DatePicker({
 								<ChevronLeft className="w-4 h-4" />
 							</button>
 							<h2 className="font-semibold text-sm text-content">
-								{format(displayMonth, 'MMMM yyyy')}
+								{formatMonthTitle(formatter, displayMonth)}
 							</h2>
 							<button
 								type="button"
@@ -225,8 +233,8 @@ export function DatePicker({
 
 						{/* Weekday headers */}
 						<div className="grid grid-cols-7 gap-1 text-center">
-							{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-								<div key={day} className="text-xs font-medium text-muted h-8 flex items-center justify-center">
+							{formatter.weekdays('short').map((day, index) => (
+								<div key={index} className="text-xs font-medium text-muted h-8 flex items-center justify-center">
 									{day}
 								</div>
 							))}
@@ -257,7 +265,7 @@ export function DatePicker({
 											${isTodayDate && !isSelected ? 'border-2 border-primary' : ''}
 										`}
 									>
-										{format(date, 'd')}
+										{formatDayNumber(formatter, date)}
 									</button>
 								);
 							})}

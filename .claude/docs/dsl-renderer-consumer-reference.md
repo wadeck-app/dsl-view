@@ -622,7 +622,7 @@ $type: Chart
 data: $sources.series
 xAxisKey: ts
 xAxisType: time          # real timestamps; `category` shows the value as is
-xFormat: time            # date (default) | time (HH:MM) | datetime; viewer's LOCAL time zone; warns on `category`
+xFormat: time            # date (default) | time | datetime; language, clock and zone of the date settings (see Dates); warns on `category`
 yFormat: number          # bytes (DEFAULT) | number
 yUnit: "%"               # optional suffix on every Y tick and tooltip value
 variant: sparkline       # default | sparkline
@@ -685,12 +685,12 @@ columns:
   - { field: event, label: Event, href: "/modules/queue/history?event={event}" }  # the cell value is a link
 ```
 
-- Column keys: `field` (alias `key`), `label`, `width`, `truncate`, `nowrap`, `mono`, `muted`, `sortable`, `format`, `badge`, `href`, `external`, `title`. Actions column: `type`, `items`, `width`; item keys: `label`, `action`, `variant`, `condition`, `icon`. Link column: `type`, `to`, `label`, `icon`, `position`, `external`, `width`.
+- Column keys: `field` (alias `key`), `label`, `width`, `truncate`, `nowrap`, `mono`, `muted`, `sortable`, `format`, `dateStyle`, `badge`, `href`, `external`, `title`. Actions column: `type`, `items`, `width`; item keys: `label`, `action`, `variant`, `condition`, `icon`. Link column: `type`, `to`, `label`, `icon`, `position`, `external`, `width`.
 - Any other column key is an error: `compileDslDocument` / `findUnknownKeys` report it with the column path, and `DataTable` logs it once with `console.error`. Earlier versions dropped everything but `field`/`label` silently, so `width`, `truncate`, `mono`, `muted`, `format` and `sortable` start taking effect on pages that already declared them.
 - An actions column is `type: actions`. `$type: actions` (older wdrive pages) was never recognised: the column rendered as an empty data column; it is now reported.
 - Default wrapping is unchanged: a plain column breaks anywhere (`break-all`). In a narrow container use `nowrap` (never wraps, the column widens), `truncate`, or `width`.
 - `badge`: values missing from the map stay plain text; a variant other than `default | primary | success | warning | danger | info` logs an error and shows the neutral variant.
-- `format` renders in the viewer's locale and local time zone. App-specific formats (an HTTP status swatch, an expiry countdown) are registered by the app before its first page renders: `registerColumnFormat('httpStatus', (value, row) => <MyStatusBadge status={Number(value)} />)`, then `format: httpStatus` in YAML. Registering a built-in name or a malformed name throws; registering a name twice replaces the renderer; an unregistered name logs the supported formats and shows the plain value. Same rule for filters: a non-equality rule such as an HTTP status family (`4xx`) is the app's, registered by its filter component with `registerFilterPredicate`.
+- `format: datetime | date | time` follows the date settings (see Dates); `dateStyle: short | medium | long` (default `short`) sets the length. Every date cell's tooltip is the exact timestamp; an explicit `title` wins. App-specific formats (an HTTP status swatch, an expiry countdown) are registered by the app before its first page renders: `registerColumnFormat('httpStatus', (value, row) => <MyStatusBadge status={Number(value)} />)`, then `format: httpStatus` in YAML. Registering a built-in name or a malformed name throws; registering a name twice replaces the renderer; an unregistered name logs the supported formats and shows the plain value. Same rule for filters: a non-equality rule such as an HTTP status family (`4xx`) is the app's, registered by its filter component with `registerFilterPredicate`.
 - Action item `icon` is a name from the icon vocabulary (below). The button is icon-only: `label` stays its accessible name and tooltip, and `variant`, `condition`, `confirm` (on the `$actions` entry) and the per-row busy spinner work as for a text button. An item without `icon` renders a text button and logs a warning.
 - `title` fills `{field}` from the row's own fields as plain text (no encoding) into the cell's tooltip. Any placeholder without a usable value (missing, empty, null, an object) means no tooltip and no error; an explicit title wins over the one `truncate` derives from the cell text. A tooltip is not keyboard-reachable: never put essential information only there.
 
@@ -758,6 +758,26 @@ A component must not say "empty" before its data has arrived. No YAML is needed:
 - Disabled and spinning while it runs; the rows stay. A failed refresh (and an unknown `source`, which lists the page's sources) goes through the notifier, every time.
 - Outside a `GenericPageRunner` it logs an error and stays disabled. The legacy `onClick` / `loading` props still work (wdrive's `$outputs: onClick`).
 - Needs dsl-ui and dsl-renderer from the same release; with an older generated registry the button has nothing to call (the error above).
+
+## Dates
+
+One formatter writes every date of dsl-ui: DataTable `datetime | date | time` columns, `DateText`, `RelativeDate`, Chart time axes, `formatDateTime`, and the date and time pickers. Default (no provider): English `en-GB`, day first, 24h clock, the time zone of the computer. The browser language is used only when the settings say `locale: auto`.
+
+```tsx
+import { createDateFormatter, DateFormatProvider, parseDateSettings, useDateFormat } from '@wadeck-app/dsl-ui';
+
+const { settings, problems } = parseDateSettings(storedJson);   // problems: one line per wrong field, defaults used for them
+const formatter = createDateFormatter(settings);
+<DateFormatProvider formatter={formatter}>{app}</DateFormatProvider>   // a new instance with the same `formatter.key` re-renders nothing
+const dates = useDateFormat();   // dates.format(v, 'short'|'medium'|'long', 'datetime'|'date'|'time'), .exact(v), .relative(v), .weekdays(), .months(), .intl(options)
+```
+
+- Settings (`DateSettings`): `locale` (BCP 47 or `auto`), `preset` (`locale` | `iso`), `hourCycle` (`auto` | `12h` | `24h`), `timeZone` (`local`, `UTC` or an IANA name), `weekStart`, `weekdayStyle`. Storing and editing them is the app's job.
+- Values: a `Date`, epoch milliseconds or ISO 8601 text. A value that is not a date is shown as it came and warned once.
+- `DateText` node: `value`, `dateStyle` (`short | medium | long`, default `medium`), `part` (`datetime | date | time`), `relative`. Plain text in a `<time>`; the tooltip is the exact timestamp. The prop is `dateStyle`, not `style`: the generated render never reads a prop named `style`. `relative` is computed at render; `RelativeDate` keeps updating.
+- `RelativeDate`: labels and tooltip come from the formatter; the `format` (date-fns) prop is ignored and reported in development.
+- Pickers: the first calendar column is `formatter.firstDayOfWeek`; `is12Hour` defaults to the clock of the settings. Without `dateFormat` the text field is written by the formatter ("24 Oct 2026") and accepts `yyyy-MM-dd` or exactly that text. An explicit date-fns `dateFormat` still decides text and parsing. A picked day is a calendar day: the settings' time zone never moves it.
+- Left as they were: `TimePicker` AM/PM labels and the English button names of the pickers; Chart number ticks (`Intl.NumberFormat` of the browser language).
 
 ## Behaviour changes by version
 

@@ -1,6 +1,10 @@
 import { act, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createDateFormatter } from '@dsl-ui/dates/dateFormatter.js';
+import { DateFormatProvider } from '@dsl-ui/dates/DateFormatContext.js';
+import { DEFAULT_DATE_SETTINGS } from '@dsl-ui/dates/dateSettings.js';
+
 import { getRelativeLabel, RelativeDate } from './RelativeDate.js';
 
 // Fixed reference point: 2026-09-12T12:00:00.000Z
@@ -24,9 +28,9 @@ const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
 describe('RelativeDate', () => {
-	it('shows "just now" for a date 10 seconds ago', () => {
+	it('shows "now" for a date 10 seconds ago', () => {
 		render(<RelativeDate date={ago(10 * SECOND)} tooltip={false} />);
-		expect(screen.getByText('just now')).toBeInTheDocument();
+		expect(screen.getByText('now')).toBeInTheDocument();
 	});
 
 	it('shows "1 minute ago" for 90 seconds ago', () => {
@@ -61,34 +65,32 @@ describe('RelativeDate', () => {
 		expect(container.querySelector('time')).not.toBeNull();
 	});
 
-	// Every bucket edge, both sides: an off-by-one in a comparison moves the label by a whole unit.
+	// Every bucket edge, both sides, from the formatter's thresholds: an off-by-one moves the label by a whole unit.
+	// The words are Intl.RelativeTimeFormat's (numeric: auto), in English en-GB without a provider.
 	it.each([
-		[-1 * SECOND, 'in the future'],
-		[0, 'just now'],
-		[59 * SECOND, 'just now'],
+		[-1 * SECOND, 'now'],
+		[0, 'now'],
+		[44 * SECOND, 'now'],
+		[45 * SECOND, '1 minute ago'],
 		[60 * SECOND, '1 minute ago'],
-		[119 * SECOND, '1 minute ago'],
 		[120 * SECOND, '2 minutes ago'],
-		[59 * MINUTE, '59 minutes ago'],
-		[60 * MINUTE, '1 hour ago'],
+		[44 * MINUTE, '44 minutes ago'],
+		[45 * MINUTE, '1 hour ago'],
 		[2 * HOUR, '2 hours ago'],
-		[23 * HOUR + 59 * MINUTE, '23 hours ago'],
+		[21 * HOUR, '21 hours ago'],
+		[22 * HOUR, 'yesterday'],
 		[24 * HOUR, 'yesterday'],
-		[47 * HOUR, 'yesterday'],
 		[48 * HOUR, '2 days ago'],
-		[6 * DAY, '6 days ago'],
-		[7 * DAY, 'last week'],
-		[13 * DAY, 'last week'],
-		[14 * DAY, '2 weeks ago'],
-		[29 * DAY, '4 weeks ago'],
-		[30 * DAY, 'last month'],
-		[59 * DAY, 'last month'],
+		[7 * DAY, '7 days ago'],
+		[25 * DAY, '25 days ago'],
+		[26 * DAY, 'last month'],
 		[60 * DAY, '2 months ago'],
-		[364 * DAY, '12 months ago'],
-		[365 * DAY, 'last year'],
-		[729 * DAY, 'last year'],
-		[730 * DAY, '2 years ago'],
-		[1000 * DAY, '2 years ago'],
+		[319 * DAY, '11 months ago'],
+		[320 * DAY, 'last year'],
+		[729 * DAY, '2 years ago'],
+		[1000 * DAY, '3 years ago'],
+		[-2 * HOUR, 'in 2 hours'],
+		[-3 * DAY, 'in 3 days'],
 	])('labels a date %i ms in the past as "%s"', (ms, expected) => {
 		expect(getRelativeLabel(ago(ms))).toBe(expected);
 	});
@@ -101,8 +103,8 @@ describe('RelativeDate', () => {
 	});
 
 	it('live: the label moves on with the clock every 60 s, and stops ticking after unmount', () => {
-		const view = render(<RelativeDate date={ago(59 * SECOND)} tooltip={false} />);
-		expect(screen.getByText('just now')).toBeInTheDocument();
+		const view = render(<RelativeDate date={ago(30 * SECOND)} tooltip={false} />);
+		expect(screen.getByText('now')).toBeInTheDocument();
 		act(() => {
 			vi.advanceTimersByTime(60 * SECOND);
 		});
@@ -116,17 +118,17 @@ describe('RelativeDate', () => {
 	});
 
 	it('live=false keeps the label it was rendered with, whatever the clock does', () => {
-		render(<RelativeDate date={ago(59 * SECOND)} tooltip={false} live={false} />);
+		render(<RelativeDate date={ago(30 * SECOND)} tooltip={false} live={false} />);
 		act(() => {
 			vi.advanceTimersByTime(10 * MINUTE);
 		});
-		expect(screen.getByText('just now')).toBeInTheDocument();
+		expect(screen.getByText('now')).toBeInTheDocument();
 		expect(vi.getTimerCount()).toBe(0);
 	});
 
 	it('follows a new date prop immediately', () => {
 		const view = render(<RelativeDate date={ago(10 * SECOND)} tooltip={false} />);
-		expect(screen.getByText('just now')).toBeInTheDocument();
+		expect(screen.getByText('now')).toBeInTheDocument();
 		view.rerender(<RelativeDate date={ago(3 * HOUR)} tooltip={false} />);
 		expect(screen.getByText('3 hours ago')).toBeInTheDocument();
 	});
@@ -144,15 +146,35 @@ describe('RelativeDate', () => {
 		expect(screen.getByText('soon-ish')).toBeInTheDocument();
 		expect(container.querySelector('time')).toBeNull();
 		expect(screen.queryByRole('tooltip')).toBeNull();
-		expect(warn).toHaveBeenCalledWith(expect.stringContaining('"soon-ish" is not a valid date'));
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('"soon-ish" is not a date'));
 		warn.mockRestore();
 	});
 
-	it('puts the absolute date in the tooltip with the given date-fns format, in local time', () => {
+	it('puts the exact timestamp (ISO 8601 with offset and zone) in the tooltip', () => {
 		const local = new Date(2026, 0, 5, 14, 5);
 		vi.setSystemTime(new Date(2026, 0, 5, 14, 10));
-		render(<RelativeDate date={local} format="yyyy-MM-dd HH:mm" />);
-		expect(screen.getByRole('tooltip')).toHaveTextContent('2026-01-05 14:05');
+		render(<RelativeDate date={local} />);
+		const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+		expect(screen.getByRole('tooltip').textContent).toMatch(new RegExp(`^2026-01-05T14:05:00\\.000(Z|[+-]\\d\\d:\\d\\d) \\(${zone.replace('/', '\\/')}\\)$`));
+	});
+
+	it('follows the language and the time zone of the date settings, label and tooltip', () => {
+		const formatter = createDateFormatter({ ...DEFAULT_DATE_SETTINGS, locale: 'fr-FR', timeZone: 'Europe/Paris' });
+		render(
+			<DateFormatProvider formatter={formatter}>
+				<RelativeDate date={new Date('2026-09-12T11:55:00.000Z')} />
+			</DateFormatProvider>,
+		);
+		expect(screen.getByText('il y a 5 minutes')).toBeInTheDocument();
+		expect(screen.getByRole('tooltip')).toHaveTextContent('2026-09-12T13:55:00.000+02:00 (Europe/Paris)');
+	});
+
+	it('ignores the deprecated date-fns format prop, and says so', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		render(<RelativeDate date={new Date('2026-09-12T11:55:00.000Z')} format="yyyy-MM-dd" />);
+		expect(screen.getByRole('tooltip').textContent).not.toContain('yyyy');
+		expect(screen.getByRole('tooltip').textContent).toMatch(/^2026-09-12T/);
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('[RelativeDate] `format` is ignored'));
 	});
 
 	it('appends a custom className to the base text classes', () => {
@@ -171,12 +193,12 @@ describe('RelativeDate', () => {
 	it('accepts a string (ISO) date input and renders without crashing', () => {
 		const isoString = fixedDate.toISOString();
 		render(<RelativeDate date={isoString} tooltip={false} />);
-		expect(screen.getAllByText('just now')[0]).toBeInTheDocument();
+		expect(screen.getAllByText('now')[0]).toBeInTheDocument();
 	});
 
 	it('accepts a number (timestamp) input and renders without crashing', () => {
 		render(<RelativeDate date={fixedDate.getTime()} tooltip={false} />);
-		expect(screen.getAllByText('just now')[0]).toBeInTheDocument();
+		expect(screen.getAllByText('now')[0]).toBeInTheDocument();
 	});
 
 	it('live=false does NOT call setInterval', () => {

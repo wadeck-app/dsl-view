@@ -1,3 +1,5 @@
+import { getDefaultDateFormatter } from '@dsl-ui/dates/DateFormatContext.js';
+import type { DateFormatter } from '@dsl-ui/dates/dateFormatter.js';
 import { formatBytes } from '@dsl-ui/utils/formatBytes.js';
 
 export type ChartYFormat = 'bytes' | 'number';
@@ -37,17 +39,18 @@ const timeFormat = { hour: '2-digit', minute: '2-digit' } as const;
 const dateTimeFormat = { ...dateFormat, ...timeFormat } as const;
 
 /**
- * `xFormat` only applies to `xAxisType: time`; all formats render in the viewer's LOCAL time zone.
- * A category axis shows the value as is.
+ * `xFormat` only applies to `xAxisType: time`; all formats follow the date settings (language, clock, time zone) of the
+ * formatter, English `en-GB` in the local zone by default. A category axis shows the value as is.
  */
-export function formatXTick(value: unknown, xAxisType: 'time' | 'category', xFormat: ChartXFormat = 'date'): string {
+export function formatXTick(value: unknown, xAxisType: 'time' | 'category', xFormat: ChartXFormat = 'date', formatter: DateFormatter = getDefaultDateFormatter()): string {
 	if (xAxisType !== 'time') {
 		return String(value);
 	}
 	const d = new Date(value as string | number);
+	// Not a date: shown as it came, without the formatter's warning (a tick is drawn on every render).
 	if (isNaN(d.getTime())) {
 		return String(value);
 	}
 	const options = xFormat === 'time' ? timeFormat : xFormat === 'datetime' ? dateTimeFormat : dateFormat;
-	return new Intl.DateTimeFormat(undefined, options).format(d);
+	return formatter.intl(options).format(d);
 }

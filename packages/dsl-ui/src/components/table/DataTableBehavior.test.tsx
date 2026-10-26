@@ -33,14 +33,15 @@ function sortable<T extends Record<string, unknown>>(key: keyof T & string, labe
 describe('DataTable cell formats', () => {
 	const ts = '2026-10-19T14:05:00Z';
 
+	// English en-GB, 24h, local zone: the documented default, whatever language the browser has. Built from local parts so it holds in any zone.
 	it.each([
-		['datetime', { dateStyle: 'short', timeStyle: 'short' }],
-		['date', { dateStyle: 'short' }],
-		['time', { timeStyle: 'short' }],
-	] as const)('ColumnHelpers.date formats %s with the viewer locale', (format, options) => {
-		type R = { id: string; at: string };
-		render(<DataTable<R> rows={[{ id: '1', at: ts }]} columns={[ColumnHelpers.date<R>('at', 'At', { format })]} />);
-		expect(screen.getByRole('cell')).toHaveTextContent(new Intl.DateTimeFormat(undefined, options).format(new Date(ts)));
+		['datetime', '19/10/2026, 14:05'],
+		['date', '19/10/2026'],
+		['time', '14:05'],
+	] as const)('ColumnHelpers.date formats %s short, in English day-first, by default', (format, expected) => {
+		type R = { id: string; at: number };
+		render(<DataTable<R> rows={[{ id: '1', at: new Date(2026, 9, 19, 14, 5).getTime() }]} columns={[ColumnHelpers.date<R>('at', 'At', { format })]} />);
+		expect(screen.getByRole('cell')).toHaveTextContent(expected);
 	});
 
 	it('shows an unparsable date as it came instead of crashing the whole table', () => {

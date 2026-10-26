@@ -71,7 +71,7 @@ describe('Chart formatters and wiring', () => {
 		expect(lastProps('XAxis').tickFormatter('10:05')).toBe('10:05');
 		const ts = new Date(2026, 9, 19, 14, 5).getTime();
 		const { unmount } = render(<Chart {...base} xAxisType="time" xFormat="time" />);
-		expect(lastProps('XAxis').tickFormatter(ts)).toBe(new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' }).format(ts));
+		expect(lastProps('XAxis').tickFormatter(ts)).toBe('14:05');
 		unmount();
 	});
 
@@ -79,19 +79,20 @@ describe('Chart formatters and wiring', () => {
 		const ts = new Date(2026, 9, 19, 14, 5).getTime();
 		render(<Chart {...base} xAxisType="time" xFormat="time" />);
 		const heading: string = lastProps('Tooltip').labelFormatter(ts);
-		expect(heading).toBe(new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(ts));
+		// English en-GB by default, whatever language the browser has.
+		expect(heading).toBe('19 Oct, 14:05');
 	});
 
 	it('keeps the configured xFormat in the tooltip heading otherwise', () => {
 		const ts = new Date(2026, 9, 19, 14, 5).getTime();
 		render(<Chart {...base} xAxisType="time" xFormat="date" />);
-		expect(lastProps('Tooltip').labelFormatter(ts)).toBe(new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(ts));
+		expect(lastProps('Tooltip').labelFormatter(ts)).toBe('19 Oct');
 	});
 
 	it('keeps the default date heading when xFormat is unset, shows date+time for datetime, and the raw label on a category axis', () => {
 		const ts = new Date(2026, 9, 19, 14, 5).getTime();
-		const dateOnly = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(ts);
-		const dateTime = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(ts);
+		const dateOnly = '19 Oct';
+		const dateTime = '19 Oct, 14:05';
 		const first = render(<Chart {...base} xAxisType="time" />);
 		expect(lastProps('Tooltip').labelFormatter(ts)).toBe(dateOnly);
 		first.unmount();

@@ -43,6 +43,11 @@ describe('validDateFormat', () => {
 		expect(error).toHaveBeenCalledTimes(1);
 	});
 
+	it('an empty fallback means the date settings: the report says so', () => {
+		expect(validDateFormat('YYYY', '', 'DatePicker.dateFormat')).toBe('');
+		expect(String(error.mock.calls[0]?.[0])).toMatch(/using the format of the date settings instead.$/);
+	});
+
 	it('the fallback it returns is itself accepted by date-fns', () => {
 		expect(() => format(new Date(2000, 0, 1), validDateFormat('DD', 'MMM d, yyyy', 'X.dateFormat'))).not.toThrow();
 	});

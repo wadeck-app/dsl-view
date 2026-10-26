@@ -20,9 +20,10 @@ describe('DatePicker dateFormat', () => {
 		expect(error).not.toHaveBeenCalled();
 	});
 
-	it.each([['YYYY-MM-DD'], ['dd/MM/YYYY'], ['']])('falls back to the default format for %j, and reports it', (dateFormat) => {
+	it.each([['YYYY-MM-DD'], ['dd/MM/YYYY'], ['']])('falls back to the format of the date settings for %j, and reports it', (dateFormat) => {
 		render(<DatePicker value={date} onChange={vi.fn()} dateFormat={dateFormat} />);
-		expect(screen.getByRole('textbox')).toHaveValue('Jan 15, 2024');
+		// English en-GB without a provider.
+		expect(screen.getByRole('textbox')).toHaveValue('15 Jan 2024');
 		expect(error).toHaveBeenCalledTimes(1);
 		expect(String(error.mock.calls[0]?.[0])).toMatch(new RegExp(`^\\[DatePicker\\.dateFormat\\] cannot format dates with ${JSON.stringify(dateFormat).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
 	});
@@ -35,9 +36,9 @@ describe('DateRangePicker dateFormat', () => {
 		expect(error).not.toHaveBeenCalled();
 	});
 
-	it.each([['YYYY-MM-DD'], ['']])('falls back to the default format for %j, and reports it', (dateFormat) => {
+	it.each([['YYYY-MM-DD'], ['']])('falls back to the format of the date settings for %j, and reports it', (dateFormat) => {
 		render(<DateRangePicker value={{ from: date, to: new Date(2024, 0, 20) }} onChange={vi.fn()} dateFormat={dateFormat} />);
-		expect(screen.getByRole('button', { name: /Jan 15, 2024 \u2013 Jan 20, 2024/ })).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: /15 Jan 2024 \u2013 20 Jan 2024/ })).toBeInTheDocument();
 		expect(error).toHaveBeenCalledTimes(1);
 		expect(String(error.mock.calls[0]?.[0])).toContain('[DateRangePicker.dateFormat] cannot format dates with');
 	});

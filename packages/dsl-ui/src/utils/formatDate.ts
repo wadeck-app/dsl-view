@@ -1,9 +1,11 @@
-export function formatDateTime(iso: string): string {
-	const date = new Date(iso);
-	// Intl.DateTimeFormat throws a RangeError on an invalid date, which would take the whole page down for one bad cell.
-	if (Number.isNaN(date.getTime())) {
-		console.warn(`[formatDateTime] not a date: ${JSON.stringify(iso)}; showing it as is`);
-		return iso;
-	}
-	return new Intl.DateTimeFormat('en-US', { dateStyle: 'short', timeStyle: 'short' }).format(date);
+import { getDefaultDateFormatter } from '@dsl-ui/dates/DateFormatContext.js';
+import type { DateFormatter } from '@dsl-ui/dates/dateFormatter.js';
+
+/**
+ * A short date and time ("24/10/2026, 18:38") from the date settings. Not a hook: pass the formatter you got from
+ * `useDateFormat()` to follow a `DateFormatProvider`; without one the documented default (English `en-GB`, 24h) is used.
+ * A value that is not a date comes back as it was and the formatter warns once.
+ */
+export function formatDateTime(iso: string, formatter: DateFormatter = getDefaultDateFormatter()): string {
+	return formatter.format(iso, 'short');
 }

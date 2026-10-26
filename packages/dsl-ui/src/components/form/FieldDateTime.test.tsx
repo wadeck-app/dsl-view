@@ -1,5 +1,6 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
+import { renderWithUsDates as render } from '@dsl-ui/test-utils.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { FieldDateTime } from './FieldDateTime.js';

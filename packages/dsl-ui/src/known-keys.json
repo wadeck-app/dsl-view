@@ -301,6 +301,7 @@
 					"muted",
 					"sortable",
 					"format",
+					"dateStyle",
 					"badge",
 					"href",
 					"external",
@@ -363,6 +364,14 @@
 			"onOpenChange",
 			"open",
 			"placeholder"
+		]
+	},
+	"DateText": {
+		"knownKeys": [
+			"dateStyle",
+			"part",
+			"relative",
+			"value"
 		]
 	},
 	"DeleteButton": {

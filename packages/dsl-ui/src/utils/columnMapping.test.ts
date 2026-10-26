@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
+import { createDateFormatter } from '@dsl-ui/dates/dateFormatter.js';
+import { DEFAULT_DATE_SETTINGS } from '@dsl-ui/dates/dateSettings.js';
 import { resolveColumn, resolveColumns } from './columnMapping.js';
 import type { TableColumn } from '../components/table/DataTable.js';
 
@@ -10,7 +12,7 @@ import type { TableColumn } from '../components/table/DataTable.js';
  * call site here was an error as soon as the tests were type-checked.
  */
 function strip(col: TableColumn<Record<string, unknown>>) {
-	const { render, ...rest } = col;
+	const { render, cellTitle, ...rest } = col;
 	return rest;
 }
 
@@ -103,6 +105,17 @@ describe('resolveColumn: every declared key reaches the column, per format', () 
 		expect(strip(col)).toStrictEqual({ key: 'ts', label: 'T', format, width: 9, mono: true, muted: true, truncate: true, sortable: true });
 		// the format drives the rendered text: a time column must not print a date
 		expect(col.render({ ts: '2026-10-25T13:45:00Z' })).toBe(resolveColumn({ field: 'ts', label: 'T', format }).render({ ts: '2026-10-25T13:45:00Z' }));
+	});
+
+	it.each(['short', 'medium', 'long'] as const)('dateStyle %s reaches the date column and changes the text', dateStyle => {
+		const row = { ts: '2026-10-25T13:45:30' };
+		const col = resolveColumn({ field: 'ts', label: 'T', format: 'datetime', dateStyle });
+		expect(col.dateStyle).toBe(dateStyle);
+		expect(col.render(row)).toBe(createDateFormatter({ ...DEFAULT_DATE_SETTINGS }).format(row.ts, dateStyle, 'datetime'));
+	});
+
+	it('a column without dateStyle has no dateStyle key (short is the default of the cell, not a stored value)', () => {
+		expect('dateStyle' in resolveColumn({ field: 'ts', label: 'T', format: 'date' })).toBe(false);
 	});
 
 	it('date and time render differently, so a dropped format would show', () => {

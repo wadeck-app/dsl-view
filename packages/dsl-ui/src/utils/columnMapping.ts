@@ -12,6 +12,8 @@ export interface YamlDataColumn {
 	field: string;
 	label: string;
 	format?: string;
+	/** Length of a `datetime | date | time` cell (default `short`). */
+	dateStyle?: 'short' | 'medium' | 'long';
 	mono?: boolean;
 	muted?: boolean;
 	truncate?: boolean;
@@ -65,7 +67,7 @@ export function resolveColumn<T extends Record<string, unknown>>(
 	// (unlike `bytes`, which IS named identically to its format value). Both branches are
 	// dispatched by format value, never by component/prop name.
 	if (dc.format === 'datetime' || dc.format === 'date' || dc.format === 'time') {
-		const built = ColumnHelpers.date<T>(key, dc.label, { format: dc.format, width: dc.width });
+		const built = ColumnHelpers.date<T>(key, dc.label, { format: dc.format, dateStyle: dc.dateStyle, width: dc.width });
 		if (dc.mono) built.mono = dc.mono;
 		if (dc.muted) built.muted = dc.muted;
 		if (dc.truncate) built.truncate = dc.truncate;

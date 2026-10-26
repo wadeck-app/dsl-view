@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { createDateFormatter } from '@dsl-ui/dates/dateFormatter.js';
+import { DEFAULT_DATE_SETTINGS } from '@dsl-ui/dates/dateSettings.js';
 import { CHART_PALETTE, formatXTick, formatYTick, seriesColor } from './chartFormat.js';
 
 describe('formatYTick', () => {
@@ -87,12 +89,23 @@ describe('formatXTick', () => {
 		expect(formatXTick(value, 'category')).toBe(String(value));
 	});
 
-	it('formats date, time and datetime in local time', () => {
-		expect(formatXTick(ts, 'time')).toBe(new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(ts));
-		const time = formatXTick(ts, 'time', 'time');
-		expect(time).toBe(new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' }).format(ts));
-		expect(time).toMatch(/05/);
-		expect(formatXTick(ts, 'time', 'datetime')).toContain(time);
+	// Without a formatter: the documented default (English en-GB, 24h, the zone of the computer), never the browser language.
+	it('formats date, time and datetime in English, in local time, by default', () => {
+		expect(formatXTick(ts, 'time')).toBe('19 Oct');
+		expect(formatXTick(ts, 'time', 'time')).toBe('14:05');
+		expect(formatXTick(ts, 'time', 'datetime')).toBe('19 Oct, 14:05');
+	});
+
+	it('follows the language, the clock and the time zone of the formatter it is given', () => {
+		const instant = Date.UTC(2026, 9, 19, 14, 5);
+		const paris = createDateFormatter({ ...DEFAULT_DATE_SETTINGS, locale: 'fr-FR', timeZone: 'Europe/Paris' });
+		expect(formatXTick(instant, 'time', 'date', paris)).toBe('19 oct.');
+		expect(formatXTick(instant, 'time', 'time', paris)).toBe('16:05');
+		const tokyo12h = createDateFormatter({ ...DEFAULT_DATE_SETTINGS, locale: 'en-GB', timeZone: 'Asia/Tokyo', hourCycle: '12h' });
+		expect(formatXTick(instant, 'time', 'time', tokyo12h)).toMatch(/^11:05\s?pm$/i);
+		expect(formatXTick(instant, 'time', 'date', tokyo12h)).toBe('19 Oct');
+		const iso = createDateFormatter({ ...DEFAULT_DATE_SETTINGS, timeZone: 'UTC', preset: 'iso' });
+		expect(formatXTick(instant, 'time', 'time', iso)).toBe('14:05');
 	});
 
 	// Each format must carry exactly its own parts: date has no clock, time has no date, datetime has both.
