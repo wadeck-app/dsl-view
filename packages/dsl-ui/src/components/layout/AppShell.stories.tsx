@@ -171,3 +171,44 @@ export const BarShrink: Story = { render: () => <LongPage barOnScroll="shrink" /
 export const BarHide: Story = { render: () => <LongPage barOnScroll="hide" /> };
 /** After the first scroll the bar is a 2rem strip of icons (tooltips carry the names). */
 export const BarIcons: Story = { render: () => <LongPage barOnScroll="icons" /> };
+
+const GROUPED_MENU: ShellMenu = {
+	title: 'Queue',
+	label: 'Queue pages',
+	items: [
+		{ id: 'overview', label: 'Overview', href: '#/queue', current: 'page' },
+		{ id: 'jobs', label: 'Jobs', href: '#/queue/jobs' },
+		{ id: 'workers', label: 'Workers', href: '#/queue/workers' },
+		{ kind: 'separator', id: 'admin', label: 'Administration' },
+		...Array.from({ length: 30 }, (_, i) => ({ id: `a${i}`, label: `Admin page ${i + 1}`, href: `#/queue/a${i}` })),
+		{ kind: 'separator', id: 'unlabelled' },
+		{ id: 'about', label: 'About', href: '#/queue/about' },
+	],
+};
+
+function MenuVariantDemo({ menuVariant }: { menuVariant: NonNullable<React.ComponentProps<typeof AppShell>['menuVariant']> }) {
+	return (
+		<AppShell brand="my-app" tabs={tabs('queue')} tabsLabel="Modules" menu={GROUPED_MENU} menuVariant={menuVariant}>
+			<div className="p-6 text-content">
+				<h1 className="text-xl font-semibold">menuVariant = {menuVariant}</h1>
+				<p className="mt-2 text-muted">The menu holds more entries than the window: it scrolls on its own. Use the arrow keys, Home and End inside it.</p>
+				{Array.from({ length: 40 }, (_, i) => (
+					<p key={i} className="mt-4 text-muted">
+						Paragraph {i + 1}.
+					</p>
+				))}
+			</div>
+		</AppShell>
+	);
+}
+
+/** 11rem, denser rows. */
+export const MenuCompact: Story = { render: () => <MenuVariantDemo menuVariant="compact" /> };
+/** Icons only (initials here); hover or Tab into it to expand it over the content, which does not move. */
+export const MenuRail: Story = { render: () => <MenuVariantDemo menuVariant="rail" /> };
+/** The chevron (or the `[` key) folds it to the rail; the choice is kept in localStorage `app-shell.menu`. */
+export const MenuToggle: Story = { render: () => <MenuVariantDemo menuVariant="toggle" /> };
+/** No column: the button at the start of the bar opens the menu as a drawer over the content. */
+export const MenuDrawer: Story = { render: () => <MenuVariantDemo menuVariant="drawer" /> };
+/** 3px accent bar and tint on the current entry, larger hit area, small-caps group captions. */
+export const MenuAccent: Story = { render: () => <MenuVariantDemo menuVariant="accent" /> };

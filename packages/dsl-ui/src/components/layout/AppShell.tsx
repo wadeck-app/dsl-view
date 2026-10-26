@@ -1,10 +1,24 @@
+import { Menu } from 'lucide-react';
 import React, { useEffect, useId, useState } from 'react';
 import { classFor } from '@dsl-ui/utils/warnUnknownChoice.js';
-import { APP_SHELL_BAR_HEIGHT, APP_SHELL_BAR_HEIGHT_VAR, APP_SHELL_MENU_WIDTH, APP_SHELL_MENU_WIDTH_VAR } from './shellMenuWidth.js';
+import { Drawer } from '../overlay/Drawer.js';
+import {
+	APP_SHELL_BAR_HEIGHT,
+	APP_SHELL_BAR_HEIGHT_VAR,
+	APP_SHELL_MENU_WIDTH,
+	APP_SHELL_MENU_WIDTH_COMPACT,
+	APP_SHELL_MENU_WIDTH_NONE,
+	APP_SHELL_MENU_WIDTH_RAIL,
+	APP_SHELL_MENU_WIDTH_VAR,
+} from './shellMenuWidth.js';
+import { isShortcutTarget, MENU_VARIANTS, ShellMenuNav, ShellSideMenu, useFoldedMenu } from './ShellSideMenu.js';
 import { ShellTabs } from './ShellTabs.js';
 import { BAR_ON_SCROLL_MODES, useBarOnScroll, type BarOnScroll } from './useBarOnScroll.js';
 
 export type { BarOnScroll } from './useBarOnScroll.js';
+
+/** The look and behaviour of the side menu. Default `classic`. See the component doc. */
+export type ShellMenuVariant = 'classic' | 'compact' | 'rail' | 'toggle' | 'drawer' | 'accent';
 
 /**
  * A generic application frame: a top bar (brand, tabs, actions), an always-visible side menu and the content.
@@ -42,8 +56,26 @@ export type { BarOnScroll } from './useBarOnScroll.js';
  * is inside it. The content never moves: a shrunk bar keeps its place in the flow. An unknown value warns once and
  * behaves as `steady`.
  *
- * Limits: no other responsive behaviour. The menu is a fixed 15rem and never collapses. Not a registry node: it is a
- * React API for the host app's layout.
+ * `menuVariant` (default `classic`) is the side menu. `--app-shell-menu-width` follows its current state:
+ * - `classic`: 15rem, icon and label.
+ * - `compact`: 11rem, denser rows.
+ * - `rail`: 3.5rem, icons only (initials without an icon, the name as tooltip). Hover or keyboard focus expands it to 15rem
+ *   OVER the content, which does not move (the variable stays 3.5rem).
+ * - `toggle`: classic plus a button (named by `menu.label`) that folds it to the rail and back; the choice is kept in
+ *   localStorage `app-shell.menu` (`open` / `folded`), and the key `[` does the same when no field has the focus. The
+ *   content follows the width.
+ * - `drawer`: no column (variable 0px). A menu button first in the top bar opens the menu as a dialog over the content;
+ *   Escape, the backdrop or using a link closes it. This is also the answer for a narrow window.
+ * - `accent`: classic width, a 3px accent bar and soft tint on the current entry, a larger hit area, group captions in
+ *   small caps.
+ * An unknown value warns once and behaves as `classic`. In every variant the arrow keys, Home and End move between the
+ * menu links, the current entry is scrolled into view and the focus ring is visible.
+ *
+ * Menu `items` may hold `{ kind: 'separator', id, label? }`: a thin rule, with the label a caption above the next group.
+ * A separator is never focusable. Leading, trailing and doubled separators are dropped silently (the data comes from
+ * modules). Collapsed, a separator is a rule only.
+ *
+ * Limits: no other responsive behaviour. Not a registry node: it is a React API for the host app's layout.
  */
 
 export interface ShellLinkProps {
@@ -58,6 +90,8 @@ export interface ShellLinkProps {
 }
 
 export interface ShellItem {
+	/** `link` (default). Present so that a menu entry can be told from a separator. */
+	kind?: 'link';
 	id: string;
 	label: string;
 	href: string;
@@ -69,12 +103,22 @@ export interface ShellItem {
 	accent?: string;
 }
 
+/** A rule between two groups of menu links, with an optional caption for the next group. */
+export interface ShellSeparator {
+	kind: 'separator';
+	id: string;
+	/** Caption of the group that follows. Also the accessible name of the separator. */
+	label?: string;
+}
+
+export type ShellMenuEntry = ShellItem | ShellSeparator;
+
 export interface ShellMenu {
 	/** Names the side menu: a visually hidden heading, so assistive technology still announces where you are. */
 	title: string;
 	/** Accessible name of the menu's navigation. */
 	label: string;
-	items: ShellItem[];
+	items: ShellMenuEntry[];
 }
 
 export interface AppShellProps {
@@ -99,6 +143,8 @@ export interface AppShellProps {
 	moreLabel?: string;
 	/** What the top bar does when the page scrolls. Default `steady` (no change). See the component doc. */
 	barOnScroll?: BarOnScroll;
+	/** The side menu's look and behaviour. Default `classic` (unchanged). See the component doc. */
+	menuVariant?: ShellMenuVariant;
 	children: React.ReactNode;
 }
 
@@ -116,14 +162,10 @@ const ANIMATE_MENU = 'transition-[top,height] duration-150 motion-reduce:transit
 // Shells mounted right now (normally one): the variable stays until the last one unmounts.
 let mountedShells = 0;
 
-const MENU_ITEM = 'flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors';
-const MENU_ITEM_CURRENT = 'bg-primary-light font-medium text-primary';
-const MENU_ITEM_OTHER = 'text-muted hover:bg-muted-bg hover:text-content';
-
 const SKIP_LINK =
 	'sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-40 focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:text-content focus:shadow-md';
 
-export function AppShell({ brand, tabs, tabsLabel, menu, actions, renderLink = defaultRenderLink, skipLabel, moreLabel, barOnScroll, children }: AppShellProps): React.ReactElement {
+export function AppShell({ brand, tabs, tabsLabel, menu, actions, renderLink = defaultRenderLink, skipLabel, moreLabel, barOnScroll, menuVariant, children }: AppShellProps): React.ReactElement {
 	const mainId = useId();
 	const mode = classFor('AppShell', 'barOnScroll', barOnScroll, BAR_ON_SCROLL_MODES, 'steady') as BarOnScroll;
 	const [hovered, setHovered] = useState(false);
@@ -133,12 +175,35 @@ export function AppShell({ brand, tabs, tabsLabel, menu, actions, renderLink = d
 	const hidden = barState === 'hidden';
 	const barHeight = hidden ? '0px' : compact ? COMPACT_BAR_HEIGHT[mode === 'icons' ? 'icons' : 'shrink'] : APP_SHELL_BAR_HEIGHT;
 	const animated = mode !== 'steady';
+	const variant = classFor('AppShell', 'menuVariant', menuVariant, MENU_VARIANTS, 'classic') as ShellMenuVariant;
+	const [folded, toggleFold] = useFoldedMenu(variant === 'toggle');
+	const [drawerOpen, setDrawerOpen] = useState(false);
+	const menuWidth =
+		variant === 'drawer'
+			? APP_SHELL_MENU_WIDTH_NONE
+			: variant === 'compact'
+				? APP_SHELL_MENU_WIDTH_COMPACT
+				: variant === 'rail' || (variant === 'toggle' && folded)
+					? APP_SHELL_MENU_WIDTH_RAIL
+					: APP_SHELL_MENU_WIDTH;
+	// `[` folds and unfolds the toggle menu, unless a field is being typed in.
+	useEffect(() => {
+		if (variant !== 'toggle') {
+			return;
+		}
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.key === '[' && isShortcutTarget(event)) {
+				toggleFold();
+			}
+		};
+		document.addEventListener('keydown', onKeyDown);
+		return () => document.removeEventListener('keydown', onKeyDown);
+	});
 
 	// Published for floating tools mounted outside the shell (see the doc above); removed with the last mounted shell.
 	useEffect(() => {
 		const root = document.documentElement.style;
 		mountedShells += 1;
-		root.setProperty(APP_SHELL_MENU_WIDTH_VAR, APP_SHELL_MENU_WIDTH);
 		return () => {
 			mountedShells -= 1;
 			if (mountedShells === 0) {
@@ -147,12 +212,15 @@ export function AppShell({ brand, tabs, tabsLabel, menu, actions, renderLink = d
 			}
 		};
 	}, []);
-	// Follows the state of the bar. Declared after the effect above: on unmount the removal there runs last.
+	// Follow the state of the bar and of the menu. Declared after the effect above: on unmount the removal there runs last.
 	useEffect(() => {
 		document.documentElement.style.setProperty(APP_SHELL_BAR_HEIGHT_VAR, barHeight);
 	}, [barHeight]);
+	useEffect(() => {
+		document.documentElement.style.setProperty(APP_SHELL_MENU_WIDTH_VAR, menuWidth);
+	}, [menuWidth]);
 	// Declared on the shell root too: the first paint has them before the effects publish them on the document root.
-	const shellVars = { [APP_SHELL_MENU_WIDTH_VAR]: APP_SHELL_MENU_WIDTH, [APP_SHELL_BAR_HEIGHT_VAR]: barHeight } as React.CSSProperties;
+	const shellVars = { [APP_SHELL_MENU_WIDTH_VAR]: menuWidth, [APP_SHELL_BAR_HEIGHT_VAR]: barHeight } as React.CSSProperties;
 
 	return (
 		<div className="relative flex min-h-screen flex-col bg-bg" style={shellVars}>
@@ -180,41 +248,36 @@ export function AppShell({ brand, tabs, tabsLabel, menu, actions, renderLink = d
 					if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocusedInside(false);
 				}}
 			>
+				{variant === 'drawer' && (
+					// violations-suppress: react/no-raw-button the shell's menu button owns its geometry (as tall as the top bar)
+					<button
+						type="button"
+						onClick={() => setDrawerOpen(true)}
+						aria-label={menu.label}
+						title={menu.label}
+						aria-haspopup="dialog"
+						aria-expanded={drawerOpen}
+						className="flex shrink-0 items-center justify-center self-stretch px-2 text-muted hover:bg-muted-bg hover:text-content focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+					>
+						<Menu size={16} aria-hidden="true" />
+					</button>
+				)}
 				<span className={compact && mode === 'icons' ? 'sr-only' : `shrink-0 whitespace-nowrap font-semibold text-content ${compact ? 'text-xs' : 'text-base'}`}>{brand}</span>
 				<ShellTabs tabs={tabs} tabsLabel={tabsLabel} renderLink={renderLink} moreLabel={moreLabel} density={compact ? (mode === 'icons' ? 'icons' : 'small') : 'normal'} />
 				{actions}
 			</header>
 			<div className="flex min-h-0 flex-1">
-				{/* Sticky under the bar. self-start: a stretched flex item is as tall as the page and has nothing to stick
-				    against. dvh where supported (mobile toolbars), vh otherwise. */}
-				<aside
-					data-testid="shell-menu"
-					style={{ top: `var(${APP_SHELL_BAR_HEIGHT_VAR})`, width: `var(${APP_SHELL_MENU_WIDTH_VAR})` }}
-					className={`sticky flex h-[calc(100vh-var(--app-shell-bar-height))] shrink-0 self-start flex-col gap-3 overflow-y-auto border-r border-border bg-surface p-3 supports-[height:100dvh]:h-[calc(100dvh-var(--app-shell-bar-height))] ${animated ? ANIMATE_MENU : ''}`}
-				>
-					<h2 className="sr-only">{menu.title}</h2>
-					<nav aria-label={menu.label} className="flex flex-col gap-0.5">
-						{menu.items.map((item) => (
-							<React.Fragment key={item.id}>
-								{renderLink({
-									href: item.href,
-									className: `${MENU_ITEM} ${item.current ? MENU_ITEM_CURRENT : MENU_ITEM_OTHER}`,
-									'aria-current': item.current,
-									children: (
-										<>
-											{item.icon}
-											<span className="truncate">{item.label}</span>
-										</>
-									),
-								})}
-							</React.Fragment>
-						))}
-					</nav>
-				</aside>
+				{variant !== 'drawer' && <ShellSideMenu menu={menu} renderLink={renderLink} variant={variant} folded={folded} onToggleFold={toggleFold} />}
 				<main id={mainId} tabIndex={-1} className="min-w-0 flex-1 focus:outline-none">
 					{children}
 				</main>
 			</div>
+			{/* Mounted only while open: the dialog is not left in the page, inert, for nothing. */}
+			{variant === 'drawer' && drawerOpen && (
+				<Drawer open onClose={() => setDrawerOpen(false)} side="left" size="sm" title={menu.title}>
+					<ShellMenuNav menu={menu} renderLink={renderLink} variant="classic" density="full" onNavigate={() => setDrawerOpen(false)} />
+				</Drawer>
+			)}
 		</div>
 	);
 }
