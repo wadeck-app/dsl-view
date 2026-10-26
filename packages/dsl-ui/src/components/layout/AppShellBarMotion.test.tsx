@@ -261,11 +261,9 @@ describe('barOnScroll: icons, initials and text get smaller with the bar', () =>
 describe('consumers of --app-shell-bar-height do not add their own transition', () => {
 	// The variable already moves frame by frame. A CSS transition on `top` / `height` of the menu chases the moving value
 	// with its own clock and opens a gap under the bar (measured: 15px at 190ms with the 150ms transition).
-	it('the side menu transitions its width only, never top or height', () => {
+	it('the side menu has no transition at all: not on top or height, and not on its width (it follows --app-shell-menu-width, also while dragged)', () => {
 		shell({ barOnScroll: 'shrink' });
 		const frame = screen.getByTestId('shell-menu');
-		const classes = frame.className.split(/\s+/).filter((c) => c.startsWith('transition'));
-		expect(classes).toContain('transition-[width]');
-		expect(classes.join(' ')).not.toMatch(/top|height/);
+		expect(frame.className.split(/\s+/).filter((c) => c.startsWith('transition'))).toEqual([]);
 	});
 });

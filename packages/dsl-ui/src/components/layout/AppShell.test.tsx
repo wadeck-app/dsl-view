@@ -140,8 +140,9 @@ describe('AppShell side menu', () => {
 		shell();
 		const heading = within(menu()).getByRole('heading', { name: 'Home' });
 		expect(heading.className).toContain('sr-only');
-		expect(menu().firstElementChild).toBe(heading);
-		expect(menu().children[1]).toBe(screen.getByRole('navigation', { name: 'Home pages' }));
+		const scroller = menu().querySelector('[data-menu-scroller]')!;
+		expect(scroller.firstElementChild).toBe(heading);
+		expect(scroller.children[1]).toBe(screen.getByRole('navigation', { name: 'Home pages' }));
 	});
 
 	it('marks the current entry', () => {
@@ -312,7 +313,9 @@ describe('AppShell stays in place while the page scrolls', () => {
 		expect(menu.style.top).toBe('var(--app-shell-bar-height)');
 		const classes = classesOf(menu);
 		// self-start: a stretched flex item is as tall as the page and has nothing to stick against.
-		expect(classes).toEqual(expect.arrayContaining(['sticky', 'self-start', 'overflow-y-auto']));
+		expect(classes).toEqual(expect.arrayContaining(['sticky', 'self-start']));
+		// The scroll box is inside the frame (the resize handle of the `resizable` menu sits outside it).
+		expect(classesOf(menu.querySelector('[data-menu-scroller]')!)).toContain('overflow-y-auto');
 		expect(classes).toContain('h-[calc(100vh-var(--app-shell-bar-height))]');
 		expect(classes).toContain('supports-[height:100dvh]:h-[calc(100dvh-var(--app-shell-bar-height))]');
 	});

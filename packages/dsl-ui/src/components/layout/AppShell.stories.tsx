@@ -179,19 +179,24 @@ const GROUPED_MENU: ShellMenu = {
 	title: 'Queue',
 	label: 'Queue pages',
 	items: [
-		{ id: 'overview', label: 'Overview', href: '#/queue', current: 'page', icon: <LayoutDashboard {...ICON} />, description: 'Health of the whole queue' },
-		{ id: 'jobs', label: 'Jobs', href: '#/queue/jobs', icon: <ListChecks {...ICON} />, description: 'Pending, running and failed jobs' },
-		{ id: 'workers', label: 'Workers', href: '#/queue/workers', icon: <Cpu {...ICON} />, description: 'Who is picking jobs up' },
+		{ id: 'overview', label: 'Overview', href: '#/queue', current: 'page', icon: <LayoutDashboard {...ICON} /> },
+		{ id: 'jobs', label: 'Jobs', href: '#/queue/jobs', icon: <ListChecks {...ICON} /> },
+		{ id: 'workers', label: 'Workers', href: '#/queue/workers', icon: <Cpu {...ICON} /> },
 		{ kind: 'separator', id: 'admin', label: 'Administration' },
-		...Array.from({ length: 30 }, (_, i) => ({ id: `a${i}`, label: `Admin page ${i + 1}`, href: `#/queue/a${i}`, icon: <Settings {...ICON} />, description: i % 3 === 0 ? `Settings group ${i + 1}` : undefined })),
+		...Array.from({ length: 30 }, (_, i) => ({ id: `a${i}`, label: `Admin page ${i + 1}`, href: `#/queue/a${i}`, icon: <Settings {...ICON} /> })),
 		{ kind: 'separator', id: 'unlabelled' },
 		{ id: 'about', label: 'About', href: '#/queue/about', icon: <Info {...ICON} /> },
 	],
 };
 
-function MenuVariantDemo({ menuVariant }: { menuVariant: ShellMenuVariant }) {
+// A long entry: wider than the narrow menu, it is cut and its label carries a tooltip.
+const LONG_ENTRY = 'Reconciliation of archived payment batches';
+const WITH_LONG_ENTRY: ShellMenu = { ...GROUPED_MENU, items: [...GROUPED_MENU.items, { id: 'long', label: LONG_ENTRY, href: '#/queue/long', icon: <Info {...ICON} /> }] };
+const SHORT_MENU: ShellMenu = { ...GROUPED_MENU, items: GROUPED_MENU.items.slice(0, 3) };
+
+function MenuVariantDemo({ menuVariant, menu = GROUPED_MENU }: { menuVariant: ShellMenuVariant; menu?: ShellMenu }) {
 	return (
-		<AppShell brand="my-app" tabs={tabs('queue')} tabsLabel="Modules" menu={GROUPED_MENU} menuVariant={menuVariant}>
+		<AppShell brand="my-app" tabs={tabs('queue')} tabsLabel="Modules" menu={menu} menuVariant={menuVariant} resizeLabel="Resize the menu">
 			<div className="p-6 text-content">
 				<h1 className="text-xl font-semibold">menuVariant = {menuVariant}</h1>
 				<p className="mt-2 text-muted">The menu holds more entries than the window: it scrolls on its own. Use the arrow keys, Home and End inside it.</p>
@@ -205,28 +210,26 @@ function MenuVariantDemo({ menuVariant }: { menuVariant: ShellMenuVariant }) {
 	);
 }
 
-/** The reference: 15rem, icon and label. */
+/** The reference: 15rem fixed. */
 export const MenuClassic: Story = { render: () => <MenuVariantDemo menuVariant="classic" /> };
-/** 13rem, text rows without icons; the current row is bold with a 2px accent line on the right edge. */
-export const MenuSlim: Story = { render: () => <MenuVariantDemo menuVariant="slim" /> };
-/** 18rem, a card per entry with the optional `description` line; lifts on hover. */
-export const MenuCards: Story = { render: () => <MenuVariantDemo menuVariant="cards" /> };
-/** 5rem launcher column: icon above a small label, the current one is a filled tile. */
-export const MenuTiles: Story = { render: () => <MenuVariantDemo menuVariant="tiles" /> };
-/** 3.5rem icon rail; hover or Tab to an icon to see its label fly out. */
-export const MenuFlyout: Story = { render: () => <MenuVariantDemo menuVariant="flyout" /> };
-/** A rounded panel detached from the edges with a soft shadow. */
-export const MenuFloating: Story = { render: () => <MenuVariantDemo menuVariant="floating" /> };
-/** Timeline: guide line, a node per entry, separators as group titles. */
-export const MenuTree: Story = { render: () => <MenuVariantDemo menuVariant="tree" /> };
-/** The chevron (or the `[` key) folds it to a 1rem sliver; hover or focus on the sliver peeks the menu. Kept in localStorage `app-shell.menu`. */
-export const MenuPeek: Story = { render: () => <MenuVariantDemo menuVariant="peek" /> };
+/** 12rem fixed. */
+export const MenuNarrow: Story = { render: () => <MenuVariantDemo menuVariant="narrow" menu={WITH_LONG_ENTRY} /> };
+/** 19rem fixed. */
+export const MenuWide: Story = { render: () => <MenuVariantDemo menuVariant="wide" /> };
+/** clamp(12rem, 16vw, 22rem): resize the window. */
+export const MenuFluid: Story = { render: () => <MenuVariantDemo menuVariant="fluid" /> };
+/** As wide as the longest entry (here "Reconciliation of archived payment batches"), between 10rem and 24rem. */
+export const MenuFit: Story = { render: () => <MenuVariantDemo menuVariant="fit" menu={WITH_LONG_ENTRY} /> };
+/** As wide as the longest entry, here a short list: the 10rem minimum. */
+export const MenuFitShort: Story = { render: () => <MenuVariantDemo menuVariant="fit" menu={SHORT_MENU} /> };
+/** Drag the right edge, or focus the handle and use Left/Right/Home/End; double-click resets. Kept in localStorage `app-shell.menu-width`. */
+export const MenuResizable: Story = { render: () => <MenuVariantDemo menuVariant="resizable" menu={WITH_LONG_ENTRY} /> };
 
 function MenuAbDemo() {
 	// The host's way to compare the variants: one A/B test, the dock shows the one-line hint of each as a tooltip.
 	const test = useAbTest({ id: 'shell-menu', label: 'Side menu', initial: 'classic', options: MENU_VARIANT_AB_OPTIONS });
 	return (
-		<AppShell brand="my-app" tabs={tabs('queue')} tabsLabel="Modules" menu={GROUPED_MENU} menuVariant={test.value}>
+		<AppShell brand="my-app" tabs={tabs('queue')} tabsLabel="Modules" menu={WITH_LONG_ENTRY} menuVariant={test.value} resizeLabel="Resize the menu">
 			<div className="p-6 text-content">
 				<h1 className="text-xl font-semibold">Side menu = {test.value}</h1>
 				<p className="mt-2 text-muted">Pick a variant in the dock at the bottom; hover an option for its hint.</p>

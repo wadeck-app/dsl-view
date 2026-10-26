@@ -1,11 +1,12 @@
-import React, { useEffect, useId, useState } from 'react';
+import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { classFor } from '@dsl-ui/utils/warnUnknownChoice.js';
 import { APP_SHELL_BAR_HEIGHT, APP_SHELL_BAR_HEIGHT_VAR, APP_SHELL_MENU_WIDTH_VAR } from './shellMenuWidth.js';
-import { MENU_VARIANT_WIDTH, MENU_WIDTH_PEEK_FOLDED, type ShellMenuVariant } from './shellMenuVariants.js';
-import { isShortcutTarget, MENU_VARIANTS, ShellSideMenu, useFoldedMenu } from './ShellSideMenu.js';
+import { MENU_FIXED_WIDTH, type ShellMenuVariant } from './shellMenuVariants.js';
+import { isFixedWidthVariant, menuFitKey, MENU_VARIANTS, ShellSideMenu } from './ShellSideMenu.js';
 import { ShellTabs } from './ShellTabs.js';
 import { useBarHeight } from './useBarHeight.js';
 import { BAR_ON_SCROLL_MODES, useBarOnScroll, type BarOnScroll } from './useBarOnScroll.js';
+import { useFitMenuWidth, useResizableMenuWidth } from './useMenuWidth.js';
 
 export type { BarOnScroll } from './useBarOnScroll.js';
 // The look and behaviour of the side menu (`menuVariant`, default `classic`) and the label + hint of each for an A/B dock.
@@ -48,32 +49,32 @@ export { MENU_VARIANT_AB_OPTIONS, type ShellMenuVariant } from './shellMenuVaria
  * is inside it. The content never moves: a shrunk bar keeps its place in the flow. An unknown value warns once and
  * behaves as `steady`.
  *
- * `menuVariant` (default `classic`) is the side menu. `--app-shell-menu-width` follows its current state:
- * - `classic`: 15rem, icon and label. The reference.
- * - `slim`: 13rem, text rows without icons, quiet text, soft full-row hover tint; the current row is bold with a 2px
- *   accent line on the right edge.
- * - `cards`: 18rem, a rounded card per entry (icon, label and the optional `description` of the item as a second line),
- *   generous spacing, lifts slightly on hover (not under reduced motion).
- * - `tiles`: 5rem launcher column, the icon above a small label (initials without an icon); the current entry is a
- *   filled accent tile.
- * - `flyout`: 3.5rem icon-only rail (initials without an icon). Hovering or focusing an entry floats its label to the
- *   right (position fixed, nothing moves); the current entry has an accent dot.
- * - `floating`: a 14rem rounded panel with a soft shadow, detached from the edges by a 0.75rem margin (the variable
- *   is 15.5rem so the content never sits under it), pill entries, captions for groups.
- * - `tree`: 14rem timeline: a thin guide line with a node per entry, the current node filled; a separator is a group
- *   title (with a label) or a break in the line (without).
- * - `peek`: 15rem like classic plus a button (named by `menu.label`) that folds it to a 1rem sliver with a grab handle
- *   and back; the key `[` does the same when no field has the focus; the choice is kept in localStorage `app-shell.menu`
- *   (`open` / `folded`). Folded, hovering or focusing the sliver shows the whole menu OVER the content, which does not
- *   move (the variable stays 1rem); the hidden links are out of the tab order.
- * An unknown value (including the removed `compact`, `rail`, `toggle`, `drawer`, `accent`) warns once and behaves as
- * `classic`. In every variant the menu is sticky under the bar with its own scrollbar, the arrow keys, Home and End move
- * between the menu links, the current entry is scrolled into view and the focus ring is visible.
- * `MENU_VARIANT_AB_OPTIONS` holds a label and a one-line hint for each value, in the shape `useAbTest({ options })` takes.
+ * `menuVariant` (default `classic`) is the WIDTH of the side menu. Every variant looks the same (rows, icons, accent,
+ * hover, separators with or without a caption); `--app-shell-menu-width` follows the width:
+ * - `classic`: 15rem fixed. The reference.
+ * - `narrow`: 12rem fixed.
+ * - `wide`: 19rem fixed.
+ * - `fluid`: `clamp(12rem, 16vw, 22rem)`, it follows the window.
+ * - `fit`: as wide as the longest entry (icon, label, padding), between 10rem and 24rem. Measured in the DOM before the
+ *   first paint, and again when the entries change, the window is resized or a web font finishes loading. Separators and
+ *   their captions do not count.
+ * - `resizable`: starts at 15rem; a handle on the right edge (cursor `col-resize`, visible on hover and focus, 6px hit
+ *   area, pointer captured while dragging) resizes it live between 10rem and 28rem; double-click resets to 15rem. The handle
+ *   is a focusable `role="separator"` (`aria-valuenow` in rem): Left/Right move 1rem, Home/End go to the limits. Name it
+ *   with `resizeLabel` (opt-in, the text is the host's; without it the handle takes `menu.label` and development warns).
+ *   The width is kept in localStorage `app-shell.menu-width` (a number of rem, for example `17.5`); a stored value that
+ *   is not a number between 10 and 28 is ignored with a development warning.
+ * The variable follows the live value, also while dragging, with no CSS transition (content, dock and sticky bars follow
+ * without lag). An entry wider than the menu is cut and its label gets a `title` with the whole text. An unknown value
+ * (including the removed `compact`, `rail`, `toggle`, `drawer`, `accent`, `slim`, `cards`, `tiles`, `flyout`,
+ * `floating`, `tree`, `peek`) warns once and behaves as `classic`. In every variant the menu is sticky under the bar
+ * with its own scrollbar, the arrow keys, Home and End move between the menu links, the current entry is scrolled into
+ * view and the focus ring is visible. `MENU_VARIANT_AB_OPTIONS` holds a label and a one-line hint (with the width) for
+ * each value, in the shape `useAbTest({ options })` takes.
  *
- * Menu `items` may hold `{ kind: 'separator', id, label? }`: a rule in the style of the variant, with the label a
- * caption for the next group. A separator is never focusable. Leading, trailing and doubled separators are dropped
- * silently (the data comes from modules). In `flyout` a separator is a rule only, its caption flies out on hover.
+ * Menu `items` may hold `{ kind: 'separator', id, label? }`: a rule, with the label a caption for the next group. A
+ * separator is never focusable. Leading, trailing and doubled separators are dropped silently (the data comes from
+ * modules).
  *
  * Limits: no other responsive behaviour. Not a registry node: it is a React API for the host app's layout.
  */
@@ -101,8 +102,6 @@ export interface ShellItem {
 	current?: 'page' | 'true';
 	/** Color of the highlight when the item is current (any CSS color); defaults to the theme accent. */
 	accent?: string;
-	/** A second, quieter line under the label. Drawn by the `cards` variant only; the others ignore it. */
-	description?: string;
 }
 
 /** A rule between two groups of menu links, with an optional caption for the next group. */
@@ -147,6 +146,12 @@ export interface AppShellProps {
 	barOnScroll?: BarOnScroll;
 	/** The side menu's look and behaviour. Default `classic` (unchanged). See the component doc. */
 	menuVariant?: ShellMenuVariant;
+	/**
+	 * Accessible name of the drag handle of `menuVariant: 'resizable'` (for example "Resize the menu"). Opt-in like
+	 * `skipLabel`: the text is the host's (language). Without it the handle is named by `menu.label` and a development
+	 * warning asks for the prop. Ignored by the other variants.
+	 */
+	resizeLabel?: string;
 	children: React.ReactNode;
 }
 
@@ -167,7 +172,7 @@ let mountedShells = 0;
 const SKIP_LINK =
 	'sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-40 focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:text-content focus:shadow-md';
 
-export function AppShell({ brand, tabs, tabsLabel, menu, actions, renderLink = defaultRenderLink, skipLabel, moreLabel, barOnScroll, menuVariant, children }: AppShellProps): React.ReactElement {
+export function AppShell({ brand, tabs, tabsLabel, menu, actions, renderLink = defaultRenderLink, skipLabel, moreLabel, barOnScroll, menuVariant, resizeLabel, children }: AppShellProps): React.ReactElement {
 	const mainId = useId();
 	const mode = classFor('AppShell', 'barOnScroll', barOnScroll, BAR_ON_SCROLL_MODES, 'steady') as BarOnScroll;
 	const [hovered, setHovered] = useState(false);
@@ -179,21 +184,12 @@ export function AppShell({ brand, tabs, tabsLabel, menu, actions, renderLink = d
 	const animated = mode !== 'steady';
 	const { shellRef, headerRef, initial: initialBarHeight } = useBarHeight(barHeight, mode === 'hide');
 	const variant = classFor('AppShell', 'menuVariant', menuVariant, MENU_VARIANTS, 'classic') as ShellMenuVariant;
-	const [folded, toggleFold] = useFoldedMenu(variant === 'peek');
-	const menuWidth = folded ? MENU_WIDTH_PEEK_FOLDED : MENU_VARIANT_WIDTH[variant];
-	// `[` folds and unfolds the peek menu, unless a field is being typed in.
-	useEffect(() => {
-		if (variant !== 'peek') {
-			return;
-		}
-		const onKeyDown = (event: KeyboardEvent) => {
-			if (event.key === '[' && isShortcutTarget(event)) {
-				toggleFold();
-			}
-		};
-		document.addEventListener('keydown', onKeyDown);
-		return () => document.removeEventListener('keydown', onKeyDown);
-	});
+	const asideRef = useRef<HTMLElement>(null);
+	// The two variants that compute their width: `fit` measures the entries, `resizable` is dragged. Both are off (no
+	// measure, no storage read) for the others.
+	const fitRem = useFitMenuWidth(variant === 'fit', asideRef, menuFitKey(menu));
+	const resize = useResizableMenuWidth(variant === 'resizable');
+	const menuWidth = isFixedWidthVariant(variant) ? MENU_FIXED_WIDTH[variant] : variant === 'fit' ? `${fitRem}rem` : `${resize.rem}rem`;
 
 	// Published for floating tools mounted outside the shell (see the doc above); removed with the last mounted shell.
 	useEffect(() => {
@@ -207,8 +203,9 @@ export function AppShell({ brand, tabs, tabsLabel, menu, actions, renderLink = d
 			}
 		};
 	}, []);
-	// The bar height is moved by useBarHeight; the menu width follows the menu.
-	useEffect(() => {
+	// The bar height is moved by useBarHeight; the menu width follows the menu. A layout effect: while the menu is dragged,
+	// everything that reads the variable (content, dock, sticky bars) must move in the same frame as the menu.
+	useLayoutEffect(() => {
 		document.documentElement.style.setProperty(APP_SHELL_MENU_WIDTH_VAR, menuWidth);
 	}, [menuWidth]);
 	// Declared on the shell root too: the first paint has them before the effects publish them on the document root.
@@ -248,7 +245,7 @@ export function AppShell({ brand, tabs, tabsLabel, menu, actions, renderLink = d
 				{actions}
 			</header>
 			<div className="flex min-h-0 flex-1">
-				<ShellSideMenu menu={menu} renderLink={renderLink} variant={variant} folded={folded} onToggleFold={toggleFold} />
+				<ShellSideMenu menu={menu} renderLink={renderLink} width={menuWidth} asideRef={asideRef} resize={variant === 'resizable' ? resize : undefined} resizeLabel={resizeLabel} />
 				<main id={mainId} tabIndex={-1} className="min-w-0 flex-1 focus:outline-none">
 					{children}
 				</main>

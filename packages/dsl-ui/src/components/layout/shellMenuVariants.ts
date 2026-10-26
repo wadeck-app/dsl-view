@@ -1,33 +1,35 @@
 /**
- * The side menu variants of `AppShell` (`menuVariant`): the allowed values, the width each publishes in
- * `--app-shell-menu-width`, and the label + one-line hint a host feeds to the A/B dock (`useAbTest` `options`).
+ * The side menu variants of `AppShell` (`menuVariant`). They all look the same (rows, icons, accent, hover, separators);
+ * only the WIDTH of the menu differs. This file holds the allowed values, the width of the fixed ones, the limits of the
+ * two that compute theirs, and the label + one-line hint a host feeds to the A/B dock (`useAbTest` `options`).
  */
 
-export type ShellMenuVariant = 'classic' | 'slim' | 'cards' | 'tiles' | 'flyout' | 'floating' | 'tree' | 'peek';
+export type ShellMenuVariant = 'classic' | 'narrow' | 'wide' | 'fluid' | 'fit' | 'resizable';
 
-/** Width of the menu column by variant (`peek`: its open width, see `MENU_WIDTH_PEEK_FOLDED`). `floating` includes its 0.75rem margin on each side. */
-export const MENU_VARIANT_WIDTH: Readonly<Record<ShellMenuVariant, string>> = {
+/** Width published in `--app-shell-menu-width` by the variants whose width is a constant. */
+export const MENU_FIXED_WIDTH = {
 	classic: '15rem',
-	slim: '13rem',
-	cards: '18rem',
-	tiles: '5rem',
-	flyout: '3.5rem',
-	floating: '15.5rem',
-	tree: '14rem',
-	peek: '15rem',
-};
+	narrow: '12rem',
+	wide: '19rem',
+	fluid: 'clamp(12rem, 16vw, 22rem)',
+} as const;
 
-/** Width of the `peek` variant once folded: a sliver with a grab handle. */
-export const MENU_WIDTH_PEEK_FOLDED = '1rem';
+/** The reference width, and where `resizable` starts and returns to. */
+export const MENU_DEFAULT_REM = 15;
+/** `fit` limits, in rem. */
+export const MENU_FIT_MIN_REM = 10;
+export const MENU_FIT_MAX_REM = 24;
+/** `resizable` limits and keyboard step, in rem. */
+export const MENU_RESIZE_MIN_REM = 10;
+export const MENU_RESIZE_MAX_REM = 28;
+export const MENU_RESIZE_STEP_REM = 1;
 
 /** `label` and `hint` of each variant, in the shape `useAbTest({ options })` takes (the hint is the dock's tooltip). */
 export const MENU_VARIANT_AB_OPTIONS: Readonly<Record<ShellMenuVariant, { label: string; hint: string }>> = {
-	classic: { label: 'Classic', hint: '15rem list with icon and label, tinted current entry. The reference.' },
-	slim: { label: 'Slim', hint: '13rem, text rows without icons, soft hover tint, accent line on the right edge for the current one.' },
-	cards: { label: 'Wide cards', hint: '18rem, one rounded card per entry with icon, label and an optional description, lifts on hover.' },
-	tiles: { label: 'Icon + label', hint: '5rem launcher column, icon above a small label, the current one is a filled accent tile.' },
-	flyout: { label: 'Rail + flyout', hint: '3.5rem icon rail, the label flies out to the right on hover or focus, accent dot on the current one.' },
-	floating: { label: 'Floating panel', hint: '14rem rounded panel detached from the edges with a soft shadow, pill entries, captions for groups.' },
-	tree: { label: 'Tree lines', hint: '14rem timeline: a guide line with a node per entry, the current node filled, groups as titles.' },
-	peek: { label: 'Fold + peek', hint: '15rem, folds (button or [ key, remembered) to a 1rem sliver whose handle peeks the menu on hover.' },
+	classic: { label: 'Classic', hint: 'Fixed 15rem. The reference: icon and label rows, tinted current entry.' },
+	narrow: { label: 'Narrow', hint: 'Fixed 12rem. Same look as classic, a tighter column; a longer label is cut, its tooltip shows all of it.' },
+	wide: { label: 'Wide', hint: 'Fixed 19rem. Same look as classic, room for long labels.' },
+	fluid: { label: 'Fluid', hint: 'Follows the window: 16vw, never under 12rem nor over 22rem. Same look as classic.' },
+	fit: { label: 'Fit to content', hint: 'As wide as the longest entry (icon, label, padding), between 10rem and 24rem; measured again when the entries change.' },
+	resizable: { label: 'Resizable', hint: 'Starts at 15rem; drag the right edge (or Left/Right, Home/End; double-click resets) between 10rem and 28rem. Remembered.' },
 };

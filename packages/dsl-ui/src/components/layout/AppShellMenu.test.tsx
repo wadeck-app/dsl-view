@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppShell, MENU_VARIANT_AB_OPTIONS, type AppShellProps, type ShellMenu, type ShellMenuVariant } from './AppShell.js';
 import { normalizeMenuEntries } from './ShellSideMenu.js';
 
@@ -10,7 +10,7 @@ const MENU: ShellMenu = {
 	label: 'Queue pages',
 	items: [
 		{ id: 'overview', label: 'Overview', href: '/', icon: <i data-testid="icon-overview" />, current: 'page' },
-		{ id: 'jobs', label: 'Jobs', href: '/jobs', description: 'Background jobs' },
+		{ id: 'jobs', label: 'Jobs', href: '/jobs' },
 		{ kind: 'separator', id: 's1', label: 'Admin' },
 		{ id: 'workers', label: 'Workers', href: '/workers' },
 	],
@@ -23,21 +23,48 @@ const shell = (props: Partial<AppShellProps> = {}) =>
 		</AppShell>,
 	);
 
-const menuWidth = () => document.documentElement.style.getPropertyValue('--app-shell-menu-width');
+const VAR = '--app-shell-menu-width';
+const menuWidth = () => document.documentElement.style.getPropertyValue(VAR);
 const aside = () => screen.getByTestId('shell-menu');
-// The element that scrolls: the aside itself, or the panel inside it (floating, peek).
-const scroller = () => (aside().hasAttribute('data-menu-scroller') ? aside() : aside().querySelector<HTMLElement>('[data-menu-scroller]')!);
+const scroller = () => aside().querySelector<HTMLElement>('[data-menu-scroller]')!;
+const nav = () => screen.getByRole('navigation', { name: 'Queue pages' });
 const classes = (el: Element) => el.className.split(/\s+/);
-const STORAGE_KEY = 'app-shell.menu';
+const STORAGE_KEY = 'app-shell.menu-width';
+const OLD_STORAGE_KEY = 'app-shell.menu';
 
-const VARIANTS: readonly ShellMenuVariant[] = ['classic', 'slim', 'cards', 'tiles', 'flyout', 'floating', 'tree', 'peek'];
-const WIDTHS: Record<ShellMenuVariant, string> = { classic: '15rem', slim: '13rem', cards: '18rem', tiles: '5rem', flyout: '3.5rem', floating: '15.5rem', tree: '14rem', peek: '15rem' };
+const VARIANTS: readonly ShellMenuVariant[] = ['classic', 'narrow', 'wide', 'fluid', 'fit', 'resizable'];
+// `fit` measures the DOM: with no layout (jsdom) the longest entry is 0px wide, so it sits on its 10rem minimum.
+const WIDTHS: Record<ShellMenuVariant, string> = { classic: '15rem', narrow: '12rem', wide: '19rem', fluid: 'clamp(12rem, 16vw, 22rem)', fit: '10rem', resizable: '15rem' };
+const RESIZE_LABEL = 'Resize the menu';
+
+// jsdom has no PointerEvent: without one fireEvent.pointer* sends a plain Event with no pointerId, button or clientX.
+class FakePointerEvent extends MouseEvent {
+	readonly pointerId: number;
+	constructor(type: string, init: PointerEventInit = {}) {
+		super(type, init);
+		this.pointerId = init.pointerId ?? 0;
+	}
+}
+
+beforeEach(() => {
+	vi.stubGlobal('PointerEvent', FakePointerEvent);
+	document.documentElement.style.fontSize = '16px';
+	// jsdom has no pointer capture.
+	Element.prototype.setPointerCapture = vi.fn();
+	Element.prototype.releasePointerCapture = vi.fn();
+	Element.prototype.hasPointerCapture = vi.fn(() => true);
+});
 
 afterEach(() => {
-	document.documentElement.style.removeProperty('--app-shell-menu-width');
+	document.documentElement.style.removeProperty(VAR);
 	document.documentElement.style.removeProperty('--app-shell-bar-height');
+	document.documentElement.style.removeProperty('font-size');
+	for (const name of ['scrollIntoView', 'setPointerCapture', 'releasePointerCapture', 'hasPointerCapture']) {
+		// @ts-expect-error removing the stub added by a test
+		delete Element.prototype[name];
+	}
 	// @ts-expect-error removing the stub added by a test
-	delete Element.prototype.scrollIntoView;
+	delete document.fonts;
 });
 
 describe('normalizeMenuEntries', () => {
@@ -80,6 +107,19 @@ describe('A/B options of the variants', () => {
 			expect(hint).not.toContain('\n');
 		}
 	});
+
+	it.each([
+		['classic', ['15rem']],
+		['narrow', ['12rem']],
+		['wide', ['19rem']],
+		['fluid', ['12rem', '16vw', '22rem']],
+		['fit', ['10rem', '24rem']],
+		['resizable', ['15rem', '10rem', '28rem']],
+	] as const)('the hint of %s states its width', (variant, parts) => {
+		for (const part of parts) {
+			expect(MENU_VARIANT_AB_OPTIONS[variant].hint).toContain(part);
+		}
+	});
 });
 
 describe('menuVariant (default and unknown values)', () => {
@@ -98,50 +138,102 @@ describe('menuVariant (default and unknown values)', () => {
 		const message = String(warn.mock.calls[0]![0]);
 		expect(message).toContain('menuVariant');
 		expect(message).toContain('sideways');
-		expect(message).toContain('classic, slim, cards, tiles, flyout, floating, tree, peek');
+		expect(message).toContain('classic, narrow, wide, fluid, fit, resizable');
 	});
 
-	it.each(['compact', 'rail', 'toggle', 'drawer', 'accent'])('the removed value "%s" warns and behaves as classic', (old) => {
+	it.each(['compact', 'rail', 'toggle', 'drawer', 'accent', 'slim', 'cards', 'tiles', 'flyout', 'floating', 'tree', 'peek'])('the removed value "%s" warns once and behaves as classic', (old) => {
 		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 		shell({ menuVariant: old as never });
 		expect(menuWidth()).toBe('15rem');
+		expect(warn).toHaveBeenCalledTimes(1);
 		expect(String(warn.mock.calls[0]![0])).toContain(old);
 		expect(screen.getByTestId('shell-menu')).toBeInTheDocument();
+		expect(screen.queryByRole('separator', { name: RESIZE_LABEL })).toBeNull();
+	});
+
+	it('the removed "[" shortcut and "app-shell.menu" storage are neither read nor written, whatever the variant', () => {
+		localStorage.setItem(OLD_STORAGE_KEY, 'folded');
+		const getItem = vi.spyOn(Storage.prototype, 'getItem');
+		const setItem = vi.spyOn(Storage.prototype, 'setItem');
+		for (const menuVariant of VARIANTS) {
+			const { unmount } = shell({ menuVariant, resizeLabel: RESIZE_LABEL });
+			fireEvent.keyDown(document.body, { key: '[' });
+			expect(menuWidth()).toBe(WIDTHS[menuVariant]);
+			unmount();
+		}
+		expect(getItem).not.toHaveBeenCalledWith(OLD_STORAGE_KEY);
+		expect(setItem).not.toHaveBeenCalledWith(OLD_STORAGE_KEY, expect.anything());
+		expect(localStorage.getItem(OLD_STORAGE_KEY)).toBe('folded');
+	});
+
+	it('has no description line: ShellItem.description is gone', () => {
+		shell({ menu: { ...MENU, items: [{ id: 'jobs', label: 'Jobs', href: '/jobs', description: 'Background jobs' } as never] } });
+		expect(screen.getByRole('link', { name: 'Jobs' })).not.toHaveTextContent('Background jobs');
 	});
 });
 
 describe.each(VARIANTS)('menuVariant %s (what every variant keeps)', (menuVariant) => {
+	const mount = (props: Partial<AppShellProps> = {}) => shell({ menuVariant, resizeLabel: RESIZE_LABEL, ...props });
+
 	it('publishes its width on the document root and on the shell root', () => {
-		const { container } = shell({ menuVariant });
+		const { container } = mount();
 		expect(menuWidth()).toBe(WIDTHS[menuVariant]);
-		expect((container.firstElementChild as HTMLElement).style.getPropertyValue('--app-shell-menu-width')).toBe(WIDTHS[menuVariant]);
+		expect((container.firstElementChild as HTMLElement).style.getPropertyValue(VAR)).toBe(WIDTHS[menuVariant]);
 		expect(aside().style.width).toBe('var(--app-shell-menu-width)');
 	});
 
+	it('removes the variable from the document root when the shell unmounts', () => {
+		const { unmount } = mount();
+		unmount();
+		expect(menuWidth()).toBe('');
+	});
+
+	it('has no CSS transition on its width, on the variable, or on the shell root', () => {
+		const { container } = mount();
+		for (const el of [aside(), scroller(), container.firstElementChild!]) {
+			expect(el.className, el.outerHTML.slice(0, 80)).not.toMatch(/transition-\[?[^ ]*width|transition-all|(^|\s)transition(\s|$)/);
+			expect((el as HTMLElement).style.transition).toBe('');
+		}
+		expect(document.documentElement.style.transition).toBe('');
+	});
+
 	it('is sticky under the bar and scrolls on its own', () => {
-		shell({ menuVariant });
+		mount();
 		expect(aside().style.top).toBe('var(--app-shell-bar-height)');
 		expect(classes(aside())).toEqual(expect.arrayContaining(['sticky', 'self-start']));
 		expect(classes(scroller())).toContain('overflow-y-auto');
-		expect(scroller().contains(screen.getByRole('navigation', { name: 'Queue pages' }))).toBe(true);
+		expect(scroller().contains(nav())).toBe(true);
 	});
 
 	it('names the menu: a heading and a navigation, links in DOM order, the current one marked', () => {
-		shell({ menuVariant });
+		mount();
 		expect(screen.getByRole('heading', { name: 'Queue' })).toBeInTheDocument();
-		const links = within(screen.getByRole('navigation', { name: 'Queue pages' })).getAllByRole('link');
+		const links = within(nav()).getAllByRole('link');
 		expect(links.map((l) => l.getAttribute('href'))).toEqual(['/', '/jobs', '/workers']);
 		expect(links.map((l) => l.getAttribute('aria-current'))).toEqual(['page', null, null]);
 		for (const name of ['Overview', 'Jobs', 'Workers']) {
-			expect(screen.getByRole('link', { name: new RegExp(name) })).toBeInTheDocument();
+			expect(screen.getByRole('link', { name })).toBeInTheDocument();
 		}
+		expect(screen.getByTestId('icon-overview')).toBeInTheDocument();
+	});
+
+	it('looks like classic: the same classes on the aside content, the nav, the links and the separators', () => {
+		mount({ menu: { ...MENU, items: [...MENU.items, { kind: 'separator', id: 's2' }, { id: 'about', label: 'About', href: '/about' }] } });
+		const mine = scroller();
+		const html = (root: Element) => Array.from(root.querySelectorAll('a, nav, [role="separator"], [role="separator"] > div')).map((el) => `${el.tagName}.${el.className}`);
+		const here = html(mine);
+		const view = shell({ menuVariant: 'classic', menu: { ...MENU, items: [...MENU.items, { kind: 'separator', id: 's2' }, { id: 'about', label: 'About', href: '/about' }] } });
+		const reference = html(view.container.querySelector('[data-menu-scroller]')!);
+		expect(here).toEqual(reference);
+		expect(classes(mine)).toEqual(classes(view.container.querySelector('[data-menu-scroller]')!));
 	});
 
 	it('draws a labelled and an unlabelled separator: named by its label or by nothing, never focusable', () => {
-		shell({ menuVariant, menu: { ...MENU, items: [...MENU.items, { kind: 'separator', id: 's2' }, { id: 'about', label: 'About', href: '/about' }] } });
-		const separators = screen.getAllByRole('separator');
+		mount({ menu: { ...MENU, items: [...MENU.items, { kind: 'separator', id: 's2' }, { id: 'about', label: 'About', href: '/about' }] } });
+		const separators = within(nav()).getAllByRole('separator');
 		expect(separators).toHaveLength(2);
 		expect(separators[0]).toHaveAttribute('aria-label', 'Admin');
+		expect(separators[0]).toHaveTextContent('Admin');
 		expect(separators[1]).not.toHaveAttribute('aria-label');
 		for (const separator of separators) {
 			expect(separator.hasAttribute('tabindex')).toBe(false);
@@ -151,8 +243,8 @@ describe.each(VARIANTS)('menuVariant %s (what every variant keeps)', (menuVarian
 	});
 
 	it('moves between links with the arrows, Home and End, skipping separators, and stops at the ends', () => {
-		shell({ menuVariant });
-		const links = within(screen.getByRole('navigation', { name: 'Queue pages' })).getAllByRole('link');
+		mount();
+		const links = within(nav()).getAllByRole('link');
 		links[0]!.focus();
 		fireEvent.keyDown(links[0]!, { key: 'ArrowUp' });
 		expect(document.activeElement).toBe(links[0]);
@@ -169,8 +261,8 @@ describe.each(VARIANTS)('menuVariant %s (what every variant keeps)', (menuVarian
 	});
 
 	it('gives every link a visible focus ring and respects reduced motion on everything that transitions', () => {
-		shell({ menuVariant });
-		for (const link of within(screen.getByRole('navigation', { name: 'Queue pages' })).getAllByRole('link')) {
+		mount();
+		for (const link of within(nav()).getAllByRole('link')) {
 			expect(link.className).toContain('focus-visible:outline');
 		}
 		for (const el of Array.from(aside().querySelectorAll('[class*="transition"]'))) {
@@ -179,322 +271,665 @@ describe.each(VARIANTS)('menuVariant %s (what every variant keeps)', (menuVarian
 	});
 
 	it('uses theme tokens only: no dark: variant anywhere in the menu', () => {
-		shell({ menuVariant });
+		mount();
 		expect(aside().outerHTML).not.toMatch(/(^|[\s"'])dark:/);
-	});
-
-	it('does not touch localStorage unless it is the variant that folds', () => {
-		localStorage.setItem(STORAGE_KEY, 'folded');
-		shell({ menuVariant });
-		if (menuVariant !== 'peek') {
-			expect(menuWidth()).toBe(WIDTHS[menuVariant]);
-		}
-		expect(localStorage.getItem(STORAGE_KEY)).toBe('folded');
 	});
 
 	it('brings the current entry into view', () => {
 		const scrollIntoView = vi.fn();
 		Element.prototype.scrollIntoView = scrollIntoView;
-		shell({ menuVariant });
+		mount();
 		expect(scrollIntoView).toHaveBeenCalledTimes(1);
 		expect(scrollIntoView.mock.contexts[0]).toBe(screen.getByRole('link', { name: /Overview/ }));
 		expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
 	});
-});
 
-describe('menuVariant slim', () => {
-	it('draws one-line text rows with no icon, the current one bold with an accent line on the right edge', () => {
-		shell({ menuVariant: 'slim' });
-		expect(screen.queryByTestId('icon-overview')).toBeNull();
-		const current = screen.getByRole('link', { name: 'Overview' });
-		expect(classes(current)).toEqual(expect.arrayContaining(['font-semibold', 'after:right-0', 'after:w-0.5', 'after:bg-primary']));
-		const other = screen.getByRole('link', { name: 'Jobs' });
-		expect(classes(other)).not.toContain('after:bg-primary');
-		expect(classes(other)).toContain('hover:bg-muted-bg');
-		expect(other).not.toHaveTextContent('Background jobs');
+	it('shows a handle only when it is the resizable one', () => {
+		mount();
+		expect(screen.queryByRole('separator', { name: RESIZE_LABEL }) !== null).toBe(menuVariant === 'resizable');
 	});
 });
 
-describe('menuVariant cards', () => {
-	it('draws a card per entry with the icon, the label and the optional description', () => {
-		shell({ menuVariant: 'cards' });
-		const jobs = screen.getByRole('link', { name: /Jobs/ });
-		expect(jobs).toHaveTextContent('Jobs');
-		expect(jobs).toHaveTextContent('Background jobs');
-		expect(classes(jobs)).toContain('rounded-xl');
-		const overview = screen.getByRole('link', { name: 'Overview' });
-		expect(overview.querySelector('[data-testid="icon-overview"]')).not.toBeNull();
-		// No description given: no empty secondary line.
-		expect(overview.querySelectorAll('[data-description]')).toHaveLength(0);
-		expect(jobs.querySelectorAll('[data-description]')).toHaveLength(1);
-	});
-
-	it('lifts on hover, but not under reduced motion; the current card is tinted', () => {
-		shell({ menuVariant: 'cards' });
-		const jobs = screen.getByRole('link', { name: /Jobs/ });
-		expect(classes(jobs)).toEqual(expect.arrayContaining(['hover:-translate-y-0.5', 'motion-reduce:hover:translate-y-0']));
-		expect(classes(screen.getByRole('link', { name: 'Overview' }))).toContain('bg-primary-light');
-	});
-
-	it('an entry without icon gets its initials in the icon box, hidden from assistive technology', () => {
-		shell({ menuVariant: 'cards' });
-		const workers = screen.getByRole('link', { name: 'Workers' });
-		expect(workers.querySelector('[aria-hidden="true"]')).toHaveTextContent('WO');
+describe('fixed widths', () => {
+	it.each([
+		['classic', '15rem'],
+		['narrow', '12rem'],
+		['wide', '19rem'],
+		['fluid', 'clamp(12rem, 16vw, 22rem)'],
+	] as const)('%s publishes %s and never reads or writes a width in storage', (menuVariant, width) => {
+		const getItem = vi.spyOn(Storage.prototype, 'getItem');
+		const setItem = vi.spyOn(Storage.prototype, 'setItem');
+		localStorage.setItem(STORAGE_KEY, '20');
+		setItem.mockClear();
+		shell({ menuVariant });
+		expect(menuWidth()).toBe(width);
+		expect(getItem).not.toHaveBeenCalled();
+		expect(setItem).not.toHaveBeenCalled();
+		expect(localStorage.getItem(STORAGE_KEY)).toBe('20');
 	});
 });
 
-describe('menuVariant tiles', () => {
-	it('puts the icon above a small label; an entry without icon shows initials', () => {
-		shell({ menuVariant: 'tiles' });
-		const overview = screen.getByRole('link', { name: 'Overview' });
-		expect(overview.firstElementChild!.querySelector('[data-testid="icon-overview"]')).not.toBeNull();
-		expect(overview.lastElementChild).toHaveTextContent('Overview');
-		expect(classes(overview)).toContain('flex-col');
-		const workers = screen.getByRole('link', { name: 'Workers' });
-		expect(workers.firstElementChild).toHaveTextContent('WO');
-		expect(workers.firstElementChild).toHaveAttribute('aria-hidden', 'true');
-	});
-
-	it('fills the current tile with the accent and leaves the others plain', () => {
-		shell({ menuVariant: 'tiles' });
-		expect(classes(screen.getByRole('link', { name: 'Overview' }))).toEqual(expect.arrayContaining(['bg-primary-solid', 'text-on-solid']));
-		expect(classes(screen.getByRole('link', { name: 'Jobs' }))).not.toContain('bg-primary-solid');
-	});
-
-	it('shows a caption as a small centred title', () => {
-		shell({ menuVariant: 'tiles' });
-		expect(screen.getByRole('separator', { name: 'Admin' })).toHaveTextContent('Admin');
-	});
-});
-
-describe('menuVariant flyout', () => {
-	const flyout = () => screen.queryByTestId('shell-menu-flyout');
-
-	it('is icon-only: the name stays (hidden text), an entry without icon shows initials, no layout state', () => {
-		shell({ menuVariant: 'flyout' });
-		const jobs = screen.getByRole('link', { name: 'Jobs' });
-		expect(jobs.querySelector('[aria-hidden="true"]')).toHaveTextContent('JO');
-		expect(jobs.querySelector('.sr-only')).toHaveTextContent('Jobs');
-		expect(screen.getByRole('link', { name: 'Overview' }).querySelector('[data-testid="icon-overview"]')).not.toBeNull();
-		expect(aside()).not.toHaveAttribute('data-expanded');
-	});
-
-	it('shows the label to the right on hover and on keyboard focus, and hides it on leave and blur, width unchanged', () => {
-		shell({ menuVariant: 'flyout' });
-		expect(flyout()).toBeNull();
-		const jobs = screen.getByRole('link', { name: 'Jobs' });
-		fireEvent.mouseOver(jobs);
-		expect(flyout()).toHaveTextContent('Jobs');
-		expect(flyout()).toHaveAttribute('aria-hidden', 'true');
-		expect(menuWidth()).toBe('3.5rem');
-		fireEvent.mouseLeave(aside());
-		expect(flyout()).toBeNull();
-		fireEvent.focus(screen.getByRole('link', { name: 'Workers' }));
-		expect(flyout()).toHaveTextContent('Workers');
-		fireEvent.blur(screen.getByRole('link', { name: 'Workers' }));
-		expect(flyout()).toBeNull();
-	});
-
-	it('takes the flyout out of the layout: it floats above the page, positioned right of the link', () => {
-		shell({ menuVariant: 'flyout' });
-		fireEvent.mouseOver(screen.getByRole('link', { name: 'Jobs' }));
-		const tip = flyout()!;
-		expect(classes(tip)).toEqual(expect.arrayContaining(['fixed', 'pointer-events-none']));
-		expect(tip.style.left).not.toBe('');
-		expect(tip.style.top).not.toBe('');
-		expect(classes(tip)).toContain('motion-reduce:transition-none');
-	});
-
-	it('marks only the current entry with an accent dot', () => {
-		shell({ menuVariant: 'flyout' });
-		expect(within(screen.getByRole('link', { name: 'Overview' })).getByTestId('current-dot')).toHaveAttribute('aria-hidden', 'true');
-		expect(within(screen.getByRole('link', { name: 'Jobs' })).queryByTestId('current-dot')).toBeNull();
-	});
-
-	it('draws a separator as a rule only, but a captioned one still shows its caption in a flyout', () => {
-		shell({ menuVariant: 'flyout' });
-		const separator = screen.getByRole('separator', { name: 'Admin' });
-		expect(separator.textContent).toBe('');
-		fireEvent.mouseOver(separator);
-		expect(flyout()).toHaveTextContent('Admin');
-	});
-
-	it('hides the flyout when the menu scrolls', () => {
-		shell({ menuVariant: 'flyout' });
-		fireEvent.mouseOver(screen.getByRole('link', { name: 'Jobs' }));
-		fireEvent.scroll(scroller());
-		expect(flyout()).toBeNull();
-	});
-
-	it('shows nothing for the other variants', () => {
-		shell({ menuVariant: 'classic' });
-		fireEvent.mouseOver(screen.getByRole('link', { name: 'Jobs' }));
-		expect(flyout()).toBeNull();
-		expect(screen.getByRole('link', { name: 'Jobs' }).getAttribute('title')).toBeNull();
-	});
-});
-
-describe('menuVariant floating', () => {
-	it('floats a rounded, shadowed panel inside a margin that the width variable includes', () => {
-		shell({ menuVariant: 'floating' });
-		expect(menuWidth()).toBe('15.5rem');
-		expect(classes(aside())).not.toContain('border-r');
-		expect(classes(aside())).toContain('p-3');
-		const panel = scroller();
-		expect(classes(panel)).toEqual(expect.arrayContaining(['rounded-2xl', 'shadow-lg', 'overflow-y-auto']));
-		expect(panel.parentElement).toBe(aside());
-	});
-
-	it('draws entries as pills, a caption for a labelled separator and a short rule for the other', () => {
-		shell({ menuVariant: 'floating', menu: { ...MENU, items: [...MENU.items, { kind: 'separator', id: 's2' }, { id: 'about', label: 'About', href: '/about' }] } });
-		expect(classes(screen.getByRole('link', { name: 'Jobs' }))).toContain('rounded-full');
-		const [labelled, plain] = screen.getAllByRole('separator');
-		expect(labelled).toHaveTextContent('Admin');
-		expect(plain!.textContent).toBe('');
-		expect(classes(plain!)).toContain('mx-3');
-	});
-});
-
-describe('menuVariant tree', () => {
-	it('joins the entries with a guide line and gives each a node, the current one filled', () => {
-		shell({ menuVariant: 'tree' });
-		const nodes = Array.from(aside().querySelectorAll('[data-node]'));
-		expect(nodes).toHaveLength(3);
-		for (const node of nodes) {
-			expect(node).toHaveAttribute('aria-hidden', 'true');
-		}
-		expect(nodes.map((n) => n.getAttribute('data-node'))).toEqual(['current', 'other', 'other']);
-		expect(classes(screen.getByRole('navigation', { name: 'Queue pages' }))).toEqual(expect.arrayContaining(['relative', 'before:w-px']));
-		expect(screen.getByRole('link', { name: 'Overview' }).querySelector('[data-node]')).toBe(nodes[0]);
-	});
-
-	it('shows a separator as a group title (with a caption) or as a break in the line (without)', () => {
-		shell({ menuVariant: 'tree', menu: { ...MENU, items: [...MENU.items, { kind: 'separator', id: 's2' }, { id: 'about', label: 'About', href: '/about' }] } });
-		const [title, gap] = screen.getAllByRole('separator');
-		expect(title).toHaveTextContent('Admin');
-		expect(gap!.textContent).toBe('');
-		// Both cover the guide line behind them.
-		expect(classes(title!.firstElementChild!)).toEqual(expect.arrayContaining(['relative', 'bg-surface']));
-		expect(classes(gap!)).toEqual(expect.arrayContaining(['relative', 'bg-surface']));
-	});
-});
-
-describe('menuVariant peek', () => {
-	const handle = () => screen.getByRole('button', { name: 'Queue pages' });
-	const navWrapper = () => screen.getByRole('navigation', { name: 'Queue pages', hidden: true }).parentElement!;
-
-	it('starts open (15rem) with a button that reports it, links reachable', () => {
-		shell({ menuVariant: 'peek' });
-		expect(menuWidth()).toBe('15rem');
-		expect(handle()).toHaveAttribute('aria-expanded', 'true');
-		expect(handle()).toHaveAttribute('aria-keyshortcuts', '[');
-		expect(navWrapper()).not.toHaveAttribute('inert');
-		expect(screen.getByRole('link', { name: 'Jobs' })).toHaveTextContent('Jobs');
-	});
-
-	it('folds to a 1rem sliver on click, remembers it, and unfolds on the next click', () => {
-		const first = shell({ menuVariant: 'peek' });
-		fireEvent.click(handle());
-		expect(menuWidth()).toBe('1rem');
-		expect(handle()).toHaveAttribute('aria-expanded', 'false');
-		expect(localStorage.getItem(STORAGE_KEY)).toBe('folded');
-		first.unmount();
-		shell({ menuVariant: 'peek' });
-		expect(menuWidth()).toBe('1rem');
-		fireEvent.click(handle());
-		expect(menuWidth()).toBe('15rem');
-		expect(localStorage.getItem(STORAGE_KEY)).toBe('open');
-	});
-
-	it('folded: the links are out of the tab order and the accessibility tree until the menu is peeked', () => {
-		localStorage.setItem(STORAGE_KEY, 'folded');
-		shell({ menuVariant: 'peek' });
-		expect(navWrapper()).toHaveAttribute('inert');
-		expect(navWrapper()).toHaveAttribute('hidden');
-		expect(screen.queryByRole('link', { name: 'Jobs' })).toBeNull();
-		expect(aside()).toHaveAttribute('data-peeked', 'false');
-	});
-
-	it('peeks the whole menu on hover without moving the content, and folds back on leave', () => {
-		localStorage.setItem(STORAGE_KEY, 'folded');
-		shell({ menuVariant: 'peek' });
-		fireEvent.mouseEnter(aside());
-		expect(aside()).toHaveAttribute('data-peeked', 'true');
-		expect(navWrapper()).not.toHaveAttribute('inert');
-		expect(screen.getByRole('link', { name: 'Jobs' })).toHaveTextContent('Jobs');
-		expect(screen.getByRole('separator', { name: 'Admin' })).toHaveTextContent('Admin');
-		expect(menuWidth()).toBe('1rem');
-		// The peeked panel overlays the page.
-		expect(classes(scroller())).toEqual(expect.arrayContaining(['absolute', 'z-20', 'overflow-y-auto']));
-		fireEvent.mouseLeave(aside());
-		expect(aside()).toHaveAttribute('data-peeked', 'false');
-		expect(menuWidth()).toBe('1rem');
-	});
-
-	it('peeks on keyboard focus of the handle and stays while the focus moves inside', () => {
-		localStorage.setItem(STORAGE_KEY, 'folded');
-		shell({ menuVariant: 'peek' });
-		fireEvent.focus(handle());
-		expect(aside()).toHaveAttribute('data-peeked', 'true');
-		const jobs = screen.getByRole('link', { name: 'Jobs' });
-		fireEvent.blur(handle(), { relatedTarget: jobs });
-		expect(aside()).toHaveAttribute('data-peeked', 'true');
-		fireEvent.blur(jobs, { relatedTarget: document.body });
-		expect(aside()).toHaveAttribute('data-peeked', 'false');
-	});
-
-	it('open: it never peeks (nothing to reveal)', () => {
-		shell({ menuVariant: 'peek' });
-		fireEvent.mouseEnter(aside());
-		expect(aside()).toHaveAttribute('data-peeked', 'false');
-	});
-
-	it('the "[" key toggles it when nothing is being typed in', () => {
-		shell({ menuVariant: 'peek' });
-		fireEvent.keyDown(document.body, { key: '[' });
-		expect(menuWidth()).toBe('1rem');
-		fireEvent.keyDown(document.body, { key: '[' });
-		expect(menuWidth()).toBe('15rem');
-	});
-
-	it('ignores "[" typed in a field, with a modifier, or already handled', () => {
-		render(<input aria-label="search" />);
-		shell({ menuVariant: 'peek' });
-		const input = screen.getByLabelText('search');
-		fireEvent.keyDown(input, { key: '[' });
-		fireEvent.keyDown(document.body, { key: '[', ctrlKey: true });
-		fireEvent.keyDown(document.body, { key: '[', metaKey: true });
-		fireEvent.keyDown(document.body, { key: '[', altKey: true });
-		expect(menuWidth()).toBe('15rem');
-	});
-
-	it('ignores "[" in the other variants and writes nothing', () => {
-		shell({ menuVariant: 'classic' });
-		fireEvent.keyDown(document.body, { key: '[' });
-		expect(menuWidth()).toBe('15rem');
-		expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
-	});
-
-	it('an unknown stored value warns, naming the key and the values, and stays open', () => {
-		localStorage.setItem(STORAGE_KEY, 'sideways');
-		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-		shell({ menuVariant: 'peek' });
-		expect(menuWidth()).toBe('15rem');
-		const message = String(warn.mock.calls[0]![0]);
-		expect(message).toContain(STORAGE_KEY);
-		expect(message).toContain('sideways');
-		expect(message).toContain('open, folded');
-	});
-
-	it('says so, and still works for this page, when the storage refuses the write', () => {
-		const error = vi.spyOn(console, 'error').mockImplementation(() => {});
-		vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-			throw new Error('QuotaExceededError');
+describe('menuVariant fit', () => {
+	// Fake layout: a label is 8px per character, starts 40px into its link (padding and icon), the link has 12px of right
+	// padding, the menu chrome (border, padding) is 25px, plus 1px for rounding: 241px aside around a 216px nav.
+	let pxPerChar = 8;
+	beforeEach(() => {
+		pxPerChar = 8;
+		vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+			const left = this.hasAttribute('data-menu-label') ? 40 : 0;
+			const width = this.tagName === 'NAV' ? 216 : 0;
+			return { x: left, y: 0, left, top: 0, right: left + width, bottom: 0, width, height: 0, toJSON: () => ({}) };
 		});
-		shell({ menuVariant: 'peek' });
-		fireEvent.click(handle());
-		expect(menuWidth()).toBe('1rem');
-		expect(String(error.mock.calls[0]![0])).toContain('QuotaExceededError');
-		expect(String(error.mock.calls[0]![0])).toContain(STORAGE_KEY);
+		vi.spyOn(Element.prototype, 'scrollWidth', 'get').mockImplementation(function (this: Element) {
+			return this.hasAttribute('data-menu-label') ? (this.textContent ?? '').length * pxPerChar : 0;
+		});
+		vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
+			return this.dataset.testid === 'shell-menu' ? 241 : 0;
+		});
+		const real = window.getComputedStyle.bind(window);
+		vi.spyOn(window, 'getComputedStyle').mockImplementation((el: Element, pseudo?: string | null) => {
+			const style = real(el, pseudo);
+			return el.tagName === 'A' ? ({ ...style, paddingRight: '12px', fontSize: '16px' } as CSSStyleDeclaration) : style;
+		});
+	});
+
+	const menuOf = (...labels: string[]): ShellMenu => ({ title: 'Queue', label: 'Queue pages', items: labels.map((label, i) => ({ id: `e${i}`, label, href: `/e${i}`, ...(i === 0 ? { current: 'page' as const } : {}) })) });
+
+	it('is as wide as the longest entry: label, icon and padding, plus the menu chrome (rounded up to 0.01rem)', () => {
+		// 24 chars: 40 + 192 + 12 = 244, + 25 chrome + 1 rounding = 270px = 16.875rem.
+		shell({ menuVariant: 'fit', menu: menuOf('Short', 'A rather long page title') });
+		expect(menuWidth()).toBe('16.88rem');
+	});
+
+	it('sets the value on the shell root too, and the menu follows the variable', () => {
+		const { container } = shell({ menuVariant: 'fit', menu: menuOf('Short', 'A rather long page title') });
+		expect((container.firstElementChild as HTMLElement).style.getPropertyValue(VAR)).toBe('16.88rem');
+		expect(aside().style.width).toBe('var(--app-shell-menu-width)');
+	});
+
+	it('never goes under 10rem', () => {
+		// 5 chars: 40 + 40 + 12 + 25 = 117px.
+		shell({ menuVariant: 'fit', menu: menuOf('Short') });
+		expect(menuWidth()).toBe('10rem');
+	});
+
+	it('never goes over 24rem', () => {
+		shell({ menuVariant: 'fit', menu: menuOf('x'.repeat(100), 'Short') });
+		expect(menuWidth()).toBe('24rem');
+	});
+
+	it('keeps a width just above the minimum', () => {
+		// 11 chars: 40 + 88 + 12 + 25 + 1 = 166px = 10.375rem.
+		shell({ menuVariant: 'fit', menu: menuOf('x'.repeat(11)) });
+		expect(menuWidth()).toBe('10.38rem');
+	});
+
+	it('is recomputed when the entries change', () => {
+		const view = shell({ menuVariant: 'fit', menu: menuOf('Short', 'A rather long page title') });
+		expect(menuWidth()).toBe('16.88rem');
+		view.rerender(
+			<AppShell brand="my-app" tabs={TABS} tabsLabel="Modules" menu={menuOf('Short', 'A rather long page title, much longer than before') } menuVariant="fit">
+				<p>content</p>
+			</AppShell>,
+		);
+		// 50 chars: 40 + 400 + 12 + 25 = 477px = 29.8rem, capped.
+		expect(menuWidth()).toBe('24rem');
+		view.rerender(
+			<AppShell brand="my-app" tabs={TABS} tabsLabel="Modules" menu={menuOf('Short')} menuVariant="fit">
+				<p>content</p>
+			</AppShell>,
+		);
+		expect(menuWidth()).toBe('10rem');
+	});
+
+	it('is recomputed when only a label changes, and ignores separators', () => {
+		const view = shell({ menuVariant: 'fit', menu: { ...menuOf('Short'), items: [{ id: 'a', label: 'Short', href: '/a' }, { kind: 'separator', id: 's', label: 'A caption that is longer than any entry of the menu' }, { id: 'b', label: 'Other', href: '/b' }] } });
+		expect(menuWidth()).toBe('10rem');
+		view.rerender(
+			<AppShell brand="my-app" tabs={TABS} tabsLabel="Modules" menu={menuOf('A rather long page title')} menuVariant="fit">
+				<p>content</p>
+			</AppShell>,
+		);
+		expect(menuWidth()).toBe('16.88rem');
+	});
+
+	it('is recomputed when the window is resized (zoom, root font size)', () => {
+		shell({ menuVariant: 'fit', menu: menuOf('A rather long page title') });
+		expect(menuWidth()).toBe('16.88rem');
+		document.documentElement.style.fontSize = '20px';
+		act(() => {
+			window.dispatchEvent(new Event('resize'));
+		});
+		// 270px / 20px = 13.5rem.
+		expect(menuWidth()).toBe('13.5rem');
+	});
+
+	it('is recomputed when a web font finishes loading, and when the fonts are ready', async () => {
+		let onDone: (() => void) | undefined;
+		let ready!: () => void;
+		Object.defineProperty(document, 'fonts', {
+			configurable: true,
+			value: {
+				ready: new Promise<void>((resolve) => {
+					ready = resolve;
+				}),
+				addEventListener: (type: string, listener: () => void) => {
+					if (type === 'loadingdone') onDone = listener;
+				},
+				removeEventListener: vi.fn(),
+			},
+		});
+		shell({ menuVariant: 'fit', menu: menuOf('A rather long page title') });
+		expect(menuWidth()).toBe('16.88rem');
+		// The fallback font was narrower than the web font.
+		pxPerChar = 10;
+		act(() => onDone!());
+		// 40 + 240 + 12 + 25 + 1 = 318px.
+		expect(menuWidth()).toBe('19.88rem');
+		pxPerChar = 6;
+		await act(async () => {
+			ready();
+			await Promise.resolve();
+		});
+		// 40 + 144 + 12 + 25 + 1 = 222px.
+		expect(menuWidth()).toBe('13.88rem');
+	});
+
+	it('stops listening when it unmounts: every listener added to the window is removed', () => {
+		const add = vi.spyOn(window, 'addEventListener');
+		const remove = vi.spyOn(window, 'removeEventListener');
+		const view = shell({ menuVariant: 'fit', menu: menuOf('A rather long page title') });
+		const added = add.mock.calls.filter(([type]) => type === 'resize').map(([, listener]) => listener);
+		expect(added.length).toBeGreaterThanOrEqual(2);
+		view.unmount();
+		const removed = remove.mock.calls.filter(([type]) => type === 'resize').map(([, listener]) => listener);
+		for (const listener of added) {
+			expect(removed).toContain(listener);
+		}
+	});
+
+	it('does not measure in the other variants: the width ignores the entries, whatever happens', () => {
+		const view = shell({ menuVariant: 'wide', menu: menuOf('A rather long page title') });
+		expect(menuWidth()).toBe('19rem');
+		view.rerender(
+			<AppShell brand="my-app" tabs={TABS} tabsLabel="Modules" menu={menuOf('x'.repeat(100))} menuVariant="wide">
+				<p>content</p>
+			</AppShell>,
+		);
+		act(() => {
+			window.dispatchEvent(new Event('resize'));
+		});
+		expect(menuWidth()).toBe('19rem');
+	});
+
+	it('switches to and from fit at run time', () => {
+		const view = shell({ menuVariant: 'classic', menu: menuOf('A rather long page title') });
+		expect(menuWidth()).toBe('15rem');
+		view.rerender(
+			<AppShell brand="my-app" tabs={TABS} tabsLabel="Modules" menu={menuOf('A rather long page title')} menuVariant="fit">
+				<p>content</p>
+			</AppShell>,
+		);
+		expect(menuWidth()).toBe('16.88rem');
+		view.rerender(
+			<AppShell brand="my-app" tabs={TABS} tabsLabel="Modules" menu={menuOf('A rather long page title')} menuVariant="wide">
+				<p>content</p>
+			</AppShell>,
+		);
+		expect(menuWidth()).toBe('19rem');
+	});
+});
+
+describe('truncated labels', () => {
+	const LONG = 'A rather long page title';
+	const longMenu: ShellMenu = { title: 'Queue', label: 'Queue pages', items: [{ id: 'a', label: LONG, href: '/a', current: 'page' }, { id: 'b', label: 'Short', href: '/b' }] };
+
+	// A label is 10px per character; the room it has is the menu width in rem (16px) minus 90px of padding and icon.
+	// `room` replaces the computed room when a test sets it (a window resize changes it with no render).
+	let room: number | undefined;
+	beforeEach(() => {
+		room = undefined;
+		vi.spyOn(Element.prototype, 'scrollWidth', 'get').mockImplementation(function (this: Element) {
+			return this.hasAttribute('data-menu-label') ? (this.textContent ?? '').length * 10 : 0;
+		});
+		vi.spyOn(Element.prototype, 'clientWidth', 'get').mockImplementation(function (this: Element) {
+			if (!this.hasAttribute('data-menu-label')) return 0;
+			if (room !== undefined) return room;
+			// The variable as CSS would inherit it: from the nearest ancestor that declares it.
+			let node: HTMLElement | null = this as HTMLElement;
+			while (node && node.style.getPropertyValue(VAR) === '') node = node.parentElement;
+			return parseFloat(node?.style.getPropertyValue(VAR) ?? '') * 16 - 90;
+		});
+	});
+
+	const labelOf = (name: string) => screen.getByRole('link', { name }).querySelector('[data-menu-label]')!;
+
+	it('gives an entry wider than the menu a title with its whole label, and the others none', () => {
+		// 15rem: 150px of room, the long label needs 240.
+		shell({ menu: longMenu });
+		expect(labelOf(LONG)).toHaveAttribute('title', LONG);
+		expect(labelOf('Short')).not.toHaveAttribute('title');
+		expect(classes(labelOf(LONG))).toContain('truncate');
+	});
+
+	it('is exactly at the limit when the label fills the room: no title', () => {
+		// 150px of room, 15 chars = 150px.
+		shell({ menu: { ...longMenu, items: [{ id: 'a', label: 'x'.repeat(15), href: '/a' }] } });
+		expect(labelOf('x'.repeat(15))).not.toHaveAttribute('title');
+	});
+
+	it('tolerates 1px of rounding (scrollWidth and clientWidth are rounded apart) but not 2px', () => {
+		const label = 'x'.repeat(16);
+		room = 159;
+		const first = shell({ menu: { ...longMenu, items: [{ id: 'a', label, href: '/a' }] } });
+		expect(labelOf(label)).not.toHaveAttribute('title');
+		first.unmount();
+		room = 158;
+		shell({ menu: { ...longMenu, items: [{ id: 'a', label, href: '/a' }] } });
+		expect(labelOf(label)).toHaveAttribute('title', label);
+	});
+
+	it('follows the width: a wider menu removes the title, a narrower one adds it', () => {
+		const view = shell({ menu: longMenu, menuVariant: 'narrow' });
+		expect(labelOf(LONG)).toHaveAttribute('title', LONG);
+		view.rerender(
+			<AppShell brand="my-app" tabs={TABS} tabsLabel="Modules" menu={longMenu} menuVariant="wide">
+				<p>content</p>
+			</AppShell>,
+		);
+		// 19rem: 214px of room, still short of 240.
+		expect(labelOf(LONG)).toHaveAttribute('title', LONG);
+		view.rerender(
+			<AppShell brand="my-app" tabs={TABS} tabsLabel="Modules" menu={{ ...longMenu, items: [{ id: 'a', label: 'x'.repeat(21), href: '/a' }] }} menuVariant="wide">
+				<p>content</p>
+			</AppShell>,
+		);
+		expect(labelOf('x'.repeat(21))).not.toHaveAttribute('title');
+	});
+
+	it('is re-evaluated when the window is resized (a fluid menu changes width without any render)', () => {
+		room = 100;
+		shell({ menu: longMenu, menuVariant: 'fluid' });
+		expect(labelOf(LONG)).toHaveAttribute('title', LONG);
+		room = 300;
+		act(() => {
+			window.dispatchEvent(new Event('resize'));
+		});
+		expect(labelOf(LONG)).not.toHaveAttribute('title');
+		room = 100;
+		act(() => {
+			window.dispatchEvent(new Event('resize'));
+		});
+		expect(labelOf(LONG)).toHaveAttribute('title', LONG);
+	});
+
+	it('stops listening to the window when it unmounts', () => {
+		const remove = vi.spyOn(window, 'removeEventListener');
+		shell({ menu: longMenu }).unmount();
+		expect(remove).toHaveBeenCalledWith('resize', expect.any(Function));
+	});
+});
+
+describe('menuVariant resizable', () => {
+	const handle = () => screen.getByRole('separator', { name: RESIZE_LABEL });
+	const mount = (props: Partial<AppShellProps> = {}) => shell({ menuVariant: 'resizable', resizeLabel: RESIZE_LABEL, ...props });
+	const shellRoot = (container: HTMLElement) => container.firstElementChild as HTMLElement;
+	// 16px per rem.
+	const drag = (from: number, to: number, pointerId = 7) => {
+		fireEvent.pointerDown(handle(), { pointerId, clientX: from, button: 0 });
+		fireEvent.pointerMove(handle(), { pointerId, clientX: to });
+	};
+
+	describe('the handle', () => {
+		it('is a focusable vertical separator with its value, bounds and the host label', () => {
+			mount();
+			expect(menuWidth()).toBe('15rem');
+			expect(handle()).toHaveAttribute('aria-orientation', 'vertical');
+			expect(handle()).toHaveAttribute('aria-valuenow', '15');
+			expect(handle()).toHaveAttribute('aria-valuemin', '10');
+			expect(handle()).toHaveAttribute('aria-valuemax', '28');
+			expect(handle()).toHaveAttribute('aria-valuetext', '15rem');
+			expect(handle()).toHaveAttribute('tabindex', '0');
+		});
+
+		it('sits outside the entries, on the right edge, with a col-resize cursor and a 6px hit area', () => {
+			mount();
+			expect(nav().contains(handle())).toBe(false);
+			expect(aside().contains(handle())).toBe(true);
+			expect(scroller().contains(handle())).toBe(false);
+			expect(classes(handle())).toEqual(expect.arrayContaining(['cursor-col-resize', 'right-0', 'w-1.5', 'touch-none']));
+			// Not an entry separator: the entries' separators stay inside the nav.
+			expect(within(nav()).getAllByRole('separator')).toHaveLength(1);
+		});
+
+		it('shows a line on hover and on focus only', () => {
+			mount();
+			const line = handle().firstElementChild!;
+			expect(classes(line)).toEqual(expect.arrayContaining(['group-hover:bg-primary', 'group-focus-visible:bg-primary']));
+			expect(classes(line)).not.toContain('bg-primary');
+			expect(line).toHaveAttribute('aria-hidden', 'true');
+		});
+
+		it('is accessible by the host label; without it, it takes the menu label and says what to add', () => {
+			const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			shell({ menuVariant: 'resizable' });
+			expect(screen.getByRole('separator', { name: 'Queue pages' })).toHaveAttribute('aria-valuenow', '15');
+			expect(warn).toHaveBeenCalledTimes(1);
+			const message = String(warn.mock.calls[0]![0]);
+			expect(message).toContain('resizeLabel');
+			expect(message).toContain('menuVariant');
+		});
+
+		it('says nothing about the label when it is given, nor when the variant has no handle', () => {
+			const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			mount();
+			shell({ menuVariant: 'classic' });
+			expect(warn).not.toHaveBeenCalled();
+		});
+
+		it('does not take an empty label for a label', () => {
+			const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			shell({ menuVariant: 'resizable', resizeLabel: '' });
+			expect(warn).toHaveBeenCalledTimes(1);
+			expect(screen.getByRole('separator', { name: 'Queue pages' })).toBeInTheDocument();
+		});
+	});
+
+	describe('dragging with the mouse', () => {
+		it('captures the pointer on press, and follows it live on the document root and on the shell root', () => {
+			const { container } = mount();
+			fireEvent.pointerDown(handle(), { pointerId: 7, clientX: 240, button: 0 });
+			expect(Element.prototype.setPointerCapture).toHaveBeenCalledWith(7);
+			fireEvent.pointerMove(handle(), { pointerId: 7, clientX: 320 });
+			expect(menuWidth()).toBe('20rem');
+			expect(shellRoot(container).style.getPropertyValue(VAR)).toBe('20rem');
+			expect(aside().style.width).toBe('var(--app-shell-menu-width)');
+			expect(handle()).toHaveAttribute('aria-valuenow', '20');
+			fireEvent.pointerMove(handle(), { pointerId: 7, clientX: 176 });
+			expect(menuWidth()).toBe('11rem');
+		});
+
+		it('measures from where it was pressed, not from the pointer position: no jump on press', () => {
+			mount();
+			fireEvent.pointerDown(handle(), { pointerId: 7, clientX: 500, button: 0 });
+			expect(menuWidth()).toBe('15rem');
+			fireEvent.pointerMove(handle(), { pointerId: 7, clientX: 516 });
+			expect(menuWidth()).toBe('16rem');
+		});
+
+		it('uses the root font size for the rem', () => {
+			document.documentElement.style.fontSize = '20px';
+			mount();
+			drag(300, 340);
+			expect(menuWidth()).toBe('17rem');
+		});
+
+		it('stays between 10rem and 28rem, exactly at the bounds', () => {
+			mount();
+			fireEvent.pointerDown(handle(), { pointerId: 7, clientX: 240, button: 0 });
+			fireEvent.pointerMove(handle(), { pointerId: 7, clientX: 240 + 13 * 16 });
+			expect(menuWidth()).toBe('28rem');
+			fireEvent.pointerMove(handle(), { pointerId: 7, clientX: 240 + 13 * 16 + 500 });
+			expect(menuWidth()).toBe('28rem');
+			fireEvent.pointerMove(handle(), { pointerId: 7, clientX: 240 - 5 * 16 });
+			expect(menuWidth()).toBe('10rem');
+			fireEvent.pointerMove(handle(), { pointerId: 7, clientX: -900 });
+			expect(menuWidth()).toBe('10rem');
+		});
+
+		it('writes the storage once, when the drag ends, not on every move', () => {
+			const setItem = vi.spyOn(Storage.prototype, 'setItem');
+			mount();
+			drag(240, 320);
+			fireEvent.pointerMove(handle(), { pointerId: 7, clientX: 336 });
+			expect(setItem).not.toHaveBeenCalled();
+			fireEvent.pointerUp(handle(), { pointerId: 7, clientX: 336 });
+			expect(setItem).toHaveBeenCalledTimes(1);
+			expect(localStorage.getItem(STORAGE_KEY)).toBe('21');
+			expect(menuWidth()).toBe('21rem');
+		});
+
+		it('ignores moves once released, and moves of another pointer', () => {
+			mount();
+			drag(240, 320);
+			fireEvent.pointerMove(handle(), { pointerId: 99, clientX: 700 });
+			expect(menuWidth()).toBe('20rem');
+			fireEvent.pointerUp(handle(), { pointerId: 7, clientX: 320 });
+			fireEvent.pointerMove(handle(), { pointerId: 7, clientX: 700 });
+			expect(menuWidth()).toBe('20rem');
+		});
+
+		it('ignores moves that were never preceded by a press', () => {
+			mount();
+			fireEvent.pointerMove(handle(), { pointerId: 7, clientX: 700 });
+			expect(menuWidth()).toBe('15rem');
+		});
+
+		it('ignores a press with another button than the main one, and does not capture', () => {
+			mount();
+			fireEvent.pointerDown(handle(), { pointerId: 7, clientX: 240, button: 2 });
+			fireEvent.pointerMove(handle(), { pointerId: 7, clientX: 400 });
+			expect(Element.prototype.setPointerCapture).not.toHaveBeenCalled();
+			expect(menuWidth()).toBe('15rem');
+		});
+
+		it('ends and keeps the width when the browser cancels the pointer or takes the capture away', () => {
+			mount();
+			drag(240, 320);
+			fireEvent.pointerCancel(handle(), { pointerId: 7 });
+			expect(localStorage.getItem(STORAGE_KEY)).toBe('20');
+			fireEvent.pointerMove(handle(), { pointerId: 7, clientX: 700 });
+			expect(menuWidth()).toBe('20rem');
+			drag(320, 352);
+			fireEvent.lostPointerCapture(handle(), { pointerId: 7 });
+			expect(localStorage.getItem(STORAGE_KEY)).toBe('22');
+			fireEvent.pointerMove(handle(), { pointerId: 7, clientX: 700 });
+			expect(menuWidth()).toBe('22rem');
+		});
+
+		it('releases the capture on release', () => {
+			mount();
+			drag(240, 320);
+			fireEvent.pointerUp(handle(), { pointerId: 7 });
+			expect(Element.prototype.releasePointerCapture).toHaveBeenCalledWith(7);
+		});
+
+		it('marks the handle while dragging, for the line to stay visible under the pointer', () => {
+			mount();
+			expect(handle()).not.toHaveAttribute('data-dragging');
+			drag(240, 320);
+			expect(handle()).toHaveAttribute('data-dragging', 'true');
+			fireEvent.pointerUp(handle(), { pointerId: 7 });
+			expect(handle()).not.toHaveAttribute('data-dragging');
+		});
+	});
+
+	describe('double-click', () => {
+		it('resets to 15rem and forgets the stored width', () => {
+			localStorage.setItem(STORAGE_KEY, '22');
+			mount();
+			expect(menuWidth()).toBe('22rem');
+			fireEvent.doubleClick(handle());
+			expect(menuWidth()).toBe('15rem');
+			expect(handle()).toHaveAttribute('aria-valuenow', '15');
+			expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+		});
+	});
+
+	describe('keyboard', () => {
+		const press = (key: string, init: Partial<KeyboardEventInit> = {}) => fireEvent.keyDown(handle(), { key, ...init });
+
+		it('Left and Right move by 1rem, and the width is remembered each time', () => {
+			mount();
+			press('ArrowRight');
+			expect(menuWidth()).toBe('16rem');
+			expect(handle()).toHaveAttribute('aria-valuenow', '16');
+			expect(localStorage.getItem(STORAGE_KEY)).toBe('16');
+			press('ArrowLeft');
+			press('ArrowLeft');
+			expect(menuWidth()).toBe('14rem');
+			expect(handle()).toHaveAttribute('aria-valuetext', '14rem');
+			expect(localStorage.getItem(STORAGE_KEY)).toBe('14');
+		});
+
+		it('Home goes to 10rem and End to 28rem; the arrows stop there', () => {
+			mount();
+			press('Home');
+			expect(menuWidth()).toBe('10rem');
+			press('ArrowLeft');
+			expect(menuWidth()).toBe('10rem');
+			press('End');
+			expect(menuWidth()).toBe('28rem');
+			press('ArrowRight');
+			expect(menuWidth()).toBe('28rem');
+			expect(handle()).toHaveAttribute('aria-valuenow', '28');
+		});
+
+		it('steps from a fractional width and clamps instead of overshooting', () => {
+			localStorage.setItem(STORAGE_KEY, '27.5');
+			mount();
+			press('ArrowRight');
+			expect(menuWidth()).toBe('28rem');
+		});
+
+		it('prevents the default of the keys it handles only, and ignores them with a modifier', () => {
+			mount();
+			expect(press('ArrowRight')).toBe(false);
+			expect(press('Home')).toBe(false);
+			expect(press('a')).toBe(true);
+			expect(press('ArrowUp')).toBe(true);
+			expect(press('ArrowRight', { ctrlKey: true })).toBe(true);
+			expect(press('ArrowRight', { altKey: true })).toBe(true);
+			expect(press('ArrowRight', { metaKey: true })).toBe(true);
+			// Only the Home before them moved it (to 10rem): none of the ignored presses did.
+			expect(menuWidth()).toBe('10rem');
+		});
+
+		it('is reachable with Tab: a tab stop, not inside the entries', () => {
+			mount();
+			handle().focus();
+			expect(document.activeElement).toBe(handle());
+			// An arrow in the list of links is not caught by the handle.
+			const links = within(nav()).getAllByRole('link');
+			links[0]!.focus();
+			fireEvent.keyDown(links[0]!, { key: 'ArrowRight' });
+			expect(menuWidth()).toBe('15rem');
+		});
+	});
+
+	describe('remembered width', () => {
+		it('starts at the stored width and survives a reload', () => {
+			const first = mount();
+			drag(240, 336);
+			fireEvent.pointerUp(handle(), { pointerId: 7 });
+			first.unmount();
+			mount();
+			expect(menuWidth()).toBe('21rem');
+			expect(handle()).toHaveAttribute('aria-valuenow', '21');
+		});
+
+		it.each(['15', '10', '28', '17.5', '0010', '12.25'])('accepts "%s"', (stored) => {
+			localStorage.setItem(STORAGE_KEY, stored);
+			const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			mount();
+			expect(menuWidth()).toBe(`${Number(stored)}rem`);
+			expect(warn).not.toHaveBeenCalled();
+		});
+
+		it.each(['abc', '', ' ', '9.99', '28.01', '0', '-12', 'NaN', 'Infinity', '15rem', '1e1', '15px', '0x10', '[15]', ' 15', '15 '])('ignores the garbage "%s" with a warning that names the key and the fix, and uses 15rem', (stored) => {
+			localStorage.setItem(STORAGE_KEY, stored);
+			const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			mount();
+			expect(menuWidth()).toBe('15rem');
+			expect(warn).toHaveBeenCalledTimes(1);
+			const message = String(warn.mock.calls[0]![0]);
+			expect(message).toContain(STORAGE_KEY);
+			expect(message).toContain(`"${stored}"`);
+			expect(message).toContain('10');
+			expect(message).toContain('28');
+			// The bad value is left alone until the user changes the width.
+			expect(localStorage.getItem(STORAGE_KEY)).toBe(stored);
+		});
+
+		it('replaces a garbage value as soon as the user sets a width', () => {
+			localStorage.setItem(STORAGE_KEY, 'abc');
+			vi.spyOn(console, 'warn').mockImplementation(() => {});
+			mount();
+			fireEvent.keyDown(handle(), { key: 'ArrowRight' });
+			expect(localStorage.getItem(STORAGE_KEY)).toBe('16');
+		});
+
+		it('says so, and still works for this page, when the storage refuses the write', () => {
+			const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+			vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+				throw new Error('QuotaExceededError');
+			});
+			mount();
+			fireEvent.keyDown(handle(), { key: 'ArrowRight' });
+			expect(menuWidth()).toBe('16rem');
+			const message = String(error.mock.calls[0]![0]);
+			expect(message).toContain('QuotaExceededError');
+			expect(message).toContain(STORAGE_KEY);
+		});
+
+		it('says so, and still works, when the storage refuses the reset', () => {
+			localStorage.setItem(STORAGE_KEY, '22');
+			const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+			vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+				throw new Error('SecurityError');
+			});
+			mount();
+			fireEvent.doubleClick(handle());
+			expect(menuWidth()).toBe('15rem');
+			expect(String(error.mock.calls[0]![0])).toContain('SecurityError');
+		});
+
+		it('says so, and starts at 15rem, when the storage cannot be read', () => {
+			const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+			vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+				throw new Error('SecurityError');
+			});
+			mount();
+			expect(menuWidth()).toBe('15rem');
+			const message = String(error.mock.calls[0]![0]);
+			expect(message).toContain('SecurityError');
+			expect(message).toContain(STORAGE_KEY);
+		});
+	});
+
+	describe('switching variant at run time', () => {
+		it('reads the stored width when it becomes resizable, and stops publishing it when it is not', () => {
+			localStorage.setItem(STORAGE_KEY, '22');
+			const view = shell({ menuVariant: 'wide', resizeLabel: RESIZE_LABEL });
+			expect(menuWidth()).toBe('19rem');
+			expect(screen.queryByRole('separator', { name: RESIZE_LABEL })).toBeNull();
+			view.rerender(
+				<AppShell brand="my-app" tabs={TABS} tabsLabel="Modules" menu={MENU} menuVariant="resizable" resizeLabel={RESIZE_LABEL}>
+					<p>content</p>
+				</AppShell>,
+			);
+			expect(menuWidth()).toBe('22rem');
+			fireEvent.keyDown(handle(), { key: 'ArrowRight' });
+			expect(menuWidth()).toBe('23rem');
+			view.rerender(
+				<AppShell brand="my-app" tabs={TABS} tabsLabel="Modules" menu={MENU} menuVariant="classic" resizeLabel={RESIZE_LABEL}>
+					<p>content</p>
+				</AppShell>,
+			);
+			expect(menuWidth()).toBe('15rem');
+			expect(screen.queryByRole('separator', { name: RESIZE_LABEL })).toBeNull();
+		});
+
+		it('ends a drag in progress without writing when the variant changes', () => {
+			const view = mount();
+			drag(240, 320);
+			view.rerender(
+				<AppShell brand="my-app" tabs={TABS} tabsLabel="Modules" menu={MENU} menuVariant="classic" resizeLabel={RESIZE_LABEL}>
+					<p>content</p>
+				</AppShell>,
+			);
+			expect(menuWidth()).toBe('15rem');
+			expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+		});
 	});
 });
