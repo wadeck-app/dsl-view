@@ -94,3 +94,12 @@ keep the `tokens` object's **values** stable. Rebuilding an equal object is fine
 only changed style properties. Declare the palette at module scope.
 
 Cheaper than the context alternative, which re-renders every consumer on a theme change.
+
+## App shell variables
+
+`AppShell` publishes two layout variables on `<html>` while mounted (plus on its own root). Both are lengths and follow the shell's current state; props: `barOnScroll`, `menuVariant` (see the component doc).
+
+| Variable | Value | Use |
+|---|---|---|
+| `--app-shell-bar-height` | 2.75rem; 1.5rem / 2rem / 0px per `barOnScroll` state | `top` of anything sticky under the bar: `top: var(--app-shell-bar-height, 0px)` |
+| `--app-shell-menu-width` | 15rem; 11rem, 3.5rem or 0px per `menuVariant` state | left inset of floating tools (the A/B dock) |
