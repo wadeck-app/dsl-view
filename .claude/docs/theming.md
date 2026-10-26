@@ -102,6 +102,6 @@ Cheaper than the context alternative, which re-renders every consumer on a theme
 | Variable | Value | Use |
 |---|---|---|
 | `--app-shell-bar-height` | 2.75rem; 1.5rem / 2rem / 0px per `barOnScroll` state, reached by a 200ms ease-out (intermediate values on the way; at once under `prefers-reduced-motion`) | `top` of anything sticky under the bar: Tailwind `top-shell-bar` (preset), or `top: var(--app-shell-bar-height, 0px)`. Never add a CSS `transition` on a property that reads it: it would lag behind the variable and open a gap |
-| `--app-shell-menu-width` | 15rem; 13rem, 18rem, 5rem, 3.5rem, 15.5rem, 14rem or 1rem per `menuVariant` and fold state (`floating` includes its 0.75rem margin) | left inset of floating tools (the A/B dock) |
+| `--app-shell-menu-width` | 15rem; per `menuVariant`: 12rem, 19rem, `clamp(12rem, 16vw, 22rem)`, the measured width of the longest entry (10rem to 24rem) or the dragged width (10rem to 28rem). Follows the live value while dragging; no CSS transition on it | left inset of floating tools (the A/B dock). Never add a CSS `transition` on a property that reads it |
 
 The bar height is written frame by frame from JS (`useBarHeight`), not animated by CSS: a plain custom property cannot transition, and `@property` would give each element declaring it its own clock.
