@@ -1,24 +1,14 @@
-import { Menu } from 'lucide-react';
 import React, { useEffect, useId, useState } from 'react';
 import { classFor } from '@dsl-ui/utils/warnUnknownChoice.js';
-import { Drawer } from '../overlay/Drawer.js';
-import {
-	APP_SHELL_BAR_HEIGHT,
-	APP_SHELL_BAR_HEIGHT_VAR,
-	APP_SHELL_MENU_WIDTH,
-	APP_SHELL_MENU_WIDTH_COMPACT,
-	APP_SHELL_MENU_WIDTH_NONE,
-	APP_SHELL_MENU_WIDTH_RAIL,
-	APP_SHELL_MENU_WIDTH_VAR,
-} from './shellMenuWidth.js';
-import { isShortcutTarget, MENU_VARIANTS, ShellMenuNav, ShellSideMenu, useFoldedMenu } from './ShellSideMenu.js';
+import { APP_SHELL_BAR_HEIGHT, APP_SHELL_BAR_HEIGHT_VAR, APP_SHELL_MENU_WIDTH_VAR } from './shellMenuWidth.js';
+import { MENU_VARIANT_WIDTH, MENU_WIDTH_PEEK_FOLDED, type ShellMenuVariant } from './shellMenuVariants.js';
+import { isShortcutTarget, MENU_VARIANTS, ShellSideMenu, useFoldedMenu } from './ShellSideMenu.js';
 import { ShellTabs } from './ShellTabs.js';
 import { BAR_ON_SCROLL_MODES, useBarOnScroll, type BarOnScroll } from './useBarOnScroll.js';
 
 export type { BarOnScroll } from './useBarOnScroll.js';
-
-/** The look and behaviour of the side menu. Default `classic`. See the component doc. */
-export type ShellMenuVariant = 'classic' | 'compact' | 'rail' | 'toggle' | 'drawer' | 'accent';
+// The look and behaviour of the side menu (`menuVariant`, default `classic`) and the label + hint of each for an A/B dock.
+export { MENU_VARIANT_AB_OPTIONS, type ShellMenuVariant } from './shellMenuVariants.js';
 
 /**
  * A generic application frame: a top bar (brand, tabs, actions), an always-visible side menu and the content.
@@ -42,7 +32,7 @@ export type ShellMenuVariant = 'classic' | 'compact' | 'rail' | 'toggle' | 'draw
  * CSS custom properties, declared on the shell's root and published on the document root while mounted (removed when the
  * last mounted shell unmounts). The document root, not just the shell, because floating tools such as the A/B dock are
  * mounted outside the shell and a custom property only inherits downwards:
- * - `--app-shell-menu-width`: 15rem. The A/B dock uses it to stay in the content area.
+ * - `--app-shell-menu-width`: 15rem by default, per `menuVariant` (below). The A/B dock uses it to stay in the content area.
  * - `--app-shell-bar-height`: 2.75rem. The side menu and sticky content stick below it. With `barOnScroll` it follows the
  *   CURRENT state of the bar (the target value: the bar and the menu animate to it over 150ms, not under
  *   prefers-reduced-motion).
@@ -57,23 +47,31 @@ export type ShellMenuVariant = 'classic' | 'compact' | 'rail' | 'toggle' | 'draw
  * behaves as `steady`.
  *
  * `menuVariant` (default `classic`) is the side menu. `--app-shell-menu-width` follows its current state:
- * - `classic`: 15rem, icon and label.
- * - `compact`: 11rem, denser rows.
- * - `rail`: 3.5rem, icons only (initials without an icon, the name as tooltip). Hover or keyboard focus expands it to 15rem
- *   OVER the content, which does not move (the variable stays 3.5rem).
- * - `toggle`: classic plus a button (named by `menu.label`) that folds it to the rail and back; the choice is kept in
- *   localStorage `app-shell.menu` (`open` / `folded`), and the key `[` does the same when no field has the focus. The
- *   content follows the width.
- * - `drawer`: no column (variable 0px). A menu button first in the top bar opens the menu as a dialog over the content;
- *   Escape, the backdrop or using a link closes it. This is also the answer for a narrow window.
- * - `accent`: classic width, a 3px accent bar and soft tint on the current entry, a larger hit area, group captions in
- *   small caps.
- * An unknown value warns once and behaves as `classic`. In every variant the arrow keys, Home and End move between the
- * menu links, the current entry is scrolled into view and the focus ring is visible.
+ * - `classic`: 15rem, icon and label. The reference.
+ * - `slim`: 13rem, text rows without icons, quiet text, soft full-row hover tint; the current row is bold with a 2px
+ *   accent line on the right edge.
+ * - `cards`: 18rem, a rounded card per entry (icon, label and the optional `description` of the item as a second line),
+ *   generous spacing, lifts slightly on hover (not under reduced motion).
+ * - `tiles`: 5rem launcher column, the icon above a small label (initials without an icon); the current entry is a
+ *   filled accent tile.
+ * - `flyout`: 3.5rem icon-only rail (initials without an icon). Hovering or focusing an entry floats its label to the
+ *   right (position fixed, nothing moves); the current entry has an accent dot.
+ * - `floating`: a 14rem rounded panel with a soft shadow, detached from the edges by a 0.75rem margin (the variable
+ *   is 15.5rem so the content never sits under it), pill entries, captions for groups.
+ * - `tree`: 14rem timeline: a thin guide line with a node per entry, the current node filled; a separator is a group
+ *   title (with a label) or a break in the line (without).
+ * - `peek`: 15rem like classic plus a button (named by `menu.label`) that folds it to a 1rem sliver with a grab handle
+ *   and back; the key `[` does the same when no field has the focus; the choice is kept in localStorage `app-shell.menu`
+ *   (`open` / `folded`). Folded, hovering or focusing the sliver shows the whole menu OVER the content, which does not
+ *   move (the variable stays 1rem); the hidden links are out of the tab order.
+ * An unknown value (including the removed `compact`, `rail`, `toggle`, `drawer`, `accent`) warns once and behaves as
+ * `classic`. In every variant the menu is sticky under the bar with its own scrollbar, the arrow keys, Home and End move
+ * between the menu links, the current entry is scrolled into view and the focus ring is visible.
+ * `MENU_VARIANT_AB_OPTIONS` holds a label and a one-line hint for each value, in the shape `useAbTest({ options })` takes.
  *
- * Menu `items` may hold `{ kind: 'separator', id, label? }`: a thin rule, with the label a caption above the next group.
- * A separator is never focusable. Leading, trailing and doubled separators are dropped silently (the data comes from
- * modules). Collapsed, a separator is a rule only.
+ * Menu `items` may hold `{ kind: 'separator', id, label? }`: a rule in the style of the variant, with the label a
+ * caption for the next group. A separator is never focusable. Leading, trailing and doubled separators are dropped
+ * silently (the data comes from modules). In `flyout` a separator is a rule only, its caption flies out on hover.
  *
  * Limits: no other responsive behaviour. Not a registry node: it is a React API for the host app's layout.
  */
@@ -101,6 +99,8 @@ export interface ShellItem {
 	current?: 'page' | 'true';
 	/** Color of the highlight when the item is current (any CSS color); defaults to the theme accent. */
 	accent?: string;
+	/** A second, quieter line under the label. Drawn by the `cards` variant only; the others ignore it. */
+	description?: string;
 }
 
 /** A rule between two groups of menu links, with an optional caption for the next group. */
@@ -176,19 +176,11 @@ export function AppShell({ brand, tabs, tabsLabel, menu, actions, renderLink = d
 	const barHeight = hidden ? '0px' : compact ? COMPACT_BAR_HEIGHT[mode === 'icons' ? 'icons' : 'shrink'] : APP_SHELL_BAR_HEIGHT;
 	const animated = mode !== 'steady';
 	const variant = classFor('AppShell', 'menuVariant', menuVariant, MENU_VARIANTS, 'classic') as ShellMenuVariant;
-	const [folded, toggleFold] = useFoldedMenu(variant === 'toggle');
-	const [drawerOpen, setDrawerOpen] = useState(false);
-	const menuWidth =
-		variant === 'drawer'
-			? APP_SHELL_MENU_WIDTH_NONE
-			: variant === 'compact'
-				? APP_SHELL_MENU_WIDTH_COMPACT
-				: variant === 'rail' || (variant === 'toggle' && folded)
-					? APP_SHELL_MENU_WIDTH_RAIL
-					: APP_SHELL_MENU_WIDTH;
-	// `[` folds and unfolds the toggle menu, unless a field is being typed in.
+	const [folded, toggleFold] = useFoldedMenu(variant === 'peek');
+	const menuWidth = folded ? MENU_WIDTH_PEEK_FOLDED : MENU_VARIANT_WIDTH[variant];
+	// `[` folds and unfolds the peek menu, unless a field is being typed in.
 	useEffect(() => {
-		if (variant !== 'toggle') {
+		if (variant !== 'peek') {
 			return;
 		}
 		const onKeyDown = (event: KeyboardEvent) => {
@@ -230,7 +222,7 @@ export function AppShell({ brand, tabs, tabsLabel, menu, actions, renderLink = d
 				</a>
 			)}
 			{/* 44px, no border: a soft shadow separates it from the page. Sticky, z-30: above the content's own stickies (z-10),
-			    below the drawer overlay (z-40) and the dialogs, toasts and popovers (z-50). Fixed height, whatever the tab:
+			    below the menu flyout label (z-40) and the dialogs, toasts and popovers (z-50). Fixed height, whatever the tab:
 			    a tab can fill it from top to bottom. A shrunk bar gives back the height it lost as a bottom margin, so the
 			    content does not move; a hidden bar keeps its height and slides up. Pointer or focus inside: full bar. */}
 			<header
@@ -248,36 +240,16 @@ export function AppShell({ brand, tabs, tabsLabel, menu, actions, renderLink = d
 					if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocusedInside(false);
 				}}
 			>
-				{variant === 'drawer' && (
-					// violations-suppress: react/no-raw-button the shell's menu button owns its geometry (as tall as the top bar)
-					<button
-						type="button"
-						onClick={() => setDrawerOpen(true)}
-						aria-label={menu.label}
-						title={menu.label}
-						aria-haspopup="dialog"
-						aria-expanded={drawerOpen}
-						className="flex shrink-0 items-center justify-center self-stretch px-2 text-muted hover:bg-muted-bg hover:text-content focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-					>
-						<Menu size={16} aria-hidden="true" />
-					</button>
-				)}
 				<span className={compact && mode === 'icons' ? 'sr-only' : `shrink-0 whitespace-nowrap font-semibold text-content ${compact ? 'text-xs' : 'text-base'}`}>{brand}</span>
 				<ShellTabs tabs={tabs} tabsLabel={tabsLabel} renderLink={renderLink} moreLabel={moreLabel} density={compact ? (mode === 'icons' ? 'icons' : 'small') : 'normal'} />
 				{actions}
 			</header>
 			<div className="flex min-h-0 flex-1">
-				{variant !== 'drawer' && <ShellSideMenu menu={menu} renderLink={renderLink} variant={variant} folded={folded} onToggleFold={toggleFold} />}
+				<ShellSideMenu menu={menu} renderLink={renderLink} variant={variant} folded={folded} onToggleFold={toggleFold} />
 				<main id={mainId} tabIndex={-1} className="min-w-0 flex-1 focus:outline-none">
 					{children}
 				</main>
 			</div>
-			{/* Mounted only while open: the dialog is not left in the page, inert, for nothing. */}
-			{variant === 'drawer' && drawerOpen && (
-				<Drawer open onClose={() => setDrawerOpen(false)} side="left" size="sm" title={menu.title}>
-					<ShellMenuNav menu={menu} renderLink={renderLink} variant="classic" density="full" onNavigate={() => setDrawerOpen(false)} />
-				</Drawer>
-			)}
 		</div>
 	);
 }

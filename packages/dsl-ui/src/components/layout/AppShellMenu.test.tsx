@@ -1,6 +1,6 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { AppShell, type AppShellProps, type ShellMenu } from './AppShell.js';
+import { AppShell, MENU_VARIANT_AB_OPTIONS, type AppShellProps, type ShellMenu, type ShellMenuVariant } from './AppShell.js';
 import { normalizeMenuEntries } from './ShellSideMenu.js';
 
 const TABS = [{ id: 'queue', label: 'Queue', href: '/queue', current: 'true' as const }];
@@ -10,7 +10,7 @@ const MENU: ShellMenu = {
 	label: 'Queue pages',
 	items: [
 		{ id: 'overview', label: 'Overview', href: '/', icon: <i data-testid="icon-overview" />, current: 'page' },
-		{ id: 'jobs', label: 'Jobs', href: '/jobs' },
+		{ id: 'jobs', label: 'Jobs', href: '/jobs', description: 'Background jobs' },
 		{ kind: 'separator', id: 's1', label: 'Admin' },
 		{ id: 'workers', label: 'Workers', href: '/workers' },
 	],
@@ -25,7 +25,13 @@ const shell = (props: Partial<AppShellProps> = {}) =>
 
 const menuWidth = () => document.documentElement.style.getPropertyValue('--app-shell-menu-width');
 const aside = () => screen.getByTestId('shell-menu');
+// The element that scrolls: the aside itself, or the panel inside it (floating, peek).
+const scroller = () => (aside().hasAttribute('data-menu-scroller') ? aside() : aside().querySelector<HTMLElement>('[data-menu-scroller]')!);
+const classes = (el: Element) => el.className.split(/\s+/);
 const STORAGE_KEY = 'app-shell.menu';
+
+const VARIANTS: readonly ShellMenuVariant[] = ['classic', 'slim', 'cards', 'tiles', 'flyout', 'floating', 'tree', 'peek'];
+const WIDTHS: Record<ShellMenuVariant, string> = { classic: '15rem', slim: '13rem', cards: '18rem', tiles: '5rem', flyout: '3.5rem', floating: '15.5rem', tree: '14rem', peek: '15rem' };
 
 afterEach(() => {
 	document.documentElement.style.removeProperty('--app-shell-menu-width');
@@ -64,91 +70,19 @@ describe('normalizeMenuEntries', () => {
 	});
 });
 
-describe('menu separators', () => {
-	it('renders a labelled separator as a caption, named by its label, and it is not focusable', () => {
-		shell();
-		const separator = screen.getByRole('separator', { name: 'Admin' });
-		expect(separator).toHaveTextContent('Admin');
-		expect(separator.hasAttribute('tabindex')).toBe(false);
-		expect(separator.querySelector('a, button')).toBeNull();
-	});
-
-	it('renders an unlabelled separator as a plain rule with no name', () => {
-		shell({ menu: { ...MENU, items: [MENU.items[0]!, { kind: 'separator', id: 's' }, MENU.items[1]!] } });
-		const separator = screen.getByRole('separator');
-		expect(separator).not.toHaveAttribute('aria-label');
-		expect(separator.textContent).toBe('');
-	});
-
-	it('skips leading, trailing and doubled separators from the data without a message', () => {
-		const warn = vi.spyOn(console, 'warn');
-		const error = vi.spyOn(console, 'error');
-		shell({ menu: { ...MENU, items: [{ kind: 'separator', id: 'a' }, MENU.items[0]!, { kind: 'separator', id: 'b' }, { kind: 'separator', id: 'c' }, MENU.items[1]!, { kind: 'separator', id: 'd' }] } });
-		expect(screen.getAllByRole('separator')).toHaveLength(1);
-		expect(screen.getAllByRole('link')).toHaveLength(3);
-		expect(warn).not.toHaveBeenCalled();
-		expect(error).not.toHaveBeenCalled();
-	});
-
-	it('is left out of the arrow-key navigation', () => {
-		shell();
-		const nav = screen.getByRole('navigation', { name: 'Queue pages' });
-		const links = within(nav).getAllByRole('link');
-		links[1]!.focus();
-		fireEvent.keyDown(links[1]!, { key: 'ArrowDown' });
-		expect(document.activeElement).toBe(links[2]);
-		expect(links[2]).toHaveTextContent('Workers');
-	});
-
-	it('is a rule only when the menu is collapsed (rail): no caption text', () => {
-		shell({ menuVariant: 'rail' });
-		const separator = screen.getByRole('separator', { name: 'Admin' });
-		expect(separator.textContent).toBe('');
+describe('A/B options of the variants', () => {
+	it('has a label and a one-line hint for exactly the allowed values', () => {
+		expect(Object.keys(MENU_VARIANT_AB_OPTIONS).sort()).toEqual([...VARIANTS].sort());
+		for (const variant of VARIANTS) {
+			const { label, hint } = MENU_VARIANT_AB_OPTIONS[variant];
+			expect(label.trim()).not.toBe('');
+			expect(hint.trim()).not.toBe('');
+			expect(hint).not.toContain('\n');
+		}
 	});
 });
 
-describe('menu keyboard', () => {
-	it('moves between links with the arrows, Home and End, and stops at the ends', () => {
-		shell();
-		const links = within(screen.getByRole('navigation', { name: 'Queue pages' })).getAllByRole('link');
-		links[0]!.focus();
-		fireEvent.keyDown(links[0]!, { key: 'ArrowUp' });
-		expect(document.activeElement).toBe(links[0]);
-		fireEvent.keyDown(links[0]!, { key: 'End' });
-		expect(document.activeElement).toBe(links[2]);
-		fireEvent.keyDown(links[2]!, { key: 'ArrowDown' });
-		expect(document.activeElement).toBe(links[2]);
-		fireEvent.keyDown(links[2]!, { key: 'Home' });
-		expect(document.activeElement).toBe(links[0]);
-		fireEvent.keyDown(links[0]!, { key: 'ArrowDown' });
-		expect(document.activeElement).toBe(links[1]);
-	});
-
-	it('leaves other keys alone', () => {
-		shell();
-		const links = within(screen.getByRole('navigation', { name: 'Queue pages' })).getAllByRole('link');
-		links[0]!.focus();
-		const notCancelled = fireEvent.keyDown(links[0]!, { key: 'a' });
-		expect(notCancelled).toBe(true);
-		expect(document.activeElement).toBe(links[0]);
-	});
-
-	it('gives the links a visible focus ring', () => {
-		shell();
-		expect(screen.getByRole('link', { name: 'Jobs' }).className).toContain('focus-visible:outline');
-	});
-
-	it('brings the current entry into view', () => {
-		const scrollIntoView = vi.fn();
-		Element.prototype.scrollIntoView = scrollIntoView;
-		shell();
-		expect(scrollIntoView).toHaveBeenCalledTimes(1);
-		expect(scrollIntoView.mock.contexts[0]).toBe(screen.getByRole('link', { name: 'Overview' }));
-		expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
-	});
-});
-
-describe('menuVariant classic (default)', () => {
+describe('menuVariant (default and unknown values)', () => {
 	it('is the same with no value and with "classic": 15rem, labels shown', () => {
 		shell();
 		expect(menuWidth()).toBe('15rem');
@@ -164,128 +98,368 @@ describe('menuVariant classic (default)', () => {
 		const message = String(warn.mock.calls[0]![0]);
 		expect(message).toContain('menuVariant');
 		expect(message).toContain('sideways');
-		expect(message).toContain('classic, compact, rail, toggle, drawer, accent');
+		expect(message).toContain('classic, slim, cards, tiles, flyout, floating, tree, peek');
 	});
-});
 
-describe('menuVariant compact', () => {
-	it('is 11rem with denser rows', () => {
-		shell({ menuVariant: 'compact' });
-		expect(menuWidth()).toBe('11rem');
-		const classes = screen.getByRole('link', { name: 'Jobs' }).className.split(/\s+/);
-		expect(classes).toContain('text-xs');
-		expect(classes).toContain('py-1');
-		expect(screen.getByRole('link', { name: 'Jobs' })).toHaveTextContent('Jobs');
-	});
-});
-
-describe('menuVariant accent', () => {
-	it('keeps the classic width, marks the current entry with a 3px bar and enlarges the hit area', () => {
-		shell({ menuVariant: 'accent' });
+	it.each(['compact', 'rail', 'toggle', 'drawer', 'accent'])('the removed value "%s" warns and behaves as classic', (old) => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		shell({ menuVariant: old as never });
 		expect(menuWidth()).toBe('15rem');
-		const current = screen.getByRole('link', { name: 'Overview' }).className.split(/\s+/);
-		expect(current).toContain('before:w-[3px]');
-		expect(current).toContain('before:bg-primary');
-		expect(current).toContain('bg-primary-light');
-		const other = screen.getByRole('link', { name: 'Jobs' }).className.split(/\s+/);
-		expect(other).not.toContain('before:bg-primary');
-		expect(other).toContain('py-2.5');
-	});
-
-	it('draws a labelled separator as a small-caps group caption', () => {
-		shell({ menuVariant: 'accent' });
-		expect(screen.getByRole('separator', { name: 'Admin' }).firstElementChild!.getAttribute('style')).toContain('font-variant-caps: all-small-caps');
+		expect(String(warn.mock.calls[0]![0])).toContain(old);
+		expect(screen.getByTestId('shell-menu')).toBeInTheDocument();
 	});
 });
 
-describe('menuVariant rail', () => {
-	it('is 3.5rem wide, icon only: the name stays (tooltip, hidden text), an entry without icon shows initials', () => {
-		shell({ menuVariant: 'rail' });
-		expect(menuWidth()).toBe('3.5rem');
+describe.each(VARIANTS)('menuVariant %s (what every variant keeps)', (menuVariant) => {
+	it('publishes its width on the document root and on the shell root', () => {
+		const { container } = shell({ menuVariant });
+		expect(menuWidth()).toBe(WIDTHS[menuVariant]);
+		expect((container.firstElementChild as HTMLElement).style.getPropertyValue('--app-shell-menu-width')).toBe(WIDTHS[menuVariant]);
+		expect(aside().style.width).toBe('var(--app-shell-menu-width)');
+	});
+
+	it('is sticky under the bar and scrolls on its own', () => {
+		shell({ menuVariant });
+		expect(aside().style.top).toBe('var(--app-shell-bar-height)');
+		expect(classes(aside())).toEqual(expect.arrayContaining(['sticky', 'self-start']));
+		expect(classes(scroller())).toContain('overflow-y-auto');
+		expect(scroller().contains(screen.getByRole('navigation', { name: 'Queue pages' }))).toBe(true);
+	});
+
+	it('names the menu: a heading and a navigation, links in DOM order, the current one marked', () => {
+		shell({ menuVariant });
+		expect(screen.getByRole('heading', { name: 'Queue' })).toBeInTheDocument();
+		const links = within(screen.getByRole('navigation', { name: 'Queue pages' })).getAllByRole('link');
+		expect(links.map((l) => l.getAttribute('href'))).toEqual(['/', '/jobs', '/workers']);
+		expect(links.map((l) => l.getAttribute('aria-current'))).toEqual(['page', null, null]);
+		for (const name of ['Overview', 'Jobs', 'Workers']) {
+			expect(screen.getByRole('link', { name: new RegExp(name) })).toBeInTheDocument();
+		}
+	});
+
+	it('draws a labelled and an unlabelled separator: named by its label or by nothing, never focusable', () => {
+		shell({ menuVariant, menu: { ...MENU, items: [...MENU.items, { kind: 'separator', id: 's2' }, { id: 'about', label: 'About', href: '/about' }] } });
+		const separators = screen.getAllByRole('separator');
+		expect(separators).toHaveLength(2);
+		expect(separators[0]).toHaveAttribute('aria-label', 'Admin');
+		expect(separators[1]).not.toHaveAttribute('aria-label');
+		for (const separator of separators) {
+			expect(separator.hasAttribute('tabindex')).toBe(false);
+			expect(separator.querySelector('a, button')).toBeNull();
+		}
+		expect(separators[1]!.textContent).toBe('');
+	});
+
+	it('moves between links with the arrows, Home and End, skipping separators, and stops at the ends', () => {
+		shell({ menuVariant });
+		const links = within(screen.getByRole('navigation', { name: 'Queue pages' })).getAllByRole('link');
+		links[0]!.focus();
+		fireEvent.keyDown(links[0]!, { key: 'ArrowUp' });
+		expect(document.activeElement).toBe(links[0]);
+		fireEvent.keyDown(links[0]!, { key: 'End' });
+		expect(document.activeElement).toBe(links[2]);
+		fireEvent.keyDown(links[2]!, { key: 'ArrowDown' });
+		expect(document.activeElement).toBe(links[2]);
+		fireEvent.keyDown(links[2]!, { key: 'ArrowUp' });
+		expect(document.activeElement).toBe(links[1]);
+		fireEvent.keyDown(links[1]!, { key: 'ArrowDown' });
+		expect(document.activeElement).toBe(links[2]);
+		fireEvent.keyDown(links[2]!, { key: 'Home' });
+		expect(document.activeElement).toBe(links[0]);
+	});
+
+	it('gives every link a visible focus ring and respects reduced motion on everything that transitions', () => {
+		shell({ menuVariant });
+		for (const link of within(screen.getByRole('navigation', { name: 'Queue pages' })).getAllByRole('link')) {
+			expect(link.className).toContain('focus-visible:outline');
+		}
+		for (const el of Array.from(aside().querySelectorAll('[class*="transition"]'))) {
+			expect(classes(el), el.outerHTML.slice(0, 120)).toContain('motion-reduce:transition-none');
+		}
+	});
+
+	it('uses theme tokens only: no dark: variant anywhere in the menu', () => {
+		shell({ menuVariant });
+		expect(aside().outerHTML).not.toMatch(/(^|[\s"'])dark:/);
+	});
+
+	it('does not touch localStorage unless it is the variant that folds', () => {
+		localStorage.setItem(STORAGE_KEY, 'folded');
+		shell({ menuVariant });
+		if (menuVariant !== 'peek') {
+			expect(menuWidth()).toBe(WIDTHS[menuVariant]);
+		}
+		expect(localStorage.getItem(STORAGE_KEY)).toBe('folded');
+	});
+
+	it('brings the current entry into view', () => {
+		const scrollIntoView = vi.fn();
+		Element.prototype.scrollIntoView = scrollIntoView;
+		shell({ menuVariant });
+		expect(scrollIntoView).toHaveBeenCalledTimes(1);
+		expect(scrollIntoView.mock.contexts[0]).toBe(screen.getByRole('link', { name: /Overview/ }));
+		expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
+	});
+});
+
+describe('menuVariant slim', () => {
+	it('draws one-line text rows with no icon, the current one bold with an accent line on the right edge', () => {
+		shell({ menuVariant: 'slim' });
+		expect(screen.queryByTestId('icon-overview')).toBeNull();
+		const current = screen.getByRole('link', { name: 'Overview' });
+		expect(classes(current)).toEqual(expect.arrayContaining(['font-semibold', 'after:right-0', 'after:w-0.5', 'after:bg-primary']));
+		const other = screen.getByRole('link', { name: 'Jobs' });
+		expect(classes(other)).not.toContain('after:bg-primary');
+		expect(classes(other)).toContain('hover:bg-muted-bg');
+		expect(other).not.toHaveTextContent('Background jobs');
+	});
+});
+
+describe('menuVariant cards', () => {
+	it('draws a card per entry with the icon, the label and the optional description', () => {
+		shell({ menuVariant: 'cards' });
+		const jobs = screen.getByRole('link', { name: /Jobs/ });
+		expect(jobs).toHaveTextContent('Jobs');
+		expect(jobs).toHaveTextContent('Background jobs');
+		expect(classes(jobs)).toContain('rounded-xl');
 		const overview = screen.getByRole('link', { name: 'Overview' });
-		expect(overview.getAttribute('title')).toBe('Overview');
 		expect(overview.querySelector('[data-testid="icon-overview"]')).not.toBeNull();
+		// No description given: no empty secondary line.
+		expect(overview.querySelectorAll('[data-description]')).toHaveLength(0);
+		expect(jobs.querySelectorAll('[data-description]')).toHaveLength(1);
+	});
+
+	it('lifts on hover, but not under reduced motion; the current card is tinted', () => {
+		shell({ menuVariant: 'cards' });
+		const jobs = screen.getByRole('link', { name: /Jobs/ });
+		expect(classes(jobs)).toEqual(expect.arrayContaining(['hover:-translate-y-0.5', 'motion-reduce:hover:translate-y-0']));
+		expect(classes(screen.getByRole('link', { name: 'Overview' }))).toContain('bg-primary-light');
+	});
+
+	it('an entry without icon gets its initials in the icon box, hidden from assistive technology', () => {
+		shell({ menuVariant: 'cards' });
+		const workers = screen.getByRole('link', { name: 'Workers' });
+		expect(workers.querySelector('[aria-hidden="true"]')).toHaveTextContent('WO');
+	});
+});
+
+describe('menuVariant tiles', () => {
+	it('puts the icon above a small label; an entry without icon shows initials', () => {
+		shell({ menuVariant: 'tiles' });
+		const overview = screen.getByRole('link', { name: 'Overview' });
+		expect(overview.firstElementChild!.querySelector('[data-testid="icon-overview"]')).not.toBeNull();
+		expect(overview.lastElementChild).toHaveTextContent('Overview');
+		expect(classes(overview)).toContain('flex-col');
+		const workers = screen.getByRole('link', { name: 'Workers' });
+		expect(workers.firstElementChild).toHaveTextContent('WO');
+		expect(workers.firstElementChild).toHaveAttribute('aria-hidden', 'true');
+	});
+
+	it('fills the current tile with the accent and leaves the others plain', () => {
+		shell({ menuVariant: 'tiles' });
+		expect(classes(screen.getByRole('link', { name: 'Overview' }))).toEqual(expect.arrayContaining(['bg-primary-solid', 'text-on-solid']));
+		expect(classes(screen.getByRole('link', { name: 'Jobs' }))).not.toContain('bg-primary-solid');
+	});
+
+	it('shows a caption as a small centred title', () => {
+		shell({ menuVariant: 'tiles' });
+		expect(screen.getByRole('separator', { name: 'Admin' })).toHaveTextContent('Admin');
+	});
+});
+
+describe('menuVariant flyout', () => {
+	const flyout = () => screen.queryByTestId('shell-menu-flyout');
+
+	it('is icon-only: the name stays (hidden text), an entry without icon shows initials, no layout state', () => {
+		shell({ menuVariant: 'flyout' });
 		const jobs = screen.getByRole('link', { name: 'Jobs' });
 		expect(jobs.querySelector('[aria-hidden="true"]')).toHaveTextContent('JO');
 		expect(jobs.querySelector('.sr-only')).toHaveTextContent('Jobs');
+		expect(screen.getByRole('link', { name: 'Overview' }).querySelector('[data-testid="icon-overview"]')).not.toBeNull();
+		expect(aside()).not.toHaveAttribute('data-expanded');
 	});
 
-	it('expands over the content on hover without moving it: the width variable stays', () => {
-		shell({ menuVariant: 'rail' });
-		expect(aside()).toHaveAttribute('data-expanded', 'false');
-		fireEvent.mouseEnter(aside());
-		expect(aside()).toHaveAttribute('data-expanded', 'true');
+	it('shows the label to the right on hover and on keyboard focus, and hides it on leave and blur, width unchanged', () => {
+		shell({ menuVariant: 'flyout' });
+		expect(flyout()).toBeNull();
+		const jobs = screen.getByRole('link', { name: 'Jobs' });
+		fireEvent.mouseOver(jobs);
+		expect(flyout()).toHaveTextContent('Jobs');
+		expect(flyout()).toHaveAttribute('aria-hidden', 'true');
 		expect(menuWidth()).toBe('3.5rem');
-		expect(screen.getByRole('link', { name: 'Jobs' })).toHaveTextContent('Jobs');
-		expect(screen.getByRole('link', { name: 'Jobs' }).getAttribute('title')).toBeNull();
-		expect(screen.getByRole('separator', { name: 'Admin' })).toHaveTextContent('Admin');
 		fireEvent.mouseLeave(aside());
-		expect(aside()).toHaveAttribute('data-expanded', 'false');
+		expect(flyout()).toBeNull();
+		fireEvent.focus(screen.getByRole('link', { name: 'Workers' }));
+		expect(flyout()).toHaveTextContent('Workers');
+		fireEvent.blur(screen.getByRole('link', { name: 'Workers' }));
+		expect(flyout()).toBeNull();
 	});
 
-	it('expands on keyboard focus too, and folds back when the focus leaves, not when it moves inside', () => {
-		shell({ menuVariant: 'rail' });
-		const links = screen.getAllByRole('link', { name: /Overview|Jobs|Workers/ });
-		fireEvent.focus(links[0]!);
-		expect(aside()).toHaveAttribute('data-expanded', 'true');
-		fireEvent.blur(links[0]!, { relatedTarget: links[1] });
-		expect(aside()).toHaveAttribute('data-expanded', 'true');
-		fireEvent.blur(links[1]!, { relatedTarget: document.body });
-		expect(aside()).toHaveAttribute('data-expanded', 'false');
+	it('takes the flyout out of the layout: it floats above the page, positioned right of the link', () => {
+		shell({ menuVariant: 'flyout' });
+		fireEvent.mouseOver(screen.getByRole('link', { name: 'Jobs' }));
+		const tip = flyout()!;
+		expect(classes(tip)).toEqual(expect.arrayContaining(['fixed', 'pointer-events-none']));
+		expect(tip.style.left).not.toBe('');
+		expect(tip.style.top).not.toBe('');
+		expect(classes(tip)).toContain('motion-reduce:transition-none');
 	});
 
-	it('overlays: the expanded panel is out of the flow, absolutely positioned, above the content', () => {
-		shell({ menuVariant: 'rail' });
-		const panel = screen.getByRole('navigation', { name: 'Queue pages' }).parentElement!;
-		const classes = panel.className.split(/\s+/);
-		expect(classes).toEqual(expect.arrayContaining(['absolute', 'z-20', 'overflow-y-auto']));
-		expect(classes).toContain('motion-reduce:transition-none');
+	it('marks only the current entry with an accent dot', () => {
+		shell({ menuVariant: 'flyout' });
+		expect(within(screen.getByRole('link', { name: 'Overview' })).getByTestId('current-dot')).toHaveAttribute('aria-hidden', 'true');
+		expect(within(screen.getByRole('link', { name: 'Jobs' })).queryByTestId('current-dot')).toBeNull();
+	});
+
+	it('draws a separator as a rule only, but a captioned one still shows its caption in a flyout', () => {
+		shell({ menuVariant: 'flyout' });
+		const separator = screen.getByRole('separator', { name: 'Admin' });
+		expect(separator.textContent).toBe('');
+		fireEvent.mouseOver(separator);
+		expect(flyout()).toHaveTextContent('Admin');
+	});
+
+	it('hides the flyout when the menu scrolls', () => {
+		shell({ menuVariant: 'flyout' });
+		fireEvent.mouseOver(screen.getByRole('link', { name: 'Jobs' }));
+		fireEvent.scroll(scroller());
+		expect(flyout()).toBeNull();
+	});
+
+	it('shows nothing for the other variants', () => {
+		shell({ menuVariant: 'classic' });
+		fireEvent.mouseOver(screen.getByRole('link', { name: 'Jobs' }));
+		expect(flyout()).toBeNull();
+		expect(screen.getByRole('link', { name: 'Jobs' }).getAttribute('title')).toBeNull();
 	});
 });
 
-describe('menuVariant toggle', () => {
-	const toggleButton = () => screen.getByRole('button', { name: 'Queue pages' });
+describe('menuVariant floating', () => {
+	it('floats a rounded, shadowed panel inside a margin that the width variable includes', () => {
+		shell({ menuVariant: 'floating' });
+		expect(menuWidth()).toBe('15.5rem');
+		expect(classes(aside())).not.toContain('border-r');
+		expect(classes(aside())).toContain('p-3');
+		const panel = scroller();
+		expect(classes(panel)).toEqual(expect.arrayContaining(['rounded-2xl', 'shadow-lg', 'overflow-y-auto']));
+		expect(panel.parentElement).toBe(aside());
+	});
 
-	it('starts open (15rem) with a button that reports it', () => {
-		shell({ menuVariant: 'toggle' });
+	it('draws entries as pills, a caption for a labelled separator and a short rule for the other', () => {
+		shell({ menuVariant: 'floating', menu: { ...MENU, items: [...MENU.items, { kind: 'separator', id: 's2' }, { id: 'about', label: 'About', href: '/about' }] } });
+		expect(classes(screen.getByRole('link', { name: 'Jobs' }))).toContain('rounded-full');
+		const [labelled, plain] = screen.getAllByRole('separator');
+		expect(labelled).toHaveTextContent('Admin');
+		expect(plain!.textContent).toBe('');
+		expect(classes(plain!)).toContain('mx-3');
+	});
+});
+
+describe('menuVariant tree', () => {
+	it('joins the entries with a guide line and gives each a node, the current one filled', () => {
+		shell({ menuVariant: 'tree' });
+		const nodes = Array.from(aside().querySelectorAll('[data-node]'));
+		expect(nodes).toHaveLength(3);
+		for (const node of nodes) {
+			expect(node).toHaveAttribute('aria-hidden', 'true');
+		}
+		expect(nodes.map((n) => n.getAttribute('data-node'))).toEqual(['current', 'other', 'other']);
+		expect(classes(screen.getByRole('navigation', { name: 'Queue pages' }))).toEqual(expect.arrayContaining(['relative', 'before:w-px']));
+		expect(screen.getByRole('link', { name: 'Overview' }).querySelector('[data-node]')).toBe(nodes[0]);
+	});
+
+	it('shows a separator as a group title (with a caption) or as a break in the line (without)', () => {
+		shell({ menuVariant: 'tree', menu: { ...MENU, items: [...MENU.items, { kind: 'separator', id: 's2' }, { id: 'about', label: 'About', href: '/about' }] } });
+		const [title, gap] = screen.getAllByRole('separator');
+		expect(title).toHaveTextContent('Admin');
+		expect(gap!.textContent).toBe('');
+		// Both cover the guide line behind them.
+		expect(classes(title!.firstElementChild!)).toEqual(expect.arrayContaining(['relative', 'bg-surface']));
+		expect(classes(gap!)).toEqual(expect.arrayContaining(['relative', 'bg-surface']));
+	});
+});
+
+describe('menuVariant peek', () => {
+	const handle = () => screen.getByRole('button', { name: 'Queue pages' });
+	const navWrapper = () => screen.getByRole('navigation', { name: 'Queue pages', hidden: true }).parentElement!;
+
+	it('starts open (15rem) with a button that reports it, links reachable', () => {
+		shell({ menuVariant: 'peek' });
 		expect(menuWidth()).toBe('15rem');
-		expect(toggleButton()).toHaveAttribute('aria-expanded', 'true');
+		expect(handle()).toHaveAttribute('aria-expanded', 'true');
+		expect(handle()).toHaveAttribute('aria-keyshortcuts', '[');
+		expect(navWrapper()).not.toHaveAttribute('inert');
 		expect(screen.getByRole('link', { name: 'Jobs' })).toHaveTextContent('Jobs');
 	});
 
-	it('folds to the rail on click, remembers it, and unfolds on the next click', () => {
-		const first = shell({ menuVariant: 'toggle' });
-		fireEvent.click(toggleButton());
-		expect(menuWidth()).toBe('3.5rem');
-		expect(toggleButton()).toHaveAttribute('aria-expanded', 'false');
+	it('folds to a 1rem sliver on click, remembers it, and unfolds on the next click', () => {
+		const first = shell({ menuVariant: 'peek' });
+		fireEvent.click(handle());
+		expect(menuWidth()).toBe('1rem');
+		expect(handle()).toHaveAttribute('aria-expanded', 'false');
 		expect(localStorage.getItem(STORAGE_KEY)).toBe('folded');
-		expect(screen.getByRole('link', { name: 'Jobs' }).getAttribute('title')).toBe('Jobs');
 		first.unmount();
-		shell({ menuVariant: 'toggle' });
-		expect(menuWidth()).toBe('3.5rem');
-		fireEvent.click(toggleButton());
+		shell({ menuVariant: 'peek' });
+		expect(menuWidth()).toBe('1rem');
+		fireEvent.click(handle());
 		expect(menuWidth()).toBe('15rem');
 		expect(localStorage.getItem(STORAGE_KEY)).toBe('open');
 	});
 
-	it('does not expand over the content on hover once folded (the button does)', () => {
+	it('folded: the links are out of the tab order and the accessibility tree until the menu is peeked', () => {
 		localStorage.setItem(STORAGE_KEY, 'folded');
-		shell({ menuVariant: 'toggle' });
+		shell({ menuVariant: 'peek' });
+		expect(navWrapper()).toHaveAttribute('inert');
+		expect(navWrapper()).toHaveAttribute('hidden');
+		expect(screen.queryByRole('link', { name: 'Jobs' })).toBeNull();
+		expect(aside()).toHaveAttribute('data-peeked', 'false');
+	});
+
+	it('peeks the whole menu on hover without moving the content, and folds back on leave', () => {
+		localStorage.setItem(STORAGE_KEY, 'folded');
+		shell({ menuVariant: 'peek' });
 		fireEvent.mouseEnter(aside());
-		expect(screen.getByRole('link', { name: 'Jobs' }).getAttribute('title')).toBe('Jobs');
+		expect(aside()).toHaveAttribute('data-peeked', 'true');
+		expect(navWrapper()).not.toHaveAttribute('inert');
+		expect(screen.getByRole('link', { name: 'Jobs' })).toHaveTextContent('Jobs');
+		expect(screen.getByRole('separator', { name: 'Admin' })).toHaveTextContent('Admin');
+		expect(menuWidth()).toBe('1rem');
+		// The peeked panel overlays the page.
+		expect(classes(scroller())).toEqual(expect.arrayContaining(['absolute', 'z-20', 'overflow-y-auto']));
+		fireEvent.mouseLeave(aside());
+		expect(aside()).toHaveAttribute('data-peeked', 'false');
+		expect(menuWidth()).toBe('1rem');
+	});
+
+	it('peeks on keyboard focus of the handle and stays while the focus moves inside', () => {
+		localStorage.setItem(STORAGE_KEY, 'folded');
+		shell({ menuVariant: 'peek' });
+		fireEvent.focus(handle());
+		expect(aside()).toHaveAttribute('data-peeked', 'true');
+		const jobs = screen.getByRole('link', { name: 'Jobs' });
+		fireEvent.blur(handle(), { relatedTarget: jobs });
+		expect(aside()).toHaveAttribute('data-peeked', 'true');
+		fireEvent.blur(jobs, { relatedTarget: document.body });
+		expect(aside()).toHaveAttribute('data-peeked', 'false');
+	});
+
+	it('open: it never peeks (nothing to reveal)', () => {
+		shell({ menuVariant: 'peek' });
+		fireEvent.mouseEnter(aside());
+		expect(aside()).toHaveAttribute('data-peeked', 'false');
 	});
 
 	it('the "[" key toggles it when nothing is being typed in', () => {
-		shell({ menuVariant: 'toggle' });
+		shell({ menuVariant: 'peek' });
 		fireEvent.keyDown(document.body, { key: '[' });
-		expect(menuWidth()).toBe('3.5rem');
+		expect(menuWidth()).toBe('1rem');
 		fireEvent.keyDown(document.body, { key: '[' });
 		expect(menuWidth()).toBe('15rem');
 	});
 
 	it('ignores "[" typed in a field, with a modifier, or already handled', () => {
 		render(<input aria-label="search" />);
-		shell({ menuVariant: 'toggle' });
+		shell({ menuVariant: 'peek' });
 		const input = screen.getByLabelText('search');
 		fireEvent.keyDown(input, { key: '[' });
 		fireEvent.keyDown(document.body, { key: '[', ctrlKey: true });
@@ -294,24 +468,17 @@ describe('menuVariant toggle', () => {
 		expect(menuWidth()).toBe('15rem');
 	});
 
-	it('ignores "[" in the other variants', () => {
+	it('ignores "[" in the other variants and writes nothing', () => {
 		shell({ menuVariant: 'classic' });
 		fireEvent.keyDown(document.body, { key: '[' });
 		expect(menuWidth()).toBe('15rem');
 		expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
 	});
 
-	it('reads and writes nothing in the other variants', () => {
-		localStorage.setItem(STORAGE_KEY, 'folded');
-		shell({ menuVariant: 'classic' });
-		expect(menuWidth()).toBe('15rem');
-		expect(localStorage.getItem(STORAGE_KEY)).toBe('folded');
-	});
-
 	it('an unknown stored value warns, naming the key and the values, and stays open', () => {
 		localStorage.setItem(STORAGE_KEY, 'sideways');
 		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-		shell({ menuVariant: 'toggle' });
+		shell({ menuVariant: 'peek' });
 		expect(menuWidth()).toBe('15rem');
 		const message = String(warn.mock.calls[0]![0]);
 		expect(message).toContain(STORAGE_KEY);
@@ -324,68 +491,10 @@ describe('menuVariant toggle', () => {
 		vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
 			throw new Error('QuotaExceededError');
 		});
-		shell({ menuVariant: 'toggle' });
-		fireEvent.click(toggleButton());
-		expect(menuWidth()).toBe('3.5rem');
+		shell({ menuVariant: 'peek' });
+		fireEvent.click(handle());
+		expect(menuWidth()).toBe('1rem');
 		expect(String(error.mock.calls[0]![0])).toContain('QuotaExceededError');
 		expect(String(error.mock.calls[0]![0])).toContain(STORAGE_KEY);
-	});
-});
-
-describe('menuVariant drawer', () => {
-	const opener = () => screen.getByRole('button', { name: 'Queue pages' });
-
-	it('has no permanent column: no aside, width 0', () => {
-		shell({ menuVariant: 'drawer' });
-		expect(screen.queryByTestId('shell-menu')).not.toBeInTheDocument();
-		expect(menuWidth()).toBe('0px');
-		expect(opener()).toHaveAttribute('aria-expanded', 'false');
-		expect(opener()).toHaveAttribute('aria-haspopup', 'dialog');
-		// The menu button comes first in the bar.
-		expect(screen.getByRole('banner').querySelector('button')).toBe(opener());
-	});
-
-	it('opens the menu as a dialog over the content, with the same links and separators', () => {
-		shell({ menuVariant: 'drawer' });
-		fireEvent.click(opener());
-		const dialog = screen.getByRole('dialog');
-		expect(opener()).toHaveAttribute('aria-expanded', 'true');
-		expect(within(dialog).getAllByRole('link').map((l) => l.textContent)).toEqual(['Overview', 'Jobs', 'Workers']);
-		expect(within(dialog).getByRole('separator', { name: 'Admin' })).toBeInTheDocument();
-	});
-
-	it('closes on Escape', () => {
-		shell({ menuVariant: 'drawer' });
-		fireEvent.click(opener());
-		fireEvent.keyDown(document, { key: 'Escape' });
-		act(() => {});
-		expect(opener()).toHaveAttribute('aria-expanded', 'false');
-	});
-
-	it('closes after a link was used (the host navigates)', () => {
-		shell({ menuVariant: 'drawer', renderLink: ({ href, children, ...rest }) => <a href={href} onClick={(e) => e.preventDefault()} {...rest}>{children}</a> });
-		fireEvent.click(opener());
-		fireEvent.click(within(screen.getByRole('dialog')).getByRole('link', { name: 'Jobs' }));
-		expect(opener()).toHaveAttribute('aria-expanded', 'false');
-	});
-
-	it('keeps the bar, the tabs and the content as usual', () => {
-		shell({ menuVariant: 'drawer' });
-		expect(screen.getByRole('navigation', { name: 'Modules' })).toBeInTheDocument();
-		expect(screen.getByText('content')).toBeInTheDocument();
-	});
-});
-
-describe('menu variants and the sticky frame', () => {
-	it('every variant with a column stays sticky under the bar with its own scrollbar', () => {
-		for (const menuVariant of ['classic', 'compact', 'toggle', 'accent', 'rail'] as const) {
-			const { unmount } = shell({ menuVariant });
-			expect(aside().style.top).toBe('var(--app-shell-bar-height)');
-			expect(aside().className.split(/\s+/)).toEqual(expect.arrayContaining(['sticky', 'self-start']));
-			// The scroller is the aside, or the panel inside it for the rail (so the expanded panel can overflow sideways).
-			const scroller = menuVariant === 'rail' ? screen.getByRole('navigation', { name: 'Queue pages' }).parentElement! : aside();
-			expect(scroller.className.split(/\s+/)).toContain('overflow-y-auto');
-			unmount();
-		}
 	});
 });
