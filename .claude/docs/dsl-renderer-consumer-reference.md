@@ -736,12 +736,42 @@ A component must not say "empty" before its data has arrived. No YAML is needed:
 | First load pending | `$ctx.$initialLoading` is `true` | `DataTable`: skeleton rows with the table's own columns (header stays, one `role="status"` "Loading...", `aria-busy`). `StatTile`: skeleton. `Pagination`: renders nothing (no "Page NaN"). |
 | Refetch (filter, page, poll, `RefreshButton`, action reload) | `$ctx.$refreshing` is `true` | Rows stay. `DataTable` sets `aria-busy` and dims the rows slightly after 300 ms (a fast poll never flashes). |
 | Loaded, nothing returned | both `false` | `emptyMessage`. |
-| Load failed | `$ctx.$initialLoading` goes `false` | The failure is reported through the notifier (`Could not load the data: <message>`, with `status`); a poll that keeps failing with the same message is reported once. The table then shows its `emptyMessage`: read the notification, not the table. |
+| Load failed | `$ctx.$initialLoading` goes `false` | The failure is reported through the notifier (`Could not load the data: <message>`, with `status`); a poll that keeps failing with the same message is reported once. The table then shows its `emptyMessage`: read the notification, not the table. The failure is also in `$ctx.$sourceErrors.<source>`. |
 
 - Defaults come from `@ctxDefault`: `DataTable.loading` and `StatTile.loading` read the ctx entry `$initialLoading`, `DataTable.refreshing` reads `$refreshing`. An explicit `loading:` / `refreshing:` in the YAML wins. `@ctxDefault <key>` names a differently-spelled ctx entry.
 - Page state keys start with `$`, and `$name` in an expression reads ctx `name` without it: write `loading: $ctx.$initialLoading`, never `loading: $initialLoading` (that resolves to `undefined`; development logs one warning naming the working form). Same for `$ctx.$refreshing`, `$ctx.$actionPending.<name>`, `$ctx.$actionPendingRows.<name>`.
 - `ctx.loading` (true on any non-polled load, including `reloadSources` actions) is unchanged; bind it only if you want a skeleton on action reloads.
 - `Skeleton` takes `decorative` (no status role, for a parent that announces once) and honours `prefers-reduced-motion`.
+
+### Failed loads: `$ctx.$sourceErrors` and `shouldNotifyLoadFailure`
+
+`$ctx.$sourceErrors` is a map `{ [source]: { message, status? } }` of the sources whose latest load failed; an entry disappears when that source loads again. A failed source is absent from `$sources` (undefined), as before. Always set, whatever the host does with the notification.
+
+`shouldNotifyLoadFailure?: (failure) => boolean` on `GenericPageRunner` lets the host skip the "Could not load the data" notification when the page already shows its own alert. Absent or `true`: notify (unchanged).
+
+| Field | Meaning |
+|---|---|
+| `source` | Key of the first source that failed in that load; `undefined` if not tied to a source |
+| `status` | Numeric HTTP status on the thrown error, else `undefined` |
+| `message`, `error` | Text shown in the notification; the error as thrown |
+| `trigger` | `'initial'` | `'poll'` | `'params'` (URL/route param refetch) | `'refresh'` (`$refresh`, `RefreshButton`) |
+
+- Asked once per notifiable failure: a poll failing with the same message is asked once until a load succeeds; `'refresh'` is asked every time.
+- Not asked for reloads started by an action (`reloadSources`) or a brain (`$reload`): they report the action's or brain's failure, and still fill `$sourceErrors`.
+- Returning `false` logs (development only) one console message per source naming it and `$ctx.$sourceErrors.<source>`. A callback that throws, returns a non-boolean or is not a function is reported in development and the failure is notified.
+- When several sources fail in one load, only the first is reported and asked about; the others are in `$sourceErrors`.
+
+```tsx
+// Daemon down: the page's DaemonStatus already shows a red alert, so skip the generic one for 503 only.
+<GenericPageRunner
+  yamlText={pageYaml}
+  registry={appRegistry}
+  fetcher={fetcher}
+  shouldNotifyLoadFailure={({ status }) => status !== 503}
+/>
+```
+
+A node reads it as an expression (`message: $ctx.$sourceErrors.jobs.message`) or a custom component as `ctx['$sourceErrors']`.
 
 `RefreshButton` re-runs the page's sources with the same loader as the poll timer; it does not touch the poll interval.
 
@@ -841,6 +871,7 @@ First published version containing the change (`dsl-ui` and `dsl-renderer` share
 | `2026.10.25-258` | **Authoring-mistake warnings are development-only**: an unknown `gap` / `size` / icon / date format, a malformed column spec or option list, a prop of the wrong shape (`coerceProp`), a missing action spec, `Stepper` / `ActionButton` / `RefreshButton` misuse and similar no longer print in a production console nor ship their message strings in a production bundle (`process.env.NODE_ENV` guard; `test` still reports). Problems from data or the environment at run time keep reporting everywhere (failed loads and actions, clipboard refusal, a rejected `onSubmit`, a stale compiled artifact). A production check that grepped for these messages stops seeing them. No regeneration needed. |
 | `2026.10.26-290` | **Dates (see "Dates").** One formatter for every date, English `en-GB` / 24h / local zone by default instead of `en-US` or the browser language: `DataTable` `datetime \| date \| time` cells ("24/10/2026, 18:38" instead of "10/24/26, 6:38 PM"; new column `dateStyle`; every date cell now has the exact timestamp as its tooltip), `formatDateTime`, Chart time ticks and tooltip headings ("24 Oct"), `RelativeDate` ("now" instead of "just now", "7 days ago" instead of "last week", "in 2 hours" instead of "in the future"; tooltip is the ISO timestamp, the date-fns `format` prop is ignored), date pickers ("24 Oct 2026" instead of "Oct 24, 2026", Monday-first calendars, typing accepts `yyyy-MM-dd` or the shown text; day aria-labels "24 October 2026"), `TimePicker` clock from the settings. New `DateText` node, `DateFormatProvider`, `useDateFormat`. A `DataTable` column's `render` / `cellTitle` take a second `ctx` argument. Tests of ours that asserted the old strings found by grep: orchestrator `JobFormOnceMoment.test.tsx` (`'Sep 17, 2026'`, `'Sep 25, 2026'` typed into `FieldDateTime`: now `'17 Sep 2026'`; typing the old text no longer parses). Others only check the column config (`format: datetime`) or use their own formatters (agent-fleet `DateText.ts`, capability-framework `dsl-ui-agent-fleet/formatters.ts`, orchestrator `DaemonStatus`, queue/task none), but their pages change visibly: capability-framework `dsl-agent-fleet-app` and `dsl-wdrive-app` YAML pages, queue and agent-fleet `dsl-views`, task `RelativeDate` nodes, app-core `DashboardBar`, wdrive `FileNavigator` / `VersionHistory` / `ScopeManager` / `KeyManagement` (`formatDateTime`), orchestrator `JobForm`. |
 | `2026.10.26-292` | `AppShell` `menuVariant="resizable"` has loose bounds (other variants unchanged). Range: 3.5rem to the smaller of 60% of the window and the window minus 20rem for the content (never under 3.5rem: the minimum wins in a tiny window). `aria-valuemin/max/now` and `--app-shell-menu-width` follow the current limits, also on window resize. Under 6rem the menu shows icons only (initials for an entry with no icon; the label as `title` on the link, so a custom `renderLink` must forward `title`; a separator caption becomes a bare rule keeping its `aria-label`). Between the limits a label or caption too long is cut with an ellipsis (no wrapping) and gets a `title`; the menu scrolls vertically only (`overflow-x-hidden`; separator captions are now cut with an ellipsis in every variant instead of wrapping). `localStorage app-shell.menu-width` stays a plain rem number and is the user's preference: a value outside the current limits is shown held between them and is NOT rewritten (shrink then enlarge the window restores it); it changes only on drag, keys or double-click (reset to 15rem, held between the limits, key removed). Any positive number is accepted; anything else is ignored with a dev warning (the old 10 to 28 range check is gone). Home/End go to the current min/max. `MENU_VARIANT_AB_OPTIONS.resizable.hint` states the new range. |
+| `2026.10.26-294` | Fix: changing only the "Weekday names" date setting now reaches `DateFormatProvider` readers. `DateFormatter.key` includes `weekdayStyle`; before, the provider kept the old formatter and `weekdays()` (no argument) kept the old style until reload. `DatePicker` / `DateRangePicker` pass their own style and were not affected. |
 
 ## Pitfalls
 
