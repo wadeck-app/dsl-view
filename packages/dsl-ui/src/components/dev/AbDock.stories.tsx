@@ -63,3 +63,36 @@ function ManyRowsDemo() {
 }
 
 export const SixRowsFoldable: Story = { render: () => <ManyRowsDemo /> };
+
+// Long labels: columns grow with their label, the label column with the longest row label, the row up to the window.
+function LongLabelsDemo() {
+	const tests = [
+		useAbTest({
+			id: 'long-card',
+			label: 'Policy scorecard layout',
+			initial: 'cards',
+			options: { cards: { label: 'One card per policy', hint: 'Cards.' }, table: { label: 'One compact table', hint: 'Table.' } },
+		}),
+		useAbTest({
+			id: 'long-colour',
+			label: 'Colour of figures',
+			initial: 'a',
+			options: {
+				a: { label: 'Neutral', hint: 'A.' },
+				b: { label: 'Semantic colours', hint: 'B.' },
+				c: { label: 'Tinted by status', hint: 'C.' },
+				d: { label: 'A rather long fourth option', hint: 'D.' },
+				e: { label: 'E', hint: 'E.' },
+			},
+		}),
+		useAbTest({ id: 'long-gap', label: 'Average policy scorecard column header density mode', initial: 'a', options: { a: { label: 'A', hint: 'A.' }, b: { label: 'B', hint: 'B.' } } }),
+	];
+	return (
+		<div className="min-h-screen bg-bg p-8 text-content">
+			<p>Long labels. The eye hides a test; Copy report copies only the visible ones.</p>
+			<AbDock tests={tests} enabled />
+		</div>
+	);
+}
+
+export const LongLabels: Story = { render: () => <LongLabelsDemo /> };

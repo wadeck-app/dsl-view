@@ -76,15 +76,26 @@ describe('AbDock rows', () => {
 
 	it('keeps few options (Off / On) at a normal cell width instead of stretching them', () => {
 		render(<AbDock tests={[manyOptionsTest(2, 'two', 'Two')]} enabled />);
-		expect(screen.getByRole('group', { name: 'Two' }).style.gridTemplateColumns).toContain('6rem');
+		expect(screen.getByRole('group', { name: 'Two' }).style.gridTemplateColumns).toBe('repeat(2, minmax(max-content, 6rem))');
 	});
 
-	it('stacks the tests in the order given, each row as wide as the others', () => {
+	it('stacks the tests in the order given, all rows on the same tracks of the dock', () => {
 		render(<Harness extra={[manyOptionsTest(4)]} />);
 		const groups = Array.from(document.querySelectorAll('[data-testid="ab-dock"] [role="group"]'));
 		expect(groups.map((g) => g.getAttribute('aria-label'))).toEqual(['Fake color', 'Many']);
-		const widths = groups.map((g) => g.parentElement!.className.match(/w-\[[^\]]+\]/)![0]);
-		expect(new Set(widths).size).toBe(1);
+		const rows = groups.map((g) => g.parentElement as HTMLElement);
+		expect(rows.map((r) => r.style.gridTemplateColumns)).toEqual(['subgrid', 'subgrid']);
+		expect(rows.map((r) => r.style.gridColumn)).toEqual(['1 / -1', '1 / -1']);
+	});
+
+	it('sizes one label column to the longest label of the dock, bounded, for every row', () => {
+		render(<AbDock tests={[manyOptionsTest(2, 'a', 'Policy scorecard layout, a very long name'), manyOptionsTest(2, 'b', 'Gap')]} enabled />);
+		const dock = screen.getByTestId('ab-dock');
+		// First track: at least 10rem, as wide as the longest label, never more than 20rem. Second track takes the rest.
+		expect(dock.style.gridTemplateColumns).toBe('minmax(10rem, max-content) minmax(0, 1fr)');
+		expect(dock.className).toContain('grid');
+		expect(dock.parentElement!.className).toContain('w-max');
+		expect(dock.parentElement!.className).toContain('max-w-[calc(100vw-2rem)]');
 	});
 
 	it('is fixed at the bottom center and above everything', () => {

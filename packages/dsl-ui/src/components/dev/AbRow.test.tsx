@@ -47,8 +47,21 @@ describe('AbRow', () => {
 		[10, 10, '1fr'],
 		[11, 10, '1fr'],
 		[25, 10, '1fr'],
-	])('lays %i options on %i columns of %s at most', (options, columns, width) => {
+	])('lays %i options on %i columns, each at least as wide as its label, at most %s', (options, columns, width) => {
 		render(<AbRow test={testWith(options)} onHide={() => {}} />);
-		expect(group().style.gridTemplateColumns).toBe(`repeat(${columns}, minmax(0, ${width}))`);
+		expect(group().style.gridTemplateColumns).toBe(`repeat(${columns}, minmax(max-content, ${width}))`);
+	});
+
+	it('never caps a column below its label: a long label is not drawn under the next cell', () => {
+		render(<AbRow test={testWith(2)} onHide={() => {}} />);
+		expect(group().style.gridTemplateColumns).not.toContain('minmax(0');
+	});
+
+	it('shares the dock tracks with the other rows and keeps the full label as a tooltip', () => {
+		render(<AbRow test={testWith(2)} onHide={() => {}} />);
+		const row = group().parentElement!;
+		expect(row.style.gridTemplateColumns).toBe('subgrid');
+		expect(row.style.gridColumn).toBe('1 / -1');
+		expect(screen.getByText('Row test').closest('[title]')).toHaveAttribute('title', 'Row test');
 	});
 });

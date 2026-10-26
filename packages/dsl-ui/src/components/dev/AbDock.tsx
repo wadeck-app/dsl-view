@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import React, { useEffect, useId, useRef } from 'react';
 
+import { AbCopyReport } from './AbCopyReport.js';
 import { AbRow } from './AbRow.js';
 import { COLLAPSED_DOCK_KEY, HIDDEN_TESTS_KEY } from './abTypes.js';
 import type { AbTest } from './abTypes.js';
@@ -13,8 +14,11 @@ export type { AbOption } from './abTypes.js';
 export type { AbTest } from './AbTest.js';
 
 // z-[9999]: stays above every overlay, modal and sticky element of the page.
-const DOCK_POSITION_CLASS = 'fixed bottom-6 left-1/2 z-[9999] -translate-x-1/2';
-const DOCK_CLASS = 'flex-col gap-1.5 rounded-[1.75rem] border border-border bg-surface p-1.5 shadow-2xl';
+// w-max: as wide as the widest row (a box fixed at left-1/2 would otherwise get half the window), up to the window.
+const DOCK_POSITION_CLASS = 'fixed bottom-6 left-1/2 z-[9999] w-max max-w-[calc(100vw-2rem)] -translate-x-1/2';
+// Track 1: the label of every row, as wide as the longest label (10rem min; the label caps itself at 20rem). Track 2: the options.
+const LABEL_AND_OPTIONS_TRACKS = 'minmax(10rem, max-content) minmax(0, 1fr)';
+const DOCK_CLASS = 'gap-1.5 rounded-[1.75rem] border border-border bg-surface p-1.5 shadow-2xl';
 const CHIP_CLASS = 'flex cursor-pointer items-center gap-1.5 rounded-full border border-border bg-surface py-1 pl-3 pr-2 text-xs text-muted hover:text-content';
 // The collapse tab sits on the top edge of the dock, so it costs no row height.
 const COLLAPSE_CLASS = 'absolute -top-3 left-1/2 flex -translate-x-1/2 cursor-pointer items-center rounded-full border border-border bg-surface px-2 py-0.5 text-muted shadow hover:text-content';
@@ -98,7 +102,8 @@ export function AbDock({ tests, enabled = isDev() }: { tests: readonly AbTest[];
 				id={dockId}
 				data-testid="ab-dock"
 				hidden={collapsed}
-				className={`${collapsed ? 'hidden' : 'flex'} ${DOCK_CLASS}`}
+				className={`${collapsed ? 'hidden' : 'grid'} ${DOCK_CLASS}`}
+				style={{ gridTemplateColumns: LABEL_AND_OPTIONS_TRACKS }}
 				onKeyDown={(e) => {
 					if (e.key === 'Escape' && !e.defaultPrevented) {
 						e.stopPropagation();
@@ -120,7 +125,7 @@ export function AbDock({ tests, enabled = isDev() }: { tests: readonly AbTest[];
 					<ChevronDown size={12} />
 				</button>
 				{reminders.length > 0 ? (
-					<div className="flex flex-wrap gap-1.5">
+					<div className="flex flex-wrap gap-1.5" style={{ gridColumn: '1 / -1' }}>
 						{reminders.map((t) => (
 							// violations-suppress: react/no-raw-button AbDock IS the atomic wrapper for the A/B option picker; the reminder chip owns its geometry
 							<button
@@ -142,6 +147,7 @@ export function AbDock({ tests, enabled = isDev() }: { tests: readonly AbTest[];
 				{shown.map((t) => (
 					<AbRow key={t.id} test={t} onHide={() => toggleHidden(t.id)} />
 				))}
+				<AbCopyReport shown={shown} hidden={reminders} />
 			</div>
 		</div>
 	);
