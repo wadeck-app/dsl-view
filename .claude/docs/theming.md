@@ -102,4 +102,4 @@ Cheaper than the context alternative, which re-renders every consumer on a theme
 | Variable | Value | Use |
 |---|---|---|
 | `--app-shell-bar-height` | 2.75rem; 1.5rem / 2rem / 0px per `barOnScroll` state | `top` of anything sticky under the bar: `top: var(--app-shell-bar-height, 0px)` |
-| `--app-shell-menu-width` | 15rem; 11rem, 3.5rem or 0px per `menuVariant` state | left inset of floating tools (the A/B dock) |
+| `--app-shell-menu-width` | 15rem; 13rem, 18rem, 5rem, 3.5rem, 15.5rem, 14rem or 1rem per `menuVariant` and fold state (`floating` includes its 0.75rem margin) | left inset of floating tools (the A/B dock) |
