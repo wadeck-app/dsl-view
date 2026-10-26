@@ -94,14 +94,47 @@ describe('AbDock rows', () => {
 		// First track: at least 10rem, as wide as the longest label, never more than 20rem. Second track takes the rest.
 		expect(dock.style.gridTemplateColumns).toBe('minmax(10rem, max-content) minmax(0, 1fr)');
 		expect(dock.className).toContain('grid');
-		expect(dock.parentElement!.className).toContain('w-max');
-		expect(dock.parentElement!.className).toContain('max-w-[calc(100vw-2rem)]');
 	});
 
-	it('is fixed at the bottom center and above everything', () => {
+	it('is fixed at the bottom and above everything', () => {
 		render(<Harness />);
-		const fixed = screen.getByTestId('ab-dock').parentElement!;
-		for (const c of ['fixed', 'bottom-6', 'left-1/2', 'z-[9999]']) expect(fixed.className).toContain(c);
+		const fixed = screen.getByTestId('ab-dock-frame');
+		for (const c of ['fixed', 'bottom-6', 'z-[9999]']) expect(fixed.className).toContain(c);
+	});
+});
+
+describe('AbDock horizontal placement (content area, never under a side menu)', () => {
+	const frame = () => screen.getByTestId('ab-dock-frame');
+
+	it('spans the content area: left inset from the documented variables, window right edge, dock centred inside', () => {
+		render(<Harness />);
+		expect(frame().style.left).toBe('var(--ab-dock-inset-left, var(--app-shell-menu-width, 0px))');
+		expect(frame().style.right).toBe('0px');
+		expect(frame().className).toContain('justify-center');
+		// Content-wide but never wider than the content area, whatever the rows hold.
+		const box = screen.getByTestId('ab-dock').parentElement!;
+		expect(box.parentElement).toBe(frame());
+		expect(box.className).toContain('w-max');
+		expect(box.className).toContain('max-w-full');
+		// The frame covers the whole content strip: it must not swallow clicks meant for the page behind it.
+		expect(frame().className).toContain('pointer-events-none');
+		expect(box.className).toContain('pointer-events-auto');
+	});
+
+	it('insetLeft sets the override variable on the frame', () => {
+		render(<AbDock tests={[manyOptionsTest(2)]} enabled insetLeft="20rem" />);
+		expect(frame().style.getPropertyValue('--ab-dock-inset-left')).toBe('20rem');
+	});
+
+	it('leaves the override variable unset without insetLeft', () => {
+		render(<Harness />);
+		expect(frame().style.getPropertyValue('--ab-dock-inset-left')).toBe('');
+	});
+
+	it('the folded pill sits in the same frame', () => {
+		localStorage.setItem('ab.collapsed', 'collapsed');
+		render(<Harness />);
+		expect(frame().contains(screen.getByRole('button', { name: /Show the A\/B tests/ }))).toBe(true);
 	});
 });
 

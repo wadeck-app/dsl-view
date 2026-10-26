@@ -22,7 +22,7 @@ export interface BackLinkProps {
  * every header lay out the same way is what removes that pixel rather than compensating for
  * it somewhere.
  */
-export const BACK_ROW_CLS  = 'sticky top-0 z-10 bg-bg py-2 -mx-4 px-4 flex items-center';
+export const BACK_ROW_CLS  = 'sticky top-[var(--app-shell-bar-height,0px)] z-10 bg-bg py-2 -mx-4 px-4 flex items-center';
 /** The link itself, without the bottom margin a single-line header needs. */
 export const BACK_LINK_CLS = 'inline-flex items-center gap-1 text-sm text-muted hover:text-content';
 // @formatter:on

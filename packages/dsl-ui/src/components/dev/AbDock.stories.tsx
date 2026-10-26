@@ -96,3 +96,34 @@ function LongLabelsDemo() {
 }
 
 export const LongLabels: Story = { render: () => <LongLabelsDemo /> };
+
+// Fake side menu, 15rem wide: the dock must stay in the area to its right. `insetLeft` is what a host with its own menu passes
+// (or sets as the `--ab-dock-inset-left` CSS variable); under a real AppShell nothing is needed (see Layout/AppShell, LongPageTallMenu).
+function BesideMenuDemo() {
+	const tests = [
+		useAbTest({
+			id: 'menu-card',
+			label: 'Policy scorecard layout',
+			initial: 'cards',
+			options: {
+				cards: { label: 'One card per policy', hint: 'Cards.' },
+				table: { label: 'One compact table', hint: 'Table.' },
+				a: { label: 'A rather long third option', hint: 'C.' },
+				b: { label: 'Fourth option, longer still', hint: 'D.' },
+				c: { label: 'Fifth', hint: 'E.' },
+			},
+		}),
+		useAbTest({ id: 'menu-gap', label: 'Average policy scorecard column header density mode', initial: 'a', options: { a: { label: 'A', hint: 'A.' }, b: { label: 'B', hint: 'B.' } } }),
+	];
+	return (
+		<div className="flex min-h-screen bg-bg text-content">
+			<aside className="w-60 shrink-0 border-r border-border bg-surface p-3 text-sm text-muted">Fake side menu (15rem)</aside>
+			<main className="flex-1 p-8">
+				<p>The dock is centred on this area, never wider, never under the menu. Copy report is the round button at its bottom right.</p>
+			</main>
+			<AbDock tests={tests} enabled insetLeft="15rem" />
+		</div>
+	);
+}
+
+export const BesideSideMenu: Story = { render: () => <BesideMenuDemo /> };

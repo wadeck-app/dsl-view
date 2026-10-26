@@ -61,4 +61,11 @@ describe('BackLink', () => {
 		expect(BACK_ROW_CLS).toContain('sticky');
 		expect(BACK_ROW_CLS).toContain('flex');
 	});
+
+	// Under an AppShell the top bar is sticky too: the row sticks below it (the variable AppShell declares), and at the very
+	// top (0px) when there is no shell.
+	it('sticks below the AppShell top bar, or at the top without a shell', () => {
+		expect(BACK_ROW_CLS.split(/\s+/)).toContain('top-[var(--app-shell-bar-height,0px)]');
+		expect(BACK_ROW_CLS.split(/\s+/)).not.toContain('top-0');
+	});
 });

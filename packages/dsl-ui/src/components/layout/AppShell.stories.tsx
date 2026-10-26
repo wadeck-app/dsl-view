@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { AppShell, type ShellItem, type ShellMenu } from './AppShell.js';
 import { AccentScope } from './AccentScope.js';
 import { ThemeScope } from './ThemeScope.js';
+import { AbDock, type AbTest } from '../dev/AbDock.js';
 import { InitialsTile } from '../display/InitialsTile.js';
 import { initialsOf } from '../display/initials.js';
 
@@ -107,5 +108,44 @@ export const ManyTabs: Story = {
 				<Page />
 			</AppShell>
 		</div>
+	),
+};
+
+// A fixed fake test: the story needs a dock, not a working A/B choice.
+const DOCK_TEST: AbTest = {
+	id: 'shell-story',
+	label: 'Policy scorecard layout',
+	summary: 'cards',
+	value: 'cards',
+	options: [
+		{ id: 'cards', label: 'One card per policy', title: 'Cards.' },
+		{ id: 'table', label: 'One compact table', title: 'Table.' },
+	],
+	onSelect: () => {},
+};
+
+const TALL_MENU: ShellMenu = {
+	title: 'Queue',
+	label: 'Queue pages',
+	items: Array.from({ length: 40 }, (_, i) => ({ id: `p${i}`, label: `Page number ${i + 1}`, href: `#/queue/p${i}`, current: i === 0 ? ('page' as const) : undefined })),
+};
+
+/**
+ * The bar and the side menu stay in place while the page scrolls. The menu holds 40 entries, more than a window:
+ * it scrolls on its own instead of growing the page. The A/B dock sits in the content area, right of the menu.
+ */
+export const LongPageTallMenu: Story = {
+	render: () => (
+		<AppShell brand="my-app" tabs={tabs('queue')} tabsLabel="Modules" menu={TALL_MENU} actions={<span className="text-sm text-muted">actions</span>}>
+			<div className="p-6 text-content">
+				<h1 className="text-xl font-semibold">Long page</h1>
+				{Array.from({ length: 60 }, (_, i) => (
+					<p key={i} className="mt-4 text-muted">
+						Paragraph {i + 1}. Scroll: the top bar and the side menu do not move.
+					</p>
+				))}
+			</div>
+			<AbDock enabled tests={[DOCK_TEST]} />
+		</AppShell>
 	),
 };

@@ -14,8 +14,16 @@ export type { AbOption } from './abTypes.js';
 export type { AbTest } from './AbTest.js';
 
 // z-[9999]: stays above every overlay, modal and sticky element of the page.
-// w-max: as wide as the widest row (a box fixed at left-1/2 would otherwise get half the window), up to the window.
-const DOCK_POSITION_CLASS = 'fixed bottom-6 left-1/2 z-[9999] w-max max-w-[calc(100vw-2rem)] -translate-x-1/2';
+// The frame is a strip over the content area (from the left inset to the window's right edge) that centres the dock and
+// lets clicks through (pointer-events-none); the dock and the copy button take them back.
+const FRAME_CLASS = 'pointer-events-none fixed bottom-6 z-[9999] flex items-end justify-center gap-2 px-4';
+// w-max: as wide as the widest row; max-w-full: never wider than the strip (so never under a side menu). min-w-0 lets it shrink.
+const DOCK_BOX_CLASS = 'pointer-events-auto relative min-w-0 w-max max-w-full';
+/**
+ * Left edge of the area the dock may use. `--ab-dock-inset-left` (the `insetLeft` prop or a host stylesheet) wins, then
+ * `--app-shell-menu-width` (published by `AppShell`), then 0px: no shell, the whole window.
+ */
+export const DOCK_INSET_LEFT = 'var(--ab-dock-inset-left, var(--app-shell-menu-width, 0px))';
 // Track 1: the label of every row, as wide as the longest label (10rem min; the label caps itself at 20rem). Track 2: the options.
 const LABEL_AND_OPTIONS_TRACKS = 'minmax(10rem, max-content) minmax(0, 1fr)';
 const DOCK_CLASS = 'gap-1.5 rounded-[1.75rem] border border-border bg-surface p-1.5 shadow-2xl';
@@ -42,11 +50,20 @@ const COLLAPSE_OPTIONS = ['open', 'collapsed'] as const;
  * never reach users. `enabled` forces it on or off, e.g. for a staging build. A production build still contains the
  * code unless the bundler removes the dead branch: do not rely on this to shrink the bundle, only to hide the tool.
  *
+ * Placement: centred on the content area, never wider than it. The dock spans from a left inset to the window's right
+ * edge. The inset is, in order: the `insetLeft` prop (any CSS length), the CSS variable `--ab-dock-inset-left`, the
+ * variable `--app-shell-menu-width` that `AppShell` publishes on the document root while mounted, then 0px (no shell:
+ * the whole window). So under an `AppShell` nothing has to be configured. A host with its own side menu sets
+ * `--ab-dock-inset-left` (or passes `insetLeft`).
+ *
+ * "Copy report" is a small icon button at the bottom right, beside the rows (not one of them). It copies the page URL
+ * and the choice of each visible test; it is disabled when every test is hidden and absent while the dock is folded.
+ *
  * Known gap: Tab-only keyboard navigation inside a row (no roving tabindex).
  *
  * Not a DSL node: it is a React API (hook + component) for the host app's code, so it carries no `@registryCategory`.
  */
-export function AbDock({ tests, enabled = isDev() }: { tests: readonly AbTest[]; enabled?: boolean }): React.ReactElement | null {
+export function AbDock({ tests, enabled = isDev(), insetLeft }: { tests: readonly AbTest[]; enabled?: boolean; insetLeft?: string }): React.ReactElement | null {
 	// Off (production by default): the tool reads nothing from the storage, so a stale value cannot even log a warning.
 	const [hidden, toggleHidden] = usePersistentSet(HIDDEN_TESTS_KEY, enabled);
 	// The fold state is read even with no test yet: a test registering later must find the stored state, not 'open'.
@@ -81,7 +98,12 @@ export function AbDock({ tests, enabled = isDev() }: { tests: readonly AbTest[];
 	const shown = tests.filter((t) => !hidden.has(t.id));
 	const reminders = tests.filter((t) => hidden.has(t.id));
 	return (
-		<div className={DOCK_POSITION_CLASS}>
+		<div
+			data-testid="ab-dock-frame"
+			className={FRAME_CLASS}
+			style={{ left: DOCK_INSET_LEFT, right: 0, ...(insetLeft === undefined ? {} : ({ '--ab-dock-inset-left': insetLeft } as React.CSSProperties)) }}
+		>
+			<div className={DOCK_BOX_CLASS}>
 			{collapsed ? (
 				// violations-suppress: react/no-raw-button AbDock IS the atomic wrapper for the A/B option picker; the pill owns its geometry
 				<button
@@ -147,8 +169,9 @@ export function AbDock({ tests, enabled = isDev() }: { tests: readonly AbTest[];
 				{shown.map((t) => (
 					<AbRow key={t.id} test={t} onHide={() => toggleHidden(t.id)} />
 				))}
-				<AbCopyReport shown={shown} hidden={reminders} />
 			</div>
+			</div>
+			{collapsed ? null : <AbCopyReport shown={shown} hidden={reminders} />}
 		</div>
 	);
 }

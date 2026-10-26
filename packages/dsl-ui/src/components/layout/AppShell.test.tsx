@@ -1,5 +1,5 @@
 import { render, screen, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AppShell, type AppShellProps, type ShellItem, type ShellLinkProps } from './AppShell.js';
 
 // No router anywhere in this file: the shell renders plain data and plain links.
@@ -65,7 +65,8 @@ describe('AppShell top bar', () => {
 	it('is 44px, borderless, and separated from the page by a soft shadow', () => {
 		shell();
 		const classes = screen.getByRole('banner').className.split(/\s+/);
-		for (const c of ['h-11', 'shadow-sm', 'bg-surface', 'z-10']) expect(classes).toContain(c);
+		for (const c of ['shadow-sm', 'bg-surface']) expect(classes).toContain(c);
+		expect(screen.getByRole('banner').style.height).toBe('var(--app-shell-bar-height)');
 		expect(classes).not.toContain('border-b');
 	});
 
@@ -245,5 +246,77 @@ describe('AppShell renderLink slot', () => {
 		const renderLink = vi.fn((props: ShellLinkProps) => <a href={props.href}>{props.children}</a>);
 		shell({ renderLink });
 		expect(renderLink).toHaveBeenCalledTimes(TABS.length + MENU.items.length);
+	});
+});
+
+describe('AppShell publishes the width of its side menu', () => {
+	const VAR = '--app-shell-menu-width';
+	const published = () => document.documentElement.style.getPropertyValue(VAR);
+
+	afterEach(() => {
+		document.documentElement.style.removeProperty(VAR);
+		document.documentElement.style.removeProperty('--app-shell-bar-height');
+	});
+
+	// On <html>, not on the shell: the A/B dock is mounted outside the shell and a custom property only inherits downwards.
+	it('sets the variable on the document root, equal to the width of the menu', () => {
+		shell();
+		expect(published()).toBe('15rem');
+		expect(screen.getByTestId('shell-menu').style.width).toBe('var(--app-shell-menu-width)');
+	});
+
+	it('publishes the bar height next to it, on the document root', () => {
+		shell();
+		expect(document.documentElement.style.getPropertyValue('--app-shell-bar-height')).toBe('2.75rem');
+	});
+
+	it('declares both variables on the shell itself too, so the first paint already has them', () => {
+		const { container } = shell();
+		const root = container.firstElementChild as HTMLElement;
+		expect(root.style.getPropertyValue('--app-shell-menu-width')).toBe('15rem');
+		expect(root.style.getPropertyValue('--app-shell-bar-height')).toBe('2.75rem');
+	});
+
+	it('removes it when the shell unmounts, so a page without a shell has no inset', () => {
+		const { unmount } = shell();
+		unmount();
+		expect(published()).toBe('');
+	});
+
+	it('keeps it until the last of several mounted shells unmounts, whatever the unmount order', () => {
+		const first = shell();
+		const second = shell();
+		first.unmount();
+		expect(published()).toBe('15rem');
+		second.unmount();
+		expect(published()).toBe('');
+	});
+});
+
+describe('AppShell stays in place while the page scrolls', () => {
+	const classesOf = (el: HTMLElement) => el.className.split(/\s+/);
+
+	it('keeps the top bar stuck to the top, above the content and below dialogs, drawers and toasts', () => {
+		shell();
+		const bar = screen.getByRole('banner');
+		expect(classesOf(bar)).toEqual(expect.arrayContaining(['sticky', 'top-0']));
+		// Content stickies (back link, table header) are z-10; dialogs, toasts and popovers are z-50, the drawer overlay z-40.
+		expect(classesOf(bar)).toContain('z-30');
+	});
+
+	it('keeps the side menu stuck right under the bar, as tall as the rest of the window, with its own scrollbar', () => {
+		shell();
+		const menu = screen.getByTestId('shell-menu');
+		expect(menu.style.top).toBe('var(--app-shell-bar-height)');
+		const classes = classesOf(menu);
+		// self-start: a stretched flex item is as tall as the page and has nothing to stick against.
+		expect(classes).toEqual(expect.arrayContaining(['sticky', 'self-start', 'overflow-y-auto']));
+		expect(classes).toContain('h-[calc(100vh-var(--app-shell-bar-height))]');
+		expect(classes).toContain('supports-[height:100dvh]:h-[calc(100dvh-var(--app-shell-bar-height))]');
+	});
+
+	it('draws the skip link above the sticky bar when it has the focus', () => {
+		shell({ skipLabel: 'Skip to content' });
+		expect(classesOf(screen.getByRole('link', { name: 'Skip to content' }))).toContain('focus:z-40');
 	});
 });

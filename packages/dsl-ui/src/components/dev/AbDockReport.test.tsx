@@ -16,6 +16,7 @@ function fakeTest(id: string, label: string, optionIds: string[], value: string)
 
 const TESTS = [fakeTest('card', 'Card layout', ['cards', 'table'], 'table'), fakeTest('colour', 'Colour', ['a', 'b', 'c'], 'c'), fakeTest('gap', 'Gap', ['s', 'm'], 'm')];
 
+// The button is an icon: its accessible name and tooltip carry the state, not a visible text.
 const copyButton = () => screen.getByRole('button', { name: /^Copy report|^Copied|^Copy failed/ });
 
 // jsdom has no clipboard: each test installs its own, vitest restores the global (unstubGlobals).
@@ -31,6 +32,37 @@ beforeEach(() => {
 
 afterEach(() => {
 	window.history.pushState({}, '', '/');
+});
+
+describe('AbDock copy report button placement', () => {
+	it('is a small icon button outside the stack of rows, in the frame next to the dock', () => {
+		stubClipboard(() => Promise.resolve());
+		render(<AbDock tests={TESTS} enabled />);
+		const dock = screen.getByTestId('ab-dock');
+		const button = copyButton();
+		expect(dock.contains(button)).toBe(false);
+		expect(screen.getByTestId('ab-dock-frame').contains(button)).toBe(true);
+		// Icon only: no visible text, the name comes from aria-label and the tooltip is the same words.
+		expect(button.textContent).toBe('');
+		expect(button.querySelector('svg')).not.toBeNull();
+		expect(button.getAttribute('title')).toBe('Copy report');
+		expect(button.className).toContain('pointer-events-auto');
+		// DOM order: after the dock, i.e. at the bottom right of the content area.
+		expect(dock.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+	});
+
+	it('is not part of any row', () => {
+		render(<AbDock tests={TESTS} enabled />);
+		for (const group of screen.getAllByRole('group')) {
+			expect(group.parentElement!.contains(copyButton())).toBe(false);
+		}
+	});
+
+	it('is hidden while the dock is folded', () => {
+		localStorage.setItem('ab.collapsed', 'collapsed');
+		render(<AbDock tests={TESTS} enabled />);
+		expect(screen.queryByRole('button', { name: /^Copy report/ })).not.toBeInTheDocument();
+	});
 });
 
 describe('AbDock copy report', () => {
@@ -74,11 +106,13 @@ describe('AbDock copy report', () => {
 		await act(async () => {
 			fireEvent.click(copyButton());
 		});
-		expect(copyButton()).toHaveTextContent('Copied');
+		expect(copyButton()).toHaveAccessibleName('Copied');
+		expect(copyButton().getAttribute('title')).toBe('Copied');
 		act(() => {
 			vi.advanceTimersByTime(5000);
 		});
-		expect(copyButton()).toHaveTextContent('Copy report');
+		expect(copyButton()).toHaveAccessibleName('Copy report');
+		expect(copyButton().getAttribute('title')).toBe('Copy report');
 	});
 
 	it('says so on the button and in the console, with the reason, when the clipboard refuses', async () => {
@@ -88,7 +122,7 @@ describe('AbDock copy report', () => {
 		await act(async () => {
 			fireEvent.click(copyButton());
 		});
-		expect(copyButton()).toHaveTextContent('Copy failed');
+		expect(copyButton()).toHaveAccessibleName('Copy failed');
 		expect(copyButton().getAttribute('title')).toContain('Write permission denied.');
 		expect(error).toHaveBeenCalledTimes(1);
 		expect(String(error.mock.calls[0][0])).toContain('Write permission denied.');
@@ -101,7 +135,7 @@ describe('AbDock copy report', () => {
 		await act(async () => {
 			fireEvent.click(copyButton());
 		});
-		expect(copyButton()).toHaveTextContent('Copy failed');
+		expect(copyButton()).toHaveAccessibleName('Copy failed');
 		expect(String(error.mock.calls[0][0])).toContain('navigator.clipboard is unavailable');
 		expect(String(error.mock.calls[0][0])).toContain('https');
 	});
