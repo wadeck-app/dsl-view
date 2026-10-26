@@ -74,7 +74,9 @@ describe('AppShell top bar', () => {
 		shell();
 		const alpha = screen.getByRole('link', { name: 'Alpha' });
 		expect(within(alpha).getByTestId('icon-a')).toBeInTheDocument();
-		expect(alpha.firstElementChild).toBe(within(alpha).getByTestId('icon-a'));
+		// The icon sits in a box of its own (it is scaled when the bar is scrolled): the box is first, the icon inside it.
+		expect(alpha.firstElementChild).toContainElement(within(alpha).getByTestId('icon-a'));
+		expect(alpha.firstElementChild).not.toHaveTextContent('Alpha');
 	});
 });
 

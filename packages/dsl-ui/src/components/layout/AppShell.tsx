@@ -4,6 +4,7 @@ import { APP_SHELL_BAR_HEIGHT, APP_SHELL_BAR_HEIGHT_VAR, APP_SHELL_MENU_WIDTH_VA
 import { MENU_VARIANT_WIDTH, MENU_WIDTH_PEEK_FOLDED, type ShellMenuVariant } from './shellMenuVariants.js';
 import { isShortcutTarget, MENU_VARIANTS, ShellSideMenu, useFoldedMenu } from './ShellSideMenu.js';
 import { ShellTabs } from './ShellTabs.js';
+import { useBarHeight } from './useBarHeight.js';
 import { BAR_ON_SCROLL_MODES, useBarOnScroll, type BarOnScroll } from './useBarOnScroll.js';
 
 export type { BarOnScroll } from './useBarOnScroll.js';
@@ -34,8 +35,9 @@ export { MENU_VARIANT_AB_OPTIONS, type ShellMenuVariant } from './shellMenuVaria
  * mounted outside the shell and a custom property only inherits downwards:
  * - `--app-shell-menu-width`: 15rem by default, per `menuVariant` (below). The A/B dock uses it to stay in the content area.
  * - `--app-shell-bar-height`: 2.75rem. The side menu and sticky content stick below it. With `barOnScroll` it follows the
- *   CURRENT state of the bar (the target value: the bar and the menu animate to it over 150ms, not under
- *   prefers-reduced-motion).
+ *   bar: it moves frame by frame over 200ms (ease-out) to the new state, so everything that reads it (bar, menu, dock,
+ *   sticky bars) moves together; under prefers-reduced-motion it changes at once. In Tailwind: `top-shell-bar`
+ *   (preset spacing key, falls back to 0px without a shell). Do not put a CSS `transition` on a property that reads it.
  *
  * `barOnScroll` (default `steady`) is what the top bar does once the page is scrolled more than 8px:
  * - `steady`: nothing, always 2.75rem.
@@ -156,8 +158,8 @@ const defaultRenderLink = ({ href, children, ...rest }: ShellLinkProps): React.R
 
 // Heights of the bar by state. `hidden` is 0 for everything that sticks below it; the bar itself keeps its full height.
 const COMPACT_BAR_HEIGHT = { shrink: '1.5rem', icons: '2rem' } as const;
-const ANIMATE = 'transition-[height,transform,margin] duration-150 motion-reduce:transition-none';
-const ANIMATE_MENU = 'transition-[top,height] duration-150 motion-reduce:transition-none';
+// Padding, gap and text size of the bar and its brand. Height, margin and slide are moved by useBarHeight instead.
+const BAR_TRANSITION = 'transition-[padding,gap,font-size,line-height] duration-200 ease-out motion-reduce:transition-none';
 
 // Shells mounted right now (normally one): the variable stays until the last one unmounts.
 let mountedShells = 0;
@@ -175,6 +177,7 @@ export function AppShell({ brand, tabs, tabsLabel, menu, actions, renderLink = d
 	const hidden = barState === 'hidden';
 	const barHeight = hidden ? '0px' : compact ? COMPACT_BAR_HEIGHT[mode === 'icons' ? 'icons' : 'shrink'] : APP_SHELL_BAR_HEIGHT;
 	const animated = mode !== 'steady';
+	const { shellRef, headerRef, initial: initialBarHeight } = useBarHeight(barHeight, mode === 'hide');
 	const variant = classFor('AppShell', 'menuVariant', menuVariant, MENU_VARIANTS, 'classic') as ShellMenuVariant;
 	const [folded, toggleFold] = useFoldedMenu(variant === 'peek');
 	const menuWidth = folded ? MENU_WIDTH_PEEK_FOLDED : MENU_VARIANT_WIDTH[variant];
@@ -204,18 +207,16 @@ export function AppShell({ brand, tabs, tabsLabel, menu, actions, renderLink = d
 			}
 		};
 	}, []);
-	// Follow the state of the bar and of the menu. Declared after the effect above: on unmount the removal there runs last.
-	useEffect(() => {
-		document.documentElement.style.setProperty(APP_SHELL_BAR_HEIGHT_VAR, barHeight);
-	}, [barHeight]);
+	// The bar height is moved by useBarHeight; the menu width follows the menu.
 	useEffect(() => {
 		document.documentElement.style.setProperty(APP_SHELL_MENU_WIDTH_VAR, menuWidth);
 	}, [menuWidth]);
 	// Declared on the shell root too: the first paint has them before the effects publish them on the document root.
-	const shellVars = { [APP_SHELL_MENU_WIDTH_VAR]: menuWidth, [APP_SHELL_BAR_HEIGHT_VAR]: barHeight } as React.CSSProperties;
+	// The bar height is the value of the FIRST render only: useBarHeight owns it afterwards (React must not write it back).
+	const shellVars = { [APP_SHELL_MENU_WIDTH_VAR]: menuWidth, [APP_SHELL_BAR_HEIGHT_VAR]: initialBarHeight } as React.CSSProperties;
 
 	return (
-		<div className="relative flex min-h-screen flex-col bg-bg" style={shellVars}>
+		<div ref={shellRef} className="relative flex min-h-screen flex-col bg-bg" style={shellVars}>
 			{skipLabel !== undefined && (
 				<a href={`#${mainId}`} className={SKIP_LINK}>
 					{skipLabel}
@@ -225,12 +226,14 @@ export function AppShell({ brand, tabs, tabsLabel, menu, actions, renderLink = d
 			    below the menu flyout label (z-40) and the dialogs, toasts and popovers (z-50). Fixed height, whatever the tab:
 			    a tab can fill it from top to bottom. A shrunk bar gives back the height it lost as a bottom margin, so the
 			    content does not move; a hidden bar keeps its height and slides up. Pointer or focus inside: full bar. */}
+			{/* Height, margin and slide follow --app-shell-bar-height, which useBarHeight moves frame by frame; padding, gap and
+			    text size animate with the same 200ms ease-out. */}
 			<header
-				className={`sticky top-0 z-30 flex items-center bg-surface ${compact ? 'gap-3 px-2' : 'gap-6 px-4'} ${hidden ? '' : 'shadow-sm'} ${animated ? ANIMATE : ''}`}
+				ref={headerRef}
+				className={`sticky top-0 z-30 flex items-center bg-surface ${compact ? 'gap-3 px-2' : 'gap-6 px-4'} ${hidden ? '' : 'shadow-sm'} ${animated ? BAR_TRANSITION : ''}`}
 				style={{
-					height: hidden ? APP_SHELL_BAR_HEIGHT : `var(${APP_SHELL_BAR_HEIGHT_VAR})`,
-					marginBottom: compact ? `calc(${APP_SHELL_BAR_HEIGHT} - var(${APP_SHELL_BAR_HEIGHT_VAR}))` : undefined,
-					transform: hidden ? 'translateY(-100%)' : undefined,
+					height: mode === 'hide' ? APP_SHELL_BAR_HEIGHT : `var(${APP_SHELL_BAR_HEIGHT_VAR})`,
+					marginBottom: animated && mode !== 'hide' ? `calc(${APP_SHELL_BAR_HEIGHT} - var(${APP_SHELL_BAR_HEIGHT_VAR}))` : undefined,
 				}}
 				onMouseEnter={() => setHovered(true)}
 				onMouseLeave={() => setHovered(false)}
@@ -240,7 +243,7 @@ export function AppShell({ brand, tabs, tabsLabel, menu, actions, renderLink = d
 					if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocusedInside(false);
 				}}
 			>
-				<span className={compact && mode === 'icons' ? 'sr-only' : `shrink-0 whitespace-nowrap font-semibold text-content ${compact ? 'text-xs' : 'text-base'}`}>{brand}</span>
+				<span className={compact && mode === 'icons' ? 'sr-only' : `shrink-0 whitespace-nowrap font-semibold text-content ${compact ? 'text-xs' : 'text-base'} ${animated ? BAR_TRANSITION : ''}`}>{brand}</span>
 				<ShellTabs tabs={tabs} tabsLabel={tabsLabel} renderLink={renderLink} moreLabel={moreLabel} density={compact ? (mode === 'icons' ? 'icons' : 'small') : 'normal'} />
 				{actions}
 			</header>

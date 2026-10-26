@@ -3,9 +3,27 @@ import { initialsOf } from '../display/initials.js';
 import type { ShellItem, ShellLinkProps } from './AppShell.js';
 
 // The tab is as tall as the top bar (self-stretch), so the current highlight fills it from top to bottom.
-const TAB_BASE = 'flex shrink-0 items-center gap-1.5 self-stretch whitespace-nowrap transition-colors';
+// Padding, gap and text size animate with the bar (200ms ease-out, like its height); colours keep the same curve.
+const TAB_BASE =
+	'flex shrink-0 items-center self-stretch whitespace-nowrap transition-[color,background-color,padding,gap,font-size,line-height] duration-200 ease-out motion-reduce:transition-none';
 // By density of the bar: normal, small (barOnScroll 'shrink', once scrolled), icons (barOnScroll 'icons', once scrolled).
-const TAB_SIZE: Record<TabDensity, string> = { normal: 'px-4 text-sm', small: 'px-2 text-xs', icons: 'px-3 text-sm' };
+const TAB_SIZE: Record<TabDensity, string> = { normal: 'gap-1.5 px-4 text-sm', small: 'gap-1 px-2 text-xs', icons: 'gap-1.5 px-3 text-sm' };
+
+// A scrolled bar draws the icons at two thirds of their size (a 24px logo becomes 16px), whatever size the host gave
+// them: `zoom` scales layout too and animates, where a width would have to know the icon's natural size.
+export const SCROLLED_ICON_SCALE = 2 / 3;
+const ICON_BOX = 'inline-flex shrink-0 items-center transition-[zoom] duration-200 ease-out motion-reduce:transition-none';
+
+function TabIcon({ scaled, children }: { scaled: boolean; children: React.ReactNode }): React.ReactElement | null {
+	if (children === undefined || children === null || children === false) {
+		return null;
+	}
+	return (
+		<span className={ICON_BOX} style={{ zoom: scaled ? SCROLLED_ICON_SCALE : 1 }}>
+			{children}
+		</span>
+	);
+}
 
 /** How much of a tab is drawn: all of it, a smaller version, or the icon only (the name stays for assistive technology). */
 export type TabDensity = 'normal' | 'small' | 'icons';
@@ -192,8 +210,11 @@ export function ShellTabs({ tabs, tabsLabel, renderLink, moreLabel, density = 'n
 							children:
 								density === 'icons' ? (
 									<>
-										{tab.icon ?? (
-											<span aria-hidden="true" className="text-xs font-semibold">
+										{tab.icon !== undefined && tab.icon !== null ? (
+											<TabIcon scaled>{tab.icon}</TabIcon>
+										) : (
+											// Initials stand in for the logo: sized for the scaled 16px box, not zoomed (they would be unreadable).
+											<span aria-hidden="true" className="text-[0.625rem] font-semibold leading-none">
 												{initialsOf(tab.label)}
 											</span>
 										)}
@@ -201,7 +222,7 @@ export function ShellTabs({ tabs, tabsLabel, renderLink, moreLabel, density = 'n
 									</>
 								) : (
 									<>
-										{tab.icon}
+										<TabIcon scaled={density === 'small'}>{tab.icon}</TabIcon>
 										{tab.label}
 									</>
 								),

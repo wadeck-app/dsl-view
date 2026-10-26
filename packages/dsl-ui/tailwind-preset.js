@@ -62,6 +62,11 @@ export default {
 			fontFamily: {
 				sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
 			},
+			// `top-shell-bar` (also h-, pt-, scroll-mt-, ...): where to stick under AppShell's top bar. The 0px is for
+			// a page with no shell, where the variable is not published. Follows the bar while it animates.
+			spacing: {
+				'shell-bar': 'var(--app-shell-bar-height, 0px)',
+			},
 			colors: {
 				primary: 'var(--color-primary)',
 				'primary-solid': 'var(--color-primary-solid)',

@@ -97,3 +97,35 @@ describe('tailwind-preset on-solid ink', () => {
 		expect(preset.theme.extend.colors['on-solid']).toBe('var(--color-on-solid, #ffffff)');
 	});
 });
+
+// Hosts stick their own bars under the shell's top bar. The variable has a fallback for pages with no shell, which is
+// easy to forget when written by hand (`top-[var(--app-shell-bar-height)]` is invalid CSS without a shell).
+describe('tailwind-preset shell-bar spacing', () => {
+	const compile = async (classes: string): Promise<string> => {
+		const { default: postcss } = await import('postcss');
+		const { default: tailwindcss } = await import('tailwindcss');
+		const result = await postcss([
+			tailwindcss({ presets: [preset], content: [{ raw: classes, extension: 'html' }], corePlugins: { preflight: false } }),
+		]).process('@tailwind utilities;', { from: undefined });
+		return result.css;
+	};
+
+	it('maps `shell-bar` onto the published variable with the 0px fallback', () => {
+		expect(preset.theme.extend.spacing).toStrictEqual({ 'shell-bar': 'var(--app-shell-bar-height, 0px)' });
+	});
+
+	it('does not shadow a key Tailwind already defines in its default spacing scale', async () => {
+		const { default: resolveConfig } = await import('tailwindcss/resolveConfig');
+		const { default: defaultConfig } = await import('tailwindcss/defaultConfig');
+		const defaults = (resolveConfig(defaultConfig as never).theme as unknown as { spacing: Record<string, string> }).spacing;
+		expect(Object.keys(defaults)).not.toContain('shell-bar');
+	});
+
+	it('generates `top-shell-bar` and the other spacing utilities', async () => {
+		const css = await compile('top-shell-bar h-shell-bar scroll-mt-shell-bar');
+		expect(css).toContain('.top-shell-bar');
+		expect(css).toMatch(/top:\s*var\(--app-shell-bar-height, 0px\)/);
+		expect(css).toMatch(/height:\s*var\(--app-shell-bar-height, 0px\)/);
+		expect(css).toMatch(/scroll-margin-top:\s*var\(--app-shell-bar-height, 0px\)/);
+	});
+});

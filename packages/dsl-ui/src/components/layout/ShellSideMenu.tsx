@@ -306,8 +306,10 @@ export function isShortcutTarget(event: KeyboardEvent): boolean {
 
 // sticky under the bar; self-start: a stretched flex item is as tall as the page and has nothing to stick against.
 // dvh where supported (mobile toolbars), vh otherwise.
+// No transition on top or height: they read --app-shell-bar-height, which AppShell already moves frame by frame (a
+// transition on top of that would chase it with a lag and open a gap under the bar).
 const FRAME =
-	'sticky flex h-[calc(100vh-var(--app-shell-bar-height))] shrink-0 self-start flex-col supports-[height:100dvh]:h-[calc(100dvh-var(--app-shell-bar-height))] transition-[top,height,width] duration-150 motion-reduce:transition-none';
+	'sticky flex h-[calc(100vh-var(--app-shell-bar-height))] shrink-0 self-start flex-col supports-[height:100dvh]:h-[calc(100dvh-var(--app-shell-bar-height))] transition-[width] duration-150 motion-reduce:transition-none';
 const FRAME_SURFACE = 'border-r border-border bg-surface';
 const FOLD_BUTTON = `shrink-0 rounded-md p-1 text-muted hover:bg-muted-bg hover:text-content ${FOCUS}`;
 const TIP = 'pointer-events-none fixed z-40 -translate-y-1/2 whitespace-nowrap rounded-md bg-content px-2 py-1 text-xs font-medium text-surface shadow-md transition-opacity duration-100 motion-reduce:transition-none';

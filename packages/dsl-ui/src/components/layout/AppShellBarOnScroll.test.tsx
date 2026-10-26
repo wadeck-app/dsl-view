@@ -39,6 +39,9 @@ beforeEach(() => {
 	frames = [];
 	vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => frames.push(cb));
 	vi.stubGlobal('cancelAnimationFrame', () => {});
+	// These tests are about WHICH height each state has: reduced motion makes the variable land at once. The motion itself
+	// is in AppShellBarMotion.test.tsx.
+	vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('prefers-reduced-motion'), media: query, addEventListener() {}, removeEventListener() {} }));
 });
 
 afterEach(() => {
@@ -82,9 +85,11 @@ describe('barOnScroll shrink', () => {
 
 	it('does not move the content: the bar gives back the height it lost as a bottom margin', () => {
 		shell({ barOnScroll: 'shrink' });
-		expect(bar().style.marginBottom).toBe('');
+		// The margin is a function of the same variable: 0 at full height, the lost height once shrunk, frame by frame.
+		const margin = 'margin-bottom: calc(2.75rem - var(--app-shell-bar-height))';
+		expect(bar().getAttribute('style')).toContain(margin);
 		scrollTo(100);
-		expect(bar().getAttribute('style')).toContain('margin-bottom: calc(2.75rem - var(--app-shell-bar-height))');
+		expect(bar().getAttribute('style')).toContain(margin);
 	});
 
 	it('is full again at the top of the page', () => {
@@ -129,12 +134,12 @@ describe('barOnScroll shrink', () => {
 		expect(screen.getByRole('link', { name: 'Audit log' })).toHaveTextContent('Audit log');
 	});
 
-	it('animates, except under prefers-reduced-motion', () => {
+	it('animates padding, gap and text size over 200ms, except under prefers-reduced-motion', () => {
 		shell({ barOnScroll: 'shrink' });
 		const classes = bar().className.split(/\s+/);
-		expect(classes).toContain('transition-[height,transform,margin]');
+		expect(classes).toContain('transition-[padding,gap,font-size,line-height]');
+		expect(classes).toContain('duration-200');
 		expect(classes).toContain('motion-reduce:transition-none');
-		expect(menu().className.split(/\s+/)).toContain('motion-reduce:transition-none');
 	});
 });
 
