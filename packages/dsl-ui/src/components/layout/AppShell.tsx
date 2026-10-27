@@ -228,6 +228,17 @@ export function AppShell({ brand, tabs, tabsLabel, menu, actions, renderLink = d
 					{skipLabel}
 				</a>
 			)}
+			{/* The menu column's surface, from the very top of the page to its bottom, behind the bar and the sticky menu. The menu
+			    only starts where the column does (below the bar's full 2.75rem while the page is at the top, 8px up after a small
+			    scroll), and the bar is shorter than that while it animates or after a small scroll: without this, the strip
+			    between them shows the page background. Same width variable and right border as the menu, so it follows a drag.
+			    Not interactive, not announced, painted before the (positioned) bar and menu so both stay above it. */}
+			<div
+				aria-hidden="true"
+				data-testid="shell-menu-backdrop"
+				className="pointer-events-none absolute inset-y-0 left-0 border-r border-border bg-surface"
+				style={{ width: `var(${APP_SHELL_MENU_WIDTH_VAR})` }}
+			/>
 			{/* 44px, no border: a soft shadow separates it from the page. Sticky, z-30: above the content's own stickies (z-10),
 			    below the menu flyout label (z-40) and the dialogs, toasts and popovers (z-50). Fixed height, whatever the tab:
 			    a tab can fill it from top to bottom. A shrunk bar gives back the height it lost as a bottom margin, so the

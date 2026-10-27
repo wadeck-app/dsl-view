@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import { LayoutDashboard, ListChecks, Cpu, Settings, Info } from 'lucide-react';
 import { AppShell, MENU_VARIANT_AB_OPTIONS, type ShellItem, type ShellMenu, type ShellMenuVariant } from './AppShell.js';
@@ -247,3 +248,116 @@ function MenuAbDemo() {
 
 /** All variants through the A/B dock (labels and hints come from `MENU_VARIANT_AB_OPTIONS`). */
 export const MenuAbDock: Story = { render: () => <MenuAbDemo /> };
+
+// ---- Browser check: does the left column ever show the PAGE background while the top bar animates? ----
+// jsdom cannot see paint, so this is the real proof. The page background is a loud magenta. "Run the probe" scrolls the
+// page down and back up (and by a few px only), and on EVERY animation frame looks, for several y from 0 down and three x
+// inside the column, at the first element under the point that has a background: the shell root means the page
+// background shows through. The report is written in the <pre data-testid="leak-report"> (read it with the browser tool).
+const LEAK_PAGE_BG = '#ff00ff';
+
+interface LeakRun {
+	label: string;
+	frames: number;
+	leakFrames: number;
+	/** First frames that leaked: time (ms), bar height variable, header height, menu top, y values where the page showed. */
+	worst: Array<{ t: number; bar: string; headerH: number; menuTop: number; scrollY: number; leakYs: string }>;
+	/** Every third frame, for the shape of the animation. */
+	sample: Array<{ t: number; bar: string; headerH: number; menuTop: number; scrollY: number; leakPoints: number }>;
+}
+
+async function runLeakProbe(): Promise<LeakRun[]> {
+	const aside = document.querySelector<HTMLElement>('[data-testid="shell-menu"]')!;
+	const shell = aside.parentElement!.parentElement!;
+	const header = shell.querySelector('header')!;
+	const frame = (): Promise<void> => new Promise((resolve) => requestAnimationFrame(() => resolve()));
+	const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+	const clear = (c: string): boolean => c === 'rgba(0, 0, 0, 0)' || c === 'transparent';
+	const paintedBy = (x: number, y: number): Element | null => document.elementsFromPoint(x, y).find((el) => !clear(getComputedStyle(el).backgroundColor)) ?? null;
+	const run = async (label: string, to: number): Promise<LeakRun> => {
+		const t0 = performance.now();
+		window.scrollTo(0, to);
+		const all: Array<LeakRun['sample'][number] & { leakYs: string }> = [];
+		let last = '';
+		let still = 0;
+		// Until the bar variable has not moved for 15 frames (20 frames at least, 90 at most).
+		for (let i = 0; i < 90 && (i < 20 || still < 15); i++) {
+			await frame();
+			const bar = shell.style.getPropertyValue('--app-shell-bar-height');
+			still = bar === last ? still + 1 : 0;
+			last = bar;
+			const width = aside.getBoundingClientRect().width;
+			const ys: number[] = [];
+			for (let y = 0; y < 120; y += 2) ys.push(y);
+			for (let y = 120; y < innerHeight; y += 40) ys.push(y);
+			ys.push(innerHeight - 1);
+			const hits = new Set<number>();
+			let points = 0;
+			for (const x of [1, Math.floor(width / 2), Math.floor(width) - 4]) {
+				for (const y of ys) {
+					const el = paintedBy(x, y);
+					if (el === null || el === shell || el === document.body || el === document.documentElement) {
+						points += 1;
+						hits.add(y);
+					}
+				}
+			}
+			all.push({ t: Math.round(performance.now() - t0), bar, headerH: +header.getBoundingClientRect().height.toFixed(2), menuTop: +aside.getBoundingClientRect().top.toFixed(2), scrollY: Math.round(scrollY), leakPoints: points, leakYs: [...hits].sort((a, b) => a - b).join(',') });
+		}
+		const leaks = all.filter((f) => f.leakPoints > 0);
+		return { label, frames: all.length, leakFrames: leaks.length, worst: leaks.slice(0, 4).map(({ leakPoints: _p, ...rest }) => rest), sample: all.filter((_, i) => i % 3 === 0).map(({ leakYs: _y, ...rest }) => rest) };
+	};
+	window.scrollTo(0, 0);
+	await sleep(500);
+	// Hit testing skips pointer-events: none (the backdrop): make every element hit-testable so elementsFromPoint follows the paint order.
+	const unblock = document.createElement('style');
+	unblock.textContent = '* { pointer-events: auto !important; }';
+	document.head.appendChild(unblock);
+	const runs: LeakRun[] = [];
+	runs.push(await run('shrink: scroll 0 -> 400', 400));
+	await sleep(300);
+	runs.push(await run('grow: scroll 400 -> 0', 0));
+	await sleep(300);
+	runs.push(await run('shrink: scroll 0 -> 12', 12));
+	await sleep(300);
+	runs.push(await run('grow: scroll 12 -> 0', 0));
+	unblock.remove();
+	return runs;
+}
+
+function LeakProbe({ theme, menuVariant, rem }: { theme: 'light' | 'dark'; menuVariant: ShellMenuVariant; rem?: number }) {
+	// The stored preference is read when the shell mounts, which is after this render.
+	useState(() => (rem === undefined ? localStorage.removeItem('app-shell.menu-width') : localStorage.setItem('app-shell.menu-width', String(rem))));
+	const [report, setReport] = useState('');
+	return (
+		<ThemeScope theme={theme} surface="none" tokens={{ '--color-bg': LEAK_PAGE_BG }}>
+			<AppShell brand="my-app" tabs={tabs('queue')} tabsLabel="Modules" menu={RESIZABLE_MENU} menuVariant={menuVariant} resizeLabel="Resize the menu" barOnScroll="shrink" actions={<span className="text-sm text-muted">actions</span>}>
+				<div className="p-6 text-content">
+					<h1 className="text-xl font-semibold">Leak probe ({theme}, {menuVariant}{rem === undefined ? '' : `, ${rem}rem`})</h1>
+					<button
+						type="button"
+						className="mt-2 rounded border border-border bg-surface px-3 py-1"
+						onClick={() => {
+							void runLeakProbe().then((runs) => setReport(JSON.stringify(runs.map((r) => ({ ...r, sample: r.sample.slice(0, 6) })), null, 1)));
+						}}
+					>
+						Run the probe
+					</button>
+					<pre data-testid="leak-report" className="mt-2 whitespace-pre-wrap text-xs">{report}</pre>
+					{Array.from({ length: 80 }, (_, i) => (
+						<p key={i} className="mt-4 text-muted">
+							Paragraph {i + 1}.
+						</p>
+					))}
+				</div>
+			</AppShell>
+		</ThemeScope>
+	);
+}
+
+/** Magenta page background, barOnScroll shrink, resizable menu: the left column must stay the menu surface while the bar animates. Press "Run the probe". */
+export const LeakProbeLight: Story = { render: () => <LeakProbe theme="light" menuVariant="resizable" /> };
+/** Same, dark theme. */
+export const LeakProbeDark: Story = { render: () => <LeakProbe theme="dark" menuVariant="resizable" /> };
+/** Same with the menu at its 3.5rem minimum (icons only). */
+export const LeakProbeRail: Story = { render: () => <LeakProbe theme="light" menuVariant="resizable" rem={3.5} /> };
