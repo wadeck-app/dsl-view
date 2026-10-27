@@ -52,7 +52,7 @@ export function trackScroll(prev: ScrollTrack, y: number): ScrollTrack {
 /**
  * The state of the top bar for `mode`, from the window scroll offset. Nothing is listened to for `steady`. The listener
  * is passive and coalesced to one update per animation frame; it reads `scrollY` only (no layout).
- * `expanded` (pointer over the bar, or focus inside it) always gives `full`.
+ * `expanded` (keyboard focus inside the bar; never the pointer) always gives `full`.
  */
 export function useBarOnScroll(mode: BarOnScroll, expanded: boolean): BarState {
 	const [track, setTrack] = useState<ScrollTrack>(() => initialTrack(typeof window === 'undefined' ? 0 : window.scrollY));

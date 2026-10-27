@@ -31,6 +31,23 @@ function scrollTo(y: number): void {
 	});
 }
 
+// jsdom has no input modality: ':focus-visible' is answered by the test, like the browser does (true after a keyboard
+// move, false after a pointer press).
+function focusVisible(answer: boolean): void {
+	const original = Element.prototype.matches;
+	vi.spyOn(Element.prototype, 'matches').mockImplementation(function (this: Element, selector: string) {
+		return selector === ':focus-visible' ? answer : original.call(this, selector);
+	});
+}
+
+// A pointer over the bar changes nothing, in any mode: only the scroll state and keyboard focus decide.
+const HEIGHT_BY_MODE = [
+	['steady', '2.75rem', '2.75rem'],
+	['shrink', '1.5rem', '1.5rem'],
+	['icons', '2rem', '2rem'],
+	['hide', '0px', '0px'],
+] as const;
+
 let frames: FrameRequestCallback[] = [];
 
 beforeEach(() => {
@@ -99,18 +116,58 @@ describe('barOnScroll shrink', () => {
 		expect(barHeight()).toBe('2.75rem');
 	});
 
-	it('is full while the pointer is over the bar, and shrinks again when it leaves', () => {
+	it('does not change while the pointer is over the bar: height, density and brand text stay', () => {
 		shell({ barOnScroll: 'shrink' });
 		scrollTo(100);
+		const brand = bar().firstElementChild!;
+		const before = { height: barHeight(), header: bar().className, brand: brand.className };
 		fireEvent.mouseEnter(bar());
-		expect(barHeight()).toBe('2.75rem');
+		fireEvent.mouseOver(screen.getByRole('link', { name: 'Audit log' }));
+		expect(barHeight()).toBe('1.5rem');
+		expect({ height: barHeight(), header: bar().className, brand: brand.className }).toStrictEqual(before);
+		expect(bar().className).toContain('gap-3');
+		expect(brand.className).toContain('text-xs');
 		fireEvent.mouseLeave(bar());
+		expect(barHeight()).toBe('1.5rem');
+	});
+
+	it.each(HEIGHT_BY_MODE)('mode %s: pointer enter and leave leave the height at %s', (mode, scrolled) => {
+		shell({ barOnScroll: mode });
+		scrollTo(100);
+		if (mode === 'hide') scrollTo(200);
+		expect(barHeight()).toBe(scrolled);
+		fireEvent.mouseEnter(bar());
+		expect(barHeight()).toBe(scrolled);
+		fireEvent.mouseLeave(bar());
+		expect(barHeight()).toBe(scrolled);
+	});
+
+	it('a link focused by the pointer (not :focus-visible) does not expand the bar', () => {
+		shell({ barOnScroll: 'shrink' });
+		scrollTo(100);
+		focusVisible(false);
+		fireEvent.focus(screen.getByRole('link', { name: 'Audit log' }));
+		expect(barHeight()).toBe('1.5rem');
+	});
+
+	it('a pointer click inside the bar collapses what keyboard focus had expanded', () => {
+		shell({ barOnScroll: 'shrink' });
+		scrollTo(100);
+		const first = screen.getByRole('link', { name: 'Queue' });
+		const second = screen.getByRole('link', { name: 'Audit log' });
+		focusVisible(true);
+		fireEvent.focus(first);
+		expect(barHeight()).toBe('2.75rem');
+		focusVisible(false);
+		fireEvent.blur(first, { relatedTarget: second });
+		fireEvent.focus(second);
 		expect(barHeight()).toBe('1.5rem');
 	});
 
 	it('is full while the keyboard focus is inside the bar, and shrinks again when it leaves', () => {
 		shell({ barOnScroll: 'shrink' });
 		scrollTo(100);
+		focusVisible(true);
 		const tab = screen.getByRole('link', { name: 'Audit log' });
 		fireEvent.focus(tab);
 		expect(barHeight()).toBe('2.75rem');
@@ -121,6 +178,7 @@ describe('barOnScroll shrink', () => {
 	it('stays full when the focus moves from one control of the bar to another', () => {
 		shell({ barOnScroll: 'shrink' });
 		scrollTo(100);
+		focusVisible(true);
 		const first = screen.getByRole('link', { name: 'Queue' });
 		const second = screen.getByRole('link', { name: 'Audit log' });
 		fireEvent.focus(first);
@@ -178,9 +236,22 @@ describe('barOnScroll hide', () => {
 		shell({ barOnScroll: 'hide' });
 		scrollTo(100);
 		scrollTo(200);
+		focusVisible(true);
 		fireEvent.focus(screen.getByRole('link', { name: 'Audit log' }));
 		expect(barHeight()).toBe('2.75rem');
 		expect(bar().style.transform).toBe('');
+	});
+});
+
+describe('barOnScroll hide: reaching a hidden bar with the pointer', () => {
+	it('the hover never revealed it (it is slid out of reach); scrolling up does', () => {
+		shell({ barOnScroll: 'hide' });
+		scrollTo(100);
+		scrollTo(200);
+		fireEvent.mouseEnter(bar());
+		expect(barHeight()).toBe('0px');
+		scrollTo(190);
+		expect(barHeight()).toBe('2.75rem');
 	});
 });
 
@@ -210,10 +281,14 @@ describe('barOnScroll icons', () => {
 		expect(screen.getByRole('link', { name: 'Audit log' }).getAttribute('title')).toBeNull();
 	});
 
-	it('expands on hover', () => {
+	it('stays icons on hover, and expands when the keyboard focus reaches a tab', () => {
 		shell({ barOnScroll: 'icons' });
 		scrollTo(100);
 		fireEvent.mouseEnter(bar());
+		expect(barHeight()).toBe('2rem');
+		expect(screen.getByRole('link', { name: 'Audit log' }).querySelector('.sr-only')).not.toBeNull();
+		focusVisible(true);
+		fireEvent.focus(screen.getByRole('link', { name: 'Audit log' }));
 		expect(barHeight()).toBe('2.75rem');
 		expect(screen.getByRole('link', { name: 'Audit log' }).querySelector('.sr-only')).toBeNull();
 	});

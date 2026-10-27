@@ -45,8 +45,10 @@ export { MENU_VARIANT_AB_OPTIONS, type ShellMenuVariant } from './shellMenuVaria
  * - `shrink`: 1.5rem, smaller brand and tab text.
  * - `hide`: slides away when scrolling down, comes back after scrolling up a little (variable: 0px).
  * - `icons`: a 2rem strip of module icons (initials when a tab has no icon), the name as tooltip.
- * In every mode the bar is full again at the top of the page, while the pointer is over it, and while the keyboard focus
- * is inside it. The content never moves: a shrunk bar keeps its place in the flow. An unknown value warns once and
+ * In every mode the bar is full again at the top of the page and while the keyboard focus is inside it (a focus that
+ * `:focus-visible` reports, so a Tab or arrow key, not a mouse click). The pointer changes nothing: hovering the bar never
+ * resizes it, and a click that focuses a tab does not expand it. A `hide` bar that is slid away comes back by scrolling up
+ * a little or by the keyboard focus; the pointer cannot reach it while it is out of view. The content never moves: a shrunk bar keeps its place in the flow. An unknown value warns once and
  * behaves as `steady`.
  *
  * `menuVariant` (default `classic`) is the WIDTH of the side menu. Every variant looks the same (rows, icons, accent,
@@ -173,6 +175,17 @@ const COMPACT_BAR_HEIGHT = { shrink: '1.5rem', icons: '2rem' } as const;
 // Padding, gap and text size of the bar and its brand. Height, margin and slide are moved by useBarHeight instead.
 const BAR_TRANSITION = 'transition-[padding,gap,font-size,line-height] duration-200 ease-out motion-reduce:transition-none';
 
+// True when the browser shows a focus ring for the target, i.e. the focus came from the keyboard (or a script), not from a
+// pointer press. A browser that does not know ':focus-visible' throws: expand then, since a focused control must never be
+// left hidden or unreadably small.
+function isKeyboardFocus(target: EventTarget): boolean {
+	try {
+		return (target as Element).matches(':focus-visible');
+	} catch {
+		return true;
+	}
+}
+
 // Shells mounted right now (normally one): the variable stays until the last one unmounts.
 let mountedShells = 0;
 
@@ -182,9 +195,8 @@ const SKIP_LINK =
 export function AppShell({ brand, tabs, tabsLabel, menu, actions, renderLink = defaultRenderLink, skipLabel, moreLabel, barOnScroll, menuVariant, resizeLabel, children }: AppShellProps): React.ReactElement {
 	const mainId = useId();
 	const mode = classFor('AppShell', 'barOnScroll', barOnScroll, BAR_ON_SCROLL_MODES, 'steady') as BarOnScroll;
-	const [hovered, setHovered] = useState(false);
 	const [focusedInside, setFocusedInside] = useState(false);
-	const barState = useBarOnScroll(mode, hovered || focusedInside);
+	const barState = useBarOnScroll(mode, focusedInside);
 	const compact = barState === 'compact';
 	const hidden = barState === 'hidden';
 	const barHeight = hidden ? '0px' : compact ? COMPACT_BAR_HEIGHT[mode === 'icons' ? 'icons' : 'shrink'] : APP_SHELL_BAR_HEIGHT;
@@ -242,7 +254,7 @@ export function AppShell({ brand, tabs, tabsLabel, menu, actions, renderLink = d
 			{/* 44px, no border: a soft shadow separates it from the page. Sticky, z-30: above the content's own stickies (z-10),
 			    below the menu flyout label (z-40) and the dialogs, toasts and popovers (z-50). Fixed height, whatever the tab:
 			    a tab can fill it from top to bottom. A shrunk bar gives back the height it lost as a bottom margin, so the
-			    content does not move; a hidden bar keeps its height and slides up. Pointer or focus inside: full bar. */}
+			    content does not move; a hidden bar keeps its height and slides up. Keyboard focus inside: full bar; the pointer changes nothing. */}
 			{/* Height, margin and slide follow --app-shell-bar-height, which useBarHeight moves frame by frame; padding, gap and
 			    text size animate with the same 200ms ease-out. */}
 			<header
@@ -252,9 +264,8 @@ export function AppShell({ brand, tabs, tabsLabel, menu, actions, renderLink = d
 					height: mode === 'hide' ? APP_SHELL_BAR_HEIGHT : `var(${APP_SHELL_BAR_HEIGHT_VAR})`,
 					marginBottom: animated && mode !== 'hide' ? `calc(${APP_SHELL_BAR_HEIGHT} - var(${APP_SHELL_BAR_HEIGHT_VAR}))` : undefined,
 				}}
-				onMouseEnter={() => setHovered(true)}
-				onMouseLeave={() => setHovered(false)}
-				onFocus={() => setFocusedInside(true)}
+				// Only a keyboard focus expands the bar: a control focused by a click is already under the pointer and visible.
+				onFocus={(event) => setFocusedInside(isKeyboardFocus(event.target))}
 				onBlur={(event) => {
 					// Focus moving between two controls of the bar stays inside.
 					if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocusedInside(false);

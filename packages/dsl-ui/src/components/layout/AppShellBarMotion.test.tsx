@@ -142,15 +142,21 @@ describe('barOnScroll motion (no reduced-motion preference)', () => {
 		expect(bar().style.transform).toBe('');
 	});
 
-	it('a change of mind mid-motion (pointer enters the bar) continues from the current height, with no jump', () => {
+	it('a change of mind mid-motion (keyboard focus enters the bar) continues from the current height, with no jump', () => {
 		shell({ barOnScroll: 'shrink' });
 		scrollTo(100);
 		sample(BAR_MOTION_MS / 2);
 		const mid = rem(rootVar());
 		expect(mid).toBeLessThan(2.75);
 		expect(mid).toBeGreaterThan(1.5);
+		// The browser answers ':focus-visible' for a keyboard focus; jsdom has no input modality.
+		const link = screen.getByRole('link', { name: 'Queue' });
+		const original = Element.prototype.matches;
+		vi.spyOn(Element.prototype, 'matches').mockImplementation(function (this: Element, selector: string) {
+			return selector === ':focus-visible' ? true : original.call(this, selector);
+		});
 		act(() => {
-			fireEvent.mouseEnter(bar());
+			fireEvent.focus(link);
 		});
 		const next = rem(sample(16)[0]!.root);
 		expect(Math.abs(next - mid)).toBeLessThan(0.3);
