@@ -88,6 +88,7 @@ export const CompactSelectNodeSchema = baseNode.extend({
 	ariaLabel: z.string(),
 	placeholder: z.string().optional(),
 	disabled: dsl(z.boolean()).optional(),
+	defaultValue: z.string().optional(),
 });
 
 export const IconButtonNodeSchema = baseNode.extend({

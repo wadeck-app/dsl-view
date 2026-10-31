@@ -466,6 +466,23 @@ Omit `urlParam` to use either component in plain controlled mode (`page`/`onPage
 
 `resetUrlParams` without `urlParam`, or containing the control's own `urlParam`, throws. A custom `UrlParamService` host must honour `set(key, value, { remove })`; `useOptionalUrlParam(key, { resetUrlParams })` is the hook form.
 
+**Default shown while the param is absent.** `CompactSelect` accepts `defaultValue`: the option displayed while the URL has no `<urlParam>`. It is only displayed, the URL is not written (unlike `PageSizeSelect`'s `default`, which fills an absent param once on mount), so a source reading `$urlParam.<name>` still sees it absent and applies its own default. A param that is present wins, including an empty one (`?name=`, what picking the `placeholder` writes). Ignored without `urlParam`.
+
+```yaml
+- $type: CompactSelect
+  urlParam: range
+  ariaLabel: Period
+  defaultValue: 6M
+  options:
+    - { value: 1M, label: 1 month }
+    - { value: 6M, label: 6 months }
+    - { value: 1Y, label: 1 year }
+```
+
+`defaultValue` should be one of the option values (`""` counts when a `placeholder` is set). A text that is not is still shown, as `Unknown: <value>`, and reported once in development; any other type is ignored and reported.
+
+**Value no option carries.** A non-empty value matching no option (hand-edited link, changed options, controlled `value`) is shown as an extra disabled option `Unknown: <value>` instead of silently displaying the first option. The empty value keeps its display.
+
 ---
 
 ## Generated files
@@ -894,6 +911,7 @@ First published version containing the change (`dsl-ui` and `dsl-renderer` share
 | `2026.10.31-305` | New expression `$concat(a, b, ...)` builds a string in a node prop (`to: "$concat('/p/', $route.id)"`); a missing piece makes the whole value `undefined`. `$urlParam.<name>` is now readable in any node prop, not only in `$sources.params`. A literal prop value starting with `$urlParam.` or `$concat(` that was meant as text now resolves (rare). No regeneration needed. |
 | `2026.11.6-307` | `HorizontalStack` new `wrap: true` (default `false`, no change without it): children move to the next line whole instead of squeezing, contributed nodes included. **Behaviour change** `Button` and `ButtonLink` labels no longer wrap (`whitespace-nowrap`; `stack`-shape buttons keep wrapping), so a long label in a narrow row overflows instead of growing taller: put the row in a `HorizontalStack` with `wrap: true`. Regenerate `entries.tsx` (and `known-keys.json`, node schemas) to expose `wrap` in YAML. |
 | `2026.11.6-309` | No component draws uppercase text any more: side-menu group captions, `CronBuilder` legends, `DateRangePicker` presets heading and the A/B row label keep the case they are written in (`Avatar` monograms stay upper-cased). A/B dock (`AbTest`/`AbExperiments`): larger option cells, never wider than the viewport with sideways-scrolling rows that keep the selected option in view, a spacer at the end of the document, a test nested in a variant (`parentId`) listed above its parent, hints shown on hover and keyboard focus. |
+| `<VERSION>` | `CompactSelect` new prop `defaultValue` (shown while the `urlParam` is absent, URL not written). **Behaviour change** a `CompactSelect` whose value (URL param or controlled `value`) is non-empty and matches no option now shows a disabled `Unknown: <value>` option; it used to display the first option while the page kept using that value. An empty value is unchanged. Regenerate `entries.tsx` (and `known-keys.json`, node schemas) to expose `defaultValue` in YAML. |
 
 ## Pitfalls
 

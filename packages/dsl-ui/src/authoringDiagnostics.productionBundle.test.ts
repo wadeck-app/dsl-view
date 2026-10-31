@@ -19,6 +19,7 @@ const MODULES = [
 	'components/navigation/Stepper.js',
 	'components/controls/ActionButton.js',
 	'components/controls/RefreshButton.js',
+	'components/controls/CompactSelect.js',
 	'components/form/timeStep.js',
 	'utils/usableOptions.js',
 	'components/form/Form.js',
@@ -37,6 +38,7 @@ const MARKERS: Record<string, string> = {
 	'ActionButton without onAction': 'cannot run action',
 	// Not "Nothing to refresh": the button's own tooltip text says that in production too.
 	'RefreshButton without a source': 'it provides `$refresh`',
+	'CompactSelect defaultValue not an option': 'is not one of the option values',
 	'TimePicker minuteStep': 'minuteStep must be a whole number',
 	'options without a label (usableOptions)': 'have no text label',
 	'missing --color-on-solid token': 'falls back to white meanwhile',

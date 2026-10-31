@@ -2,6 +2,7 @@ import React from 'react';
 import { ChevronDown } from 'lucide-react';
 
 import { useOptionalUrlParam } from '../../context/UrlParamContext.js';
+import { reportAuthoringMistake } from '@dsl-ui/utils/devDiagnostics.js';
 import type { FieldSelectOption } from '../form/FieldSelect.js';
 
 // pr-8 reserves the chevron's column. A native select draws its own arrow inside the box, so the
@@ -43,6 +44,14 @@ export interface CompactSelectProps {
 	/** The empty choice. Omitted, there is no empty option to pick by accident. */
 	placeholder?: string;
 	disabled?: boolean;
+	/**
+	 * Value shown while the `urlParam` is absent from the URL, e.g. the choice a page's sources assume when they
+	 * receive no parameter. It is only displayed: the URL is not written until the user picks something. Ignored
+	 * without `urlParam`. Should be one of the option values; a text that is not is still shown (as `Unknown: <value>`)
+	 * and reported once in development, any other type is ignored and reported. A present but empty parameter
+	 * (`?name=`) is a choice (the placeholder) and does not fall back to it.
+	 */
+	defaultValue?: string;
 }
 
 /**
@@ -58,9 +67,19 @@ export interface CompactSelectProps {
  * @registryTags select compact toolbar
  * @registryBind formData onChange
  */
-export function CompactSelect({ urlParam, resetUrlParams, value: valueProp, options, onChange: onChangeProp, ariaLabel, placeholder, disabled }: CompactSelectProps) {
+export function CompactSelect({ urlParam, resetUrlParams, value: valueProp, options, onChange: onChangeProp, ariaLabel, placeholder, disabled, defaultValue: defaultProp }: CompactSelectProps) {
 	const [urlValue, setUrlValue] = useOptionalUrlParam(urlParam, { resetUrlParams });
-	const value = urlParam != null ? urlValue ?? '' : valueProp;
+	// `null` is "no value" for every prop (a YAML `key:` with nothing); only a text can be shown as a choice.
+	const defaultValue = typeof defaultProp === 'string' ? defaultProp : undefined;
+	// The empty text is a valid default only when a placeholder gives it an option.
+	const defaultListed = defaultValue !== undefined && (options.some(opt => opt.value === defaultValue) || (defaultValue === '' && placeholder !== undefined));
+	if (defaultProp != null && !defaultListed) {
+		reportAuthoringMistake(`[CompactSelect] defaultValue ${typeof defaultProp === 'string' ? `"${defaultProp}"` : String(defaultProp)} is not one of the option values (${options.map(opt => opt.value).join(', ')})${defaultValue === undefined ? ' and is ignored: it must be a text' : ''}.`);
+	}
+	const value = urlParam != null ? urlValue ?? defaultValue ?? '' : valueProp;
+	// A value no option carries (hand-edited link, changed options) would otherwise show the first option while the
+	// page still uses that value. The empty text is "nothing chosen" and keeps its existing display.
+	const unlisted = typeof value === 'string' && value !== '' && !options.some(opt => opt.value === value);
 	const onChange = urlParam != null ? setUrlValue : onChangeProp;
 	return (
 		<span className="relative inline-flex">
@@ -73,6 +92,11 @@ export function CompactSelect({ urlParam, resetUrlParams, value: valueProp, opti
 				disabled={disabled}
 			>
 				{placeholder !== undefined && <option value="">{placeholder}</option>}
+				{unlisted && (
+					<option value={value} disabled>
+						{`Unknown: ${value}`}
+					</option>
+				)}
 				{options.map(opt => (
 					<option key={opt.value} value={opt.value}>
 						{opt.label}
