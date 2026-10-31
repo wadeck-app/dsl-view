@@ -79,7 +79,7 @@ export function CompactSelect({ urlParam, resetUrlParams, value: valueProp, opti
 	const value = urlParam != null ? urlValue ?? defaultValue ?? '' : valueProp;
 	// A value no option carries (hand-edited link, changed options) would otherwise show the first option while the
 	// page still uses that value. The empty text is "nothing chosen" and keeps its existing display.
-	const unlisted = typeof value === 'string' && value !== '' && !options.some(opt => opt.value === value);
+	const unlisted = urlParam != null && typeof value === 'string' && value !== '' && !options.some(opt => opt.value === value);
 	const onChange = urlParam != null ? setUrlValue : onChangeProp;
 	return (
 		<span className="relative inline-flex">

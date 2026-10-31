@@ -248,20 +248,21 @@ describe('a value no option carries', () => {
 		expect(screen.getAllByRole('option')).toHaveLength(OPTIONS.length + 1);
 	});
 
-	it('applies to the controlled value too', () => {
+	// Existing hosts pass `value` themselves (options often load later): their display must not change under them.
+	it('is not added for a controlled value, which keeps the native display it always had', () => {
 		render(<CompactSelect value="gone" options={OPTIONS} onChange={() => {}} ariaLabel="Run" />);
-		expect(screen.getByRole('option', { name: 'Unknown: gone' })).toBeDisabled();
-		expect(screen.getByRole('combobox')).toHaveValue('gone');
+		expect(screen.queryByRole('option', { name: /^Unknown/ })).toBeNull();
+		expect(screen.getAllByRole('option')).toHaveLength(OPTIONS.length);
 	});
 
 	it('comes after the placeholder, which stays the first option', () => {
-		render(<CompactSelect value="gone" options={OPTIONS} onChange={() => {}} ariaLabel="Run" placeholder="All runs" />);
+		renderAt('/p?run=gone', <CompactSelect urlParam="run" value="" options={OPTIONS} onChange={() => {}} ariaLabel="Run" placeholder="All runs" />);
 		expect(screen.getAllByRole('option').map(o => o.textContent)).toStrictEqual(['All runs', 'Unknown: gone', 'Run A', 'Run B']);
 	});
 
 	// A link can carry any text; it is rendered as text, never as markup.
 	it('renders the value as text', () => {
-		render(<CompactSelect value="<b>x</b>" options={OPTIONS} onChange={() => {}} ariaLabel="Run" />);
+		renderAt('/p?run=' + encodeURIComponent('<b>x</b>'), <CompactSelect urlParam="run" value="" options={OPTIONS} onChange={() => {}} ariaLabel="Run" />);
 		expect(screen.getByRole('option', { name: 'Unknown: <b>x</b>' })).toBeInTheDocument();
 	});
 
