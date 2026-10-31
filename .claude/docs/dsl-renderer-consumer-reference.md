@@ -668,6 +668,43 @@ series:
 - `sparkline` = no grid, no axes, no legend, tooltip kept, tight padding; the series still bind to their axes, which are only hidden.
 - A series without `color` takes the next entry of a theme palette (`--color-primary-solid`, then success, warning, danger, purple, cyan, orange), so it follows light and dark. An explicit `color` is used as is.
 
+## TimeSeriesChart and TimeBrush
+
+New nodes next to `Chart`; `Chart` is unchanged. Use `TimeSeriesChart` when the x axis is a timestamp and the reader should pan and zoom, several charts must line up, or the data has gaps, bars, zones or a second scale. Keep `Chart` for category axes, sparklines, byte values and a one-off chart.
+
+```yaml
+- $type: TimeBrush                      # overview strip + zoom buttons, optional
+  data: $sources.series.rows
+  valueKey: a
+  kind: line                            # line (default) | bars (one tick per row with a value)
+  syncGroup: page
+- $type: TimeSeriesChart
+  title: Temperature
+  data: $sources.series.rows            # rows: { t: <ms timestamp>, a: 20.5, ... }
+  xKey: t                               # default t
+  syncGroup: page                       # charts and brushes with the same group share one time window
+  gapDashAfterDays: 2                   # a segment between two values further apart is dashed (absent = never)
+  xFormat: date                         # date (default) | time | datetime
+  yUnit: deg
+  series:
+    - { key: a, name: Series A, width: 1.5, dots: 3, detailKey: note }                 # no `color`: next theme palette colour
+    - { key: b, name: Series B, kind: area, axis: right, color: "var(--color-danger)" }  # right axis: marginRight >= yRightAxisWidth
+    - { key: end, fromKey: start, name: Span, kind: bar }                              # floating bar; kind: bar alone grows from 0
+  bands: [{ from: 18, to: 22, color: "var(--color-success)", opacity: 0.12 }]
+  rangeAreas:                           # edges from row fields; a missing lowKey / highKey is the edge of the axis
+    - { highKey: low, name: Below, color: "var(--color-danger)", legend: false }
+```
+
+- Props: `data`, `xKey`, `domain` (`[min, max]` ms), `series`, `bands`, `rangeAreas`, `legendItems`, `gapDashAfterDays`, `syncGroup`, `title`, `height` (220), `yUnit`, `yFormat` (`number` | `clock`: hours of the day shown `HH:MM`, `+1` after midnight), `yDecimals`, `yIncludeZero`, `yAxisWidth` (56), `marginRight` (16), `emptyMessage`, `xFormat`, `yRight*`. `series`, `bands`, `rangeAreas` and `legendItems` resolve expressions inside their maps (`name: $sources.x.label`).
+- Series: `key`, `name`, `color`, `width`, `dots`, `pointColorKey` (row field with the dot colour), `detailKey` (row field with a tooltip line), `gapDash`, `legend`, `kind` (`line` | `area` | `bar`), `fromKey`, `decimals`, `showValue`, `axis` (`left` | `right`).
+- Stacked charts with the same `yAxisWidth` and `marginRight`, and the `TimeBrush` given the same two values, line up to the pixel; a right axis is drawn inside `marginRight`.
+- Window: drag = pan, Ctrl or Cmd + wheel = zoom, double click = whole period; the plot is focusable (arrows pan, `+` and `-` zoom, `0` resets). Zoom stops at 7 days (or the whole period when shorter).
+- Dates (see "Dates"): ticks, tooltip heading and brush label go through the date settings, so language, clock (24h / 12h) and time zone follow them. `time` shows the clock only, but the first tick and every tick that starts a new day (in the settings' zone) also carry the date. The tooltip heading always has the date. `yFormat: clock` is a plain `HH:MM` of a number of hours and ignores the clock setting.
+- Window state lives in a module-level store, one group per `syncGroup` name, dropped when its last chart or brush unmounts. Two page runners on one page share a group name unless each is wrapped in `TimeSeriesSyncProvider` (React) or uses different names.
+- Accessibility: the plot is a `role="img"` labelled with a summary of the visible window (latest, min, max, count per series) and described by the keyboard hint; the legend markers are hidden from assistive technology.
+- Odd input: props the component cannot use (no series, a right-axis setting without a right series, a `marginRight` under `yRightAxisWidth`, a bad `domain`) show an inline `role="alert"` naming the fix, plus one development warning; odd data (null, NaN, text, unsorted or duplicate x, a missing key) is skipped, and no row shows `emptyMessage`.
+- Not in `TimeSeriesChart`: category axis, `variant: sparkline`, `fill`, byte ticks. Y tick numbers are plain numbers (no locale grouping).
+
 ## Filling a dashboard tile
 
 A dashboard tile is a box of fixed height; the widget has to take it, whatever its content. `fill: true` (default `false`) on `VerticalStack`, `HorizontalStack`, `Card`, `Section`, `ScrollArea`, `StatTile` and `Chart` makes that element take the room its parent gives (`h-full min-h-0 flex-1`): inside a flex parent it takes what its siblings leave, otherwise 100% of the parent height.
@@ -946,6 +983,7 @@ First published version containing the change (`dsl-ui` and `dsl-renderer` share
 | `2026.11.6-309` | No component draws uppercase text any more: side-menu group captions, `CronBuilder` legends, `DateRangePicker` presets heading and the A/B row label keep the case they are written in (`Avatar` monograms stay upper-cased). A/B dock (`AbTest`/`AbExperiments`): larger option cells, never wider than the viewport with sideways-scrolling rows that keep the selected option in view, a spacer at the end of the document, a test nested in a variant (`parentId`) listed above its parent, hints shown on hover and keyboard focus. |
 | `<VERSION>` | `CompactSelect` new prop `defaultValue` (shown while the `urlParam` is absent, URL not written). **Behaviour change** a `CompactSelect` whose value (URL param or controlled `value`) is non-empty and matches no option now shows a disabled `Unknown: <value>` option; it used to display the first option while the page kept using that value. An empty value is unchanged. Regenerate `entries.tsx` (and `known-keys.json`, node schemas) to expose `defaultValue` in YAML. |
 | `<VERSION>` | New `FigureRow` (composite) and `SparklineView` (atomic), see "FigureRow and SparklineView". Nothing existing changes; run `generate-node-schemas` / `generate-known-keys` and regenerate `entries.tsx` in consuming apps (new `$type`s). |
+| `<VERSION>` | New nodes `TimeSeriesChart` and `TimeBrush` (see "TimeSeriesChart and TimeBrush"); `Chart` is unchanged. Regenerate `entries.tsx`; they are lazy chunks like `Chart` (recharts). New export `TimeSeriesSyncProvider`. |
 
 ## Pitfalls
 

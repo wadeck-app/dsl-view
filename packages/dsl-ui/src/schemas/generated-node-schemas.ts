@@ -308,6 +308,84 @@ export const TagNodeSchema = baseNode.extend({
 	color: dsl(z.enum(['default', 'blue', 'green', 'red', 'yellow', 'purple'])).optional(),
 });
 
+export const TimeBrushNodeSchema = baseNode.extend({
+	data: dsl(z.array(z.unknown())).optional(),
+	xKey: z.string().default('t'),
+	valueKey: z.string(),
+	kind: dsl(z.enum(['line', 'bars'])).default('line'),
+	domain: dsl(z.array(z.number())).optional(),
+	syncGroup: z.string().default('default'),
+	height: dsl(z.number()).default(56),
+	yAxisWidth: dsl(z.number()).default(56),
+	marginRight: dsl(z.number()).default(16),
+});
+
+const TimeSeriesSeriesSchema = z.object({
+	key: z.string(),
+	name: z.string(),
+	color: z.string().optional(),
+	width: z.number().default(2),
+	dots: z.number().default(0),
+	pointColorKey: z.string().optional(),
+	detailKey: z.string().optional(),
+	gapDash: z.boolean().default(true),
+	legend: z.boolean().default(true),
+	kind: z.enum(['line', 'area', 'bar']).default('line'),
+	fromKey: z.string().optional(),
+	decimals: z.number().optional(),
+	showValue: z.boolean().default(true),
+	axis: z.enum(['left', 'right']).default('left'),
+});
+
+const TimeSeriesBandSchema = z.object({
+	from: z.number(),
+	to: z.number(),
+	color: z.string(),
+	opacity: z.number().default(0.12),
+	label: z.string().optional(),
+});
+
+const TimeSeriesRangeAreaSchema = z.object({
+	lowKey: z.string().optional(),
+	highKey: z.string().optional(),
+	name: z.string(),
+	color: z.string(),
+	opacity: z.number().default(0.15),
+	legend: z.boolean().default(true),
+});
+
+const TimeSeriesLegendItemSchema = z.object({
+	label: z.string(),
+	color: z.string(),
+});
+
+export const TimeSeriesChartNodeSchema = baseNode.extend({
+	data: dsl(z.array(z.unknown())).optional(),
+	xKey: z.string().default('t'),
+	domain: dsl(z.array(z.number())).optional(),
+	series: dsl(z.array(z.unknown())),
+	bands: dsl(z.array(z.unknown())).optional(),
+	rangeAreas: dsl(z.array(z.unknown())).optional(),
+	legendItems: dsl(z.array(z.unknown())).optional(),
+	gapDashAfterDays: dsl(z.number()).optional(),
+	syncGroup: z.string().default('default'),
+	title: z.string().optional(),
+	height: dsl(z.number()).default(220),
+	yUnit: z.string().optional(),
+	yFormat: dsl(z.enum(['number', 'clock'])).default('number'),
+	yDecimals: dsl(z.number()).default(1),
+	yIncludeZero: dsl(z.boolean()).default(false),
+	yAxisWidth: dsl(z.number()).default(56),
+	marginRight: dsl(z.number()).default(16),
+	emptyMessage: z.string().default('No data in this period'),
+	xFormat: dsl(z.enum(['date', 'time', 'datetime'])).default('date'),
+	yRightFormat: dsl(z.enum(['number', 'clock'])).default('number'),
+	yRightUnit: z.string().optional(),
+	yRightDecimals: dsl(z.number()).default(1),
+	yRightIncludeZero: dsl(z.boolean()).optional(),
+	yRightAxisWidth: dsl(z.number()).default(56),
+});
+
 export const ButtonCancelNodeSchema = baseNode.extend({
 	label: z.string().optional(),
 	disabled: dsl(z.boolean()).optional(),

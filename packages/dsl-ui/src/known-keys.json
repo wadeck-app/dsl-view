@@ -1028,6 +1028,19 @@
 			"tokens"
 		]
 	},
+	"TimeBrush": {
+		"knownKeys": [
+			"data",
+			"domain",
+			"height",
+			"kind",
+			"marginRight",
+			"syncGroup",
+			"valueKey",
+			"xKey",
+			"yAxisWidth"
+		]
+	},
 	"TimePicker": {
 		"knownKeys": [
 			"bind",
@@ -1038,6 +1051,79 @@
 			"open",
 			"placeholder"
 		]
+	},
+	"TimeSeriesChart": {
+		"knownKeys": [
+			"bands",
+			"data",
+			"domain",
+			"emptyMessage",
+			"gapDashAfterDays",
+			"height",
+			"legendItems",
+			"marginRight",
+			"rangeAreas",
+			"series",
+			"syncGroup",
+			"title",
+			"xFormat",
+			"xKey",
+			"yAxisWidth",
+			"yDecimals",
+			"yFormat",
+			"yIncludeZero",
+			"yRightAxisWidth",
+			"yRightDecimals",
+			"yRightFormat",
+			"yRightIncludeZero",
+			"yRightUnit",
+			"yUnit"
+		],
+		"itemKeys": {
+			"series": {
+				"keys": [
+					"key",
+					"name",
+					"color",
+					"width",
+					"dots",
+					"pointColorKey",
+					"detailKey",
+					"gapDash",
+					"legend",
+					"kind",
+					"fromKey",
+					"decimals",
+					"showValue",
+					"axis"
+				]
+			},
+			"bands": {
+				"keys": [
+					"from",
+					"to",
+					"color",
+					"opacity",
+					"label"
+				]
+			},
+			"rangeAreas": {
+				"keys": [
+					"lowKey",
+					"highKey",
+					"name",
+					"color",
+					"opacity",
+					"legend"
+				]
+			},
+			"legendItems": {
+				"keys": [
+					"label",
+					"color"
+				]
+			}
+		}
 	},
 	"ToastProvider": {
 		"knownKeys": [

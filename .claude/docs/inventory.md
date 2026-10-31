@@ -58,6 +58,8 @@ Maintenance: add a row here in the same change that adds, renames or removes a c
 | `SparklineView` | atomic | points, ariaLabel | Tiny line chart of recent points with gaps and a tooltip that follows the pointer, touch or arrow keys (focusable slider); pick it for an inline trend, Chart `variant: sparkline` for a full-size plot. Do not nest it in a link or button. |
 | `Spinner` | atomic | size, label | Standalone spinning SVG loader in sm, md or lg size with optional visible label; use FetchSpinner for a small inline indicator. |
 | `Tag` | atomic | label, color, onRemove | Small rounded label with a colour palette and optional remove button; use for free-form labels, Badge for statuses. |
+| `TimeBrush` | composite | data, valueKey, kind, syncGroup, domain, yAxisWidth, marginRight | Overview strip with zoom, pan and reset buttons for the `TimeSeriesChart`s of one `syncGroup`; drag the window to pan, drag an edge to resize, click to recentre. Give it the charts' `yAxisWidth` and `marginRight` so it lines up with their plots. |
+| `TimeSeriesChart` | composite | data, xKey, series, xFormat, syncGroup, gapDashAfterDays, bands, rangeAreas, yFormat, height | Timestamp (ms) x axis with lines, areas, plain or floating bars, a second y axis, zone bands, dashed bridges over gaps, per-point colours, and a pan / zoom window (drag, Ctrl + wheel, keys) shared with the charts and brush of its `syncGroup`; stacked charts align to the pixel. Use `Chart` for category axes, sparklines, byte values or a quick single chart. |
 
 ### form
 
