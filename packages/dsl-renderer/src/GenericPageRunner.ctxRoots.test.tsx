@@ -250,3 +250,43 @@ describe('GenericPageRunner: pageKey precedence', () => {
 		expect(screen.getByTestId('typed')).toHaveTextContent('none');
 	});
 });
+
+describe('GenericPageRunner: $concat and $urlParam through a real page', () => {
+	const PAGE = (value: string) => `$type: Probe\nvalue: "${value}"\n`;
+
+	it('builds a link from a route param', () => {
+		render(<Host yamlText={PAGE("$concat('/modules/project/p/', $route.project)")} path="/h/ab12cd34" pattern="/h/:project" />);
+		expect(screen.getByTestId('value')).toHaveTextContent('"/modules/project/p/ab12cd34"');
+	});
+
+	it('is undefined while a piece is missing, not a link ending in "undefined"', () => {
+		render(<Host yamlText={PAGE("$concat('/p/', $route.nope)")} path="/h/x" pattern="/h/:project" />);
+		expect(screen.getByTestId('value')).toHaveTextContent('undefined');
+	});
+
+	it('reads a query parameter in a node prop', () => {
+		render(<Host yamlText={PAGE('$urlParam.project')} path="/page?project=p1" pattern="/page" />);
+		expect(screen.getByTestId('value')).toHaveTextContent('"p1"');
+	});
+
+	it('gives the first value of a repeated key, and undefined for an absent one', () => {
+		const { unmount } = render(<Host yamlText={PAGE('$urlParam.tag')} path="/page?tag=a&tag=b" pattern="/page" />);
+		expect(screen.getByTestId('value')).toHaveTextContent('"a"');
+		unmount();
+		render(<Host yamlText={PAGE('$urlParam.absent')} path="/page" pattern="/page" />);
+		expect(screen.getByTestId('value')).toHaveTextContent('undefined');
+	});
+
+	it('combines a query parameter with $concat', () => {
+		render(<Host yamlText={PAGE("$concat('/p/', $urlParam.project)")} path="/page?project=p9" pattern="/page" />);
+		expect(screen.getByTestId('value')).toHaveTextContent('"/p/p9"');
+	});
+
+	it('logs an unparseable $concat once and resolves to undefined', () => {
+		const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		render(<Host yamlText={PAGE("$concat('/p/'")} />);
+		expect(screen.getByTestId('value')).toHaveTextContent('undefined');
+		expect(error.mock.calls.some(call => String(call[0]).includes('not a valid $concat'))).toBe(true);
+		error.mockRestore();
+	});
+});

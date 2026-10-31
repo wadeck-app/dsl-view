@@ -213,7 +213,25 @@ export function resolveExpressionValue(expr: unknown, ctx: RenderContext): unkno
 	if (!expr.startsWith('$')) {
 		return expr;
 	}
+	if (expr.startsWith('$concat(')) {
+		warnMalformedConcat(expr);
+		return undefined;
+	}
 	return resolveExpressionPath(expr, ctx);
+}
+
+const warnedConcat = new Set<string>();
+
+/** A `$concat(` that does not parse would otherwise resolve to an unrelated path and silently render nothing. */
+function warnMalformedConcat(expr: string): void {
+	if (warnedConcat.has(expr)) {
+		return;
+	}
+	warnedConcat.add(expr);
+	console.error(
+		`[DslRenderer] "${expr}" is not a valid $concat expression, so it resolves to undefined. ` +
+			`Write $concat(<arg>, <arg>, ...) with $paths, quoted strings or numbers as arguments, e.g. $concat('/projects/', $route.project).`
+	);
 }
 
 function resolveExpressionPath(expr: string, ctx: RenderContext): unknown {
@@ -228,6 +246,8 @@ function resolveExpressionPath(expr: string, ctx: RenderContext): unknown {
 		current = ctx['$props'];
 	} else if (root === 'route') {
 		current = ctx['$route'];
+	} else if (root === 'urlParam') {
+		current = ctx['$urlParam'];
 	} else if (root === 'vars') {
 		current = ctx['$vars'];
 	} else if (root === 'outputs') {

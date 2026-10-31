@@ -243,6 +243,8 @@ function PageRunner({
 		$outputs: outputs,
 		$publishOutput: publishOutput,
 		$route: routeParams,
+		// The query string, first value per key: `$urlParam.live` in a node prop (a source `params` entry resolves it itself).
+		$urlParam: Object.fromEntries([...searchParams.keys()].map(key => [key, searchParams.get(key)])),
 	};
 
 	// `$vars: { payload: $sources.event.exampleText }`: a variable declared with an expression is seeded once, as soon as

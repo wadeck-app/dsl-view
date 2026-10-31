@@ -180,3 +180,58 @@ describe('isExpressionString', () => {
 		expect(isExpressionString('')).toBe(false);
 	});
 });
+
+describe('$concat', () => {
+	it('joins quoted strings and paths as text', () => {
+		expect(run("$concat('/projects/', $name, '/tasks')")).toBe('/projects/ping/tasks');
+	});
+
+	it('writes numbers and booleans as text, zero and false included', () => {
+		expect(run("$concat('n=', $count, ' z=', $zero, ' b=', $no)")).toBe('n=3 z=0 b=false');
+	});
+
+	it('accepts an empty string, which is a value', () => {
+		expect(run("$concat('a', $empty, 'b')")).toBe('ab');
+	});
+
+	// A half-built link ("/projects/undefined/tasks") is worse than no link.
+	it.each([
+		["$concat('/p/', $missing)", 'a path that is undefined'],
+		["$concat('/p/', $nothing)", 'a null'],
+		["$concat('/p/', null)", 'a null literal'],
+	])('is undefined, never the text "undefined", with %s (%s)', source => {
+		expect(run(source)).toBeUndefined();
+	});
+
+	it('is undefined when an argument is an object', () => {
+		const result = evaluateOperatorExpression("$concat('/p/', $obj)", p => (p === '$obj' ? { a: 1 } : undefined));
+		expect(result).toEqual({ matched: true, value: undefined });
+	});
+
+	it('composes with the other operators', () => {
+		expect(run("$concat('/p/', $name) || '/none'")).toBe('/p/ping');
+		expect(run("$missing || $concat('/p/', $name)")).toBe('/p/ping');
+		expect(run("$concat('/p/', $missing) || '/none'")).toBe('/none');
+		expect(run("$concat($name == 'ping' && 'yes', '!')")).toBe('yes!');
+	});
+
+	it('nests', () => {
+		expect(run("$concat('<', $concat($name, '-', $count), '>')")).toBe('<ping-3>');
+	});
+
+	it('is an expression even with no path argument', () => {
+		expect(isExpressionString("$concat('a', 'b')")).toBe(true);
+		expect(run("$concat('a', 'b')")).toBe('ab');
+	});
+
+	it.each(["$concat('a'", "$concat()", "$concat('a',)", "$concat('a' 'b')", "$concat('a', 'b'))"])(
+		'does not parse %s, so the caller keeps its fallback',
+		source => {
+			expect(evaluateOperatorExpression(source, resolvePath)).toEqual({ matched: false });
+		}
+	);
+
+	it('leaves a bare $concat path (no parenthesis) alone', () => {
+		expect(evaluateOperatorExpression('$concat', resolvePath)).toEqual({ matched: false });
+	});
+});

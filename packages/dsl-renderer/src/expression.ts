@@ -1,18 +1,23 @@
 // React-free expression grammar shared by the runtime resolver (engine/DslRenderer.tsx), the prop checks
 // (nodePropIssues.ts) and the build tooling. A DSL string is an expression when it starts with `$` (a path such as
 // `$sources.event.name`) or with `!` (a negation such as `!$validation.valid`). On top of plain paths, an expression
-// may combine operands with `!`, `==`, `!=`, `&&`, `||` and parentheses:
+// may combine operands with `!`, `==`, `!=`, `&&`, `||` and parentheses, and build a string with `$concat(...)`:
 //
 //   $vars.payload != $validated.payload
 //   !$validation.valid || $vars.payload != $validated.payload
+//   $concat('/projects/', $route.project, '/tasks')
 //
 // Operands are `$path`, a quoted string ('a' or "a"), a number, true, false or null. Precedence, loosest first:
 // `||`, `&&`, `==` / `!=`, `!`. `==` and `!=` are strict (`===` / `!==`): "1" does not equal 1. `&&` and `||` return
 // the operand that decided the result, like JavaScript, so `$a || 'none'` is a fallback. A string that does not parse
 // is NOT an operator expression: it keeps its old meaning (a plain path, or a literal), so no existing page changes.
+//
+// `$concat(a, b, ...)` joins its arguments as text (numbers and booleans included). When any argument is undefined,
+// null or not a primitive (an object, a list) the result is undefined, never the text "undefined": a link or URL that
+// is still missing a piece must not be built half-way.
 
 type Token =
-	| { kind: 'op'; value: '(' | ')' | '!' | '==' | '!=' | '&&' | '||' }
+	| { kind: 'op'; value: '(' | ')' | ',' | '!' | '==' | '!=' | '&&' | '||' }
 	| { kind: 'path'; value: string }
 	| { kind: 'literal'; value: string | number | boolean | null };
 
@@ -20,11 +25,12 @@ type Node =
 	| { kind: 'path'; path: string }
 	| { kind: 'literal'; value: string | number | boolean | null }
 	| { kind: 'not'; operand: Node }
+	| { kind: 'concat'; args: Node[] }
 	| { kind: 'binary'; op: '==' | '!=' | '&&' | '||'; left: Node; right: Node };
 
 const OPERATOR_HINT = /==|!=|&&|\|\||^\s*!|\(/;
 const NUMBER = /^-?\d+(?:\.\d+)?/;
-const PATH_STOP = /[\s()!=&|'"]/;
+const PATH_STOP = /[\s(),!=&|'"]/;
 
 function tokenize(source: string): Token[] | undefined {
 	const tokens: Token[] = [];
@@ -41,7 +47,7 @@ function tokenize(source: string): Token[] | undefined {
 			i += 2;
 			continue;
 		}
-		if (char === '(' || char === ')' || char === '!') {
+		if (char === '(' || char === ')' || char === ',' || char === '!') {
 			tokens.push({ kind: 'op', value: char });
 			i++;
 			continue;
@@ -141,6 +147,26 @@ function parse(tokens: Token[]): Node | undefined {
 		if (!token) {
 			return undefined;
 		}
+		const next = tokens[position + 1];
+		if (token.kind === 'path' && token.value === '$concat' && next?.kind === 'op' && next.value === '(') {
+			position += 2;
+			const args: Node[] = [];
+			for (;;) {
+				const arg = parseOr();
+				if (!arg) {
+					return undefined;
+				}
+				args.push(arg);
+				const separator = peekOp();
+				position++;
+				if (separator === ')') {
+					return { kind: 'concat', args };
+				}
+				if (separator !== ',') {
+					return undefined;
+				}
+			}
+		}
 		if (token.kind === 'path') {
 			position++;
 			return { kind: 'path', path: token.value };
@@ -172,6 +198,8 @@ function hasPath(node: Node): boolean {
 			return false;
 		case 'not':
 			return hasPath(node.operand);
+		case 'concat':
+			return true;
 		case 'binary':
 			return hasPath(node.left) || hasPath(node.right);
 	}
@@ -217,6 +245,17 @@ function evaluate(node: Node, resolvePath: (path: string) => unknown): unknown {
 			return node.value;
 		case 'not':
 			return !evaluate(node.operand, resolvePath);
+		case 'concat': {
+			let text = '';
+			for (const arg of node.args) {
+				const part = evaluate(arg, resolvePath);
+				if (typeof part !== 'string' && typeof part !== 'number' && typeof part !== 'boolean') {
+					return undefined;
+				}
+				text += String(part);
+			}
+			return text;
+		}
 		case 'binary': {
 			const left = evaluate(node.left, resolvePath);
 			if (node.op === '&&') {

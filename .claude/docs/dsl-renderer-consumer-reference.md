@@ -97,7 +97,7 @@ Any string starting with `$` in a node prop is resolved at render time.
 | `$sources.name.field` | Field from source response |
 | `$vars.key` | Page var |
 | `$route.param` | URL route param |
-| `$urlParam.name` | URLSearchParams value (inside `$sources.params` only) |
+| `$urlParam.name` | URLSearchParams value, first value of a repeated key; `undefined` when absent. Readable in any node prop (and so in nodes contributed to an `ExtensionSlot`) and in `$sources.params` |
 | `$outputs.id.event` | Published component output |
 | `$brains.id.field` | Brain result field |
 | `$ctx.key` | Raw value from ctx |
@@ -117,6 +117,20 @@ Inside `$sources.params`, `$source.name.field.sub[0]` (singular, dot-path + arra
 ```yaml
 disabled: "!$validation.valid || $vars.payload != $validated.payload"   # quote it: YAML reads a leading ! as a tag
 ```
+
+**Building a string: `$concat(a, b, ...)`.** Joins its arguments as text; arguments are `$paths`, quoted strings, numbers, booleans or any operator expression, and `$concat` nests. The whole value must start with `$concat(` (a prefix before it makes it a literal), and it is quoted in YAML because of the `'`:
+
+```yaml
+$type: Link
+to: "$concat('/modules/project/p/', $route.project)"
+```
+
+| Rule | Detail |
+|---|---|
+| Missing piece | if any argument is `undefined`, `null`, an object or a list, the result is `undefined`, never the text "undefined". A link whose target is still loading renders as if `to` were absent |
+| Numbers, booleans | written as text (`0` and `false` included); an empty string is a value |
+| Malformed | an unparseable `$concat(` resolves to `undefined` and logs one console error per distinct string; it does not throw |
+| Where it works | node props (the generated entries resolve each prop with `resolveExpressionValue`), `$if` and `$vars` seeds; no regeneration of `entries.tsx`. Not in `$sources.<key>.params` or `url`: those use their own resolver (paths and `$urlParam.*` only) |
 
 ---
 
