@@ -1,4 +1,5 @@
-import { describe, it, beforeAll, afterAll, expect } from 'vitest'
+import { describe, it, before, after } from 'node:test'
+import assert from 'node:assert/strict'
 
 import fs from 'node:fs'
 import os from 'node:os'
@@ -12,6 +13,12 @@ import { rule } from './no-unexported-component.js'
 
 const ANNOTATION = `/**\n * @registry${''}Category atomic\n */`
 
+// Built piecewise: `violations test` rewrites a quoted './<x>.js' literal as an import specifier, even
+// inside a template string.
+function barrel(name: string): string {
+  return `export * from '${'.'}/${name}.js'\n`
+}
+
 let dir: string
 
 function write(rel: string, content: string): string {
@@ -21,56 +28,56 @@ function write(rel: string, content: string): string {
   return full
 }
 
-beforeAll(() => {
+before(() => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'violations-unexported-'))
 })
 
-afterAll(() => {
+after(() => {
   fs.rmSync(dir, { recursive: true, force: true })
 })
 
 describe('dsl-ui/no-unexported-component', () => {
   it('has the expected id and severity', () => {
-    expect(rule.id).toBe('dsl-ui/no-unexported-component')
-    expect(rule.defaultSeverity).toBe('error')
+    assert.equal(rule.id, 'dsl-ui/no-unexported-component')
+    assert.equal(rule.defaultSeverity, 'error')
   })
 
   it('reports an annotated component the barrel does not re-export', async () => {
     const file = write('controls/Checkbox.tsx', `${ANNOTATION}\nexport const Checkbox = 1\n`)
-    write('controls/index.ts', `export * from './CheckboxGroup.js'\n`)
+    write('controls/index.ts', barrel('CheckboxGroup'))
 
     const found = await rule.check([file])
 
-    expect(found.length).toBe(1)
-    expect(found[0]!.message).toMatch(/Checkbox/)
+    assert.equal(found.length, 1)
+    assert.match(found[0]!.message, /Checkbox/)
     // The message has to say what to add, or the reader has to guess the convention.
-    expect(found[0]!.message).toMatch(/export \* from '\.\/Checkbox\.js'/)
+    assert.match(found[0]!.message, /export \* from '\.\/Checkbox\.js'/)
   })
 
   it('accepts an annotated component the barrel re-exports', async () => {
     const file = write('display/Badge.tsx', `${ANNOTATION}\nexport function Badge() { return null }\n`)
-    write('display/index.ts', `export * from './Badge.js'\n`)
+    write('display/index.ts', barrel('Badge'))
 
-    expect(await rule.check([file])).toEqual([])
+    assert.deepEqual(await rule.check([file]), [])
   })
 
   // forwardRef components declare with const. Missing that form is what let the equivalent
   // package test pass while Checkbox was still unreachable.
   it('names a const-declared component in the message', async () => {
     const file = write('controls/Radio.tsx', `${ANNOTATION}\nexport const Radio = 1\n`)
-    write('controls/index.ts', `export * from './RadioGroup.js'\n`)
+    write('controls/index.ts', barrel('RadioGroup'))
 
     const found = await rule.check([file])
 
-    expect(found.length).toBe(1)
-    expect(found[0]!.message).toMatch(/Radio/)
+    assert.equal(found.length, 1)
+    assert.match(found[0]!.message, /Radio/)
   })
 
   it('ignores a component with no registry annotation', async () => {
     const file = write('utils/helper.tsx', `export const helper = 1\n`)
     write('utils/index.ts', `\n`)
 
-    expect(await rule.check([file])).toEqual([])
+    assert.deepEqual(await rule.check([file]), [])
   })
 
   it('ignores underscore-prefixed internals, tests and stories', async () => {
@@ -81,7 +88,7 @@ describe('dsl-ui/no-unexported-component', () => {
       write('controls/Thing.stories.tsx', `${ANNOTATION}\nexport function Thing() { return null }\n`),
     ]
 
-    expect(await rule.check(files)).toEqual([])
+    assert.deepEqual(await rule.check(files), [])
   })
 
   // A folder with no barrel cannot re-export anything, which is the same defect in a worse form.
@@ -90,7 +97,7 @@ describe('dsl-ui/no-unexported-component', () => {
 
     const found = await rule.check([file])
 
-    expect(found.length).toBe(1)
-    expect(found[0]!.message).toMatch(/does not exist/)
+    assert.equal(found.length, 1)
+    assert.match(found[0]!.message, /does not exist/)
   })
 })

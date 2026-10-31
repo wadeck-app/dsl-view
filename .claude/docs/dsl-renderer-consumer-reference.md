@@ -1,6 +1,6 @@
 # @wadeck-app/dsl-renderer — Consumer Reference
 
-Complete reference for building apps with `@wadeck-app/dsl-renderer`. For framework internals, see the root `CLAUDE.md`.
+Complete reference for building apps with `@wadeck-app/dsl-renderer`. For framework internals, see the root `CLAUDE.md`. To choose a component, see `inventory.md`.
 
 ## Core concepts
 
@@ -27,7 +27,7 @@ $sources:
     url: GET /api/items/{id}
     params:
       id: $route.id             # param resolved from ctx ($vars, $route, $urlParam, $source.*)
-    poll: 10s                   # re-fetch every 10s
+    poll: 10s                   # re-fetch every 10s, all sources of the page each tick; paused while the tab is hidden, one reload on return to visible
     pollWhen: $urlParam.live    # polls unless the param is absent, empty, 0 or false; other expressions are logged and ignored (it polls)
     cache: 30s                  # cache response for 30s ("30s", "5m", etc.)
 

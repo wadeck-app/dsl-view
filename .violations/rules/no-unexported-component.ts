@@ -17,7 +17,9 @@ import path from 'node:path'
  * Files prefixed with _ are internal building blocks by convention and are skipped.
  */
 
-const ANNOTATION = ['@registry', 'Category'].join('')
+// The tag at the start of a doc line, followed by a category. Prose that merely mentions it (as
+// PageHeader.tsx does, to say it carries none) is not an annotation.
+const TAG_LINE = new RegExp(String.raw`^[ \t]*\*[ \t]*${['@registry', 'Category'].join('')}[ \t]+\w`, 'm')
 
 /** Names a component file exports, covering both declaration forms. */
 function exportedComponents(src: string): string[] {
@@ -48,7 +50,7 @@ export const rule: Rule = {
       } catch {
         continue
       }
-      if (!src.includes(ANNOTATION)) {
+      if (!TAG_LINE.test(src)) {
         continue
       }
 
@@ -67,15 +69,18 @@ export const rule: Rule = {
       }
 
       const stem = base.replace(/\.tsx$/, '')
+      // Built by concatenation: `violations test` rewrites a quoted './<x>.js' literal as an import
+      // specifier even inside a template string, which turned this into a file:// URL.
+      const specifier = '.' + '/' + stem + '.js'
       // The barrel convention is `export * from './Name.js'`.
-      const reExported = barrelSrc.includes(`'./${stem}.js'`)
+      const reExported = barrelSrc.includes(`'${specifier}'`)
       if (!reExported) {
         const names = exportedComponents(src)
         const named = names.length > 0 ? names.join(', ') : stem
         violations.push({
           file,
           line: 1,
-          message: `${named} is annotated for the registry but not re-exported: add "export * from './${stem}.js';" to ${path.basename(path.dirname(file))}/index.ts, or consumers cannot import it.`,
+          message: `${named} is annotated for the registry but not re-exported: add "export * from '${specifier}';" to ${path.basename(path.dirname(file))}/index.ts, or consumers cannot import it.`,
         })
       }
     }

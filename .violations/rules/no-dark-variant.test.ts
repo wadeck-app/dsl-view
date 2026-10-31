@@ -1,4 +1,5 @@
-import { describe, it, beforeAll, afterAll, expect } from 'vitest'
+import { describe, it, before, after } from 'node:test'
+import assert from 'node:assert/strict'
 
 import fs from 'node:fs'
 import os from 'node:os'
@@ -19,18 +20,18 @@ function write(name: string, content: string): string {
   return full
 }
 
-beforeAll(() => {
+before(() => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'violations-dark-'))
 })
 
-afterAll(() => {
+after(() => {
   fs.rmSync(dir, { recursive: true, force: true })
 })
 
 describe('dsl-ui/no-dark-variant', () => {
   it('has the expected id and severity', () => {
-    expect(rule.id).toBe('dsl-ui/no-dark-variant')
-    expect(rule.defaultSeverity).toBe('error')
+    assert.equal(rule.id, 'dsl-ui/no-dark-variant')
+    assert.equal(rule.defaultSeverity, 'error')
   })
 
   // The exact shape that kept a chip dark inside a light scope.
@@ -39,14 +40,14 @@ describe('dsl-ui/no-dark-variant', () => {
 
     const found = await rule.check([file])
 
-    expect(found.length).toBe(1)
-    expect(found[0]!.message).toContain('dark:bg-gray-700')
+    assert.equal(found.length, 1)
+    assert.ok(found[0]!.message.includes('dark:bg-gray-700'))
     // Names the alternative, or the reader is told off without being told what to do.
-    expect(found[0]!.message).toMatch(/bg-muted-bg|semantic token/)
+    assert.match(found[0]!.message, /bg-muted-bg|semantic token/)
   })
 
   it('accepts the token equivalent', async () => {
-    expect(await rule.check([write('Tokens.tsx', `const cls = 'bg-muted-bg text-content'\n`)])).toEqual([])
+    assert.deepEqual(await rule.check([write('Tokens.tsx', `const cls = 'bg-muted-bg text-content'\n`)]), [])
   })
 
   /*
@@ -56,7 +57,7 @@ describe('dsl-ui/no-dark-variant', () => {
   it('does not report the bare scope class', async () => {
     const file = write('Scope.tsx', `const cls = \`\${theme} bg-bg text-content\`\nconst d = 'dark'\n`)
 
-    expect(await rule.check([file])).toEqual([])
+    assert.deepEqual(await rule.check([file]), [])
   })
 
   /*
@@ -73,13 +74,13 @@ describe('dsl-ui/no-dark-variant', () => {
       '',
     ].join('\n'))
 
-    expect(await rule.check([file])).toEqual([])
+    assert.deepEqual(await rule.check([file]), [])
   })
 
   it('still reports real code on a line that also carries a comment', async () => {
     const file = write('Mixed.tsx', `const cls = 'dark:bg-gray-700'  // intentional\n`)
 
-    expect((await rule.check([file])).length).toBe(1)
+    assert.equal((await rule.check([file])).length, 1)
   })
 
   // Blanking comments must not shift the reported position.
@@ -92,7 +93,7 @@ describe('dsl-ui/no-dark-variant', () => {
       '',
     ].join('\n'))
 
-    expect((await rule.check([file]))[0]!.line).toBe(4)
+    assert.equal((await rule.check([file]))[0]!.line, 4)
   })
 
   it('reports each occurrence on its own line', async () => {
@@ -100,8 +101,8 @@ describe('dsl-ui/no-dark-variant', () => {
 
     const found = await rule.check([file])
 
-    expect(found.length).toBe(2)
-    expect(found.map(v => v.line)).toEqual([1, 3])
+    assert.equal(found.length, 2)
+    assert.deepEqual(found.map(v => v.line), [1, 3])
   })
 
   // Stories demonstrate theming on purpose, including a dark wrapper to show a subtree.
@@ -109,7 +110,7 @@ describe('dsl-ui/no-dark-variant', () => {
     const story = write('Thing.stories.tsx', `const cls = 'dark:bg-gray-700'\n`)
     const test = write('Thing.test.tsx', `const cls = 'dark:bg-gray-700'\n`)
 
-    expect(await rule.check([story, test])).toEqual([])
+    assert.deepEqual(await rule.check([story, test]), [])
   })
 
   /*
@@ -123,6 +124,6 @@ describe('dsl-ui/no-dark-variant', () => {
     const files = ['chipColors.ts', 'HttpMethodBadge.tsx', 'HttpStatusBadge.tsx', 'ColorPicker.tsx']
       .map(name => write(name, `const cls = 'text-blue-600 dark:text-blue-400'\n`))
 
-    expect((await rule.check(files)).length).toBe(4)
+    assert.equal((await rule.check(files)).length, 4)
   })
 })

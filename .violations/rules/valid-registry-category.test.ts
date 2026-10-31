@@ -1,4 +1,5 @@
-import { describe, it, beforeAll, afterAll, expect } from 'vitest'
+import { describe, it, before, after } from 'node:test'
+import assert from 'node:assert/strict'
 
 import fs from 'node:fs'
 import os from 'node:os'
@@ -25,23 +26,25 @@ function annotated(category: string): string {
   return `/**\n * ${TAG} ${category}\n */\nexport function Thing() { return null }\n`
 }
 
-beforeAll(() => {
+before(() => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'violations-category-'))
 })
 
-afterAll(() => {
+after(() => {
   fs.rmSync(dir, { recursive: true, force: true })
 })
 
 describe('dsl-ui/valid-registry-category', () => {
   it('has the expected id and severity', () => {
-    expect(rule.id).toBe('dsl-ui/valid-registry-category')
-    expect(rule.defaultSeverity).toBe('error')
+    assert.equal(rule.id, 'dsl-ui/valid-registry-category')
+    assert.equal(rule.defaultSeverity, 'error')
   })
 
-  it.each(['atomic', 'composite', 'disposition'])('accepts %s', async category => {
-    expect(await rule.check([write(`Ok-${category}.tsx`, annotated(category))])).toEqual([])
-  })
+  for (const category of ['atomic', 'composite', 'disposition']) {
+    it(`accepts ${category}`, async () => {
+      assert.deepEqual(await rule.check([write(`Ok-${category}.tsx`, annotated(category))]), [])
+    })
+  }
 
   /*
    * The real case. Two components shipped with "layout" - a plausible word that is not a category -
@@ -50,15 +53,15 @@ describe('dsl-ui/valid-registry-category', () => {
   it('rejects "layout", the one that actually happened', async () => {
     const found = await rule.check([write('Bad.tsx', annotated('layout'))])
 
-    expect(found.length).toBe(1)
-    expect(found[0]!.message).toContain('layout')
+    assert.equal(found.length, 1)
+    assert.ok(found[0]!.message.includes('layout'))
     // Says which one to use, or the reader has to go and read the registry types.
-    expect(found[0]!.message).toContain('disposition')
+    assert.ok(found[0]!.message.includes('disposition'))
   })
 
   it('rejects any other invented category', async () => {
     const found = await rule.check([write('Invented.tsx', annotated('widget'))])
-    expect(found.length).toBe(1)
+    assert.equal(found.length, 1)
   })
 
   it('reports the line the annotation is on', async () => {
@@ -66,16 +69,16 @@ describe('dsl-ui/valid-registry-category', () => {
 
     const found = await rule.check([file])
 
-    expect(found[0]!.line).toBe(4)
+    assert.equal(found[0]!.line, 4)
   })
 
   it('ignores a file with no annotation at all', async () => {
-    expect(await rule.check([write('Plain.tsx', 'export const x = 1\n')])).toEqual([])
+    assert.deepEqual(await rule.check([write('Plain.tsx', 'export const x = 1\n')]), [])
   })
 
   it('reports every bad annotation in one file, not just the first', async () => {
     const file = write('Two.tsx', `${annotated('layout')}\n${annotated('widget')}`)
 
-    expect((await rule.check([file])).length).toBe(2)
+    assert.equal((await rule.check([file])).length, 2)
   })
 })

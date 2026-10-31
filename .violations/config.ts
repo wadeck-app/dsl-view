@@ -23,6 +23,9 @@ export default {
     // An invented category compiles fine here and fails as a type error in a CONSUMING app's
     // generated registry. Two components shipped with "layout", which is not a category.
     './.violations/rules/valid-registry-category.ts': true,
+    // A component missing from the inventory is, for a consuming agent, a component that does not
+    // exist: it hand-rolls the thing instead.
+    './.violations/rules/component-in-inventory.ts': true,
     // A dark: variant applies under ANY .dark ancestor, so a component using one cannot be nested
     // inside a ThemeScope that re-asserts light. Tokens resolve against the nearest scope instead.
     './.violations/rules/no-dark-variant.ts': true,
