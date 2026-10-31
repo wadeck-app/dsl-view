@@ -210,6 +210,91 @@ describe('useSourceLoader: polling', () => {
 		expect(fetcher).toHaveBeenCalledTimes(callsBefore);
 	});
 
+	describe('while the tab is hidden', () => {
+		function setHidden(hidden: boolean) {
+			Object.defineProperty(document, 'hidden', { configurable: true, get: () => hidden });
+			document.dispatchEvent(new Event('visibilitychange'));
+		}
+
+		afterEach(() => {
+			// Back to the jsdom default, so no other test sees a hidden document.
+			setHidden(false);
+		});
+
+		it('sends no poll request while hidden, then reloads once on return and resumes the interval', async () => {
+			vi.useFakeTimers();
+			const fetcher = vi.fn().mockResolvedValue([1]);
+			renderHook(() => useSourceLoader({ $sources: SRC_POLL, searchParams: sp(), fetcher }));
+			await act(async () => {
+				await vi.advanceTimersByTimeAsync(0);
+			});
+			expect(fetcher).toHaveBeenCalledTimes(1);
+
+			act(() => setHidden(true));
+			await act(async () => {
+				await vi.advanceTimersByTimeAsync(10_000);
+			});
+			// Ten intervals elapsed while hidden: none of them fetched.
+			expect(fetcher).toHaveBeenCalledTimes(1);
+
+			act(() => setHidden(false));
+			await act(async () => {
+				await vi.advanceTimersByTimeAsync(0);
+			});
+			// Exactly one immediate reload on return, not one per missed tick.
+			expect(fetcher).toHaveBeenCalledTimes(2);
+
+			await act(async () => {
+				await vi.advanceTimersByTimeAsync(1000);
+			});
+			expect(fetcher).toHaveBeenCalledTimes(3);
+		});
+
+		it('does not start polling when the page mounts hidden, and starts on first show', async () => {
+			vi.useFakeTimers();
+			setHidden(true);
+			const fetcher = vi.fn().mockResolvedValue([1]);
+			renderHook(() => useSourceLoader({ $sources: SRC_POLL, searchParams: sp(), fetcher }));
+			await act(async () => {
+				await vi.advanceTimersByTimeAsync(5000);
+			});
+			// Only the initial load.
+			expect(fetcher).toHaveBeenCalledTimes(1);
+
+			act(() => setHidden(false));
+			await act(async () => {
+				await vi.advanceTimersByTimeAsync(0);
+			});
+			expect(fetcher).toHaveBeenCalledTimes(2);
+		});
+
+		it('does not reload on return for a page with nothing to poll', async () => {
+			const fetcher = vi.fn().mockResolvedValue([1]);
+			const { result } = renderHook(() => useSourceLoader({ $sources: SRC_PLAIN, searchParams: sp(), fetcher }));
+			await waitFor(() => expect(result.current.loading).toBe(false));
+
+			act(() => setHidden(true));
+			act(() => setHidden(false));
+			expect(fetcher).toHaveBeenCalledTimes(1);
+		});
+
+		it('stops listening on unmount', async () => {
+			vi.useFakeTimers();
+			const fetcher = vi.fn().mockResolvedValue([1]);
+			const { unmount } = renderHook(() => useSourceLoader({ $sources: SRC_POLL, searchParams: sp(), fetcher }));
+			await act(async () => {
+				await vi.advanceTimersByTimeAsync(0);
+			});
+			unmount();
+			act(() => setHidden(true));
+			act(() => setHidden(false));
+			await act(async () => {
+				await vi.advanceTimersByTimeAsync(5000);
+			});
+			expect(fetcher).toHaveBeenCalledTimes(1);
+		});
+	});
+
 	it('logs an unparseable poll interval and keeps the page working', async () => {
 		const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 		const bad: Record<string, RawSourceSpec> = { books: { url: 'GET /api/books', poll: 'often' } };

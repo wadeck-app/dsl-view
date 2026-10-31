@@ -329,7 +329,7 @@ export function useSourceLoader(params: {
 			return;
 		}
 
-		const intervals: ReturnType<typeof setInterval>[] = [];
+		const pollMs: number[] = [];
 
 		for (const [key, raw] of Object.entries($sources)) {
 			const spec = normalizeSource(raw);
@@ -363,20 +363,51 @@ export function useSourceLoader(params: {
 				}
 			}
 
-			// Re-load ALL sources on each tick so dependent sources stay consistent.
-			// bypassCache=true: poll implies fresh data - never return a stale cached value.
-			// We pass an empty ctx snapshot here; for richer $ctx support during polls
-			// a ref to the live ctx could be passed instead.
-			const id = setInterval(() => {
-				void loadSources(true, {}, undefined, true).catch(error => reportLoadError(error, 'poll'));
-			}, intervalMs);
-			intervals.push(id);
+			pollMs.push(intervalMs);
 		}
 
-		return () => {
+		if (pollMs.length === 0) {
+			return;
+		}
+
+		// Re-load ALL sources on each tick so dependent sources stay consistent.
+		// bypassCache=true: poll implies fresh data - never return a stale cached value.
+		// We pass an empty ctx snapshot here; for richer $ctx support during polls
+		// a ref to the live ctx could be passed instead.
+		const tick = () => {
+			void loadSources(true, {}, undefined, true).catch(error => reportLoadError(error, 'poll'));
+		};
+
+		let intervals: ReturnType<typeof setInterval>[] = [];
+		const startTimers = () => {
+			intervals = pollMs.map(ms => setInterval(tick, ms));
+		};
+		const stopTimers = () => {
 			for (const id of intervals) {
 				clearInterval(id);
 			}
+			intervals = [];
+		};
+
+		// A hidden tab polls nothing: the timers stop, and on return one reload brings the data up to date
+		// before they resume. One reload covers every polled source, since a tick reloads them all. State is
+		// per page runner (this effect), never global.
+		const onVisibilityChange = () => {
+			stopTimers();
+			if (!document.hidden) {
+				tick();
+				startTimers();
+			}
+		};
+
+		if (!document.hidden) {
+			startTimers();
+		}
+		document.addEventListener('visibilitychange', onVisibilityChange);
+
+		return () => {
+			document.removeEventListener('visibilitychange', onVisibilityChange);
+			stopTimers();
 		};
 	}, [$sources, loadSources, searchParams, reportLoadError]);
 
