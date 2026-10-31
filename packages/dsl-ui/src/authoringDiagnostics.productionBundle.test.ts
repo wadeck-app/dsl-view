@@ -20,6 +20,8 @@ const MODULES = [
 	'components/controls/ActionButton.js',
 	'components/controls/RefreshButton.js',
 	'components/controls/CompactSelect.js',
+	'components/display/FigureRow.js',
+	'components/display/SparklineView.js',
 	'components/form/timeStep.js',
 	'utils/usableOptions.js',
 	'components/form/Form.js',
@@ -39,6 +41,9 @@ const MARKERS: Record<string, string> = {
 	// Not "Nothing to refresh": the button's own tooltip text says that in production too.
 	'RefreshButton without a source': 'it provides `$refresh`',
 	'CompactSelect defaultValue not an option': 'is not one of the option values',
+	'FigureRow invalid items': 'An alert is shown instead of the figures',
+	'SparklineView invalid points': 'Nothing is drawn.',
+	'SparklineView without ariaLabel': 'it is the name a screen reader announces',
 	'TimePicker minuteStep': 'minuteStep must be a whole number',
 	'options without a label (usableOptions)': 'have no text label',
 	'missing --color-on-solid token': 'falls back to white meanwhile',
@@ -54,6 +59,7 @@ const RUNTIME_MARKERS: Record<string, string> = {
 	'Form onSubmit failure': 'onSubmit failed; the form keeps its values',
 	// A storage that refuses is the browser's doing, not a mistake of the author.
 	'AppShell menu width not saved': 'Could not remember the menu width',
+	'FigureRow alert text': 'must be a list of { label, value, unit?, href?, trend? }',
 };
 
 // esbuild cannot run inside the jsdom test environment, so the bundle is made by a separate Node process.

@@ -643,6 +643,11 @@
 			]
 		}
 	},
+	"FigureRow": {
+		"knownKeys": [
+			"items"
+		]
+	},
 	"FilterBar": {
 		"knownKeys": [
 			"filters",
@@ -939,6 +944,12 @@
 			"label",
 			"onSort",
 			"sortKey"
+		]
+	},
+	"SparklineView": {
+		"knownKeys": [
+			"ariaLabel",
+			"points"
 		]
 	},
 	"Spinner": {

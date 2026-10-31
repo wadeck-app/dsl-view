@@ -744,6 +744,39 @@ Icon vocabulary (`icon:` of an action item, link column, `StatTile`/`Badge` link
 - `position: start` places the link right after the expansion chevron; link clicks do not trigger row clicks.
 - Registries generated before this version do not know the new keys: regenerate `entries.tsx` and restart the dev server fully.
 
+## `FigureRow` and `SparklineView`
+
+A row of figures that share the full width. Pick it over a row of `StatTile` when a unit must stay beside the value (`120 ms`) or when each figure carries a trend; `StatTile` stays the choice for one boxed metric.
+
+```yaml
+$sources:
+  stats: { url: GET /api/stats }
+$type: FigureRow
+items: $sources.stats.figures
+```
+
+```yaml
+# what $sources.stats.figures holds
+- label: Latency
+  value: "120"            # string or finite number; formatted by the data owner
+  unit: ms                # optional, small, same line as the value
+  href: /reports/latency  # optional: the whole cell becomes a link (see below)
+  trend:
+    direction: up         # up | down | flat | none; never coloured good or bad
+    text: Up 5 ms over the last 14 builds   # tooltip of the arrow and part of the link's accessible name
+    points:               # optional sparkline, oldest first
+      - { label: Build 13, value: 118, measured: true, text: "Build 13: 118 ms", detail: "-2 ms vs previous" }
+      - { label: Build 14, value: null, measured: false }   # a gap: dashed bridge, announced as "no data"
+    # spark: [118, 121, null, 120]   # short form: plain values, positions as labels (#1, #2...); points wins
+```
+
+- `items` is normally one expression. It is NOT deep-resolved: a `$path` nested inside an item is not evaluated, so a literal `value: "$48,295"` stays text. Put the whole list in a source.
+- `value unit` stays on one line and is cut with an ellipsis; the label is cut too. Nothing here knows what a figure measures: the arrow and the tooltip texts are whatever the caller sends.
+- `href` follows the `StatTile` rules (absolute app path, `external: true` for `http(s)`/`mailto`, a refused target renders the unlinked form and logs once). The link covers the whole cell; Tab order is label, sparkline, then the link.
+- The sparkline is a focusable `slider`, a SIBLING of the link (an interactive element cannot live inside a link). Pointer or touch shows the nearest point in a tooltip that follows the pointer; Left/Right (Up/Down), Home/End move through the points, Escape hides the tooltip, `aria-valuetext` announces `text` and `detail`. A touch tooltip stays until a tap elsewhere or a scroll. The tooltip is a `position: fixed` layer placed above the cell, in the nearest `ThemeScope` (so it follows a nested palette).
+- Items it cannot show render an inline `role="alert"` naming the path and the fix, and development builds log one warning. A missing `items` (source not loaded yet) is an empty row, quietly.
+- `SparklineView` (`points`, `ariaLabel`) is the same sparkline on its own. Do not put it inside a link or a button.
+
 ## `Markdown`
 
 ```yaml
@@ -912,6 +945,7 @@ First published version containing the change (`dsl-ui` and `dsl-renderer` share
 | `2026.11.6-307` | `HorizontalStack` new `wrap: true` (default `false`, no change without it): children move to the next line whole instead of squeezing, contributed nodes included. **Behaviour change** `Button` and `ButtonLink` labels no longer wrap (`whitespace-nowrap`; `stack`-shape buttons keep wrapping), so a long label in a narrow row overflows instead of growing taller: put the row in a `HorizontalStack` with `wrap: true`. Regenerate `entries.tsx` (and `known-keys.json`, node schemas) to expose `wrap` in YAML. |
 | `2026.11.6-309` | No component draws uppercase text any more: side-menu group captions, `CronBuilder` legends, `DateRangePicker` presets heading and the A/B row label keep the case they are written in (`Avatar` monograms stay upper-cased). A/B dock (`AbTest`/`AbExperiments`): larger option cells, never wider than the viewport with sideways-scrolling rows that keep the selected option in view, a spacer at the end of the document, a test nested in a variant (`parentId`) listed above its parent, hints shown on hover and keyboard focus. |
 | `<VERSION>` | `CompactSelect` new prop `defaultValue` (shown while the `urlParam` is absent, URL not written). **Behaviour change** a `CompactSelect` whose value (URL param or controlled `value`) is non-empty and matches no option now shows a disabled `Unknown: <value>` option; it used to display the first option while the page kept using that value. An empty value is unchanged. Regenerate `entries.tsx` (and `known-keys.json`, node schemas) to expose `defaultValue` in YAML. |
+| `<VERSION>` | New `FigureRow` (composite) and `SparklineView` (atomic), see "FigureRow and SparklineView". Nothing existing changes; run `generate-node-schemas` / `generate-known-keys` and regenerate `entries.tsx` in consuming apps (new `$type`s). |
 
 ## Pitfalls
 

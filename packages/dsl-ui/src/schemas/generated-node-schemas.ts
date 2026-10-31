@@ -224,6 +224,26 @@ export const FetchSpinnerNodeSchema = baseNode.extend({
 	loading: dsl(z.boolean()),
 });
 
+const FigureTrendSchema = z.object({
+	direction: z.enum(['up', 'down', 'flat', 'none']),
+	text: z.string(),
+	spark: z.array(z.number().nullable()).optional(),
+	points: z.array(z.unknown()).optional(),
+});
+
+const FigureSchema = z.object({
+	label: z.string(),
+	value: z.union([z.string(), z.number()]),
+	unit: z.string().optional(),
+	href: z.string().optional(),
+	external: z.boolean().optional(),
+	trend: FigureTrendSchema.optional(),
+});
+
+export const FigureRowNodeSchema = baseNode.extend({
+	items: dsl(z.array(FigureSchema)),
+});
+
 export const JsonViewerNodeSchema = baseNode.extend({
 	row: dsl(z.record(z.string(), z.unknown())).optional(),
 	field: z.string().optional(),
@@ -270,6 +290,12 @@ export const SkeletonNodeSchema = baseNode.extend({
 	variant: dsl(z.enum(['line', 'circle', 'block'])).optional(),
 	count: dsl(z.number()).optional(),
 	decorative: dsl(z.boolean()).optional(),
+});
+
+export const SparklineViewNodeSchema = baseNode.extend({
+	points: dsl(z.array(z.unknown())),
+	ariaLabel: z.string(),
+	className: z.string().optional(),
 });
 
 export const SpinnerNodeSchema = baseNode.extend({
