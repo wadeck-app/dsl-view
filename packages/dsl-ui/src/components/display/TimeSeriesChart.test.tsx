@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -282,6 +282,54 @@ describe('legend', () => {
 		noLine.unmount();
 		const noThreshold = draw({ ...base, data: gappy });
 		expect(legendOf(noThreshold.container)).not.toHaveTextContent('gap >');
+	});
+
+	// Days 0 to 4, then 13 to 29: one bridge, from day 4 to day 13.
+	describe('the entry follows the visible window: it needs a bridge overlapping it', () => {
+		const gappy = rows.filter((_, i) => i < 5 || i > 12);
+		const withDomain = (domain: [number, number]) => draw({ ...base, data: gappy, gapDashAfterDays: 2, domain });
+
+		it('hidden when the only bridge lies after the window, or before it', () => {
+			const before = withDomain([day(-0.5), day(3)]);
+			expect(legendOf(before.container)).not.toHaveTextContent('gap >');
+			before.unmount();
+			const after = withDomain([day(14), day(20)]);
+			expect(legendOf(after.container)).not.toHaveTextContent('gap >');
+		});
+
+		it('shown when the bridge crosses an edge of the window (it is drawn), or covers all of it', () => {
+			for (const domain of [[day(-0.5), day(4.5)], [day(12.5), day(20)], [day(6), day(10)]] as [number, number][]) {
+				const { container, unmount } = withDomain(domain);
+				expect(legendOf(container)).toHaveTextContent('gap > 2 days');
+				unmount();
+			}
+		});
+
+		it('boundary: a bridge ending exactly at the start of the window, or starting exactly at its end, counts', () => {
+			const atEnd = withDomain([day(-1), day(4)]);
+			expect(legendOf(atEnd.container)).toHaveTextContent('gap > 2 days');
+			atEnd.unmount();
+			const atStart = withDomain([day(13), day(20)]);
+			expect(legendOf(atStart.container)).toHaveTextContent('gap > 2 days');
+			atStart.unmount();
+			const justBefore = withDomain([day(13) + 1, day(20)]);
+			expect(legendOf(justBefore.container)).not.toHaveTextContent('gap >');
+		});
+
+		it('zooming and panning onto a window without the bridge removes the entry, and coming back restores it', () => {
+			const { container } = draw({ ...base, data: gappy, gapDashAfterDays: 2 });
+			const plot = container.querySelector<HTMLElement>('[data-chart-plot]')!;
+			expect(legendOf(container)).toHaveTextContent('gap > 2 days');
+			for (let i = 0; i < 3; i++) {
+				fireEvent.keyDown(plot, { key: '+' });
+			}
+			// still [day 11.25, day 17.75]: the bridge (day 4 to 13) reaches into it
+			expect(legendOf(container)).toHaveTextContent('gap > 2 days');
+			fireEvent.keyDown(plot, { key: 'ArrowRight' });
+			expect(legendOf(container)).not.toHaveTextContent('gap >');
+			fireEvent.keyDown(plot, { key: 'ArrowLeft' });
+			expect(legendOf(container)).toHaveTextContent('gap > 2 days');
+		});
 	});
 });
 

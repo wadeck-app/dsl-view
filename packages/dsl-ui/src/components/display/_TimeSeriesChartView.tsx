@@ -46,7 +46,8 @@ const EMPTY_CLASS = 'flex items-center justify-center rounded-lg border border-b
 // @formatter:on
 
 type Row = Record<string, unknown>;
-type Segments = { runs: Row[]; links: Row[] };
+// `spans`: the [from, to] x of each dashed bridge, what the legend checks against the visible window.
+type Segments = { runs: Row[]; links: Row[]; spans: [number, number][] };
 
 /** Chart body: the checked settings (see `TimeSeriesChart`) drawn with recharts at a measured width. */
 export function TimeSeriesChartView(props: TimeSeriesChartSettings): React.ReactElement {
@@ -70,11 +71,11 @@ export function TimeSeriesChartView(props: TimeSeriesChartSettings): React.React
 		() =>
 			series.map(s => {
 				if (s.kind === 'bar') {
-					return { runs: [], links: [] };
+					return { runs: [], links: [], spans: [] };
 				}
 				const { runs, links } = splitAtGaps(rows, xKey, s.key, s.gapDash ? gapMs : null);
 				const withX = (pts: { t: number; v: number | null }[]): Row[] => pts.map(p => ({ [xKey]: p.t, v: p.v }));
-				return { runs: withX(flattenRuns(runs)), links: withX(flattenLinks(links)) };
+				return { runs: withX(flattenRuns(runs)), links: withX(flattenLinks(links)), spans: links.map(([a, b]): [number, number] => [a.t, b.t]) };
 			}),
 		[rows, series, xKey, gapMs],
 	);
@@ -172,8 +173,9 @@ export function TimeSeriesChartView(props: TimeSeriesChartSettings): React.React
 
 	const hoverRow = hover ? rows[hover.index] : undefined;
 	const hoverT = hoverRow ? numberAt(hoverRow, xKey) : null;
-	// Explained only when a dashed bridge is actually drawn (a threshold that no gap reaches needs no legend entry).
-	const hasDashed = series.some((s, i) => s.width > 0 && (segments[i]?.links.length ?? 0) > 0);
+	// Explained only when a dashed bridge is drawn: one overlapping the visible window (a threshold no gap reaches, or a window
+	// panned or zoomed past every gap, needs no legend entry). A bridge touching an edge counts.
+	const hasDashed = series.some((s, i) => s.width > 0 && (segments[i]?.spans ?? []).some(([from, to]) => from <= win[1] && to >= win[0]));
 	const formatY = (v: number): string => (yFormat === 'clock' ? formatClock(v) : `${v}`);
 	const formatYRight = (v: number): string => (props.yRightFormat === 'clock' ? formatClock(v) : `${v}`);
 	const formatValue = (v: number, s: SeriesSettings): string => {
@@ -312,7 +314,7 @@ export function TimeSeriesChartView(props: TimeSeriesChartSettings): React.React
 							if (s.kind === 'bar') {
 								return [];
 							}
-							const seg = segments[i] ?? { runs: [], links: [] };
+							const seg = segments[i] ?? { runs: [], links: [], spans: [] };
 							// Flat list of elements: recharts looks for its graphical children by type and does not reliably see through fragments.
 							const out: React.ReactElement[] = [];
 							if (s.kind === 'area' && seg.runs.length > 0) {
