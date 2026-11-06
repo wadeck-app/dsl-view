@@ -79,6 +79,19 @@ describe('HorizontalStack', () => {
 		expect(root().className).toBe('flex gap-1 items-start justify-between');
 	});
 
+	it('stays on one line unless wrap is set, then lets children move to the next line', () => {
+		const { container, rerender } = render(<HorizontalStack>x</HorizontalStack>);
+		const root = () => container.firstElementChild as HTMLElement;
+		expect(root()).not.toHaveClass('flex-wrap');
+
+		rerender(<HorizontalStack wrap>x</HorizontalStack>);
+		expect(root()).toHaveClass('flex', 'flex-wrap');
+
+		// An explicit false (YAML `wrap: false`) is the default, not wrapping.
+		rerender(<HorizontalStack wrap={false}>x</HorizontalStack>);
+		expect(root()).not.toHaveClass('flex-wrap');
+	});
+
 	it('without itemSizes, or with none of them set, children are not wrapped', () => {
 		const { container, rerender } = render(
 			<HorizontalStack>

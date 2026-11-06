@@ -569,6 +569,7 @@ export const HorizontalStackNodeSchema = baseNode.extend({
 	align: dsl(z.enum(['items-start', 'items-center', 'items-end', 'items-stretch', 'items-baseline'])).optional(),
 	justify: dsl(z.enum(['justify-start', 'justify-center', 'justify-end', 'justify-between', 'justify-around', 'justify-evenly'])).optional(),
 	fill: dsl(z.boolean()).default(false),
+	wrap: dsl(z.boolean()).default(false),
 	items: dsl(z.array(z.unknown())).optional(),
 	itemSizes: dsl(z.array(z.enum(['fixed', 'flex']).optional())).optional(),
 });

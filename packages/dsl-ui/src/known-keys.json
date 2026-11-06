@@ -685,7 +685,8 @@
 			"gap",
 			"itemSizes",
 			"items",
-			"justify"
+			"justify",
+			"wrap"
 		],
 		"allowedChildren": {
 			"items": [

@@ -51,6 +51,12 @@ describe('ButtonLink', () => {
 		expect(box(linkCls)).toBe(box(btnCls));
 	});
 
+	it('keeps its label on one line', () => {
+		renderLink();
+
+		expect(screen.getByRole('link')).toHaveClass('whitespace-nowrap');
+	});
+
 	it('defaults to a secondary md control', () => {
 		renderLink();
 

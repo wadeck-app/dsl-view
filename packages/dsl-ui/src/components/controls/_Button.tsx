@@ -28,6 +28,11 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const BASE =
 	'inline-flex items-center justify-center rounded font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer';
 
+// A button label is short and one line: wrapped, a row of buttons goes uneven (one button 42px high next to a 26px one).
+// 'stack' buttons arrange their own column and keep normal wrapping. A row that is too narrow wraps its buttons whole
+// (HorizontalStack `wrap`), it does not break their labels.
+const NOWRAP = 'whitespace-nowrap';
+
 // Every variant carries `border`, transparent where the design has no visible outline.
 // Variants pick colour, never geometry: secondary and danger-outline used to be the only
 // ones with a border, which made them 2px taller than primary/danger/neutral/success at
@@ -89,7 +94,7 @@ const SHAPE_CLASSES: Record<Shape, string> = {
  * distinct button sizings.
  */
 export function buttonClasses(variant: Variant = 'primary', size: Size = 'md', className = ''): string {
-	return [BASE, classFor('Button', 'variant', variant, VARIANT_CLASSES, 'primary'), classFor('Button', 'size', size, SIZE_CLASSES, 'md'), className].filter(Boolean).join(' ');
+	return [BASE, NOWRAP, classFor('Button', 'variant', variant, VARIANT_CLASSES, 'primary'), classFor('Button', 'size', size, SIZE_CLASSES, 'md'), className].filter(Boolean).join(' ');
 }
 
 // Leading underscore on the filename (guiding-principles.md §2/§29): Button is never an
@@ -125,7 +130,7 @@ export function Button({
 			// action button must not; ButtonSave opts in with an explicit type="submit".
 			type={props.type ?? 'button'}
 			disabled={isDisabled}
-			className={[BASE, !isStack && classFor('Button', 'variant', resolvedVariant, VARIANT_CLASSES, 'primary'), !isStack && classFor('Button', 'size', resolvedSize, SIZE_CLASSES, 'md'), classFor('Button', 'shape', shape, SHAPE_CLASSES, 'default'), className]
+			className={[BASE, !isStack && NOWRAP, !isStack && classFor('Button', 'variant', resolvedVariant, VARIANT_CLASSES, 'primary'), !isStack && classFor('Button', 'size', resolvedSize, SIZE_CLASSES, 'md'), classFor('Button', 'shape', shape, SHAPE_CLASSES, 'default'), className]
 				.filter(Boolean)
 				.join(' ')}
 		>

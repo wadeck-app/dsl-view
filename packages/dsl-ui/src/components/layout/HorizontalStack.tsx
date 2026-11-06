@@ -39,6 +39,13 @@ export interface HorizontalStackProps {
 	 * @default false
 	 */
 	fill?: boolean;
+	/**
+	 * Lets the children move to the next line when the row is too narrow, instead of squeezing them (a row of buttons
+	 * or filters on a small screen). Children keep their own size and wrap whole. It also applies to nodes another
+	 * module contributes into the row, since the container wraps. Without it the row stays on one line, as before.
+	 * @default false
+	 */
+	wrap?: boolean;
 	/** @slot tag:layout, tag:table, tag:form, tag:display, tag:composite, tag:atomic */
 	children: React.ReactNode;
 	/**
@@ -55,12 +62,12 @@ export interface HorizontalStackProps {
  * IN SCOPE: horizontal flex container with configurable gap, alignment, and justification.
  * OUT OF SCOPE: business-specific layouts - use PageHeader.headerActions for header+button patterns.
  */
-export function HorizontalStack({ gap = 'gap-3', align = 'items-center', justify, fill = false, children, itemSizes }: HorizontalStackProps) {
+export function HorizontalStack({ gap = 'gap-3', align = 'items-center', justify, fill = false, wrap = false, children, itemSizes }: HorizontalStackProps) {
 	warnUnknownChoice('HorizontalStack', 'gap', gap, GAP_CHOICES);
 	warnUnknownChoice('HorizontalStack', 'align', align, ALIGN_CHOICES);
 	warnUnknownChoice('HorizontalStack', 'justify', justify, JUSTIFY_CHOICES);
 	itemSizes?.forEach(size => warnUnknownChoice('HorizontalStack', 'itemSizes', size, ITEM_SIZE_CLASSES));
-	const containerClass = joinClasses('flex', gap, align, justify, fillClasses(fill));
+	const containerClass = joinClasses('flex', wrap && 'flex-wrap', gap, align, justify, fillClasses(fill));
 	if (!itemSizes || itemSizes.every(size => !size)) {
 		return <div className={containerClass}>{children}</div>;
 	}

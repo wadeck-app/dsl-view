@@ -94,7 +94,7 @@ Maintenance: add a row here in the same change that adds, renames or removes a c
 | `Collapsible` | disposition | title, children, defaultOpen | Titled toggle row with a chevron that shows or hides its children; pick it for optional content inside a page or form. |
 | `DialogFooter` | disposition | children, className | Right-aligned button row with a top border whose buttons default to size md; pick it for the bottom of dialog content. |
 | `Divider` | atomic | orientation, label, className | Horizontal or vertical separator line with an optional centered label for the horizontal one. |
-| `HorizontalStack` | disposition | children, gap, align, justify, itemSizes, fill | Flex row with configurable gap, alignment and justification, and optional fixed or flex width per child; pick it over VerticalStack to lay children side by side. |
+| `HorizontalStack` | disposition | children, gap, align, justify, wrap, itemSizes, fill | Flex row with configurable gap, alignment and justification, and optional fixed or flex width per child; pick it over VerticalStack to lay children side by side. |
 | `NavBar` | disposition | children, className | Row of small ghost-style buttons with a gap; pick it for inline navigation buttons rather than tabs. |
 | `PageContent` | disposition | sections, maxWidth | Centered page wrapper with a selectable max width that stacks its sections vertically; pick it as the outer container of a page. |
 | `PageSection` | disposition | title, actions, children, className | Section with an h2 title, an optional actions slot at the right of the title and children below; pick it over Section when the title needs buttons. |

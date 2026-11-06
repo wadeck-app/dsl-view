@@ -11,6 +11,15 @@ describe('Button', () => {
 	});
 
 	// A bare <button> in a form submits it, so every action button (Cancel, copy, tabs...) would save the form.
+	// A wrapped label makes a row of buttons uneven (42px next to 26px).
+	it('keeps its label on one line, except a stack button which arranges its own column', () => {
+		const { rerender } = render(<Button>Flow definition</Button>);
+		expect(screen.getByRole('button')).toHaveClass('whitespace-nowrap');
+
+		rerender(<Button shape="stack">Flow definition</Button>);
+		expect(screen.getByRole('button')).not.toHaveClass('whitespace-nowrap');
+	});
+
 	it('is a plain button by default, so it does not submit the form it sits in', () => {
 		const onSubmit = vi.fn((e: React.FormEvent) => e.preventDefault());
 		render(<form onSubmit={onSubmit}><Button>Cancel</Button></form>);
