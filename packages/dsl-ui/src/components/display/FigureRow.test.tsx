@@ -160,6 +160,73 @@ describe('FigureRow sparkline', () => {
 		expect(screen.getByRole('slider')).toHaveAttribute('aria-valuemax', '2');
 	});
 
+	describe('pointsLabel: the caller words the sparkline name', () => {
+		it('replaces the text after the label, for points and for spark', () => {
+			render(<FigureRow items={[{ ...latency, pointsLabel: 'last 7 days' }, { ...errors, pointsLabel: 'last 4 builds' }]} />);
+			expect(screen.getByRole('slider', { name: 'Latency, last 7 days' })).toBeInTheDocument();
+			expect(screen.getByRole('slider', { name: 'Errors, last 4 builds' })).toBeInTheDocument();
+			expect(screen.queryByRole('slider', { name: /points/ })).toBeNull();
+		});
+
+		it('is per figure: a figure without it keeps the point count', () => {
+			render(<FigureRow items={[{ ...latency, pointsLabel: 'last 7 days' }, errors]} />);
+			expect(screen.getByRole('slider', { name: 'Latency, last 7 days' })).toBeInTheDocument();
+			expect(screen.getByRole('slider', { name: 'Errors, 4 points' })).toBeInTheDocument();
+		});
+
+		it('absent, null and empty (or blank) text keep the default wording, without any warning', () => {
+			const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			for (const pointsLabel of [undefined, null, '', '   ']) {
+				const { unmount } = render(<FigureRow items={[{ ...latency, pointsLabel } as Figure]} />);
+				expect(screen.getByRole('slider', { name: 'Latency, 5 points' })).toBeInTheDocument();
+				unmount();
+			}
+			expect(warn).not.toHaveBeenCalled();
+		});
+
+		it('is not part of the link name and is unused without a sparkline', () => {
+			render(<FigureRow items={[{ ...latency, pointsLabel: 'last 7 days' }, { ...throughput, pointsLabel: 'unused' }]} />);
+			expect(screen.getByRole('link')).toHaveAccessibleName('Latency: 120 ms. Up 5 ms over the last 5 points');
+			expect(screen.getAllByRole('slider')).toHaveLength(1);
+		});
+
+		it.each<[string, unknown, string]>([
+			['a number', 5, '5'],
+			['an object', { a: 1 }, '{"a":1}'],
+			['a boolean', true, 'true'],
+			['a list', ['x'], '["x"]'],
+		])('%s is ignored: default wording, figure still shown, one warning naming the item', (_name, pointsLabel, shown) => {
+			const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			const view = render(<FigureRow items={[{ ...latency, pointsLabel } as unknown as Figure]} />);
+			expect(screen.getByRole('slider', { name: 'Latency, 5 points' })).toBeInTheDocument();
+			expect(screen.queryByRole('alert')).toBeNull();
+			expect(warn).toHaveBeenCalledTimes(1);
+			expect(warn.mock.calls[0]![0]).toContain('[FigureRow] items[0].pointsLabel must be a string, got ' + shown);
+			expect(warn.mock.calls[0]![0]).toContain('default wording');
+			// the same mistake again (re-render, second instance) is not reported twice
+			view.rerender(<FigureRow items={[{ ...latency, pointsLabel } as unknown as Figure]} />);
+			render(<FigureRow items={[{ ...latency, pointsLabel } as unknown as Figure]} />);
+			expect(warn).toHaveBeenCalledTimes(1);
+		});
+
+		it('names every item that has an odd one, in one warning', () => {
+			const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			render(<FigureRow items={[{ ...latency, pointsLabel: 1 }, errors, { ...throughput, pointsLabel: false }] as unknown as Figure[]} />);
+			expect(warn).toHaveBeenCalledTimes(1);
+			expect(warn.mock.calls[0]![0]).toContain('items[0].pointsLabel');
+			expect(warn.mock.calls[0]![0]).toContain('items[2].pointsLabel');
+			expect(warn.mock.calls[0]![0]).not.toContain('items[1]');
+		});
+
+		it('in a production build an odd value is still ignored, quietly', () => {
+			vi.stubEnv('NODE_ENV', 'production');
+			const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			render(<FigureRow items={[{ ...latency, pointsLabel: 5 } as unknown as Figure]} />);
+			expect(screen.getByRole('slider', { name: 'Latency, 5 points' })).toBeInTheDocument();
+			expect(warn).not.toHaveBeenCalled();
+		});
+	});
+
 	it('fewer than two points draws no sparkline but keeps the label and the trend mark', () => {
 		render(<FigureRow items={[{ label: 'A', value: '1', trend: { direction: 'up', text: 't', spark: [3] } }]} />);
 		expect(screen.queryByRole('slider')).toBeNull();

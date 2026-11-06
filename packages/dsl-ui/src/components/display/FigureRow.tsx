@@ -29,6 +29,11 @@ export interface Figure {
 	external?: boolean;
 	/** Direction of the change over a period, with an optional sparkline. */
 	trend?: FigureTrend;
+	/**
+	 * What the sparkline's accessible name says after the label (`Latency, last 7 days`). Default: the point count (`Latency, 7 points`).
+	 * A value that is not text is ignored (default wording) with one development warning; an empty text means the default.
+	 */
+	pointsLabel?: string;
 }
 
 export interface FigureRowProps {
@@ -94,9 +99,16 @@ interface ShownFigure {
 	href: string | undefined;
 	external: boolean;
 	trend: { direction: FigureTrend['direction']; text: string; points: SparkPoint[] | undefined } | undefined;
+	pointsLabel: string | undefined;
 }
 
-type Read = { problem: string; figures?: undefined } | { problem?: undefined; figures: ShownFigure[] };
+/** A `pointsLabel` that is not text: ignored, and reported once by the effect that owns the message. */
+interface IgnoredPointsLabel {
+	index: number;
+	value: unknown;
+}
+
+type Read = { problem: string; figures?: undefined; ignored?: undefined } | { problem?: undefined; figures: ShownFigure[]; ignored: IgnoredPointsLabel[] };
 
 /**
  * The figures to show, or the problem. An absent list (undefined, null) is a source that has not loaded yet: an empty
@@ -104,7 +116,7 @@ type Read = { problem: string; figures?: undefined } | { problem?: undefined; fi
  */
 function readItems(raw: unknown): Read {
 	if (raw === undefined || raw === null) {
-		return { figures: [] };
+		return { figures: [], ignored: [] };
 	}
 	if (!Array.isArray(raw)) {
 		return { problem: `items must be a list of { label, value, unit?, href?, trend? }, got ${show(raw)}.` };
@@ -115,8 +127,13 @@ function readItems(raw: unknown): Read {
 			return { problem };
 		}
 	}
-	const figures = (raw as Figure[]).map((f): ShownFigure => {
+	const ignored: IgnoredPointsLabel[] = [];
+	const figures = (raw as Figure[]).map((f, index): ShownFigure => {
 		const t = f.trend;
+		const rawLabel: unknown = f.pointsLabel;
+		if (rawLabel != null && typeof rawLabel !== 'string') {
+			ignored.push({ index, value: rawLabel });
+		}
 		const points = t ? (t.points ?? (t.spark ? pointsFromValues(t.spark) : undefined)) : undefined;
 		return {
 			label: f.label,
@@ -125,9 +142,10 @@ function readItems(raw: unknown): Read {
 			href: f.href ?? undefined,
 			external: f.external === true,
 			trend: t ? { direction: t.direction, text: t.text, points } : undefined,
+			pointsLabel: typeof rawLabel === 'string' && rawLabel.trim() !== '' ? rawLabel : undefined,
 		};
 	});
-	return { figures };
+	return { figures, ignored };
 }
 
 // @formatter:off
@@ -163,6 +181,15 @@ export function FigureRow({ items }: FigureRowProps): React.ReactElement {
 		}
 	}, [problem]);
 
+	// The figures are still shown: only the wording falls back to the default. The message is built here, in the dev-only reporter.
+	const ignored = read.ignored;
+	React.useEffect(() => {
+		if (ignored !== undefined && ignored.length > 0) {
+			const list = ignored.map(i => `items[${i.index}].pointsLabel must be a string, got ${show(i.value)}.`).join(' ');
+			reportAuthoringMistake(`[FigureRow] ${list} The default wording (the point count) is used.`);
+		}
+	}, [ignored]);
+
 	if (read.problem !== undefined) {
 		return (
 			<div role="alert" data-invalid-props className={ALERT_CLASS}>
@@ -189,7 +216,7 @@ export function FigureRow({ items }: FigureRowProps): React.ReactElement {
 						{trend?.points ? (
 							<div className="flex min-w-0 items-center justify-between gap-1">
 								<span className={LABEL_CLASS}>{item.label}</span>
-								<SparklineView className="relative z-10" points={trend.points} ariaLabel={`${item.label}, ${trend.points.length} points`} />
+								<SparklineView className="relative z-10" points={trend.points} ariaLabel={`${item.label}, ${item.pointsLabel ?? `${trend.points.length} points`}`} />
 							</div>
 						) : (
 							<div className={LABEL_CLASS}>{item.label}</div>

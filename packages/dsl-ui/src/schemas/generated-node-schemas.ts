@@ -238,6 +238,7 @@ const FigureSchema = z.object({
 	href: z.string().optional(),
 	external: z.boolean().optional(),
 	trend: FigureTrendSchema.optional(),
+	pointsLabel: z.string().optional(),
 });
 
 export const FigureRowNodeSchema = baseNode.extend({

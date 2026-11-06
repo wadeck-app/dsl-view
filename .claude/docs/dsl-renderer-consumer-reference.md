@@ -798,6 +798,7 @@ items: $sources.stats.figures
   value: "120"            # string or finite number; formatted by the data owner
   unit: ms                # optional, small, same line as the value
   href: /reports/latency  # optional: the whole cell becomes a link (see below)
+  pointsLabel: last 14 builds   # optional: sparkline name becomes "Latency, last 14 builds" (default "Latency, 14 points")
   trend:
     direction: up         # up | down | flat | none; never coloured good or bad
     text: Up 5 ms over the last 14 builds   # tooltip of the arrow and part of the link's accessible name
@@ -812,6 +813,7 @@ items: $sources.stats.figures
 - `href` follows the `StatTile` rules (absolute app path, `external: true` for `http(s)`/`mailto`, a refused target renders the unlinked form and logs once). The link covers the whole cell; Tab order is label, sparkline, then the link.
 - The sparkline is a focusable `slider`, a SIBLING of the link (an interactive element cannot live inside a link). Pointer or touch shows the nearest point in a tooltip that follows the pointer; Left/Right (Up/Down), Home/End move through the points, Escape hides the tooltip, `aria-valuetext` announces `text` and `detail`. A touch tooltip stays until a tap elsewhere or a scroll. The tooltip is a `position: fixed` layer placed above the cell, in the nearest `ThemeScope` (so it follows a nested palette).
 - Items it cannot show render an inline `role="alert"` naming the path and the fix, and development builds log one warning. A missing `items` (source not loaded yet) is an empty row, quietly.
+- `pointsLabel` (string) words the sparkline's accessible name after the label. Empty or blank means the default (point count); a non-string is ignored with one development warning, the figure still renders. It is not part of the link's name.
 - `SparklineView` (`points`, `ariaLabel`) is the same sparkline on its own. Do not put it inside a link or a button.
 
 ## `Markdown`
@@ -982,7 +984,7 @@ First published version containing the change (`dsl-ui` and `dsl-renderer` share
 | `2026.11.6-307` | `HorizontalStack` new `wrap: true` (default `false`, no change without it): children move to the next line whole instead of squeezing, contributed nodes included. **Behaviour change** `Button` and `ButtonLink` labels no longer wrap (`whitespace-nowrap`; `stack`-shape buttons keep wrapping), so a long label in a narrow row overflows instead of growing taller: put the row in a `HorizontalStack` with `wrap: true`. Regenerate `entries.tsx` (and `known-keys.json`, node schemas) to expose `wrap` in YAML. |
 | `2026.11.6-309` | No component draws uppercase text any more: side-menu group captions, `CronBuilder` legends, `DateRangePicker` presets heading and the A/B row label keep the case they are written in (`Avatar` monograms stay upper-cased). A/B dock (`AbTest`/`AbExperiments`): larger option cells, never wider than the viewport with sideways-scrolling rows that keep the selected option in view, a spacer at the end of the document, a test nested in a variant (`parentId`) listed above its parent, hints shown on hover and keyboard focus. |
 | `<VERSION>` | `CompactSelect` new prop `defaultValue` (shown while the `urlParam` is absent, URL not written). **Behaviour change** a `CompactSelect` with a `urlParam` whose value is non-empty and matches no option now shows a disabled `Unknown: <value>` option; it used to display the first option while the page kept using that value. An empty value is unchanged. Regenerate `entries.tsx` (and `known-keys.json`, node schemas) to expose `defaultValue` in YAML. |
-| `<VERSION>` | New `FigureRow` (composite) and `SparklineView` (atomic), see "FigureRow and SparklineView". Nothing existing changes; run `generate-node-schemas` / `generate-known-keys` and regenerate `entries.tsx` in consuming apps (new `$type`s). |
+| `<VERSION>` | New `FigureRow` (composite) and `SparklineView` (atomic), see "FigureRow and SparklineView" (figure item has an optional `pointsLabel` for the sparkline's accessible name). Nothing existing changes; run `generate-node-schemas` / `generate-known-keys` and regenerate `entries.tsx` in consuming apps (new `$type`s). |
 | `<VERSION>` | New nodes `TimeSeriesChart` and `TimeBrush` (see "TimeSeriesChart and TimeBrush"); `Chart` is unchanged. Regenerate `entries.tsx`; they are lazy chunks like `Chart` (recharts). New export `TimeSeriesSyncProvider`. |
 
 ## Pitfalls
