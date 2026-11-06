@@ -152,7 +152,7 @@ function readItems(raw: unknown): Read {
 const CELL_CLASS = 'relative flex min-w-0 flex-1 flex-col rounded-lg border border-border bg-surface px-2.5 py-[5px] text-content';
 // A linked cell: the anchor's ::after covers the whole cell, so only hover on the anchor lights it up (not the sparkline above it).
 const CELL_LINK_CLASS = 'transition-colors has-[a:hover]:border-primary has-[a:hover]:bg-bg-secondary';
-const LABEL_CLASS = 'min-w-0 truncate text-xs leading-[1.2] text-muted';
+const LABEL_CLASS = 'min-w-0 truncate text-xs !leading-[1.2] text-muted';
 const LINE_CLASS = 'flex min-w-0 items-baseline gap-[3px] whitespace-nowrap';
 // The stretched link: its ::after covers the cell, the sparkline (relative z-10) stays above it and keeps its own pointer behaviour.
 const ANCHOR_CLASS = `${LINE_CLASS} text-inherit no-underline after:absolute after:inset-0 after:rounded-lg focus:outline-none focus-visible:after:ring-2 focus-visible:after:ring-[var(--color-primary-solid)]`;
@@ -206,7 +206,7 @@ export function FigureRow({ items }: FigureRowProps): React.ReactElement {
 				const aria = `${item.label}: ${item.value}${item.unit ? ` ${item.unit}` : ''}${trend ? `. ${trend.text}` : ''}`;
 				const valueLine = (
 					<>
-						<span className="text-xl font-bold leading-[1.2] text-content">{item.value}</span>
+						<span className="text-xl font-bold !leading-[1.2] text-content">{item.value}</span>
 						{item.unit ? <span className="text-xs text-muted">{item.unit}</span> : null}
 						{trend ? <TrendMark direction={trend.direction} text={trend.text} /> : null}
 					</>

@@ -350,7 +350,7 @@ describe('FigureRow styling contract', () => {
 	});
 
 	// jsdom has no layout, so the tile height cannot be measured here: these tokens ARE the contract. A 4x1 dashboard tile is
-	// 50px high: 2 x 5px padding + 2 x 1px border + 12px x 1.2 (label) + 20px x 1.2 (value) = 50.4px. `py-1.5` + `leading-tight` made 54px.
+	// 50px high: 2 x 5px padding + 2 x 1px border + 12px x 1.2 (label) + 20px x 1.2 (value) = 50.4px. `py-1.5` + `leading-tight` made 54px. The line heights are important (`!`): an app that loads another stylesheet re-declaring `.text-xs` or `.text-xl` after this one would otherwise win at equal specificity and make the tile 56px.
 	it('keeps the compact tile geometry: 5px vertical padding, line height 1.2, 3px between value, unit and arrow', () => {
 		const { container } = inRouter([latency, throughput]);
 		const cells = Array.from(container.querySelectorAll<HTMLElement>('[data-figure-cell]'));
@@ -359,7 +359,7 @@ describe('FigureRow styling contract', () => {
 			expect(cell).toHaveClass('py-[5px]', 'border');
 			expect(cell).not.toHaveClass('py-1.5');
 			const label = within(cell).getByText(/Latency|Throughput/);
-			expect(label.className.split(' ')).toContain('leading-[1.2]');
+			expect(label.className.split(' ')).toContain('!leading-[1.2]');
 		}
 		// A linked cell (latency, with a unit and a trend arrow) and a plain one: both lines carry the 3px gap.
 		const lines = [screen.getByRole('link'), screen.getByText('1.2').parentElement!];
@@ -368,7 +368,7 @@ describe('FigureRow styling contract', () => {
 			expect(line).not.toHaveClass('gap-1');
 		}
 		for (const value of [screen.getByText('120'), screen.getByText('1.2')]) {
-			expect(value).toHaveClass('leading-[1.2]');
+			expect(value).toHaveClass('!leading-[1.2]');
 			expect(value).not.toHaveClass('leading-tight');
 		}
 	});
