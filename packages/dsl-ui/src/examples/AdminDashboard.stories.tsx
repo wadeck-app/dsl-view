@@ -181,23 +181,23 @@ function AdminDashboardPage() {
 			{activeUser && (
 				<div className="space-y-4 text-sm">
 					<div>
-						<p className="text-xs font-semibold uppercase tracking-wide text-muted mb-1">Name</p>
+						<p className="text-xs font-semibold text-muted mb-1">Name</p>
 						<p className="text-content">{activeUser.name}</p>
 					</div>
 					<div>
-						<p className="text-xs font-semibold uppercase tracking-wide text-muted mb-1">Email</p>
+						<p className="text-xs font-semibold text-muted mb-1">Email</p>
 						<p className="text-content">{activeUser.email}</p>
 					</div>
 					<div>
-						<p className="text-xs font-semibold uppercase tracking-wide text-muted mb-1">Role</p>
+						<p className="text-xs font-semibold text-muted mb-1">Role</p>
 						<p className="text-content">{activeUser.role}</p>
 					</div>
 					<div>
-						<p className="text-xs font-semibold uppercase tracking-wide text-muted mb-1">Status</p>
+						<p className="text-xs font-semibold text-muted mb-1">Status</p>
 						<Badge label={activeUser.status} variant={STATUS_VARIANT[activeUser.status]} />
 					</div>
 					<div>
-						<p className="text-xs font-semibold uppercase tracking-wide text-muted mb-1">Joined Date</p>
+						<p className="text-xs font-semibold text-muted mb-1">Joined Date</p>
 						<p className="text-content">
 							{new Intl.DateTimeFormat(undefined, { dateStyle: 'long' }).format(
 								new Date(activeUser.joinedDate),

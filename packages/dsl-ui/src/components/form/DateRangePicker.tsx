@@ -257,7 +257,7 @@ export function DateRangePicker({
 				>
 					{/* Preset sidebar */}
 					<div className="flex flex-col gap-1 pr-4 border-r border-border min-w-[120px]">
-						<p className="text-xs font-semibold text-muted mb-1 uppercase tracking-wide">Presets</p>
+						<p className="text-xs font-semibold text-muted mb-1">Presets</p>
 						{PRESETS.map(({ label, key }) => (
 							<button
 								key={key}

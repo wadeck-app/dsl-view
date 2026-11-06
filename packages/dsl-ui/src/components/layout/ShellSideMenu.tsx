@@ -57,7 +57,7 @@ const ROW_CURRENT = 'bg-primary-light font-medium text-primary';
 const ROW_OTHER = 'text-muted hover:bg-muted-bg hover:text-content';
 const ITEM = `flex items-center gap-2 rounded-md px-3 py-2 text-sm ${TRANSITION}`;
 // `truncate`: a caption longer than the menu is cut with an ellipsis (its `title` has the whole text), never wrapped.
-const CAPTION = 'truncate px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-muted';
+const CAPTION = 'truncate px-3 pb-1 pt-3 text-xs font-semibold text-muted';
 // Icons only (the menu is under 6rem wide): the icon or initials centered, no side padding to eat the room.
 const ITEM_ICON_ONLY = `flex items-center justify-center rounded-md px-0 py-2 text-sm ${TRANSITION}`;
 

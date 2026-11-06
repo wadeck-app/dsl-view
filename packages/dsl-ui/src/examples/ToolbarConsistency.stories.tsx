@@ -13,7 +13,7 @@ import { Pagination } from '../components/table/Pagination.js';
 // between them is visible at a glance even though each looks fine alone.
 
 function RowLabel({ children }: { children: React.ReactNode }) {
-	return <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">{children}</p>;
+	return <p className="mb-1 text-xs font-semibold text-muted">{children}</p>;
 }
 
 const sampleFilters: FilterBarFilter[] = [

@@ -29,12 +29,12 @@ function BothThemes({ label, children }: { label: string; children: React.ReactN
 			<p className="text-sm font-medium text-content">{label}</p>
 			<div className="grid grid-cols-2 gap-4">
 				<div className="bg-bg p-3 rounded border border-border">
-					<p className="mb-2 text-xs uppercase tracking-wide text-muted">light theme</p>
+					<p className="mb-2 text-xs text-muted">light theme</p>
 					{children}
 				</div>
 				{/* `dark` carries both the tokens and `color-scheme: dark`, exactly as on a real app root. */}
 				<div className="dark bg-bg p-3 rounded border border-border">
-					<p className="mb-2 text-xs uppercase tracking-wide text-muted">dark theme</p>
+					<p className="mb-2 text-xs text-muted">dark theme</p>
 					{children}
 				</div>
 			</div>

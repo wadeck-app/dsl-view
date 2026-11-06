@@ -23,7 +23,7 @@ export interface CronBuilderProps {
 // @formatter:off
 const SEL         = 'rounded border border-border px-2 py-1 text-sm bg-surface text-content focus:outline-none';
 const PREVIEW_CLS = 'text-xs font-mono text-content bg-bg border border-border rounded px-2 py-1';
-const LEGEND_CLS  = 'text-xs uppercase tracking-wide text-muted';
+const LEGEND_CLS  = 'text-xs text-muted';
 /*
  * A raised panel, not a grey slab.
  *

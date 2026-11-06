@@ -294,27 +294,27 @@ export const WithDrawerDetail: Story = {
 					{activeEmployee && (
 						<dl className="space-y-4">
 							<div>
-								<dt className="text-xs font-medium text-muted uppercase tracking-wide">Name</dt>
+								<dt className="text-xs font-medium text-muted">Name</dt>
 								<dd className="mt-1 text-sm text-content">{activeEmployee.name}</dd>
 							</div>
 							<div>
-								<dt className="text-xs font-medium text-muted uppercase tracking-wide">Email</dt>
+								<dt className="text-xs font-medium text-muted">Email</dt>
 								<dd className="mt-1 text-sm text-content">{activeEmployee.email}</dd>
 							</div>
 							<div>
-								<dt className="text-xs font-medium text-muted uppercase tracking-wide">Department</dt>
+								<dt className="text-xs font-medium text-muted">Department</dt>
 								<dd className="mt-1 text-sm text-content">{activeEmployee.department}</dd>
 							</div>
 							<div>
-								<dt className="text-xs font-medium text-muted uppercase tracking-wide">Role</dt>
+								<dt className="text-xs font-medium text-muted">Role</dt>
 								<dd className="mt-1 text-sm text-content">{activeEmployee.role}</dd>
 							</div>
 							<div>
-								<dt className="text-xs font-medium text-muted uppercase tracking-wide">Salary</dt>
+								<dt className="text-xs font-medium text-muted">Salary</dt>
 								<dd className="mt-1 text-sm text-content">${activeEmployee.salary.toLocaleString()}</dd>
 							</div>
 							<div>
-								<dt className="text-xs font-medium text-muted uppercase tracking-wide">Start Date</dt>
+								<dt className="text-xs font-medium text-muted">Start Date</dt>
 								<dd className="mt-1 text-sm text-content">{activeEmployee.startDate}</dd>
 							</div>
 						</dl>
@@ -496,23 +496,23 @@ export const FullAdminTable: Story = {
 					{activeEmployee && (
 						<dl className="space-y-4">
 							<div>
-								<dt className="text-xs font-medium text-muted uppercase tracking-wide">Email</dt>
+								<dt className="text-xs font-medium text-muted">Email</dt>
 								<dd className="mt-1 text-sm text-content">{activeEmployee.email}</dd>
 							</div>
 							<div>
-								<dt className="text-xs font-medium text-muted uppercase tracking-wide">Department</dt>
+								<dt className="text-xs font-medium text-muted">Department</dt>
 								<dd className="mt-1 text-sm text-content">{activeEmployee.department}</dd>
 							</div>
 							<div>
-								<dt className="text-xs font-medium text-muted uppercase tracking-wide">Role</dt>
+								<dt className="text-xs font-medium text-muted">Role</dt>
 								<dd className="mt-1 text-sm text-content">{activeEmployee.role}</dd>
 							</div>
 							<div>
-								<dt className="text-xs font-medium text-muted uppercase tracking-wide">Salary</dt>
+								<dt className="text-xs font-medium text-muted">Salary</dt>
 								<dd className="mt-1 text-sm text-content">${activeEmployee.salary.toLocaleString()}</dd>
 							</div>
 							<div>
-								<dt className="text-xs font-medium text-muted uppercase tracking-wide">Start Date</dt>
+								<dt className="text-xs font-medium text-muted">Start Date</dt>
 								<dd className="mt-1 text-sm text-content">{activeEmployee.startDate}</dd>
 							</div>
 						</dl>
