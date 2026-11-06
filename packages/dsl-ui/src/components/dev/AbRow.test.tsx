@@ -40,21 +40,39 @@ describe('AbRow', () => {
 		expect(screen.getByRole('button', { name: 'Option 1' })).toHaveAttribute('title', 'Hint 1');
 	});
 
-	it.each([
-		[1, 1, '6rem'],
-		[3, 3, '6rem'],
-		[4, 4, '1fr'],
-		[10, 10, '1fr'],
-		[11, 10, '1fr'],
-		[25, 10, '1fr'],
-	])('lays %i options on %i columns, each at least as wide as its label, at most %s', (options, columns, width) => {
+	it.each([1, 3, 4, 10, 11, 14, 25])('keeps %i options on one line that scrolls sideways, never wrapped', (options) => {
 		render(<AbRow test={testWith(options)} onHide={() => {}} />);
-		expect(group().style.gridTemplateColumns).toBe(`repeat(${columns}, minmax(max-content, ${width}))`);
+		const classes = group().className.split(' ');
+		expect(classes).toContain('flex');
+		expect(classes).toContain('overflow-x-auto');
+		expect(classes).not.toContain('flex-wrap');
+		expect(classes).not.toContain('grid');
+		// No column count to cap: the old grid wrapped the 11th option alone onto a second line.
+		expect(group().style.gridTemplateColumns).toBe('');
 	});
 
-	it('never caps a column below its label: a long label is not drawn under the next cell', () => {
-		render(<AbRow test={testWith(2)} onHide={() => {}} />);
-		expect(group().style.gridTemplateColumns).not.toContain('minmax(0');
+	it.each([1, 11, 14])('gives each of %i cells its natural width (never shrunk, so none is cut inside the scroller)', (options) => {
+		render(<AbRow test={testWith(options)} onHide={() => {}} />);
+		const buttons = within(group()).getAllByRole('button');
+		expect(buttons).toHaveLength(options);
+		for (const b of buttons) {
+			const classes = b.className.split(' ');
+			expect(classes).toContain('shrink-0');
+			expect(classes).toContain('whitespace-nowrap');
+			expect(classes).toContain('min-w-14');
+		}
+	});
+
+	it.each([
+		[2, false],
+		[3, false],
+		[4, true],
+		[11, true],
+	])('with %i options the cells %s fill the spare width of the row', (options, grows) => {
+		render(<AbRow test={testWith(options)} onHide={() => {}} />);
+		for (const b of within(group()).getAllByRole('button')) {
+			expect(b.className.split(' ').includes('grow')).toBe(grows);
+		}
 	});
 
 	it('draws the label at text-xs and the options at text-sm with a 32px-tall target', () => {
@@ -190,6 +208,28 @@ describe('AbRow', () => {
 			expect(spy.mock.contexts[1]).toBe(screen.getByRole('button', { name: 'Option 9' }));
 			unmount();
 			expect(disconnect).toHaveBeenCalledTimes(1);
+		});
+
+		it('brings the chosen option back when the pointer leaves a row the user scrolled away, not before', () => {
+			const spy = stubScroll();
+			render(<AbRow test={testWith(11, 'o9')} onHide={() => {}} />);
+			expect(spy).toHaveBeenCalledTimes(1);
+			// Hovering inside the row (the user is looking around) never fights the scroll position.
+			fireEvent.mouseEnter(group());
+			fireEvent.mouseEnter(screen.getByRole('button', { name: 'Option 2' }));
+			fireEvent.scroll(group());
+			expect(spy).toHaveBeenCalledTimes(1);
+			fireEvent.mouseLeave(group());
+			expect(spy).toHaveBeenCalledTimes(2);
+			expect(spy.mock.contexts[1]).toBe(screen.getByRole('button', { name: 'Option 9' }));
+		});
+
+		it('does not bring the option back while the keyboard focus is inside the row', () => {
+			const spy = stubScroll();
+			render(<AbRow test={testWith(11, 'o9')} onHide={() => {}} />);
+			act(() => screen.getByRole('button', { name: 'Option 2' }).focus());
+			fireEvent.mouseLeave(group());
+			expect(spy).toHaveBeenCalledTimes(1);
 		});
 
 		it('does not fail where scrollIntoView does not exist', () => {

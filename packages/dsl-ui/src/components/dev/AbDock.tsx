@@ -17,7 +17,7 @@ export type { AbTest } from './AbTest.js';
 // z-[9999]: stays above every overlay, modal and sticky element of the page.
 // The frame is a strip over the content area (from the left inset to the window's right edge) that centres the dock and
 // lets clicks through (pointer-events-none); the dock and the copy button take them back.
-const FRAME_CLASS = 'pointer-events-none fixed bottom-6 z-[9999] flex items-end justify-center gap-2 px-4';
+const FRAME_CLASS = 'pointer-events-none fixed bottom-6 z-[9999] flex items-end justify-center gap-2 px-2 sm:px-4';
 // w-max: as wide as the widest row. min-w-0 lets it shrink; each row then scrolls sideways.
 const DOCK_BOX_CLASS = 'pointer-events-auto relative min-w-0 w-max';
 // Never wider than the strip (so never under a side menu), nor than the window minus a small margin.
@@ -31,8 +31,9 @@ const HINT_CLASS = 'pointer-events-none absolute bottom-full left-1/2 mb-4 w-max
  * `--app-shell-menu-width` (published by `AppShell`), then 0px: no shell, the whole window.
  */
 export const DOCK_INSET_LEFT = 'var(--ab-dock-inset-left, var(--app-shell-menu-width, 0px))';
-// Track 1: the label of every row, as wide as the longest label (10rem min, 35vw on a narrow window; the label caps itself at 20rem / 40vw). Track 2: the options.
-const LABEL_AND_OPTIONS_TRACKS = 'minmax(min(10rem, 35vw), max-content) minmax(0, 1fr)';
+// Track 1: the label of every row, as wide as the longest label (no minimum below 640px, 10rem from there up; the label caps
+// itself at 6rem, then 20rem / 40vw). Track 2: the options. Classes, not an inline style: a media query decides.
+const LABEL_AND_OPTIONS_TRACKS = 'grid-cols-[minmax(0,max-content)_minmax(0,1fr)] sm:grid-cols-[minmax(10rem,max-content)_minmax(0,1fr)]';
 const DOCK_CLASS = 'gap-1.5 rounded-[1.75rem] border border-border bg-surface p-1.5 shadow-2xl';
 const CHIP_CLASS = 'flex cursor-pointer items-center gap-1.5 rounded-full border border-border bg-surface py-1 pl-3 pr-2 text-xs text-muted hover:text-content';
 // The collapse tab sits on the top edge of the dock, so it costs no row height.
@@ -66,7 +67,11 @@ const COLLAPSE_OPTIONS = ['open', 'collapsed'] as const;
  * "Copy report" is a small icon button at the bottom right, beside the rows (not one of them). It copies the page URL
  * and the choice of each visible test; it is disabled when every test is hidden and absent while the dock is folded.
  *
- * Narrow windows: the dock never exceeds the window width; each row scrolls sideways and keeps the chosen option in view.
+ * Narrow windows: the dock never exceeds the window width. A row is one line that never wraps (no column cap, cells keep
+ * their natural width) and scrolls sideways; it keeps the chosen option in view when the choice changes, when the row
+ * resizes and when the pointer leaves it after the user scrolled it. Below 640px the label is cut at 6rem (full text in
+ * its tooltip) and the label column has no minimum width. The width left to the dock is the strip (window minus the side
+ * menu inset) minus the paddings and the copy button.
  * Nested tests (an AbTest inside a variant) are listed ABOVE their parent: the dock grows upwards, so the row just clicked stays under the pointer.
  * The hint of the hovered or keyboard-focused option shows above the dock (it is also the option's accessible description).
  * The host page gets a spacer of the dock's height (folded: the pill's) at the end of its flow, so the dock never hides the last content.
@@ -165,8 +170,7 @@ export function AbDock({ tests, enabled = isDev(), insetLeft }: { tests: readonl
 				id={dockId}
 				data-testid="ab-dock"
 				hidden={collapsed}
-				className={`${collapsed ? 'hidden' : 'grid'} ${DOCK_CLASS}`}
-				style={{ gridTemplateColumns: LABEL_AND_OPTIONS_TRACKS }}
+				className={`${collapsed ? 'hidden' : 'grid'} ${LABEL_AND_OPTIONS_TRACKS} ${DOCK_CLASS}`}
 				onKeyDown={(e) => {
 					if (e.key === 'Escape' && !e.defaultPrevented) {
 						e.stopPropagation();

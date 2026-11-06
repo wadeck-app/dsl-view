@@ -30,10 +30,28 @@ describe('AbDock narrow windows', () => {
 		expect(screen.getByTestId('ab-dock').parentElement!.style.maxWidth).toBe('min(100%, calc(100vw - 1rem))');
 	});
 
-	it('lets the label take at most 40% of the window, and the label column 35% when the window is narrow', () => {
+	it('caps the label at 6rem below 640px (20rem or 40% of the window from there up) and cuts it with an ellipsis', () => {
 		render(<AbDock tests={[testWith('a')]} enabled />);
-		expect(screen.getByText('Test a').closest('[title]')!.className).toContain('max-w-[min(20rem,40vw)]');
-		expect(screen.getByTestId('ab-dock').style.gridTemplateColumns).toContain('min(10rem, 35vw)');
+		const label = screen.getByText('Test a');
+		const cell = label.closest('[title]')!;
+		expect(cell.className.split(' ')).toContain('max-w-24');
+		expect(cell.className.split(' ')).toContain('sm:max-w-[min(20rem,40vw)]');
+		expect(cell).toHaveAttribute('title', 'Test a');
+		expect(label.className.split(' ')).toEqual(expect.arrayContaining(['truncate']));
+	});
+
+	it('gives the label column no minimum width below 640px, 10rem from there up (no wide empty label on a phone)', () => {
+		render(<AbDock tests={[testWith('a')]} enabled />);
+		const classes = screen.getByTestId('ab-dock').className.split(' ');
+		expect(classes).toContain('grid-cols-[minmax(0,max-content)_minmax(0,1fr)]');
+		expect(classes).toContain('sm:grid-cols-[minmax(10rem,max-content)_minmax(0,1fr)]');
+		expect(screen.getByTestId('ab-dock').style.gridTemplateColumns).toBe('');
+	});
+
+	it('leaves 0.5rem on each side of the strip below 640px (1rem from there up)', () => {
+		render(<AbDock tests={[testWith('a')]} enabled />);
+		expect(frame().className.split(' ')).toEqual(expect.arrayContaining(['px-2', 'sm:px-4']));
+		expect(frame().className.split(' ')).not.toContain('px-4');
 	});
 
 	it('keeps each row scrollable sideways', () => {

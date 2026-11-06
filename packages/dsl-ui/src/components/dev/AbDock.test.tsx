@@ -67,16 +67,23 @@ describe('AbDock rows', () => {
 		for (const b of colorRow().getAllByRole('button')) expect(b.getAttribute('title')!.length, b.textContent ?? '').toBeGreaterThan(20);
 	});
 
-	it('wraps a long row onto several lines of 10 columns, labels on one line', () => {
-		render(<AbDock tests={[manyOptionsTest(23)]} enabled />);
+	it.each([11, 14, 23])('never wraps a row of %i choices: one line, scrolls sideways, labels on one line', (count) => {
+		render(<AbDock tests={[manyOptionsTest(count)]} enabled />);
 		const group = screen.getByRole('group', { name: 'Many' });
-		expect(group.style.gridTemplateColumns).toContain('repeat(10,');
-		for (const b of within(group).getAllByRole('button')) expect(b.className).toContain('whitespace-nowrap');
+		expect(group.className.split(' ')).not.toContain('flex-wrap');
+		expect(group.className).toContain('overflow-x-auto');
+		expect(group.style.gridTemplateColumns).toBe('');
+		for (const b of within(group).getAllByRole('button')) {
+			expect(b.className).toContain('whitespace-nowrap');
+			expect(b.className).toContain('shrink-0');
+		}
 	});
 
 	it('keeps few options (Off / On) at a normal cell width instead of stretching them', () => {
 		render(<AbDock tests={[manyOptionsTest(2, 'two', 'Two')]} enabled />);
-		expect(screen.getByRole('group', { name: 'Two' }).style.gridTemplateColumns).toBe('repeat(2, minmax(max-content, 6rem))');
+		for (const b of within(screen.getByRole('group', { name: 'Two' })).getAllByRole('button')) {
+			expect(b.className.split(' ')).not.toContain('grow');
+		}
 	});
 
 	it('stacks the tests in the order given, all rows on the same tracks of the dock', () => {
@@ -91,8 +98,9 @@ describe('AbDock rows', () => {
 	it('sizes one label column to the longest label of the dock, bounded, for every row', () => {
 		render(<AbDock tests={[manyOptionsTest(2, 'a', 'Policy scorecard layout, a very long name'), manyOptionsTest(2, 'b', 'Gap')]} enabled />);
 		const dock = screen.getByTestId('ab-dock');
-		// First track: at least 10rem (35vw on a narrow window), as wide as the longest label. Second track takes the rest.
-		expect(dock.style.gridTemplateColumns).toBe('minmax(min(10rem, 35vw), max-content) minmax(0, 1fr)');
+		// First track: as wide as the longest label (at least 10rem from 640px up). Second track takes the rest.
+		expect(dock.className.split(' ')).toContain('grid-cols-[minmax(0,max-content)_minmax(0,1fr)]');
+		expect(dock.className.split(' ')).toContain('sm:grid-cols-[minmax(10rem,max-content)_minmax(0,1fr)]');
 		expect(dock.className).toContain('grid');
 	});
 

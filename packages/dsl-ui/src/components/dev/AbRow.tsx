@@ -3,16 +3,16 @@ import React, { useEffect, useId, useRef } from 'react';
 
 import type { AbTest } from './abTypes.js';
 
-// Beyond this many options a row wraps onto a second line instead of squeezing the labels.
-const MAX_COLUMNS = 10;
-
 // The row sits on the two tracks of the dock (label column, options), so every label column has the width of the longest label.
 const ROW_CLASS = 'grid gap-x-0 items-stretch overflow-hidden rounded-[1.25rem] border border-border bg-surface text-xs';
-// max-w: the label never takes more than 40% of the window, so on a narrow screen the options keep room (and scroll).
-const LABEL_CLASS = 'flex min-w-0 max-w-[min(20rem,40vw)] items-center justify-between gap-1 border-r border-border bg-bg pl-4 pr-2 text-xs font-medium text-muted';
+// max-w: the label never takes more than 6rem below 640px (then 20rem or 40% of the window), so on a phone the options keep room (and scroll).
+const LABEL_CLASS = 'flex min-w-0 max-w-24 sm:max-w-[min(20rem,40vw)] items-center justify-between gap-1 border-r border-border bg-bg pl-4 pr-2 text-xs font-medium text-muted';
 const HIDE_CLASS = 'shrink-0 cursor-pointer rounded-full p-1 text-muted hover:bg-surface hover:text-content';
 // py-1.5 + text-sm: at least 32px tall, a comfortable target to compare many variants.
-const CELL_BASE = 'whitespace-nowrap rounded-full px-3 py-1.5 text-center text-sm font-semibold transition-colors cursor-pointer';
+// shrink-0 + min-w-14: a cell keeps its natural width, so the row scrolls sideways instead of wrapping or cutting a cell.
+const CELL_BASE = 'shrink-0 min-w-14 whitespace-nowrap rounded-full px-3 py-1.5 text-center text-sm font-semibold transition-colors cursor-pointer';
+// From 4 options the cells share the spare width of the row; Off / On keep their own width, left-aligned.
+const CELL_GROW = 'grow';
 const CELL_ON = 'bg-primary-solid text-white';
 const CELL_OFF = 'text-muted hover:bg-bg hover:text-content';
 
@@ -43,26 +43,34 @@ export function AbRow({
 	onHint?: (hint: string | null) => void;
 	folded?: boolean;
 }): React.ReactElement {
-	const cell = (id: string): string => `${CELL_BASE} ${id === test.value ? CELL_ON : CELL_OFF}`;
-	const columns = Math.min(test.options.length, MAX_COLUMNS);
+	const grows = test.options.length > 3;
+	const cell = (id: string): string => `${CELL_BASE} ${grows ? `${CELL_GROW} ` : ''}${id === test.value ? CELL_ON : CELL_OFF}`;
 	const hintIdBase = useId();
 	const selectedRef = useRef<HTMLButtonElement | null>(null);
 	const groupRef = useRef<HTMLDivElement | null>(null);
 	// The row scrolls sideways when it does not fit (narrow screen): keep the chosen option visible, on mount and on each change.
-	useEffect(() => {
+	// Only a change of the choice, a resize or the pointer leaving the row brings the chosen option back: a user who
+	// scrolls the row to look at the other options is never fought while the pointer is over it.
+	const reveal = (): void => {
 		const el = selectedRef.current;
 		// jsdom has no scrollIntoView; a display:none (folded) dock has no layout to scroll.
 		if (folded || !el || typeof el.scrollIntoView !== 'function') {
 			return;
 		}
-		const reveal = (): void => el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+		el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+	};
+	useEffect(() => {
+		const el = selectedRef.current;
+		if (folded || !el || typeof el.scrollIntoView !== 'function') {
+			return;
+		}
 		reveal();
 		// Layout settles after the first paint (fonts change the option widths, the dock sizes itself, the window resizes): reveal again then.
 		const group = groupRef.current;
 		if (!group || typeof ResizeObserver === 'undefined') {
 			return;
 		}
-		const observer = new ResizeObserver(reveal);
+		const observer = new ResizeObserver(() => reveal());
 		observer.observe(group);
 		observer.observe(el);
 		return () => observer.disconnect();
@@ -86,10 +94,14 @@ export function AbRow({
 				ref={groupRef}
 				role="group"
 				aria-label={test.label}
-				// A column is never narrower than its label (no cell drawn under its neighbour). Few options (Off / On) keep a
-				// normal cell width, left-aligned, instead of stretching over the whole row.
-				style={{ gridTemplateColumns: `repeat(${columns}, minmax(max-content, ${test.options.length <= 3 ? '6rem' : '1fr'}))` }}
-				className="grid min-w-0 gap-1 overflow-x-auto p-1"
+				// One line, never wrapped: it scrolls sideways when the options do not fit. Leaving the row with the pointer brings
+				// the chosen option back into view, unless the keyboard focus is inside the row.
+				onMouseLeave={(e) => {
+					if (!e.currentTarget.contains(document.activeElement)) {
+						reveal();
+					}
+				}}
+				className="flex min-w-0 gap-1 overflow-x-auto p-1 [scrollbar-width:thin]"
 			>
 				{test.options.map((o, index) => {
 					const selected = o.id === test.value;

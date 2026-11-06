@@ -149,3 +149,19 @@ function ElevenVariantsDemo() {
 }
 
 export const ElevenVariantsLongPage: Story = { render: () => <ElevenVariantsDemo /> };
+
+const FOURTEEN = Object.fromEntries(Array.from({ length: 14 }, (_, i) => [`v${i + 1}`, { label: `Variant ${i + 1}`, hint: `Hint of variant ${i + 1}: what it changes.` }]));
+
+// 14 variants and a second, short row: a row never wraps, it is one line that scrolls sideways; the label column is shared.
+function FourteenVariantsDemo() {
+	const layout = useAbTest({ id: 'story-fourteen', label: 'Layout', initial: 'v12', options: FOURTEEN });
+	const dense = useAbTest({ id: 'story-fourteen-dense', label: 'Density', initial: 'off', options: { off: { label: 'Off', hint: 'Off.' }, on: { label: 'On', hint: 'On.' } } });
+	return (
+		<div className="min-h-screen bg-bg p-8 text-content">
+			<p>Applied: layout = {layout.value}.</p>
+			<AbDock tests={[layout, dense]} enabled />
+		</div>
+	);
+}
+
+export const FourteenVariants: Story = { render: () => <FourteenVariantsDemo /> };
