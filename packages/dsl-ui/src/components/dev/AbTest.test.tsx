@@ -189,6 +189,29 @@ describe('AbTest node, experiments enabled', () => {
 		expect(screen.queryByRole('group', { name: 'Test inner-1' })).not.toBeInTheDocument();
 	});
 
+	it('lists the rows of a chosen variant ABOVE the variants row, so the clicked row keeps its place', () => {
+		const inner = experiment('inner-2', { x: label('inner X'), y: label('inner Y') });
+		render(<Page node={experiment('outer-2', { plain: label('plain view'), nested: inner })} />);
+		const names = () => screen.getAllByRole('group').map((g) => g.getAttribute('aria-label'));
+		expect(names()).toEqual(['Test outer-2']);
+		fireEvent.click(rowOf('Test outer-2').getByRole('button', { name: 'NESTED' }));
+		expect(names()).toEqual(['Test inner-2', 'Test outer-2']);
+		// A choice in the inner row does not move either row.
+		fireEvent.click(rowOf('Test inner-2').getByRole('button', { name: 'Y' }));
+		expect(names()).toEqual(['Test inner-2', 'Test outer-2']);
+	});
+
+	it('keeps a test declared in the page flow, and not in a variant, in declaration order', () => {
+		const page = (
+			<AbExperiments enabled>
+				<DslRenderer node={experiment('flow-a', { a: label('a1') })} registry={registry} />
+				<DslRenderer node={experiment('flow-b', { a: label('b1') })} registry={registry} />
+			</AbExperiments>
+		);
+		render(page);
+		expect(screen.getAllByRole('group').map((g) => g.getAttribute('aria-label'))).toEqual(['Test flow-a', 'Test flow-b']);
+	});
+
 	it('follows a change made in another tab', () => {
 		render(<Page node={experiment('tab-1', { a: label('view A'), b: label('view B') })} />);
 		act(() => {

@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useContext, useEffect, useMemo, useRef } from 'react';
 
 import { useAbExperiments } from './AbExperiments.js';
+import { AbParentContext } from './abOrder.js';
 import type { AbTest as AbDockTest } from './abTypes.js';
 import { isDev } from './isDev.js';
 import { reportOnce } from './reportOnce.js';
@@ -90,6 +91,8 @@ const ALERT_CLASS = 'rounded border border-danger bg-danger-bg p-2 text-sm text-
  */
 export function AbTest({ id, label, initial, variants, renderNode }: AbTestProps): React.ReactElement {
 	const host = useAbExperiments();
+	// Set when this node sits inside the chosen variant of another AbTest: the dock then shows its row above that one.
+	const parentId = useContext(AbParentContext);
 	const enabled = host ? host.enabled : isDev();
 	const error = configError({ id, label, initial, variants });
 	const ids = useMemo(() => (error ? [] : Object.keys(variants)), [error, variants]);
@@ -121,9 +124,17 @@ export function AbTest({ id, label, initial, variants, renderNode }: AbTestProps
 			host?.store.remove(owner, id);
 			return;
 		}
-		const test: AbDockTest = { id, label, summary, options: JSON.parse(optionsKey) as AbDockTest['options'], value, onSelect: (variantId) => chooseRef.current(variantId) };
+		const test: AbDockTest = {
+			id,
+			label,
+			summary,
+			options: JSON.parse(optionsKey) as AbDockTest['options'],
+			value,
+			onSelect: (variantId) => chooseRef.current(variantId),
+			...(parentId === null ? {} : { parentId }),
+		};
 		host.store.set(owner, test, JSON.stringify([label, initial, optionsKey]));
-	}, [registrable, host, id, label, initial, summary, optionsKey, value, owner]);
+	}, [registrable, host, id, label, initial, summary, optionsKey, value, owner, parentId]);
 
 	useEffect(() => () => host?.store.remove(owner, id), [host, id, owner]);
 
@@ -135,5 +146,9 @@ export function AbTest({ id, label, initial, variants, renderNode }: AbTestProps
 		);
 	}
 	// While experiments are off, usePersistentChoice returns `initial` without touching the storage or the URL.
-	return <React.Fragment key={value}>{renderNode(variants[value]!.view, {})}</React.Fragment>;
+	return (
+		<AbParentContext.Provider value={id}>
+			<React.Fragment key={value}>{renderNode(variants[value]!.view, {})}</React.Fragment>
+		</AbParentContext.Provider>
+	);
 }

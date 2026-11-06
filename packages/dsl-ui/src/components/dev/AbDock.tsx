@@ -1,7 +1,8 @@
 import { ChevronDown, ChevronUp, Plus } from 'lucide-react';
-import React, { useEffect, useId, useRef } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 
 import { AbCopyReport } from './AbCopyReport.js';
+import { nestedAboveParent } from './abOrder.js';
 import { AbRow } from './AbRow.js';
 import { COLLAPSED_DOCK_KEY, HIDDEN_TESTS_KEY } from './abTypes.js';
 import type { AbTest } from './abTypes.js';
@@ -17,15 +18,21 @@ export type { AbTest } from './AbTest.js';
 // The frame is a strip over the content area (from the left inset to the window's right edge) that centres the dock and
 // lets clicks through (pointer-events-none); the dock and the copy button take them back.
 const FRAME_CLASS = 'pointer-events-none fixed bottom-6 z-[9999] flex items-end justify-center gap-2 px-4';
-// w-max: as wide as the widest row; max-w-full: never wider than the strip (so never under a side menu). min-w-0 lets it shrink.
-const DOCK_BOX_CLASS = 'pointer-events-auto relative min-w-0 w-max max-w-full';
+// w-max: as wide as the widest row. min-w-0 lets it shrink; each row then scrolls sideways.
+const DOCK_BOX_CLASS = 'pointer-events-auto relative min-w-0 w-max';
+// Never wider than the strip (so never under a side menu), nor than the window minus a small margin.
+const DOCK_BOX_MAX_WIDTH = 'min(100%, calc(100vw - 1rem))';
+// The frame sits this far above the bottom of the window (bottom-6): the page must leave that room too.
+const FRAME_BOTTOM_OFFSET = '1.5rem';
+// Hint of the hovered or keyboard-focused option, above the dock (absolute: it never moves a row).
+const HINT_CLASS = 'pointer-events-none absolute bottom-full left-1/2 mb-4 w-max max-w-[min(32rem,calc(100vw-2rem))] -translate-x-1/2 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs text-content shadow-lg';
 /**
  * Left edge of the area the dock may use. `--ab-dock-inset-left` (the `insetLeft` prop or a host stylesheet) wins, then
  * `--app-shell-menu-width` (published by `AppShell`), then 0px: no shell, the whole window.
  */
 export const DOCK_INSET_LEFT = 'var(--ab-dock-inset-left, var(--app-shell-menu-width, 0px))';
-// Track 1: the label of every row, as wide as the longest label (10rem min; the label caps itself at 20rem). Track 2: the options.
-const LABEL_AND_OPTIONS_TRACKS = 'minmax(10rem, max-content) minmax(0, 1fr)';
+// Track 1: the label of every row, as wide as the longest label (10rem min, 35vw on a narrow window; the label caps itself at 20rem / 40vw). Track 2: the options.
+const LABEL_AND_OPTIONS_TRACKS = 'minmax(min(10rem, 35vw), max-content) minmax(0, 1fr)';
 const DOCK_CLASS = 'gap-1.5 rounded-[1.75rem] border border-border bg-surface p-1.5 shadow-2xl';
 const CHIP_CLASS = 'flex cursor-pointer items-center gap-1.5 rounded-full border border-border bg-surface py-1 pl-3 pr-2 text-xs text-muted hover:text-content';
 // The collapse tab sits on the top edge of the dock, so it costs no row height.
@@ -59,6 +66,12 @@ const COLLAPSE_OPTIONS = ['open', 'collapsed'] as const;
  * "Copy report" is a small icon button at the bottom right, beside the rows (not one of them). It copies the page URL
  * and the choice of each visible test; it is disabled when every test is hidden and absent while the dock is folded.
  *
+ * Narrow windows: the dock never exceeds the window width; each row scrolls sideways and keeps the chosen option in view.
+ * Nested tests (an AbTest inside a variant) are listed ABOVE their parent: the dock grows upwards, so the row just clicked stays under the pointer.
+ * The hint of the hovered or keyboard-focused option shows above the dock (it is also the option's accessible description).
+ * The host page gets a spacer of the dock's height (folded: the pill's) at the end of its flow, so the dock never hides the last content.
+ * That works when the document scrolls; an app with its own inner scroll container must leave the room itself.
+ *
  * Known gap: Tab-only keyboard navigation inside a row (no roving tabindex).
  *
  * Not a DSL node: it is a React API (hook + component) for the host app's code, so it carries no `@registryCategory`.
@@ -71,9 +84,29 @@ export function AbDock({ tests, enabled = isDev(), insetLeft }: { tests: readonl
 	const dockId = useId();
 	const collapseRef = useRef<HTMLButtonElement>(null);
 	const pillRef = useRef<HTMLButtonElement>(null);
+	const frameRef = useRef<HTMLDivElement>(null);
+	const [hint, setHint] = useState<string | null>(null);
+	// Height of the fixed frame (dock or folded pill), reserved at the end of the page flow.
+	const [reservedHeight, setReservedHeight] = useState(0);
+	const active = enabled && tests.length > 0;
 	// Where the focus goes after a toggle the user made (not after a change coming from another tab or the first render).
 	const focusAfterToggle = useRef<'pill' | 'collapse' | null>(null);
 	const collapsed = dockState === 'collapsed';
+	useEffect(() => {
+		const frame = frameRef.current;
+		if (!active || !frame) {
+			return;
+		}
+		const measure = (): void => setReservedHeight(Math.ceil(frame.getBoundingClientRect().height));
+		measure();
+		// jsdom and very old engines have no ResizeObserver: the height is then measured once.
+		if (typeof ResizeObserver === 'undefined') {
+			return;
+		}
+		const observer = new ResizeObserver(measure);
+		observer.observe(frame);
+		return () => observer.disconnect();
+	}, [active]);
 	useEffect(() => {
 		const target = focusAfterToggle.current;
 		focusAfterToggle.current = null;
@@ -84,26 +117,34 @@ export function AbDock({ tests, enabled = isDev(), insetLeft }: { tests: readonl
 		}
 	}, [collapsed]);
 	// Nothing to show without a test: no chevron, no pill. The stored fold state is only read, never written, here.
-	if (!enabled || tests.length === 0) {
+	if (!active) {
 		return null;
 	}
 	const collapse = (): void => {
 		focusAfterToggle.current = 'pill';
+		setHint(null);
 		setDockState('collapsed');
 	};
 	const expand = (): void => {
 		focusAfterToggle.current = 'collapse';
 		setDockState('open');
 	};
-	const shown = tests.filter((t) => !hidden.has(t.id));
+	const shown = nestedAboveParent(tests).filter((t) => !hidden.has(t.id));
 	const reminders = tests.filter((t) => hidden.has(t.id));
 	return (
+		<>
 		<div
+			ref={frameRef}
 			data-testid="ab-dock-frame"
 			className={FRAME_CLASS}
 			style={{ left: DOCK_INSET_LEFT, right: 0, ...(insetLeft === undefined ? {} : ({ '--ab-dock-inset-left': insetLeft } as React.CSSProperties)) }}
 		>
-			<div className={DOCK_BOX_CLASS}>
+			<div className={DOCK_BOX_CLASS} style={{ maxWidth: DOCK_BOX_MAX_WIDTH }}>
+			{hint !== null && !collapsed ? (
+				<div data-testid="ab-dock-hint" aria-hidden="true" className={HINT_CLASS}>
+					{hint}
+				</div>
+			) : null}
 			{collapsed ? (
 				// violations-suppress: react/no-raw-button AbDock IS the atomic wrapper for the A/B option picker; the pill owns its geometry
 				<button
@@ -167,11 +208,23 @@ export function AbDock({ tests, enabled = isDev(), insetLeft }: { tests: readonl
 					</div>
 				) : null}
 				{shown.map((t) => (
-					<AbRow key={t.id} test={t} onHide={() => toggleHidden(t.id)} />
+					<AbRow
+							key={t.id}
+							test={t}
+							folded={collapsed}
+							onHint={setHint}
+							onHide={() => {
+								setHint(null);
+								toggleHidden(t.id);
+							}}
+						/>
 				))}
 			</div>
 			</div>
 			{collapsed ? null : <AbCopyReport shown={shown} hidden={reminders} />}
 		</div>
+		{/* Room for the fixed frame in the page flow, so the end of the page (a form) can be scrolled above the dock. */}
+		<div aria-hidden="true" data-testid="ab-dock-spacer" style={{ height: `calc(${reservedHeight}px + ${FRAME_BOTTOM_OFFSET})`, flexShrink: 0 }} />
+		</>
 	);
 }

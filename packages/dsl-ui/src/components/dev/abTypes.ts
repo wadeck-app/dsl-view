@@ -16,6 +16,8 @@ export interface AbTest {
 	options: readonly AbOption[];
 	value: string;
 	onSelect: (id: string) => void;
+	// Id of the test whose chosen variant declares this one (an AbTest inside a variant). The dock shows it ABOVE its parent.
+	parentId?: string;
 }
 
 // Whole-dock state: 'open' (default) or 'collapsed' (a small pill; every choice stays applied).

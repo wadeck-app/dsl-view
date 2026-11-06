@@ -1,5 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react';
 
+import { useState } from 'react';
+
+import { FieldText } from '../form/FieldText.js';
 import { AbDock } from './AbDock.js';
 import { useAbTest } from './useAbTest.js';
 
@@ -127,3 +130,22 @@ function BesideMenuDemo() {
 }
 
 export const BesideSideMenu: Story = { render: () => <BesideMenuDemo /> };
+
+const ELEVEN = Object.fromEntries(Array.from({ length: 11 }, (_, i) => [`v${i + 1}`, { label: `Variant ${i + 1}`, hint: `Hint of variant ${i + 1}: what it changes.` }]));
+
+// 11 variants on a long page: on a narrow window the row scrolls sideways with the chosen variant in view, the page ends above the
+// dock (try the last field), and a hover or keyboard focus shows the hint above the dock.
+function ElevenVariantsDemo() {
+	const [last, setLast] = useState('');
+	const layout = useAbTest({ id: 'story-eleven', label: 'Layout', initial: 'v9', options: ELEVEN });
+	return (
+		<div className="min-h-screen bg-bg p-8 text-content">
+			<p>Applied: layout = {layout.value}. Scroll to the end: the last field stays reachable above the dock.</p>
+			<div className="h-[120vh]" />
+			<FieldText label="Last field" value={last} onChange={setLast} />
+			<AbDock tests={[layout]} enabled />
+		</div>
+	);
+}
+
+export const ElevenVariantsLongPage: Story = { render: () => <ElevenVariantsDemo /> };

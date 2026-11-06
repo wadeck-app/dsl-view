@@ -91,8 +91,8 @@ describe('AbDock rows', () => {
 	it('sizes one label column to the longest label of the dock, bounded, for every row', () => {
 		render(<AbDock tests={[manyOptionsTest(2, 'a', 'Policy scorecard layout, a very long name'), manyOptionsTest(2, 'b', 'Gap')]} enabled />);
 		const dock = screen.getByTestId('ab-dock');
-		// First track: at least 10rem, as wide as the longest label, never more than 20rem. Second track takes the rest.
-		expect(dock.style.gridTemplateColumns).toBe('minmax(10rem, max-content) minmax(0, 1fr)');
+		// First track: at least 10rem (35vw on a narrow window), as wide as the longest label. Second track takes the rest.
+		expect(dock.style.gridTemplateColumns).toBe('minmax(min(10rem, 35vw), max-content) minmax(0, 1fr)');
 		expect(dock.className).toContain('grid');
 	});
 
@@ -115,7 +115,7 @@ describe('AbDock horizontal placement (content area, never under a side menu)', 
 		const box = screen.getByTestId('ab-dock').parentElement!;
 		expect(box.parentElement).toBe(frame());
 		expect(box.className).toContain('w-max');
-		expect(box.className).toContain('max-w-full');
+		expect(box.style.maxWidth).toBe('min(100%, calc(100vw - 1rem))');
 		// The frame covers the whole content strip: it must not swallow clicks meant for the page behind it.
 		expect(frame().className).toContain('pointer-events-none');
 		expect(box.className).toContain('pointer-events-auto');
