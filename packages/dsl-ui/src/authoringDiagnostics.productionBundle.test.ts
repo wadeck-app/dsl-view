@@ -43,6 +43,10 @@ const MARKERS: Record<string, string> = {
 	// Not "Nothing to refresh": the button's own tooltip text says that in production too.
 	'RefreshButton without a source': 'it provides `$refresh`',
 	'CompactSelect defaultValue not an option': 'is not one of the option values',
+	'CompactSelect storageKey not usable': 'it must be a non-empty text (the localStorage key)',
+	'CompactSelect storageKey without urlParam': 'only a URL-backed select remembers its choice',
+	'CompactSelect stored value not an option': 'The entry is left in place; picking an option replaces it',
+	'CompactSelect localStorage refuses': 'the choice is kept in the URL only',
 	'FigureRow invalid items': 'An alert is shown instead of the figures',
 	'SparklineView invalid points': 'Nothing is drawn.',
 	'SparklineView without ariaLabel': 'it is the name a screen reader announces',
@@ -52,6 +56,7 @@ const MARKERS: Record<string, string> = {
 	'missing --color-on-solid token': 'falls back to white meanwhile',
 	// AppShell `menuVariant` and `barOnScroll` go through classFor: one message for both ("using X instead").
 	'AppShell menuVariant / barOnScroll unknown value (classFor)': 'instead. Allowed values:',
+	'AppShell item badge that is not a count': 'No badge is shown for it',
 	'AppShell resizable menu without resizeLabel': 'needs a name for assistive technology',
 	'AppShell garbage menu width in localStorage': 'Ignoring the menu width',
 };

@@ -213,6 +213,7 @@
 			"options",
 			"placeholder",
 			"resetUrlParams",
+			"storageKey",
 			"urlParam"
 		]
 	},

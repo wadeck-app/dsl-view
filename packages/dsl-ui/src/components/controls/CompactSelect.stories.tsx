@@ -124,3 +124,14 @@ export const DefaultWithPlaceholder: Story = {
 	render: args => <UrlBacked {...args} />,
 	args: { value: '', onChange: () => {}, urlParam: 'range', options: RANGES, ariaLabel: 'Period', placeholder: 'Any period', defaultValue: '6M' },
 };
+
+/**
+ * `storageKey` remembers the choice in the browser's localStorage (key `storybook.compactSelect.range`, raw value).
+ * This story READS and WRITES localStorage: pick an option, then reload the story with an empty URL to see it come back
+ * (the URL query above is written on restore). Clear the key in the browser devtools to reset it.
+ */
+export const RememberedInLocalStorage: Story = {
+	decorators: inUrl('/'),
+	render: args => <UrlBacked {...args} />,
+	args: { value: '', onChange: () => {}, urlParam: 'range', storageKey: 'storybook.compactSelect.range', options: RANGES, ariaLabel: 'Period', defaultValue: '6M' },
+};

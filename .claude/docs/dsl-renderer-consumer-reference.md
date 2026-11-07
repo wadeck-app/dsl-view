@@ -483,6 +483,23 @@ Omit `urlParam` to use either component in plain controlled mode (`page`/`onPage
 
 **Value no option carries.** With `urlParam`, a non-empty value matching no option (hand-edited link, changed options) is shown as an extra disabled option `Unknown: <value>` instead of silently displaying the first option. The empty value keeps its display, and a controlled `value` (no `urlParam`) is unchanged: its options often load later, so the option would flash.
 
+**Remembering the choice (`storageKey`).** `CompactSelect` accepts `storageKey`, a localStorage key; it needs `urlParam` (ignored and reported once in development without it). Precedence: URL param, then stored value, then `defaultValue`.
+
+```yaml
+- $type: CompactSelect
+  urlParam: range
+  storageKey: orders.period
+  defaultValue: 6M
+  ariaLabel: Period
+  options: [...]
+```
+
+- **Restore writes the URL.** With the param absent and a stored value that is an option and differs from `defaultValue`, the stored value is written to the URL once (history `replace`, other params kept). Sources reading `$urlParam.<name>` load once without it, then refetch once with it. A stored value equal to `defaultValue` writes nothing.
+- **Storage mirrors the URL value.** An option is stored (also when it comes from a link); the empty text (`?name=`, the placeholder) removes the entry and is never stored or restored; any other text is shown as `Unknown: <value>` and leaves the entry alone. Every user change writes both. Removing the param from the URL later restores the stored choice again; pick an option to replace it.
+- **Format.** The raw option value under exactly the key you gave, no prefix or JSON: the host can read, write or clear it. Pick a key unique to the select (`orders.period`), since any other code using the key shares it.
+- **Other tabs.** A `storage` event storing an option updates the select and the URL.
+- **Failures.** A stored text that is not an option is ignored, reported once in development naming the key, and left in place. A localStorage that throws (private mode, quota, disabled) is reported once in development and the select keeps working from the URL alone. No `window`/`localStorage`: nothing is read or written. `storageKey` must be a non-empty text; another type is ignored and reported (`null` means no value).
+
 ---
 
 ## Generated files
@@ -912,6 +929,16 @@ const dates = useDateFormat();   // dates.format(v, 'short'|'medium'|'long', 'da
 - `RelativeDate`: labels and tooltip come from the formatter; the `format` (date-fns) prop is ignored and reported in development.
 - Pickers: the first calendar column is `formatter.firstDayOfWeek`; `is12Hour` defaults to the clock of the settings. Without `dateFormat` the text field is written by the formatter ("24 Oct 2026") and accepts `yyyy-MM-dd` or exactly that text. An explicit date-fns `dateFormat` still decides text and parsing. A picked day is a calendar day: the settings' time zone never moves it.
 - Left as they were: `TimePicker` AM/PM labels and the English button names of the pickers; Chart number ticks (`Intl.NumberFormat` of the browser language).
+
+## `AppShell` item badge (`ShellItem.badge`)
+
+A count after the label of a side-menu row, a top-bar tab and a row of the tabs overflow list.
+
+- Value: a non-negative whole number. `0` is shown; large values are shown whole (no abbreviation). `undefined`/`null`: nothing.
+- Anything else (string, `NaN`, `Infinity`, negative, fractional) draws nothing and warns once in development; the item otherwise works.
+- Look: small pill, `bg-muted-bg text-muted`; on the current menu row `bg-primary-light text-primary`. Tab pills stay muted (a tab's accent is the host's).
+- Accessible name is "Label, 3": a visually hidden ", " then the figure, read once. The label still truncates; the pill never shrinks or wraps. `menuVariant="fit"` counts the pill in the width.
+- Icons only (`resizable` menu under 6rem, `barOnScroll: 'icons'` once scrolled): no pill; the count stays in the accessible name and the tooltip becomes "Label (3)". A custom `renderLink` must forward `title`.
 
 ## Behaviour changes by version
 

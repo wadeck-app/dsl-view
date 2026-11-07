@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { announceStoredValue, subscribeToStoredValue } from '@dsl-ui/utils/storageSubscription.js';
+
 // Instances of this hook sharing a key (the same test declared in two places) must agree within one tab too: the
-// `storage` event only fires in OTHER tabs, so a choice is also announced here.
-const sameTabListeners = new Map<string, Set<(value: string) => void>>();
+// `storage` event only fires in OTHER tabs, so a choice is also announced (see storageSubscription).
 
 // One value among `options`, kept in localStorage.
 // - An unknown stored value (or URL value) is reported, never silently used; `initial` applies.
@@ -56,26 +57,7 @@ export function usePersistentChoice<T extends string>(
 				setValue(next as T);
 			}
 		};
-		const onStorage = (e: StorageEvent): void => {
-			if (e.storageArea !== localStorage || e.key !== key || e.newValue === null) {
-				return;
-			}
-			apply(e.newValue);
-		};
-		window.addEventListener('storage', onStorage);
-		let listeners = sameTabListeners.get(key);
-		if (!listeners) {
-			listeners = new Set();
-			sameTabListeners.set(key, listeners);
-		}
-		listeners.add(apply);
-		return () => {
-			window.removeEventListener('storage', onStorage);
-			listeners.delete(apply);
-			if (listeners.size === 0) {
-				sameTabListeners.delete(key);
-			}
-		};
+		return subscribeToStoredValue(key, apply);
 	}, [key, enabled]);
 
 	const choose = (v: T): void => {
@@ -84,7 +66,7 @@ export function usePersistentChoice<T extends string>(
 		}
 		localStorage.setItem(key, v);
 		setValue(v);
-		sameTabListeners.get(key)?.forEach((listener) => listener(v));
+		announceStoredValue(key, v);
 	};
 	return [value, choose];
 }

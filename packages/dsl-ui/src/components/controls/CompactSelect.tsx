@@ -4,6 +4,7 @@ import { ChevronDown } from 'lucide-react';
 import { useOptionalUrlParam } from '../../context/UrlParamContext.js';
 import { reportAuthoringMistake } from '@dsl-ui/utils/devDiagnostics.js';
 import type { FieldSelectOption } from '../form/FieldSelect.js';
+import { useStoredUrlChoice } from './useStoredUrlChoice.js';
 
 // pr-8 reserves the chevron's column. A native select draws its own arrow inside the box, so the
 // arrow is suppressed with appearance-none and drawn here instead, the same treatment FieldSelect
@@ -52,6 +53,27 @@ export interface CompactSelectProps {
 	 * (`?name=`) is a choice (the placeholder) and does not fall back to it.
 	 */
 	defaultValue?: string;
+	/**
+	 * localStorage key remembering the choice, so a user who comes back finds the select where they left it. Only
+	 * meaningful with `urlParam`; without it the prop is ignored and reported once in development. Precedence: URL
+	 * param, then the stored value, then `defaultValue`.
+	 *
+	 * - On load, with the param absent and a stored value that is one of the options and differs from `defaultValue`, the
+	 *   stored value is written to the URL (history replace, other params kept). Sources reading `$urlParam.<name>`
+	 *   therefore load once without it and refetch once with it. A stored value equal to `defaultValue` writes nothing.
+	 * - A param in the URL wins for that load and becomes the stored choice. The storage mirrors the URL value: an option
+	 *   is stored; the empty text (the placeholder, `?name=`) removes the entry and is never stored or restored; any other
+	 *   text (a hand-edited link) is shown as `Unknown: <value>` and leaves the entry alone.
+	 * - Every user change writes the URL and the storage. Another tab storing an option updates the select and the URL.
+	 * - Removing the param from the URL later restores the stored choice again; picking an option replaces it.
+	 * - Format: the raw option value under exactly this key, no prefix, so a host can read or clear it. Use a key
+	 *   distinct per select and unlikely to collide with the host's own (e.g. "orders.period").
+	 * - A stored text that is not an option is ignored, reported once in development naming the key, and left in place.
+	 *   A localStorage that throws (private mode, quota, disabled) is reported once in development; the select keeps
+	 *   working from the URL alone. No `window` or `localStorage`: nothing is read or written.
+	 * - Must be a non-empty text; any other type is ignored and reported once (`null` means no value).
+	 */
+	storageKey?: string;
 }
 
 /**
@@ -67,7 +89,7 @@ export interface CompactSelectProps {
  * @registryTags select compact toolbar
  * @registryBind formData onChange
  */
-export function CompactSelect({ urlParam, resetUrlParams, value: valueProp, options, onChange: onChangeProp, ariaLabel, placeholder, disabled, defaultValue: defaultProp }: CompactSelectProps) {
+export function CompactSelect({ urlParam, resetUrlParams, value: valueProp, options, onChange: onChangeProp, ariaLabel, placeholder, disabled, defaultValue: defaultProp, storageKey: storageKeyProp }: CompactSelectProps) {
 	const [urlValue, setUrlValue] = useOptionalUrlParam(urlParam, { resetUrlParams });
 	// `null` is "no value" for every prop (a YAML `key:` with nothing); only a text can be shown as a choice.
 	const defaultValue = typeof defaultProp === 'string' ? defaultProp : undefined;
@@ -76,7 +98,20 @@ export function CompactSelect({ urlParam, resetUrlParams, value: valueProp, opti
 	if (defaultProp != null && !defaultListed) {
 		reportAuthoringMistake(`[CompactSelect] defaultValue ${typeof defaultProp === 'string' ? `"${defaultProp}"` : String(defaultProp)} is not one of the option values (${options.map(opt => opt.value).join(', ')})${defaultValue === undefined ? ' and is ignored: it must be a text' : ''}.`);
 	}
-	const value = urlParam != null ? urlValue ?? defaultValue ?? '' : valueProp;
+	const storageKeyUsable = typeof storageKeyProp === 'string' && storageKeyProp !== '';
+	if (storageKeyProp != null && !storageKeyUsable) {
+		reportAuthoringMistake(`[CompactSelect] storageKey ${typeof storageKeyProp === 'string' ? '""' : String(storageKeyProp)} is ignored: it must be a non-empty text (the localStorage key).`);
+	} else if (storageKeyUsable && urlParam == null) {
+		reportAuthoringMistake(`[CompactSelect] storageKey "${storageKeyProp}" is ignored without urlParam: only a URL-backed select remembers its choice.`);
+	}
+	const restored = useStoredUrlChoice({
+		storageKey: storageKeyUsable && urlParam != null ? storageKeyProp : undefined,
+		urlValue,
+		setUrlValue,
+		optionValues: options.map(opt => opt.value),
+		defaultValue,
+	});
+	const value = urlParam != null ? urlValue ?? restored ?? defaultValue ?? '' : valueProp;
 	// A value no option carries (hand-edited link, changed options) would otherwise show the first option while the
 	// page still uses that value. The empty text is "nothing chosen" and keeps its existing display.
 	const unlisted = urlParam != null && typeof value === 'string' && value !== '' && !options.some(opt => opt.value === value);
