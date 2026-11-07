@@ -146,6 +146,22 @@ describe('defaultValue', () => {
 		expect(screen.getByRole('option', { name: 'Any period' })).toHaveProperty('selected', true);
 	});
 
+	// No option can represent the empty text without a placeholder, so `?range=` is not a choice there: it is read as absent.
+	it('without a placeholder, an empty url param is not a choice and the default is shown', () => {
+		const { router, updates } = renderAt('/p?range=', <CompactSelect urlParam="range" defaultValue="6M" value="" options={RANGES} onChange={() => {}} ariaLabel="Period" />);
+		expect(screen.getByRole('combobox', { name: 'Period' })).toHaveValue('6M');
+		expect(screen.queryByRole('option', { name: /^Unknown/ })).toBeNull();
+		expect(router.state.location.search).toBe('?range=');
+		expect(updates).toHaveLength(0);
+	});
+
+	it('without a placeholder and without a default, an empty url param keeps the native first-option display', () => {
+		const { updates } = renderAt('/p?range=', <CompactSelect urlParam="range" value="" options={RANGES} onChange={() => {}} ariaLabel="Period" />);
+		expect(screen.getByRole('combobox', { name: 'Period' })).toHaveValue('1M');
+		expect(screen.getAllByRole('option')).toHaveLength(RANGES.length);
+		expect(updates).toHaveLength(0);
+	});
+
 	// Right side of `??`: without a default the absent param is still '' (the placeholder), as before the prop existed.
 	it('without it an absent url param still shows the placeholder', () => {
 		renderAt('/p', <CompactSelect urlParam="range" value="" options={RANGES} onChange={() => {}} ariaLabel="Period" placeholder="Any period" />);

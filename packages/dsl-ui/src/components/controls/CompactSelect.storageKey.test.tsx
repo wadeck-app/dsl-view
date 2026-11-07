@@ -120,6 +120,46 @@ describe('restoring the stored value', () => {
 		expect(localStorage.getItem(KEY)).toBeNull();
 	});
 
+	// Without a placeholder no option can represent the empty text: `?range=` is read exactly like an absent param.
+	it('without a placeholder, an empty URL param restores the stored option like an absent one and keeps the entry', () => {
+		localStorage.setItem(KEY, '1Y');
+		const { router, updates } = renderAt('/p?range=&keep=1', { defaultValue: '6M' });
+		const params = new URLSearchParams(router.state.location.search);
+		expect(params.get('range')).toBe('1Y');
+		expect(params.get('keep')).toBe('1');
+		expect(updates).toHaveLength(1);
+		expect(updates[0]!.action).toBe('REPLACE');
+		expect(select()).toHaveValue('1Y');
+		expect(localStorage.getItem(KEY)).toBe('1Y');
+	});
+
+	it('without a placeholder, an empty URL param with a stored option equal to the default shows it, writes nothing and keeps the entry', () => {
+		localStorage.setItem(KEY, '6M');
+		const { router, updates } = renderAt('/p?range=', { defaultValue: '6M' });
+		expect(select()).toHaveValue('6M');
+		expect(router.state.location.search).toBe('?range=');
+		expect(updates).toHaveLength(0);
+		expect(localStorage.getItem(KEY)).toBe('6M');
+	});
+
+	it('without a placeholder, an empty URL param shows the default when nothing is stored, and writes nothing', () => {
+		const { router, updates } = renderAt('/p?range=', { defaultValue: '6M' });
+		expect(select()).toHaveValue('6M');
+		expect(router.state.location.search).toBe('?range=');
+		expect(updates).toHaveLength(0);
+		expect(localStorage.getItem(KEY)).toBeNull();
+	});
+
+	it('without a placeholder, an empty URL param with nothing stored and no default keeps the native display and writes nothing', () => {
+		const setItem = vi.spyOn(Storage.prototype, 'setItem');
+		const { router, updates } = renderAt('/p?range=');
+		expect(select()).toHaveValue('1M');
+		expect(router.state.location.search).toBe('?range=');
+		expect(updates).toHaveLength(0);
+		expect(keysOf(setItem)).toStrictEqual([]);
+		expect(localStorage.getItem(KEY)).toBeNull();
+	});
+
 	it('a URL value that is not an option is shown as Unknown and is not stored; the entry stays', () => {
 		localStorage.setItem(KEY, '1M');
 		renderAt('/p?range=2Y');

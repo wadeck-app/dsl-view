@@ -50,7 +50,8 @@ export interface CompactSelectProps {
 	 * receive no parameter. It is only displayed: the URL is not written until the user picks something. Ignored
 	 * without `urlParam`. Should be one of the option values; a text that is not is still shown (as `Unknown: <value>`)
 	 * and reported once in development, any other type is ignored and reported. A present but empty parameter
-	 * (`?name=`) is a choice (the placeholder) and does not fall back to it.
+	 * (`?name=`) depends on the placeholder: with one it is a choice (the placeholder) and does not fall back to the
+	 * default; without one no option can represent it, so it is treated like an absent param and the default is shown.
 	 */
 	defaultValue?: string;
 	/**
@@ -62,8 +63,9 @@ export interface CompactSelectProps {
 	 *   stored value is written to the URL (history replace, other params kept). Sources reading `$urlParam.<name>`
 	 *   therefore load once without it and refetch once with it. A stored value equal to `defaultValue` writes nothing.
 	 * - A param in the URL wins for that load and becomes the stored choice. The storage mirrors the URL value: an option
-	 *   is stored; the empty text (the placeholder, `?name=`) removes the entry and is never stored or restored; any other
-	 *   text (a hand-edited link) is shown as `Unknown: <value>` and leaves the entry alone.
+	 *   is stored; the empty text (`?name=`) with a placeholder is a choice: it removes the entry and is never stored or
+	 *   restored; without a placeholder it is not a choice and is treated like an absent param (the stored option is
+	 *   restored to the URL and the entry is kept); any other text (a hand-edited link) is shown as `Unknown: <value>` and leaves the entry alone.
 	 * - Every user change writes the URL and the storage. Another tab storing an option updates the select and the URL.
 	 * - Removing the param from the URL later restores the stored choice again; picking an option replaces it.
 	 * - Format: the raw option value under exactly this key, no prefix, so a host can read or clear it. Use a key
@@ -90,7 +92,10 @@ export interface CompactSelectProps {
  * @registryBind formData onChange
  */
 export function CompactSelect({ urlParam, resetUrlParams, value: valueProp, options, onChange: onChangeProp, ariaLabel, placeholder, disabled, defaultValue: defaultProp, storageKey: storageKeyProp }: CompactSelectProps) {
-	const [urlValue, setUrlValue] = useOptionalUrlParam(urlParam, { resetUrlParams });
+	const [rawUrlValue, setUrlValue] = useOptionalUrlParam(urlParam, { resetUrlParams });
+	// Without a placeholder no option can represent the empty text, so `?name=` is not a choice: it counts as absent for
+	// the display, the default and the stored value alike. With a placeholder the empty text stays a choice.
+	const urlValue = rawUrlValue === '' && placeholder === undefined ? null : rawUrlValue;
 	// `null` is "no value" for every prop (a YAML `key:` with nothing); only a text can be shown as a choice.
 	const defaultValue = typeof defaultProp === 'string' ? defaultProp : undefined;
 	// The empty text is a valid default only when a placeholder gives it an option.
