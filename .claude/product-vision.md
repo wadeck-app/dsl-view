@@ -8,7 +8,7 @@ Two published packages:
 Target use case: admin and internal tooling pages defined in YAML, eliminating hand-written React component trees for data-driven UIs.
 
 ## Planned / signalled directions
-- `generate-node-schemas` script in `dsl-ui` (`tsx scripts/generate-node-schemas.ts`) signals future JSON Schema tooling for component introspection — enables tooling (editors, validators) to understand the YAML DSL schema.
+- Shipped: `npm run generate-node-schemas` in `dsl-ui` generates the per-component Zod node schemas (`src/schemas/generated-node-schemas.ts`), `known-keys.json` ships the component key manifest for CLIs, and `compileDslDocument`/`compileDslPagesDir` (`dsl-renderer/build/dslCompiler`) run static DSL checks in CI. Not built: a JSON Schema export (no `toJSONSchema` or equivalent in `packages/*/src` or `scripts`) so editors and validators outside this toolchain can understand the YAML DSL.
 - `ContractAdapter` interface is pluggable (ZodContractAdapter is provided); multiple backend contract formats are a natural extension point.
 - Brain system (`$brains`) supports HTTP, var mutations, navigation, chaining, polling — already present; continued expansion of action types is expected.
 

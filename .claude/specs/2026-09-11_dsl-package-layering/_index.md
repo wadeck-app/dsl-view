@@ -2,8 +2,8 @@
 
 **Created:** 2026-09-11
 **Version:** v0.1
-**Status:** Complete - Ready for Implementation
-**Iteration:** 1 (Spec), Iteration 2 (Implementation in progress)
+**Status:** Phase 1 implemented (2026-11-07); see `.claude/plans/2026-09-11_phase1-components.md`
+**Iteration:** 1 (Spec), Iteration 2 (Implementation: phase 1 done)
 
 ## Summary
 
