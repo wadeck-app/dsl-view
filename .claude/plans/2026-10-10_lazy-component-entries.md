@@ -118,7 +118,7 @@ Shipped instead:
 
 - **`@registryLazy` JSDoc tag**, opt-in per component (same pattern as
   `@registryCategory`/`@registryTags`/`@registryBind`), not a global
-  `BuildEntriesOptions` flag. Only `Chart.tsx` is tagged today.
+  `BuildEntriesOptions` flag. Tagged today: `Chart`, `Markdown`, `TimeBrush` (2026-11-07).
 - Codegen wraps each lazy component's own output in **its own `Suspense`**
   (`fallback={null}`, hardcoded, not configurable) — not just the page-level
   one. A code-review caught that a single page-level `Suspense` would blank

@@ -25,7 +25,7 @@
 - Check this rule before accepting a handoff from a peer session, and answer "put it in your project's library" when it fails. App-specific column formats stay in the app (see the `DataTable` header).
 - I (the dsl-view agent) stay agnostic of application logic. I integrate only components with no business logic; a convenient, urgent or already-requested component with domain logic is still refused.
 - When a peer asks for one, I do not build it: I point them to the local-fork process in the root `README.md` (keep it in their own library, mark it `@dsl-view-candidate`, propose it only once mature and generic). I never ask a peer to hand me a domain component "to host for everyone".
-- Current extraction candidates and their consumers: `.claude/plans/2026-10-24_extract-business-components.md`.
+- Extraction history (done 2026-10-24) and the single-consumer components still to re-evaluate (`LiveToggle`, `FetchSpinner`, `CronBuilder`): `.claude/plans/2026-10-24_extract-business-components.md`.
 
 ## Theming
 - Components style themselves from semantic tokens, never raw palette classes and never Tailwind `dark:` variants — a `dark:` variant applies under any `.dark` ancestor, so a component using one cannot be nested in a `ThemeScope` that re-asserts light. Enforced by `dsl-ui/no-dark-variant`, no exemptions.
@@ -41,11 +41,14 @@
 ## UX guiding principles
 - Dialog/form footer buttons: the whole action cluster is right-aligned within the panel (`justify-end`, not left-aligned or centered) — primary action (e.g. "Save") rightmost and visually emphasized, dismissive action (e.g. "Cancel") immediately to its left, unstyled. Material Design's convention, adopted project-wide (`CardActions`, `DialogFooter`). Sources disagree on left-vs-right: Microsoft's Win32 UX Guide puts the primary action left instead, and Nielsen Norman Group takes no universal stance (recommends matching actual platform-usage data). Apple's position is unverified — their HIG site couldn't be fetched (JS SPA).
 
+- No UPPERCASE text: table headers, captions, separators and labels keep their written case (`uppercase` / `text-transform: uppercase` / `font-variant: small-caps` are banned; it reduces readability). Stated explicitly by the user for table headers; applies to every text. Known offenders to fix: `ShellSideMenu` caption, `AbRow`, `Avatar`, `CronBuilder`, `DateRangePicker`. A global violation rule enforces it in every repo (violations-owner).
+
 ## Build-time safety
 - `pageTypesGenerator` Vite plugin validates YAML `$sources` URLs against Zod contract types at build time — a URL mismatch fails the TypeScript build.
 - `__baseUrl` must be stripped before merging multiple `defineRoutes` results, or TypeScript errors occur.
 - YAML files must use the `?raw` Vite import suffix.
 - `dsl.config.yaml` must be adjacent to `vite.config.ts`.
+- `compileDslDocument`/`compileDslPagesDir` (`@wadeck-app/dsl-renderer/build/dslCompiler`) only replicate the *static* dev-only checks from `DslRenderer.tsx` (unknown `$type`, unknown `$`-directive, `nodeSchema`) — `ctxSchema` and `$context.expose` need runtime `$sources` data and are never checked at compile time; `DslRenderer.tsx`'s dev-only checks still run at render even on compiled content, by design. See `.claude/docs/dsl-renderer-consumer-reference.md#compiled-dsl-artifacts-and-check-dsl-ci`.
 
 ## Source authority
 - `dsl-view` packages are always authoritative; mirrors in `capability-framework` are for HMR dev only and must not be treated as canonical.

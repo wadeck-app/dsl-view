@@ -1,5 +1,7 @@
 # Plan: UI Component Context Variants
 
+> **Status (2026-11-07): phases 1-4 done** (commit 584322a: `_Button` variants and sizes, `buttonContext`, `TabButton`, `DeleteButton`, `IconButton`, the layout containers providing the button context). Phases 5-7 (violation sweep, screenshots, review) are process steps with no artifact, not verified. The size and variant unions have grown since (`icon-field`, `none`, `chip`, `neutral`, `success`); read `_Button.tsx` for the current set.
+
 **Spec:** .claude/specs/2026-09-12_ui-component-context-variants/
 **Package:** `packages/dsl-ui`
 

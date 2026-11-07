@@ -1,5 +1,7 @@
 # Plan : Nouveaux composants atomiques dsl-ui
 
+> **Statut (2026-11-07) : terminé.** Les 15 composants existent dans `packages/dsl-ui/src/components/*` avec leurs stories (commits f61cf7f, 0b88d69). Document historique : Storybook est passé en 10 (`addon-docs`) et les paquets Radix sont dans `dependencies`, pas en devDependencies comme écrit ci-dessous.
+
 ## Contexte
 
 `dsl-ui` manque de briques atomiques standard présentes dans toutes les grandes libs (Mantine, Shadcn, Ant Design, Chakra, Radix). Objectif : combler les 15 gaps identifiés, en utilisant Radix UI comme primitive là où disponible, avec Storybook et tests Vitest pour chaque composant.

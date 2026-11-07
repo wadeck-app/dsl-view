@@ -1,5 +1,7 @@
 # Extract business components from dsl-ui
 
+> **Status (2026-11-07): done (commit 29192e2).** The extracted components are gone from `packages/dsl-ui/src` and live in the consumers' own libraries. The sections below are the original plan, written in the future tense. Single-consumer components still in dsl-ui and to re-evaluate: `LiveToggle`, `FetchSpinner`, `CronBuilder`.
+
 Rule: `dsl-ui` only ships generic UI components (see "Scope of dsl-ui" in `.claude/guiding-principles.md`). Inventory run 2026-10-24 over `packages/dsl-ui/src`; consumers searched in capability-framework, app-core, queue, task, orchestrator, agent-fleet (YAML `$type`, TSX imports, non-generated files only).
 
 ## Verdicts

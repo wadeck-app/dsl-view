@@ -1,5 +1,7 @@
 # Implementation Plan: Phase 1 - dsl-ui Component Enhancements
 
+> **Status (2026-11-07): partial.** Steps 1-4 are in the code (`DatePicker`, `DateRangePicker`, `TimePicker` and their `Field*` wrappers, `Drawer`, `SortableColumn`, `BulkActionsToolbar`). Not done: step 5's `data-table-patterns.md` and the `TableDrawerDetail` example (patterns are shown in `DataTablePatterns.stories.tsx` instead), step 6's admin-dashboard demo and screenshot, and stories for `FieldDate`, `FieldDateRange` and `FieldTime`. Docs now live in `.claude/docs/`, not `docs/`. Acceptance criteria were not re-checked.
+
 **Spec:** .claude/specs/2026-09-11_dsl-package-layering/
 
 **Date:** 2026-09-11
