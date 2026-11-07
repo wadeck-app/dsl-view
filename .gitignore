@@ -16,5 +16,6 @@ debug-storybook.log
 .claude/tmp-*
 # Bypass state, written only by the guardrails plugin after the user approves. Machine-local, and
 # committing it would hand another checkout someone else's approvals.
-.claude/w-guardrails/# `violations` run from a sub-folder (no config.ts there) drops a cache folder next to it; the real one is the root .violations/.
+.claude/w-guardrails/
+# `violations` run from a sub-folder (no config.ts there) drops a cache folder next to it; the real one is the root .violations/.
 packages/**/.violations/
