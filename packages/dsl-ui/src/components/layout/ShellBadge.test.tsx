@@ -145,10 +145,12 @@ describe('side menu badge', () => {
 		expect(classes(pill)).not.toContain('text-primary');
 	});
 
-	it('takes the primary tokens on the current row', () => {
+	// The current row is bg-muted-bg (rail look): a pill on the same fill would only have its edge to show it.
+	it('takes the surface fill and the primary ink on the current row', () => {
 		shell({ menu: menuOf({ id: 'jobs', label: 'Jobs', href: '/jobs', badge: 3, current: 'page' }) });
 		const pill = pillOf(row('Jobs, 3'))!;
-		expect(classes(pill)).toEqual(expect.arrayContaining(['bg-primary-light', 'text-primary']));
+		expect(classes(pill)).toEqual(expect.arrayContaining(['bg-surface', 'text-primary']));
+		expect(classes(pill)).not.toContain('bg-primary-light');
 		expect(classes(pill)).not.toContain('bg-muted-bg');
 		expect(classes(pill)).not.toContain('text-muted');
 	});
@@ -269,13 +271,20 @@ describe('icons-only side menu', () => {
 describe('tabs', () => {
 	const tabLink = (name: string) => within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('link', { name: nameIs(name) });
 
-	it('draws the figure after the label, named "Label, 7", not primary even when current', () => {
+	it('draws the figure after the label, named "Label, 7", on the surface with the primary ink when the tab is current', () => {
 		shell();
 		const link = tabLink('Queue, 7');
 		const pill = pillOf(link)!;
 		expect(pill).toHaveTextContent('7');
 		expect(link.textContent).toBe('Queue, 7');
-		expect(classes(pill)).toEqual(expect.arrayContaining(['bg-muted-bg', 'text-muted', 'shrink-0']));
+		expect(classes(pill)).toEqual(expect.arrayContaining(['bg-surface', 'text-primary', 'shrink-0']));
+		expect(classes(pill)).not.toContain('bg-muted-bg');
+	});
+
+	it('keeps the muted pill on a tab that is not current', () => {
+		shell({ tabs: [{ id: 'queue', label: 'Queue', href: '/queue', badge: 7 }] });
+		const pill = pillOf(tabLink('Queue, 7'))!;
+		expect(classes(pill)).toEqual(expect.arrayContaining(['bg-muted-bg', 'text-muted']));
 		expect(classes(pill)).not.toContain('text-primary');
 	});
 

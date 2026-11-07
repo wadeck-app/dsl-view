@@ -930,13 +930,23 @@ const dates = useDateFormat();   // dates.format(v, 'short'|'medium'|'long', 'da
 - Pickers: the first calendar column is `formatter.firstDayOfWeek`; `is12Hour` defaults to the clock of the settings. Without `dateFormat` the text field is written by the formatter ("24 Oct 2026") and accepts `yyyy-MM-dd` or exactly that text. An explicit date-fns `dateFormat` still decides text and parsing. A picked day is a calendar day: the settings' time zone never moves it.
 - Left as they were: `TimePicker` AM/PM labels and the English button names of the pickers; Chart number ticks (`Intl.NumberFormat` of the browser language).
 
+## `AppShell` current entry (rail look)
+
+Visible change for every `AppShell` consumer, no option: the current entry (`current` set) looks the same in the top bar and the side menu.
+
+- Text `text-content`, fill `bg-muted-bg`, weight 500, and a 3px bar in `--color-primary` on the inner edge: under a tab, on the left of a row.
+- Tabs and rows have square corners, current or not. The tab glow is gone. Inactive entries are unchanged.
+- The bar follows `--color-primary`, so `useRootAccent` / `AccentScope` colour it per module. Same bar in the `barOnScroll` `shrink` and `icons` states and in the icons-only `resizable` menu.
+- `ShellItem.accent` is deprecated and ignored (it only coloured the glow); drop it and set the module colour with `useRootAccent`.
+- The tabs overflow list (`moreLabel`) keeps its previous current style.
+
 ## `AppShell` item badge (`ShellItem.badge`)
 
 A count after the label of a side-menu row, a top-bar tab and a row of the tabs overflow list.
 
 - Value: a non-negative whole number. `0` is shown; large values are shown whole (no abbreviation). `undefined`/`null`: nothing.
 - Anything else (string, `NaN`, `Infinity`, negative, fractional) draws nothing and warns once in development; the item otherwise works.
-- Look: small pill, `bg-muted-bg text-muted`; on the current menu row `bg-primary-light text-primary`. Tab pills stay muted (a tab's accent is the host's).
+- Look: small pill, `bg-muted-bg text-muted`; on the current row or tab `bg-surface text-primary` with a primary edge (the current entry is `bg-muted-bg`, so a muted pill would blend into it).
 - Accessible name is "Label, 3": a visually hidden ", " then the figure, read once. The label still truncates; the pill never shrinks or wraps. `menuVariant="fit"` counts the pill in the width.
 - Icons only (`resizable` menu under 6rem, `barOnScroll: 'icons'` once scrolled): no pill; the count stays in the accessible name and the tooltip becomes "Label (3)". A custom `renderLink` must forward `title`.
 

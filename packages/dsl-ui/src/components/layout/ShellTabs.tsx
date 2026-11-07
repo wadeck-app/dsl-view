@@ -3,7 +3,7 @@ import { initialsOf } from '../display/initials.js';
 import type { ShellItem, ShellLinkProps } from './AppShell.js';
 import { labelWithBadge, ShellBadge } from './ShellBadge.js';
 
-// The tab is as tall as the top bar (self-stretch), so the current highlight fills it from top to bottom.
+// The tab is as tall as the top bar (self-stretch), so the current fill and bar span it from top to bottom.
 // Padding, gap and text size animate with the bar (200ms ease-out, like its height); colours keep the same curve.
 const TAB_BASE =
 	'flex shrink-0 items-center self-stretch whitespace-nowrap transition-[color,background-color,padding,gap,font-size,line-height] duration-200 ease-out motion-reduce:transition-none';
@@ -28,10 +28,11 @@ function TabIcon({ scaled, children }: { scaled: boolean; children: React.ReactN
 
 /** How much of a tab is drawn: all of it, a smaller version, or the icon only (the name stays for assistive technology). */
 export type TabDensity = 'normal' | 'small' | 'icons';
-const TAB_CURRENT = 'font-semibold text-content';
+// The "rail" look: the current tab has neutral text on a grey fill and a 3px bar under it, inside its bottom edge, in
+// --color-primary (the host sets it to the module colour through useRootAccent / AccentScope). No rounded class anywhere
+// so the bar is square; the same weight as the other tabs, so a label does not change width when its tab becomes current.
+const TAB_CURRENT = 'bg-muted-bg font-medium text-content shadow-[inset_0_-3px_0_0_var(--color-primary)]';
 const TAB_OTHER = 'font-medium text-muted hover:bg-muted-bg hover:text-content';
-// Highlight color of a current tab without its own accent: the theme accent.
-const THEME_ACCENT = 'var(--color-primary-solid)';
 
 const MORE_BUTTON =
 	'flex h-full shrink-0 items-center gap-1 px-3 text-sm font-medium text-muted transition-colors hover:bg-muted-bg hover:text-content focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary';
@@ -39,14 +40,6 @@ const MORE_PANEL = 'absolute right-0 top-full z-20 flex max-h-[70vh] w-60 flex-c
 const MORE_ITEM = 'flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors';
 const MORE_ITEM_CURRENT = 'bg-primary-light font-medium text-primary';
 const MORE_ITEM_OTHER = 'text-muted hover:bg-muted-bg hover:text-content';
-
-const mix = (color: string, pct: number): string => `color-mix(in srgb, ${color} ${pct}%, transparent)`;
-
-// The current tab: a light vertical fade of the accent from the bottom edge, plus a small glow centered on the bottom
-// edge (strongest at the bottom center, softer toward the sides and the top).
-const currentTabStyle = (color: string): React.CSSProperties => ({
-	backgroundImage: `radial-gradient(60% 90% at 50% 100%, ${mix(color, 32)}, transparent 100%), linear-gradient(0deg, ${mix(color, 14)}, transparent)`,
-});
 
 // Tolerance for sub-pixel layout: a tab cut by less than this still counts as fully visible.
 const EDGE_TOLERANCE_PX = 1;
@@ -204,7 +197,6 @@ export function ShellTabs({ tabs, tabsLabel, renderLink, moreLabel, density = 'n
 						{renderLink({
 							href: tab.href,
 							className: `${TAB_BASE} ${TAB_SIZE[density]} ${tab.current ? TAB_CURRENT : TAB_OTHER}`,
-							style: tab.current ? currentTabStyle(tab.accent ?? THEME_ACCENT) : undefined,
 							'aria-current': tab.current,
 							// Icons only: the tooltip says what the icon is, and the name stays in the DOM for assistive technology.
 							title: density === 'icons' ? labelWithBadge(tab) : undefined,
@@ -229,7 +221,7 @@ export function ShellTabs({ tabs, tabsLabel, renderLink, moreLabel, density = 'n
 									<>
 										<TabIcon scaled={density === 'small'}>{tab.icon}</TabIcon>
 										{tab.label}
-										<ShellBadge item={tab} />
+										<ShellBadge item={tab} current={tab.current !== undefined} />
 									</>
 								),
 						})}

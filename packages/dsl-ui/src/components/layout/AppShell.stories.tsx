@@ -30,7 +30,6 @@ function tabs(currentId: string): ShellItem[] {
 		href: `#/${m.id}`,
 		icon: <InitialsTile text={initialsOf(m.title)} color={m.color} />,
 		current: m.id === currentId ? 'true' : undefined,
-		accent: m.color,
 	}));
 }
 
@@ -62,23 +61,22 @@ export const Basic: Story = {
 	),
 };
 
-/** The current tab glows in its own accent; a tab without `accent` uses the theme accent (here recolored by AccentScope). */
-export const ThemeAccentFallback: Story = {
+/**
+ * The rail look: the current entry has neutral text on a grey fill and a 3px bar on its inner edge, under the tab and on the
+ * left of the row. The bar is the theme accent (`--color-primary`), here recolored by AccentScope (the host does it per module
+ * with `useRootAccent`). Square corners, no glow; the pill of a current entry is on the surface.
+ */
+export const AccentBar: Story = {
 	render: () => (
 		<AccentScope color="#0284c7">
-			<AppShell
-				brand="my-app"
-				tabs={tabs('queue').map((t) => ({ ...t, accent: undefined }))}
-				tabsLabel="Modules"
-				menu={MENU}
-			>
+			<AppShell brand="my-app" tabs={tabs('queue').map((t) => ({ ...t, badge: t.current ? 5 : undefined }))} tabsLabel="Modules" menu={{ ...MENU, items: MENU.items.map((item, i) => ({ ...item, badge: i === 0 ? 3 : undefined })) }}>
 				<Page />
 			</AppShell>
 		</AccentScope>
 	),
 };
 
-/** Same data under each theme: every color is a token, so nothing else changes. */
+/** Same data under each theme: every color is a token, so nothing else changes (the rail look: fill, bar, pill). */
 export const LightAndDark: Story = {
 	render: () => (
 		<div className="flex flex-col">
@@ -103,7 +101,7 @@ export const ManyTabs: Story = {
 		<div className="w-[640px] max-w-full">
 			<AppShell
 				brand="my-app"
-				tabs={MANY.map((m, i) => ({ id: m.id, label: m.title, href: `#/${m.id}`, accent: m.color, current: i === 11 ? ('true' as const) : undefined }))}
+				tabs={MANY.map((m, i) => ({ id: m.id, label: m.title, href: `#/${m.id}`, current: i === 11 ? ('true' as const) : undefined }))}
 				tabsLabel="Modules"
 				menu={MENU}
 				moreLabel="More"
@@ -232,7 +230,7 @@ const RESIZABLE_MENU: ShellMenu = { ...WITH_LONG_ENTRY, items: [...WITH_LONG_ENT
  */
 export const MenuResizable: Story = { render: () => <MenuVariantDemo menuVariant="resizable" menu={RESIZABLE_MENU} /> };
 
-// A count on some entries: 0 is shown, a large value is shown whole, the current row takes the primary tint, and a long label
+// A count on some entries: 0 is shown, a large value is shown whole, the current row has the surface pill, and a long label
 // is cut while its pill stays. The "Odd value" entry holds a NaN: no pill, and one development warning in the console.
 const BADGE_MENU: ShellMenu = {
 	title: 'Queue',

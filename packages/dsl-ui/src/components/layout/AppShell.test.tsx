@@ -4,15 +4,6 @@ import { AppShell, type AppShellProps, type ShellItem, type ShellLinkProps } fro
 
 // No router anywhere in this file: the shell renders plain data and plain links.
 
-const asBackgroundImage = (css: string): string => {
-	const probe = document.createElement('i');
-	probe.style.backgroundImage = css;
-	return probe.style.backgroundImage;
-};
-const mixed = (color: string, pct: number): string => `color-mix(in srgb, ${color} ${pct}%, transparent)`;
-const upBlend = (color: string): string =>
-	`radial-gradient(60% 90% at 50% 100%, ${mixed(color, 32)}, transparent 100%), linear-gradient(0deg, ${mixed(color, 14)}, transparent)`;
-
 const TABS: ShellItem[] = [
 	{ id: 'home', label: 'Home', href: '/', icon: <i data-testid="icon-home" />, current: 'page' },
 	{ id: 'a', label: 'Alpha', href: '/a', icon: <i data-testid="icon-a" />, accent: '#e11d48' },
@@ -89,30 +80,22 @@ describe('AppShell tabs: the current one is highlighted', () => {
 		expect(tabs.getByRole('link', { name: 'Beta' })).not.toHaveAttribute('aria-current');
 	});
 
-	it('paints the current tab with Up blend in its own accent', () => {
-		shell({ tabs: [{ ...TABS[1], current: 'true' }] });
-		expect(screen.getByRole('link', { name: 'Alpha' }).style.backgroundImage).toBe(asBackgroundImage(upBlend('#e11d48')));
-	});
-
-	it('falls back to the theme accent for a current tab without an accent', () => {
-		shell();
-		expect(screen.getByRole('link', { name: 'Home' }).style.backgroundImage).toBe(asBackgroundImage(upBlend('var(--color-primary-solid)')));
-	});
-
+	// The rail look itself (fill, bar, square corners, no glow) is in AppShellRail.test.tsx.
 	it('leaves the other tabs plain', () => {
 		shell();
 		for (const name of ['Alpha', 'Beta']) {
 			const tab = screen.getByRole('link', { name });
-			expect(tab.style.backgroundImage, name).toBe('');
+			expect(tab.hasAttribute('style'), name).toBe(false);
 			expect(tab.className, name).toContain('text-muted');
 			expect(tab.className, name).toContain('font-medium');
 		}
 	});
 
-	it('gives the current tab a bolder, darker label', () => {
+	it('gives the current tab the neutral text colour and the same weight as the others', () => {
 		shell();
 		const current = screen.getByRole('link', { name: 'Home' });
-		expect(current.className).toContain('font-semibold');
+		expect(current.className).toContain('font-medium');
+		expect(current.className).not.toContain('font-semibold');
 		expect(current.className).toContain('text-content');
 	});
 
@@ -169,14 +152,14 @@ describe('AppShell side menu', () => {
 		expect(menu().className.split(/\s+/)).toContain('border-border');
 	});
 
-	it('highlights the current entry with the accent tokens', () => {
+	it('highlights the current entry with the grey fill and neutral text (the accent is the bar, see AppShellRail.test.tsx)', () => {
 		shell();
 		const current = screen.getByRole('link', { name: 'Overview' }).className.split(/\s+/);
-		expect(current).toContain('bg-primary-light');
-		expect(current).toContain('text-primary');
+		expect(current).toContain('bg-muted-bg');
+		expect(current).toContain('text-content');
 		const other = screen.getByRole('link', { name: 'Reports' }).className.split(/\s+/);
 		expect(other).toContain('text-muted');
-		expect(other).not.toContain('bg-primary-light');
+		expect(other).not.toContain('bg-muted-bg');
 	});
 });
 
@@ -239,8 +222,8 @@ describe('AppShell renderLink slot', () => {
 		expect(screen.getByRole('link', { name: 'Alpha' })).toHaveAttribute('href', '#/a');
 		// The host gets what it needs to render the link correctly.
 		const home = seen.find((p) => p.href === '/' && p['aria-current'] === 'page' && p.className.includes('self-stretch'))!;
-		expect(home.className).toContain('font-semibold');
-		expect(home.style?.backgroundImage).toContain('radial-gradient');
+		expect(home.className).toContain('bg-muted-bg');
+		expect(home.style).toBeUndefined();
 		const reports = seen.find((p) => p.href === '/reports')!;
 		expect(reports['aria-current']).toBeUndefined();
 	});

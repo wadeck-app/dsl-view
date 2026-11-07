@@ -19,9 +19,11 @@ export { MENU_VARIANT_AB_OPTIONS, type ShellMenuVariant } from './shellMenuVaria
  * current, and `renderLink` decides how a link navigates (a router `Link`). Without `renderLink` it renders plain
  * `<a href>`. Routing stays in the host (see out-of-scope.md).
  *
- * The look is fixed: a 44px borderless top bar with a soft shadow, tabs as tall as the bar whose current one gets an
- * accent glow, and a 15rem side menu. All colors are theme tokens, so it follows the theme and nests in a
- * `ThemeScope`; the accent of the current tab follows `AccentScope` / `useRootAccent` unless the item has its own.
+ * The look is fixed: a 44px borderless top bar with a soft shadow, tabs as tall as the bar, and a 15rem side menu. The
+ * current entry (the "rail" look, the same for a tab and a row) has neutral text on the grey `muted-bg` fill and a 3px bar
+ * in the accent on its inner edge: under a tab, on the left of a row. Tabs and rows have square corners, current or not.
+ * All colors are theme tokens, so it follows the theme and nests in a `ThemeScope`; the bar is `--color-primary`, which
+ * follows `AccentScope` / `useRootAccent`.
  *
  * The tabs never wrap: when the bar cannot hold them they scroll, the current tab is brought into view, and with
  * `moreLabel` an overflow control lists the tabs that are cut off.
@@ -112,10 +114,14 @@ export interface ShellItem {
 	icon?: React.ReactNode;
 	/** Set by the host on the item that is current. 'page' for a page, 'true' for a section. */
 	current?: 'page' | 'true';
-	/** Color of the highlight when the item is current (any CSS color); defaults to the theme accent. */
+	/**
+	 * @deprecated Ignored. It colored the glow of the current tab; the current entry now has a bar in `--color-primary`
+	 * (the rail look), which the host already sets to the module colour with `useRootAccent` or `AccentScope`. Still
+	 * accepted so existing data compiles; remove it from your items.
+	 */
 	accent?: string;
 	/**
-	 * A count shown after the label as a small muted pill (the current row uses the primary tint). A non-negative whole
+	 * A count shown after the label as a small muted pill (on the current entry: surface fill, primary ink and edge). A non-negative whole
 	 * number: `0` is shown, large values as they are (no abbreviation). Absent or `null`: nothing. Anything else (a string,
 	 * `NaN`, `Infinity`, a negative or fractional number) is ignored with one development warning. The link reads
 	 * "Label, 3" for assistive technology (the number once). Where only icons are drawn (the `resizable` side menu under

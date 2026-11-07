@@ -18,10 +18,13 @@ export function labelWithBadge(item: Pick<ShellItem, 'label' | 'badge'>): string
 }
 
 // Neutral by default; `ring-inset` draws the edge inside the pill so that it still reads over a hovered row (same
-// `muted-bg`) and over the current row (`primary-light`). Never shrinks, never wraps: the label next to it is what gives.
+// `muted-bg`). Never shrinks, never wraps: the label next to it is what gives.
 const PILL = 'inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full px-1.5 text-xs font-medium leading-4 tabular-nums ring-1 ring-inset';
 const PILL_OTHER = 'bg-muted-bg text-muted ring-border';
-const PILL_CURRENT = 'bg-primary-light text-primary ring-primary/30';
+// The current entry is `muted-bg` too (rail look), so its pill is on the `surface`: a fill that differs from the entry
+// (1.1:1 light, 1.4:1 dark), the primary ink on it (5.2:1 light, 5.7:1 dark) and a primary edge. Muted ink on `muted-bg` was
+// 4.3:1 light and 4.0:1 dark, with an edge that vanished in dark.
+const PILL_CURRENT = 'bg-surface text-primary ring-primary/30';
 
 /**
  * The count of a menu entry or tab.

@@ -319,17 +319,20 @@ describe('AppShell tabs observers and edge cases', () => {
 		expect(screen.getByText('(5)')).toHaveAttribute('aria-hidden', 'true');
 	});
 
-	it('uses the accent of a current tab, the theme accent when it has none', () => {
+	it('draws the bar of a current tab with the primary token, never from the deprecated item accent', () => {
 		const items: ShellItem[] = [
 			{ id: 'a', label: 'A', href: '/a', current: 'true', accent: '#e11d48' },
 			{ id: 'b', label: 'B', href: '/b', current: 'true' },
 			{ id: 'c', label: 'C', href: '/c' },
 		];
 		render(shell(items));
-		const style = (name: string) => screen.getByRole('link', { name }).getAttribute('style') ?? '';
-		expect(style('A')).toContain('#e11d48');
-		expect(style('B')).toContain('var(--color-primary-solid)');
-		expect(style('C')).toBe('');
+		const link = (name: string) => screen.getByRole('link', { name });
+		expect(link('A').outerHTML).not.toContain('#e11d48');
+		expect(link('A').hasAttribute('style')).toBe(false);
+		for (const name of ['A', 'B']) {
+			expect(link(name).className).toContain('shadow-[inset_0_-3px_0_0_var(--color-primary)]');
+		}
+		expect(link('C').className).not.toContain('shadow-');
 	});
 
 	it('does not throw when no tab is current, nor when a link renders more than one element', () => {
