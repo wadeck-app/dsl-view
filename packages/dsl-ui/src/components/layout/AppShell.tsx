@@ -81,6 +81,9 @@ export { MENU_VARIANT_AB_OPTIONS, type ShellMenuVariant } from './shellMenuVaria
  * view and the focus ring is visible. `MENU_VARIANT_AB_OPTIONS` holds a label and a one-line hint (with the width) for
  * each value, in the shape `useAbTest({ options })` takes.
  *
+ * An item may carry a `badge` (a count, see `ShellItem`): a pill after the label in the side menu, in the tabs and in the
+ * tabs overflow list; not drawn (kept in the accessible name and the tooltip) where only icons are drawn.
+ *
  * Menu `items` may hold `{ kind: 'separator', id, label? }`: a rule, with the label a caption for the next group. A
  * separator is never focusable. Leading, trailing and doubled separators are dropped silently (the data comes from
  * modules).
@@ -111,6 +114,15 @@ export interface ShellItem {
 	current?: 'page' | 'true';
 	/** Color of the highlight when the item is current (any CSS color); defaults to the theme accent. */
 	accent?: string;
+	/**
+	 * A count shown after the label as a small muted pill (the current row uses the primary tint). A non-negative whole
+	 * number: `0` is shown, large values as they are (no abbreviation). Absent or `null`: nothing. Anything else (a string,
+	 * `NaN`, `Infinity`, a negative or fractional number) is ignored with one development warning. The link reads
+	 * "Label, 3" for assistive technology (the number once). Where only icons are drawn (the `resizable` side menu under
+	 * 6rem, the top bar of `barOnScroll: 'icons'` once scrolled) the pill is not drawn: the count stays in the accessible
+	 * name and in the tooltip ("Label (3)"). The label truncates, the pill never shrinks.
+	 */
+	badge?: number;
 }
 
 /** A rule between two groups of menu links, with an optional caption for the next group. */

@@ -144,7 +144,11 @@ export function measureFitRem(aside: HTMLElement): number {
 			continue;
 		}
 		const before = label.getBoundingClientRect().left - link.getBoundingClientRect().left;
-		const after = parseFloat(getComputedStyle(link).paddingRight) || 0;
+		const style = getComputedStyle(link);
+		// A badge pill sits after the label and never shrinks: it, and the gap before it, are room the label does not have.
+		const badge = link.querySelector<HTMLElement>('[data-menu-badge]');
+		const badgeRoom = badge ? badge.getBoundingClientRect().width + (parseFloat(style.columnGap) || 0) : 0;
+		const after = (parseFloat(style.paddingRight) || 0) + badgeRoom;
 		widest = Math.max(widest, before + label.scrollWidth + after);
 	}
 	// What surrounds the links: the aside minus the width the links get (the nav fills the padded scroll box).

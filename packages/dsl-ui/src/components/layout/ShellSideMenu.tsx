@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { reportAuthoringMistake } from '@dsl-ui/utils/devDiagnostics.js';
 import type { ShellItem, ShellLinkProps, ShellMenu, ShellMenuEntry, ShellSeparator } from './AppShell.js';
+import { labelWithBadge, shellBadgeCount, ShellBadge } from './ShellBadge.js';
 import { initialsOf } from '../display/initials.js';
 import { MENU_FIXED_WIDTH, MENU_RESIZE_STEP_REM, MENU_VARIANT_AB_OPTIONS, type ShellMenuVariant } from './shellMenuVariants.js';
 import { rootFontPx, type ResizableMenuWidth } from './useMenuWidth.js';
@@ -43,11 +44,11 @@ export function normalizeMenuEntries(entries: readonly ShellMenuEntry[]): ShellM
 	return out;
 }
 
-/** What a measured width depends on: the labels of the links and whether each has an icon (not the separators). */
+/** What a measured width depends on: the labels of the links, whether each has an icon and its badge (not the separators). */
 export function menuFitKey(menu: ShellMenu): string {
 	return normalizeMenuEntries(menu.items)
 		.filter((entry): entry is ShellItem => !isSeparator(entry))
-		.map((entry) => `${entry.label}\u0000${entry.icon === undefined || entry.icon === null ? 0 : 1}`)
+		.map((entry) => `${entry.label}\u0000${entry.icon === undefined || entry.icon === null ? 0 : 1}\u0000${shellBadgeCount(entry.badge) ?? ''}`)
 		.join('\u0001');
 }
 
@@ -68,7 +69,7 @@ function itemLink(item: ShellItem, renderLink: (props: ShellLinkProps) => React.
 			className: `${ITEM_ICON_ONLY} ${item.current ? ROW_CURRENT : ROW_OTHER} ${FOCUS}`,
 			'aria-current': item.current,
 			// The tooltip says what the icon is; the name stays in the DOM for assistive technology.
-			title: item.label,
+			title: labelWithBadge(item),
 			children: (
 				<>
 					{item.icon !== undefined && item.icon !== null ? (
@@ -79,7 +80,11 @@ function itemLink(item: ShellItem, renderLink: (props: ShellLinkProps) => React.
 							{initialsOf(item.label)}
 						</span>
 					)}
-					<span className="sr-only">{item.label}</span>
+					{/* No room for the pill: the count stays in the accessible name and in the tooltip. */}
+					<span className="sr-only">
+						{item.label}
+						<ShellBadge item={item} variant="text" />
+					</span>
 				</>
 			),
 		});
@@ -95,6 +100,7 @@ function itemLink(item: ShellItem, renderLink: (props: ShellLinkProps) => React.
 				<span data-menu-label="" className="truncate">
 					{item.label}
 				</span>
+				<ShellBadge item={item} current={item.current !== undefined} className="ml-auto" />
 			</>
 		),
 	});

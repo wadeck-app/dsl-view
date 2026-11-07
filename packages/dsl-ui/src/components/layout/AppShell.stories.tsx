@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import { LayoutDashboard, ListChecks, Cpu, Settings, Info } from 'lucide-react';
 import { AppShell, MENU_VARIANT_AB_OPTIONS, type ShellItem, type ShellMenu, type ShellMenuVariant } from './AppShell.js';
@@ -231,6 +231,63 @@ const RESIZABLE_MENU: ShellMenu = { ...WITH_LONG_ENTRY, items: [...WITH_LONG_ENT
  * Resize the window: the limits follow, the preference is kept in localStorage `app-shell.menu-width`.
  */
 export const MenuResizable: Story = { render: () => <MenuVariantDemo menuVariant="resizable" menu={RESIZABLE_MENU} /> };
+
+// A count on some entries: 0 is shown, a large value is shown whole, the current row takes the primary tint, and a long label
+// is cut while its pill stays. The "Odd value" entry holds a NaN: no pill, and one development warning in the console.
+const BADGE_MENU: ShellMenu = {
+	title: 'Queue',
+	label: 'Queue pages',
+	items: [
+		{ id: 'overview', label: 'Overview', href: '#/queue', icon: <LayoutDashboard {...ICON} /> },
+		{ id: 'jobs', label: 'Jobs', href: '#/queue/jobs', icon: <ListChecks {...ICON} />, current: 'page', badge: 3 },
+		{ id: 'workers', label: 'Workers', href: '#/queue/workers', icon: <Cpu {...ICON} />, badge: 0 },
+		{ id: 'failed', label: 'Failed runs', href: '#/queue/failed', icon: <Settings {...ICON} />, badge: 1234567 },
+		{ id: 'long', label: LONG_ENTRY, href: '#/queue/long', icon: <Info {...ICON} />, badge: 42 },
+		{ id: 'noicon', label: 'Entry without an icon', href: '#/queue/noicon', badge: 8 },
+		{ id: 'odd', label: 'Odd value', href: '#/queue/odd', badge: Number.NaN },
+	],
+};
+const BADGE_TABS: ShellItem[] = tabs('queue').map((tab, i) => ({ ...tab, badge: [5, 0, 120][i] }));
+
+/** `ShellItem.badge` in the side menu and the top-bar tabs. Shrink the window or pick `narrow`: the label is cut, the pill stays. */
+export const Badges: Story = {
+	render: () => (
+		<AppShell brand="my-app" tabs={BADGE_TABS} tabsLabel="Modules" menu={BADGE_MENU} menuVariant="narrow">
+			<Page />
+		</AppShell>
+	),
+};
+
+// `resizable` reads its width from localStorage when it mounts: 4rem is under the 6rem where only icons are shown. The previous
+// preference is put back when the story unmounts.
+function IconsOnlyBadges() {
+	const [previous] = useState(() => {
+		const before = localStorage.getItem('app-shell.menu-width');
+		localStorage.setItem('app-shell.menu-width', '4');
+		return before;
+	});
+	useEffect(
+		() => () => {
+			if (previous === null) {
+				localStorage.removeItem('app-shell.menu-width');
+			} else {
+				localStorage.setItem('app-shell.menu-width', previous);
+			}
+		},
+		[previous],
+	);
+	return (
+		<AppShell brand="my-app" tabs={BADGE_TABS} tabsLabel="Modules" menu={BADGE_MENU} menuVariant="resizable" resizeLabel="Resize the menu">
+			<div className="p-6 text-content">
+				<h1 className="text-xl font-semibold">Icons-only menu</h1>
+				<p className="mt-2 text-muted">No pill under 6rem: hover a row for its tooltip, "Jobs (3)". Double-click the menu edge to widen it and get the pills back.</p>
+			</div>
+		</AppShell>
+	);
+}
+
+/** The menu collapsed under 6rem (icons or initials only): the count is in the tooltip and the accessible name. */
+export const BadgesIconsOnly: Story = { render: () => <IconsOnlyBadges /> };
 
 function MenuAbDemo() {
 	// The host's way to compare the variants: one A/B test, the dock shows the one-line hint of each as a tooltip.
