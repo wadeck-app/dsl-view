@@ -126,7 +126,7 @@ describe('pill with a tone (no icon)', () => {
 		menuWith({ count: 4, tone: 'danger' });
 		const link = row('Jobs, 4');
 		expect(markOf(link)).not.toHaveAttribute('aria-hidden');
-		expect(markOf(link)).not.toHaveAttribute('title');
+		expect(markOf(link)).toHaveAttribute('title', 'Jobs: 4');
 		expect(link.textContent).toBe('Jobs, 4');
 	});
 

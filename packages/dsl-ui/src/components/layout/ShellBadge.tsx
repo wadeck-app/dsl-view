@@ -233,7 +233,7 @@ export function ItemBadge({ item, variant = 'pill', current = false, className =
 	return (
 		<>
 			<span className="sr-only">, </span>
-			<span data-menu-badge="" className={`${PILL} ${colours} ${className}`}>
+			<span data-menu-badge="" title={`${item.label}: ${count}`} className={`${PILL} ${colours} ${className}`}>
 				{count}
 			</span>
 		</>

@@ -58,6 +58,14 @@ describe('shellBadgeCount', () => {
 });
 
 describe('side menu badge', () => {
+	// A tooltip on every badge: a plain count names what it counts. The accessible name must not change (no label twice).
+	it('gives a plain count the tooltip "<item label>: <count>" without changing the accessible name', () => {
+		shell();
+		// `row` finds the link by its accessible name: it still reads "Jobs, 3".
+		const link = row('Jobs, 3');
+		expect(pillOf(link)).toHaveAttribute('title', 'Jobs: 3');
+	});
+
 	it('draws the figure after the label, outside the truncating label', () => {
 		shell();
 		const link = row('Jobs, 3');
@@ -175,7 +183,8 @@ describe('side menu badge', () => {
 		shell({ menu: menuOf({ id: 'long', label: long, href: '/long', badge: 12 }) });
 		const link = row(`${long}, 12`);
 		expect(link.querySelector('[data-menu-label]')).toHaveAttribute('title', long);
-		expect(pillOf(link)).not.toHaveAttribute('title');
+		// The row title stays the label alone; the pill has its own tooltip naming what it counts.
+		expect(pillOf(link)).toHaveAttribute('title', `${long}: 12`);
 	});
 
 	it('another row without a badge is unchanged', () => {
