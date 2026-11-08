@@ -83,8 +83,9 @@ export { MENU_VARIANT_AB_OPTIONS, type ShellMenuVariant } from './shellMenuVaria
  * view and the focus ring is visible. `MENU_VARIANT_AB_OPTIONS` holds a label and a one-line hint (with the width) for
  * each value, in the shape `useAbTest({ options })` takes.
  *
- * An item may carry a `badge` (a count, see `ShellItem`): a pill after the label in the side menu, in the tabs and in the
- * tabs overflow list; not drawn (kept in the accessible name and the tooltip) where only icons are drawn.
+ * An item may carry a `badge` (a count, or a tone / icon / label, see `ShellItem` and `ShellBadge`): after the label in the
+ * side menu, in the tabs and in the tabs overflow list; not drawn (kept in the accessible name and the tooltip) where only
+ * icons are drawn.
  *
  * Menu `items` may hold `{ kind: 'separator', id, label? }`: a rule, with the label a caption for the next group. A
  * separator is never focusable. Leading, trailing and doubled separators are dropped silently (the data comes from
@@ -121,14 +122,40 @@ export interface ShellItem {
 	 */
 	accent?: string;
 	/**
-	 * A count shown after the label as a small muted pill (on the current entry: surface fill, primary ink and edge). A non-negative whole
-	 * number: `0` is shown, large values as they are (no abbreviation). Absent or `null`: nothing. Anything else (a string,
-	 * `NaN`, `Infinity`, a negative or fractional number) is ignored with one development warning. The link reads
-	 * "Label, 3" for assistive technology (the number once). Where only icons are drawn (the `resizable` side menu under
-	 * 6rem, the top bar of `barOnScroll: 'icons'` once scrolled) the pill is not drawn: the count stays in the accessible
-	 * name and in the tooltip ("Label (3)"). The label truncates, the pill never shrinks.
+	 * A badge after the label. A plain number is a count: a small muted pill (on the current entry: surface fill, content ink
+	 * and a border edge, the accent belongs to the bar). A non-negative whole number: `0` is shown, large values as they are
+	 * (no abbreviation). An object ({@link ShellBadge}) adds a tone, an icon and an accessible label. Absent or `null`:
+	 * nothing. Anything else (a string, `NaN`, a negative or fractional number, an array) is ignored with one development
+	 * warning. The link reads "Label, 3" for assistive technology (the number once). Where only icons are drawn (the
+	 * `resizable` side menu under 6rem, the top bar of `barOnScroll: 'icons'` once scrolled) the pill is not drawn: the text
+	 * stays in the accessible name and in the tooltip ("Label (3)"). The label truncates, the badge never shrinks.
 	 */
-	badge?: number;
+	badge?: number | ShellBadge;
+}
+
+/** Tone of a badge pill (and of its icon): `neutral` is the muted grey, the others are the semantic info / success / warning / danger tokens. */
+export type ShellBadgeTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger';
+
+/** Icon of a badge: it replaces the number (no pill). `error` is drawn in the `danger` tone. */
+export type ShellBadgeIcon = 'info' | 'success' | 'warning' | 'error';
+
+/**
+ * The object form of {@link ShellItem.badge}.
+ *
+ * - `count`: the figure of the pill (same rules as a plain number). With an `icon` it is not drawn.
+ * - `tone`: the colours of the pill or of the icon. Default `neutral`, or the tone of the icon (`info` -> info,
+ *   `success` -> success, `warning` -> warning, `error` -> danger).
+ * - `icon`: an icon instead of the number, without a pill.
+ * - `label`: the accessible text and the tooltip ("3 failures"). Without a label the text is the default label of the
+ *   icon ("Information", "OK", "Warning", "Error"), else the count. The link reads "Label, <text>", once.
+ *
+ * With neither a `count` nor an `icon` there is nothing to show: nothing is drawn and one development warning says so.
+ */
+export interface ShellBadge {
+	count?: number;
+	tone?: ShellBadgeTone;
+	icon?: ShellBadgeIcon;
+	label?: string;
 }
 
 /** A rule between two groups of menu links, with an optional caption for the next group. */

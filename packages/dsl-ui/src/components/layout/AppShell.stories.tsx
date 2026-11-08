@@ -287,6 +287,47 @@ function IconsOnlyBadges() {
 /** The menu collapsed under 6rem (icons or initials only): the count is in the tooltip and the accessible name. */
 export const BadgesIconsOnly: Story = { render: () => <IconsOnlyBadges /> };
 
+// Every tone as a pill and every icon, in the side menu and in the top-bar tabs. `currentId` picks the entry that is
+// current in both (the control in the panel): a neutral pill goes to the surface, a toned pill and an icon keep their tone.
+const BADGE_GALLERY: { id: string; label: string; badge: ShellItem['badge'] }[] = [
+	{ id: 'neutral', label: 'Neutral', badge: { count: 3, tone: 'neutral', label: '3 items' } },
+	{ id: 'info', label: 'Info', badge: { count: 3, tone: 'info', label: '3 notes' } },
+	{ id: 'success', label: 'Success', badge: { count: 3, tone: 'success', label: '3 passed' } },
+	{ id: 'warning', label: 'Warning', badge: { count: 3, tone: 'warning', label: '3 warnings' } },
+	{ id: 'danger', label: 'Danger', badge: { count: 3, tone: 'danger', label: '3 failures' } },
+	{ id: 'i-info', label: 'Icon info', badge: { icon: 'info' } },
+	{ id: 'i-success', label: 'Icon success', badge: { icon: 'success' } },
+	{ id: 'i-warning', label: 'Icon warning', badge: { icon: 'warning', label: 'Needs attention' } },
+	{ id: 'i-error', label: 'Icon error', badge: { icon: 'error', tone: 'danger' } },
+	{ id: 'plain', label: 'Plain number', badge: 12 },
+];
+
+function BadgeGallery({ currentId }: { currentId: string }) {
+	const asItem = (entry: (typeof BADGE_GALLERY)[number], section: 'page' | 'true'): ShellItem => ({
+		id: entry.id,
+		label: entry.label,
+		href: `#/${entry.id}`,
+		badge: entry.badge,
+		current: entry.id === currentId ? section : undefined,
+	});
+	const menu: ShellMenu = { title: 'Badges', label: 'Badge pages', items: BADGE_GALLERY.map((entry) => asItem(entry, 'page')) };
+	return (
+		<AppShell brand="my-app" tabs={BADGE_GALLERY.map((entry) => asItem(entry, 'true'))} tabsLabel="Modules" menu={menu} menuVariant="wide">
+			<div className="p-6 text-content">
+				<h1 className="text-xl font-semibold">Badge tones and icons</h1>
+				<p className="mt-2 text-muted">Hover a badge for its tooltip. Pick the current entry with the control; switch the theme in the toolbar to compare light and dark.</p>
+			</div>
+		</AppShell>
+	);
+}
+
+/** `ShellItem.badge` as an object: five tones and four icons, side menu and tabs, current or not (control `currentId`). */
+export const BadgeTonesAndIcons: StoryObj<{ currentId: string }> = {
+	args: { currentId: 'danger' },
+	argTypes: { currentId: { control: 'select', options: BADGE_GALLERY.map((entry) => entry.id) } },
+	render: ({ currentId }) => <BadgeGallery currentId={currentId} />,
+};
+
 function MenuAbDemo() {
 	// The host's way to compare the variants: one A/B test, the dock shows the one-line hint of each as a tooltip.
 	const test = useAbTest({ id: 'shell-menu', label: 'Side menu', initial: 'classic', options: MENU_VARIANT_AB_OPTIONS });

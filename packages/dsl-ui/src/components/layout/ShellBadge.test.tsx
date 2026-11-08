@@ -106,7 +106,8 @@ describe('side menu badge', () => {
 		['Infinity', Infinity, 'Infinity'],
 		['a negative number', -2, '-2'],
 		['a fractional number', 2.5, '2.5'],
-		['an object', {}, 'a value of type object'],
+		['an array', [], 'an array'],
+		['a boolean', true, 'a value of type boolean'],
 	])('ignores %s: no pill, no "NaN" text, the row keeps working, one development report', (_name, value, received) => {
 		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 		const { rerender } = shell({ menu: menuOf({ id: 'jobs', label: 'Jobs', href: '/jobs', badge: value as never }) });
@@ -146,11 +147,11 @@ describe('side menu badge', () => {
 	});
 
 	// The current row is bg-muted-bg (rail look): a pill on the same fill would only have its edge to show it.
-	it('takes the surface fill and the primary ink on the current row', () => {
+	it('takes the surface fill, the content ink and the border edge on the current row (the accent belongs to the bar)', () => {
 		shell({ menu: menuOf({ id: 'jobs', label: 'Jobs', href: '/jobs', badge: 3, current: 'page' }) });
 		const pill = pillOf(row('Jobs, 3'))!;
-		expect(classes(pill)).toEqual(expect.arrayContaining(['bg-surface', 'text-primary']));
-		expect(classes(pill)).not.toContain('bg-primary-light');
+		expect(classes(pill)).toEqual(expect.arrayContaining(['bg-surface', 'text-content', 'ring-border']));
+		expect(classes(pill).filter((c) => /primary/.test(c))).toEqual([]);
 		expect(classes(pill)).not.toContain('bg-muted-bg');
 		expect(classes(pill)).not.toContain('text-muted');
 	});
@@ -271,13 +272,13 @@ describe('icons-only side menu', () => {
 describe('tabs', () => {
 	const tabLink = (name: string) => within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('link', { name: nameIs(name) });
 
-	it('draws the figure after the label, named "Label, 7", on the surface with the primary ink when the tab is current', () => {
+	it('draws the figure after the label, named "Label, 7", on the surface with the content ink when the tab is current', () => {
 		shell();
 		const link = tabLink('Queue, 7');
 		const pill = pillOf(link)!;
 		expect(pill).toHaveTextContent('7');
 		expect(link.textContent).toBe('Queue, 7');
-		expect(classes(pill)).toEqual(expect.arrayContaining(['bg-surface', 'text-primary', 'shrink-0']));
+		expect(classes(pill)).toEqual(expect.arrayContaining(['bg-surface', 'text-content', 'ring-border', 'shrink-0']));
 		expect(classes(pill)).not.toContain('bg-muted-bg');
 	});
 

@@ -57,6 +57,8 @@ const MARKERS: Record<string, string> = {
 	// AppShell `menuVariant` and `barOnScroll` go through classFor: one message for both ("using X instead").
 	'AppShell menuVariant / barOnScroll unknown value (classFor)': 'instead. Allowed values:',
 	'AppShell item badge that is not a count': 'No badge is shown for it',
+	'AppShell item badge object with a wrong field': 'is not usable as written',
+	'AppShell item badge object with nothing to show': 'so there is nothing to show',
 	'AppShell resizable menu without resizeLabel': 'needs a name for assistive technology',
 	'AppShell garbage menu width in localStorage': 'Ignoring the menu width',
 };

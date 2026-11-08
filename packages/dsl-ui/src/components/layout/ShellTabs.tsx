@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { initialsOf } from '../display/initials.js';
 import type { ShellItem, ShellLinkProps } from './AppShell.js';
-import { labelWithBadge, ShellBadge } from './ShellBadge.js';
+import { ItemBadge, labelWithBadge } from './ShellBadge.js';
 
 // The tab is as tall as the top bar (self-stretch), so the current fill and bar span it from top to bottom.
 // Padding, gap and text size animate with the bar (200ms ease-out, like its height); colours keep the same curve.
@@ -214,14 +214,14 @@ export function ShellTabs({ tabs, tabsLabel, renderLink, moreLabel, density = 'n
 										{/* No room for the pill: the count stays in the accessible name and in the tooltip. */}
 										<span className="sr-only">
 											{tab.label}
-											<ShellBadge item={tab} variant="text" />
+											<ItemBadge item={tab} variant="text" />
 										</span>
 									</>
 								) : (
 									<>
 										<TabIcon scaled={density === 'small'}>{tab.icon}</TabIcon>
 										{tab.label}
-										<ShellBadge item={tab} current={tab.current !== undefined} />
+										<ItemBadge item={tab} current={tab.current !== undefined} />
 									</>
 								),
 						})}
@@ -249,7 +249,7 @@ export function ShellTabs({ tabs, tabsLabel, renderLink, moreLabel, density = 'n
 											<>
 												{tab.icon}
 												<span className="truncate">{tab.label}</span>
-												<ShellBadge item={tab} current={tab.current !== undefined} className="ml-auto" />
+												<ItemBadge item={tab} current={tab.current !== undefined} className="ml-auto" />
 											</>
 										),
 									})}

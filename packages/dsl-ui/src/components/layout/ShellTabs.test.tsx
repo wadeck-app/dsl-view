@@ -158,6 +158,29 @@ describe('AppShell tabs overflow', () => {
 			expect(panel.getAllByRole('link').map((a) => a.getAttribute('href'))).toEqual(['/t3', '/t4', '/t5', '/t6', '/t7']);
 		});
 
+		it('draws the badge of a cut-off tab in the list: toned pill, icon, neutral pill', () => {
+			const badges: Record<string, ShellItem['badge']> = {
+				t3: { count: 2, tone: 'danger', label: '2 failures' },
+				t4: 9,
+				t5: { icon: 'warning' },
+				t6: { count: 1, tone: 'info' },
+			};
+			const items = tabs(8, 0).map((tab): ShellItem => ({ ...tab, badge: badges[tab.id] }));
+			render(shell(items, 'More'));
+			fireEvent.click(screen.getByRole('button', { name: /more/i }));
+			const panel = within(screen.getByRole('navigation', { name: 'More' }));
+			const link = (name: string) => panel.getByRole('link', { name: (n) => n.replace(/\s+,/g, ',') === name });
+			const mark = (name: string) => link(name).querySelector<HTMLElement>('[data-menu-badge]')!;
+			expect(mark('Tab 3, 2 failures').className).toContain('bg-danger-bg');
+			expect(mark('Tab 3, 2 failures')).toHaveAttribute('title', '2 failures');
+			// The current tab is always scrolled into view, so it is never in this list: a row here is a neutral pill on the page.
+			expect(mark('Tab 4, 9').className).toContain('bg-muted-bg');
+			expect(mark('Tab 5, Warning')).toHaveAttribute('data-badge-icon', 'warning');
+			expect(mark('Tab 5, Warning').className).toContain('text-warning-text');
+			expect(mark('Tab 6, 1').className).toContain('bg-info-bg');
+			expect(link('Tab 7').querySelector('[data-menu-badge]')).toBeNull();
+		});
+
 		it('updates the list when the nav scrolls', () => {
 			render(shell(tabs(8, 0), 'More'));
 			nav().scrollLeft = 500;

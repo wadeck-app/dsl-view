@@ -198,20 +198,21 @@ describe('rail look: barOnScroll states keep the bar', () => {
 });
 
 describe('rail look: the badge pill on a current entry', () => {
-	// The row is bg-muted-bg now: the pill must not be the same fill with a border that blends in. Surface fill, primary ink.
-	it('a current row pill is drawn on the surface with the primary ink and edge, not on the grey of its row', () => {
+	// The row is bg-muted-bg now: the pill must not be the same fill. Surface fill; the accent belongs to the bar only, so neutral ink and edge.
+	it('a current row pill is drawn on the surface with the content ink and the border edge, no accent, not on the grey of its row', () => {
 		shell({ menu: { ...MENU, items: [{ id: 'jobs', label: 'Jobs', href: '/jobs', badge: 3, current: 'page' }] } });
 		const pill = row('Jobs, 3').querySelector('[data-menu-badge]')!;
-		expect(classes(pill)).toEqual(expect.arrayContaining(['bg-surface', 'text-primary', 'ring-primary/30', 'ring-1', 'ring-inset', 'shrink-0']));
+		expect(classes(pill)).toEqual(expect.arrayContaining(['bg-surface', 'text-content', 'ring-border', 'ring-1', 'ring-inset', 'shrink-0']));
 		expect(classes(pill)).not.toContain('bg-muted-bg');
-		expect(classes(pill)).not.toContain('bg-primary-light');
+		expect(classes(pill).filter((c) => /primary/.test(c))).toEqual([]);
 		expect(pill).toHaveTextContent('3');
 	});
 
 	it('a current tab pill gets the same treatment (muted-on-muted was under 4.5:1 in light and dark)', () => {
 		shell({ tabs: [{ id: 'queue', label: 'Queue', href: '/queue', current: 'true', badge: 7 }, { id: 'audit', label: 'Audit log', href: '/audit', badge: 2 }] });
 		const current = tab('Queue, 7').querySelector('[data-menu-badge]')!;
-		expect(classes(current)).toEqual(expect.arrayContaining(['bg-surface', 'text-primary']));
+		expect(classes(current)).toEqual(expect.arrayContaining(['bg-surface', 'text-content', 'ring-border']));
+		expect(classes(current).filter((c) => /primary/.test(c))).toEqual([]);
 		expect(classes(current)).not.toContain('bg-muted-bg');
 		const other = tab('Audit log, 2').querySelector('[data-menu-badge]')!;
 		expect(classes(other)).toEqual(expect.arrayContaining(['bg-muted-bg', 'text-muted']));

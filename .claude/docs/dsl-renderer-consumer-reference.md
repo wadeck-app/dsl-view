@@ -942,13 +942,17 @@ Visible change for every `AppShell` consumer, no option: the current entry (`cur
 
 ## `AppShell` item badge (`ShellItem.badge`)
 
-A count after the label of a side-menu row, a top-bar tab and a row of the tabs overflow list.
+A badge after the label of a side-menu row, a top-bar tab and a row of the tabs overflow list. `badge?: number | ShellBadge`; `ShellBadge`, `ShellBadgeTone` and `ShellBadgeIcon` are exported like `ShellItem`.
 
-- Value: a non-negative whole number. `0` is shown; large values are shown whole (no abbreviation). `undefined`/`null`: nothing.
-- Anything else (string, `NaN`, `Infinity`, negative, fractional) draws nothing and warns once in development; the item otherwise works.
-- Look: small pill, `bg-muted-bg text-muted`; on the current row or tab `bg-surface text-primary` with a primary edge (the current entry is `bg-muted-bg`, so a muted pill would blend into it).
-- Accessible name is "Label, 3": a visually hidden ", " then the figure, read once. The label still truncates; the pill never shrinks or wraps. `menuVariant="fit"` counts the pill in the width.
-- Icons only (`resizable` menu under 6rem, `barOnScroll: 'icons'` once scrolled): no pill; the count stays in the accessible name and the tooltip becomes "Label (3)". A custom `renderLink` must forward `title`.
+- A plain number is unchanged: a count in a small muted pill (`0` shown, large values whole, no abbreviation; `undefined`/`null`: nothing). One visual change: on the current row or tab a neutral pill is now `bg-surface text-content ring-border` (it was `text-primary` with a primary edge), because the accent belongs to the bar only.
+- Object form `{ count?, tone?, icon?, label? }`:
+  - `tone`: `neutral` (default, the muted pill), `info`, `success`, `warning`, `danger` (the semantic `*-bg` / `*-text` tokens, so light and dark work; a faint edge in the ink colour). A toned pill keeps its tone on the current row or tab.
+  - `icon`: `info`, `success`, `warning`, `error` replaces the number, no pill; coloured by the tone, which defaults from the icon (`info`, `success`, `warning`, and `danger` for `error`). `count` is not drawn with an icon.
+  - `label`: the accessible text and the tooltip ("3 failures"). With an icon and no label it is "Information", "OK", "Warning" or "Error". The link reads "Label, <label or count>", once: the visible mark is `aria-hidden` when a label or an icon carries the words.
+  - With neither a valid `count` nor an `icon` there is nothing to show (`{ tone: 'danger' }` alone): nothing is drawn and one development warning says so.
+- Invalid values draw nothing for the offending part and warn once in development, one message per item naming it and its `id`: an unknown `tone` falls back to the default tone and still draws the count or icon; an unknown `icon`, an invalid `count`, an empty or non-string `label` and an unknown key are ignored. A string, `NaN`, negative or fractional number, boolean or array as the whole badge draws nothing.
+- Look: the label still truncates; the badge never shrinks or wraps. `menuVariant="fit"` counts the pill or icon in the width.
+- Icons only (`resizable` menu under 6rem, `barOnScroll: 'icons'` once scrolled): no mark; the text stays in the accessible name and the tooltip becomes "Label (text)", e.g. "Jobs (3 failures)". A custom `renderLink` must forward `title`.
 
 ## Behaviour changes by version
 
