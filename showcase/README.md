@@ -34,11 +34,12 @@ A component with a required prop that is not a scalar (a list, a node) is "descr
 | Assets | `DataTable`, row actions, `DialogForm` create/edit, delete confirmation |
 | Asset (route `/assets/:id`) | `Form` with optimistic locking (`version`, HTTP 409, "Simulate another user saving"), manifest tabs (Details, History) |
 | Loan request | `Stepper` wizard on page variables |
+| Reservations | Select fed by a source, date fields, an action with a body, HTTP 409 on overlapping dates |
 | Settings | `Tabs`, `Collapsible`, `Switch`, `ThemePicker` |
 | States | Error toasts (short, long path, 100-character word), source failure, loading, empty list |
 | Dashboard widget | `StatTile` sized by the manifest (`width`, `height`) |
 
 ## Not done yet
 
-- Reservations page (`FieldAsyncSelect`, `DateRangePicker`), server-side list filters (blocked by the optional-placeholder finding in the plan), interaction pages ($brains, filters in the URL, `AbTest`, theming).
+- Server-side list filters (blocked by the optional-placeholder finding in the plan), interaction pages ($brains, filters in the URL, `AbTest`, theming).
 - CI: the staleness test runs in the publish workflow; `app-core-cli check` runs by hand only (the CLI is not installed in CI).

@@ -1,0 +1,79 @@
+# Equipment-loan demo, reservations: a form on page variables (select fed by a source, date fields) that posts through an
+# action, and a table of the existing reservations. A clash on the dates answers HTTP 409. Components used - FieldSelect,
+# FieldText, FieldDate, ActionButton, DataTable.
+$sources:
+  options:
+    url: GET /api/modules/showcase/asset-options
+  reservations:
+    url: GET /api/modules/showcase/reservations
+
+$vars:
+  assetId: ""
+  borrower: ""
+  from: ""
+  to: ""
+
+$actions:
+  reserve:
+    url: POST /api/modules/showcase/reservations
+    reloadSources: [reservations]
+    successMessage: Reservation created
+  cancelReservation:
+    url: DELETE /api/modules/showcase/reservations/{id}
+    confirm: Cancel this reservation?
+    reloadSources: [reservations]
+    successMessage: Reservation cancelled
+
+$type: VerticalStack
+items:
+  - $type: PageHeader
+    title: Reservations
+    subtitle: Reserve an asset for a period. Two reservations of the same asset cannot overlap (HTTP 409).
+  - $type: Card
+    header:
+      - $type: Tag
+        label: New reservation
+    items:
+      - $type: FieldSelect
+        label: Asset
+        bind: assetId
+        placeholder: Choose an asset
+        options: $sources.options.items
+      - $type: FieldText
+        label: Borrower
+        bind: borrower
+      - $type: HorizontalStack
+        items:
+          - $type: FieldDate
+            label: From
+            bind: from
+          - $type: FieldDate
+            label: To
+            bind: to
+      - $type: ActionButton
+        label: Reserve
+        action: reserve
+        body:
+          assetId: $vars.assetId
+          borrower: $vars.borrower
+          from: $vars.from
+          to: $vars.to
+  - $type: DataTable
+    rows: $sources.reservations.items
+    emptyMessage: No reservation yet
+    columns:
+      - field: assetName
+        label: Asset
+      - field: borrower
+        label: Borrower
+      - field: from
+        label: From
+        format: date
+      - field: to
+        label: To
+        format: date
+      - type: actions
+        items:
+          - label: Cancel
+            action: cancelReservation
+            variant: danger

@@ -175,3 +175,4 @@ Spike in `showcase/app-module-showcase`: one page, one backend route, one playgr
 | After an action, all page sources reload, and a `Form` silently replaces unsaved edits when the reloaded data differs | Browser test above | Not changed; to report to the owner of `Form` / the page runner |
 | `Card` header with a single `Markdown` renders empty | Phase 0 | Not investigated |
 | An invalid enum value on `Badge` falls back to the default look | Phase 0 | Console warning not checked |
+| A `FieldDate` bound value is an ISO datetime at local midnight (`2026-11-30T23:00:00.000Z` for 1 Dec in UTC+1), not a date | Reservations page, seen in the backend payload | Not changed; the demo stores what it gets and formats columns with `format: date` |

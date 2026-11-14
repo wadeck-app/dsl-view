@@ -1,6 +1,6 @@
 // Backend entry (fixed path). Routes of the equipment-loan demo, mounted at /api/modules/showcase/.
 import type { ModuleContext } from '@wadeck-app/app-core-sdk';
-import { AssetStore, StoreError, type AssetInput } from './store.js';
+import { AssetStore, ReservationStore, StoreError, type AssetInput, type ReservationInput } from './store.js';
 
 interface Reply {
   code(status: number): Reply;
@@ -10,6 +10,7 @@ interface Reply {
 export default function setup(ctx: ModuleContext): void {
   // Reset on every load: the demo data is disposable.
   const store = new AssetStore();
+  const reservations = new ReservationStore(store);
 
   // A store refusal becomes its HTTP status and a message the page shows as is; anything else is a bug and rethrown.
   function guarded(reply: Reply, run: () => unknown): unknown {
@@ -50,6 +51,21 @@ export default function setup(ctx: ModuleContext): void {
     await new Promise(resolve => setTimeout(resolve, 3000));
     return reply.send({ done: true });
   });
+
+  // Options of the asset select of the reservation form, in the { value, label } shape the select reads.
+  ctx.registerRoute('GET', '/asset-options', (_req, reply) =>
+    reply.send({ items: store.list({}).map(a => ({ value: a.id, label: a.name })) })
+  );
+  ctx.registerRoute('GET', '/reservations', (_req, reply) => reply.send({ items: reservations.list() }));
+  ctx.registerRoute('POST', '/reservations', (req, reply) =>
+    guarded(reply as Reply, () => reservations.create((req.body ?? {}) as ReservationInput))
+  );
+  ctx.registerRoute('DELETE', '/reservations/:id', (req, reply) =>
+    guarded(reply as Reply, () => {
+      reservations.remove(req.params.id);
+      return { ok: true };
+    })
+  );
 
   ctx.registerRoute('GET', '/assets', (req, reply) => {
     const query = (req.query ?? {}) as { search?: string; status?: string };

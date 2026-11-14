@@ -127,3 +127,65 @@ function validate(input: AssetInput): Omit<Asset, 'id' | 'version'> {
   const purchasedAt = typeof input.purchasedAt === 'string' ? input.purchasedAt : '';
   return { name, category, status: status as Asset['status'], quantity, tags, purchasedAt };
 }
+
+export interface Reservation {
+  id: string;
+  assetId: string;
+  assetName: string;
+  borrower: string;
+  from: string;
+  to: string;
+}
+
+export interface ReservationInput {
+  assetId?: unknown;
+  borrower?: unknown;
+  from?: unknown;
+  to?: unknown;
+}
+
+export class ReservationStore {
+  private reservations: Reservation[] = [];
+  private nextId = 1;
+
+  constructor(private readonly assets: AssetStore) {}
+
+  list(): Reservation[] {
+    return [...this.reservations].sort((a, b) => a.from.localeCompare(b.from));
+  }
+
+  create(input: ReservationInput): Reservation {
+    const assetId = typeof input.assetId === 'string' ? input.assetId : '';
+    if (assetId === '') {
+      throw new StoreError(422, 'Choose an asset.');
+    }
+    const asset = this.assets.get(assetId);
+    const borrower = typeof input.borrower === 'string' ? input.borrower.trim() : '';
+    if (borrower.length < 2) {
+      throw new StoreError(422, 'The borrower must have at least 2 characters.');
+    }
+    const from = typeof input.from === 'string' ? input.from : '';
+    const to = typeof input.to === 'string' ? input.to : '';
+    if (from === '' || to === '') {
+      throw new StoreError(422, 'Choose a start and an end date.');
+    }
+    if (to < from) {
+      throw new StoreError(422, 'The end date is before the start date.');
+    }
+    const clash = this.reservations.find(r => r.assetId === assetId && r.from <= to && from <= r.to);
+    if (clash) {
+      throw new StoreError(409, `"${asset.name}" is already reserved by ${clash.borrower} from ${clash.from} to ${clash.to}.`);
+    }
+    const reservation: Reservation = { id: `r${this.nextId++}`, assetId, assetName: asset.name, borrower, from, to };
+    this.reservations.push(reservation);
+    return reservation;
+  }
+
+  remove(id: string): void {
+    const index = this.reservations.findIndex(r => r.id === id);
+    if (index < 0) {
+      throw new StoreError(404, `No reservation "${id}".`);
+    }
+    this.reservations.splice(index, 1);
+  }
+}

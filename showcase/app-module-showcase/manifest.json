@@ -3,6 +3,7 @@
   "extensionPoints": [
     { "kind": "page", "slot": "nav", "label": "Overview", "path": "/", "view": { "type": "path", "value": "./src/dsl-views/home.yaml" } },
     { "kind": "page", "slot": "nav", "label": "Assets", "path": "/assets", "separatorBefore": true, "groupLabel": "Equipment loans", "view": { "type": "path", "value": "./src/dsl-views/assets.yaml" } },
+    { "kind": "page", "slot": "nav", "label": "Reservations", "path": "/reservations", "view": { "type": "path", "value": "./src/dsl-views/reservations.yaml" } },
     { "kind": "page", "slot": "route", "label": "Asset", "path": "/assets/:id", "tab": { "group": "asset", "label": "Details", "order": 10 }, "view": { "type": "path", "value": "./src/dsl-views/asset-edit.yaml" } },
     { "kind": "page", "slot": "route", "label": "Asset history", "path": "/assets/:id/history", "tab": { "group": "asset", "label": "History", "order": 20 }, "view": { "type": "path", "value": "./src/dsl-views/asset-history.yaml" } },
     { "kind": "widget", "slot": "dashboard", "label": "Demo assets", "width": 2, "height": 1, "view": { "type": "path", "value": "./src/dsl-views/widget-stats.yaml" } },
