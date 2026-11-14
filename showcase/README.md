@@ -41,4 +41,4 @@ A component with a required prop that is not a scalar (a list, a node) is "descr
 ## Not done yet
 
 - Reservations page (`FieldAsyncSelect`, `DateRangePicker`), server-side list filters (blocked by the optional-placeholder finding in the plan), interaction pages ($brains, filters in the URL, `AbTest`, theming).
-- CI: the staleness test and `app-core-cli check` run by hand only.
+- CI: the staleness test runs in the publish workflow; `app-core-cli check` runs by hand only (the CLI is not installed in CI).

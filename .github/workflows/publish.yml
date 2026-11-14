@@ -47,6 +47,11 @@ jobs:
             - name: Run tests
               run: npm test --workspaces --if-present
 
+            # The showcase views are generated from inventory.md and the node schemas: a stale view or a component
+            # without a frame fails here, before anything is published.
+            - name: Showcase generated views are up to date
+              run: node --test showcase/scripts/generate-views.test.mjs
+
     publish:
         needs: build-and-test
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
