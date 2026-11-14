@@ -1,37 +1,38 @@
-# Spike: one playground frame (Badge) with controls bound to page variables, plus one source read.
+# Overview: what this module shows and where to look. Hand-written; the component pages are generated.
 $sources:
-  ping:
-    url: GET /api/modules/showcase/ping
-
-$vars:
-  label: hello
-  variant: info
+  assets:
+    url: GET /api/modules/showcase/assets
 
 $type: VerticalStack
 items:
   - $type: PageHeader
-    title: Showcase
-    subtitle: Spike of the playground frame
+    title: dsl-view showcase
+    subtitle: Every dsl-ui component with live controls, plus a small equipment-loan app built only from YAML.
+  - $type: HorizontalStack
+    wrap: true
+    items:
+      - $type: StatTile
+        label: Demo assets
+        value: $sources.assets.items.length
   - $type: Card
     header:
       - $type: Tag
-        label: Badge
+        label: Equipment loans
     items:
-      - $type: HorizontalStack
-        items:
-          - $type: FieldText
-            label: label
-            bind: label
-          - $type: FieldSelect
-            label: variant
-            bind: variant
-            options:
-              - { value: info, label: info }
-              - { value: success, label: success }
-              - { value: warning, label: warning }
-              - { value: danger, label: danger }
-      - $type: Badge
-        label: $vars.label
-        variant: $vars.variant
-  - $type: Markdown
-    text: $concat('Backend answered at ', $sources.ping.at)
+      - $type: Markdown
+        text: |
+          A fictional domain that lives only in this module. Open **Assets** to see a table with row actions, a create/edit dialog and a delete confirmation; click a row for the edit page, which demonstrates optimistic locking (`version`, HTTP 409, a button that simulates another user saving).
+      - $type: ButtonLink
+        to: /modules/showcase/assets
+        label: Open Assets
+  - $type: Card
+    header:
+      - $type: Tag
+        label: Components
+    items:
+      - $type: Markdown
+        text: |
+          One page per folder of dsl-ui (controls, display, form, layout, navigation, overlay, table, dev). Each component sits in a frame that names it (registry name, category, folder). When the component has simple props, controls under the frame change them live; the table lists every prop and its type. A frame marked "Not playable yet" needs a sample in `showcase/scripts/samples.json`.
+      - $type: ButtonLink
+        to: /modules/showcase/components/display
+        label: Open Display
