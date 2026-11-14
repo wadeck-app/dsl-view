@@ -1,0 +1,10 @@
+# Dashboard widget: sized by the manifest (width, height).
+$sources:
+  assets:
+    url: GET /api/modules/showcase/assets
+
+$type: VerticalStack
+items:
+  - $type: StatTile
+    label: Assets in the demo
+    value: $sources.assets.items.length

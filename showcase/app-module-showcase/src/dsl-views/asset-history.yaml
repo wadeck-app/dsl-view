@@ -1,0 +1,22 @@
+# Second tab of the asset pages (group "asset"): same :id as the edit page, so the shell shows both as tabs.
+$sources:
+  asset:
+    url: GET /api/modules/showcase/assets/{id}
+    params:
+      id: $route.id
+
+$type: VerticalStack
+items:
+  - $type: PageHeader
+    title: $sources.asset.name
+    subtitle: Tabs from the manifest (tab group), not from a Tabs component.
+  - $type: Card
+    header:
+      - $type: Tag
+        label: Current state
+    items:
+      - $type: Markdown
+        text: "$concat('Version **', $sources.asset.version, '**, status **', $sources.asset.status, '**, quantity **', $sources.asset.quantity, '**.')"
+      - $type: BackLink
+        to: /modules/showcase/assets
+        label: Back to the list

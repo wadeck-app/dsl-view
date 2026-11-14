@@ -1,0 +1,52 @@
+# Page structure: a multi-step request. Components used - Stepper, FieldText, FieldSelect, FieldTextarea, Switch, Markdown,
+# Badge. The answers live in page variables ($vars) bound to the fields, and the last step recaps them.
+$vars:
+  borrower: ""
+  assetName: ""
+  purpose: loan
+  notes: ""
+  insured: false
+
+$type: VerticalStack
+items:
+  - $type: PageHeader
+    title: Loan request
+    subtitle: "A wizard built from Stepper. Nothing is sent, the point is the page structure."
+  - $type: Stepper
+    completedLabel: Submit request
+    steps:
+      - label: Who
+        description: The borrower
+        items:
+          - $type: FieldText
+            label: Borrower name
+            bind: borrower
+            required: true
+      - label: What
+        description: The equipment and the reason
+        items:
+          - $type: FieldText
+            label: Equipment
+            bind: assetName
+          - $type: FieldSelect
+            label: Purpose
+            bind: purpose
+            options:
+              - { value: loan, label: Loan }
+              - { value: demo, label: Demonstration }
+              - { value: repair, label: Repair }
+          - $type: Switch
+            label: Insured during the loan
+            bind: insured
+      - label: Review
+        description: Check before submitting
+        items:
+          - $type: FieldTextarea
+            label: Notes
+            bind: notes
+          - $type: Markdown
+            text: $concat('**', $vars.borrower, '** asks for **', $vars.assetName, '** (', $vars.purpose, ').')
+          - $type: Badge
+            $if: $vars.insured
+            label: Insured
+            variant: success

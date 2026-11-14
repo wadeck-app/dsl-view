@@ -1,0 +1,49 @@
+# Page structure: a settings page. Components used - Tabs, Section, Switch, CompactSelect-style FieldSelect, Collapsible,
+# ThemePicker, Card. Values are page variables: nothing is saved.
+$vars:
+  notifications: true
+  digest: daily
+  compact: false
+
+$type: VerticalStack
+items:
+  - $type: PageHeader
+    title: Settings
+    subtitle: "A tabbed settings page. Values stay in the page, nothing is saved."
+  - $type: Tabs
+    defaultTab: general
+    tabs:
+      - key: general
+        label: General
+        children:
+          - $type: Section
+            title: Notifications
+            items:
+              - $type: Switch
+                label: Send notifications
+                bind: notifications
+              - $type: FieldSelect
+                label: Digest
+                bind: digest
+                options:
+                  - { value: hourly, label: Hourly }
+                  - { value: daily, label: Daily }
+                  - { value: weekly, label: Weekly }
+          - $type: Collapsible
+            title: Advanced
+            items:
+              - $type: Switch
+                label: Compact tables
+                bind: compact
+      - key: appearance
+        label: Appearance
+        children:
+          - $type: Section
+            title: Theme
+            items:
+              - $type: ThemePicker
+      - key: summary
+        label: Summary
+        children:
+          - $type: Markdown
+            text: "$concat('Notifications: **', $vars.notifications, '**, digest: **', $vars.digest, '**, compact tables: **', $vars.compact, '**.')"

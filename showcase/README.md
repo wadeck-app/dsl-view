@@ -26,7 +26,19 @@ Each component gets a `Card` whose header tags are its registry name, category a
 
 A component with a required prop that is not a scalar (a list, a node) is "described only" until `samples.json` gives it a literal `props` entry. The generator prints the counts.
 
-## Not wired yet
+## Hand-written pages
 
+| Page | Shows |
+|---|---|
+| Overview | Entry points |
+| Assets | `DataTable`, row actions, `DialogForm` create/edit, delete confirmation |
+| Asset (route `/assets/:id`) | `Form` with optimistic locking (`version`, HTTP 409, "Simulate another user saving"), manifest tabs (Details, History) |
+| Loan request | `Stepper` wizard on page variables |
+| Settings | `Tabs`, `Collapsible`, `Switch`, `ThemePicker` |
+| States | Error toasts (short, long path, 100-character word), source failure, loading, empty list |
+| Dashboard widget | `StatTile` sized by the manifest (`width`, `height`) |
+
+## Not done yet
+
+- Reservations page (`FieldAsyncSelect`, `DateRangePicker`), server-side list filters (blocked by the optional-placeholder finding in the plan), interaction pages ($brains, filters in the URL, `AbTest`, theming).
 - CI: the staleness test and `app-core-cli check` run by hand only.
-- Business demo, interaction pages and states pages from the plan.
