@@ -1,0 +1,88 @@
+# Equipment-loan demo, list: DataTable with row actions, create and edit in a DialogForm, delete with a confirmation.
+# delete with a confirmation. Data: in-memory backend of this module (src/backend/store.ts).
+$sources:
+  assets:
+    url: GET /api/modules/showcase/assets
+
+$actions:
+  openCreate:
+    resultKey: assetDialog
+  openEdit:
+    resultKey: assetDialog
+  createAsset:
+    url: POST /api/modules/showcase/assets
+    reloadSources: [assets]
+    successMessage: Asset created
+  updateAsset:
+    url: PATCH /api/modules/showcase/assets/{id}
+    reloadSources: [assets]
+    successMessage: Asset saved
+  deleteAsset:
+    url: DELETE /api/modules/showcase/assets/{id}
+    confirm: Delete this asset?
+    reloadSources: [assets]
+    successMessage: Asset deleted
+
+$type: VerticalStack
+items:
+  - $type: PageHeader
+    title: Assets
+    subtitle: Equipment-loan demo. Components used - DataTable, DialogForm, FieldText, FieldNumber, FieldSelect, FieldTags, FieldDate.
+    headerActions:
+      - $type: ButtonAction
+        label: New asset
+        onClick: $openCreate
+  - $type: DataTable
+    rows: $sources.assets.items
+    emptyMessage: No asset matches
+    navigateTo: /modules/showcase/assets/{id}
+    columns:
+      - field: name
+        label: Name
+      - field: category
+        label: Category
+      - field: status
+        label: Status
+      - field: quantity
+        label: Quantity
+      - field: version
+        label: Version
+      - type: actions
+        items:
+          - label: Edit
+            action: openEdit
+          - label: Delete
+            action: deleteAsset
+            variant: danger
+  - $type: DialogForm
+    title: Asset
+    visible: $assetDialog
+    initialData: $assetDialog
+    onSubmit: $createAsset
+    onSubmitEdit: $updateAsset
+    size: md
+    fields:
+      - $type: FieldText
+        label: Name
+        bind: name
+        required: true
+      - $type: FieldText
+        label: Category
+        bind: category
+      - $type: FieldSelect
+        label: Status
+        bind: status
+        options:
+          - { value: available, label: available }
+          - { value: loaned, label: loaned }
+          - { value: maintenance, label: maintenance }
+      - $type: FieldNumber
+        label: Quantity
+        bind: quantity
+        min: 0
+      - $type: FieldTags
+        label: Tags
+        bind: tags
+      - $type: FieldDate
+        label: Purchased on
+        bind: purchasedAt

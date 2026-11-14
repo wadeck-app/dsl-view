@@ -1,0 +1,69 @@
+# Equipment-loan demo, edit page (route /assets/:id): a Form with optimistic locking.
+# The asset carries `version`; the form sends it back (hidden field `version` of initialData), the backend answers 409
+# when it moved. "Simulate another user" bumps the version so the next save fails; "Reload" re-reads the asset.
+$sources:
+  asset:
+    url: GET /api/modules/showcase/assets/{id}
+    params:
+      id: $route.id
+
+$actions:
+  saveAsset:
+    url: PATCH /api/modules/showcase/assets/{id}
+    reloadSources: [asset]
+    successMessage: Asset saved
+  simulateOtherUser:
+    url: POST /api/modules/showcase/assets/{id}/touch
+    # reloadSources: [] keeps this page on the version it opened, as a second browser tab would: the next save is stale.
+    reloadSources: []
+    successMessage: Someone else saved this asset (version bumped)
+  reloadAsset:
+    resultKey: reloaded
+    reloadSources: [asset]
+
+$type: VerticalStack
+items:
+  - $type: PageHeader
+    title: $sources.asset.name
+    subtitle: Optimistic locking demo. Components used - Form, FieldText, FieldNumber, FieldSelect, FieldTags, FieldDate, UnsavedBadge, ButtonSave, ButtonCancel, ActionButton.
+  - $type: Badge
+    label: $concat('version ', $sources.asset.version)
+    variant: info
+  - $type: Form
+    initialData: $sources.asset
+    onSubmit: $saveAsset
+    fields:
+      - $type: FieldText
+        label: Name
+        bind: name
+        required: true
+      - $type: FieldText
+        label: Category
+        bind: category
+      - $type: FieldSelect
+        label: Status
+        bind: status
+        options:
+          - { value: available, label: available }
+          - { value: loaned, label: loaned }
+          - { value: maintenance, label: maintenance }
+      - $type: FieldNumber
+        label: Quantity
+        bind: quantity
+        min: 0
+    actions:
+      - $type: ButtonSave
+        label: Save
+      - $type: UnsavedBadge
+  - $type: HorizontalStack
+    items:
+      - $type: ActionButton
+        label: Simulate another user saving
+        action: simulateOtherUser
+        params:
+          id: $route.id
+        variant: secondary
+      - $type: ActionButton
+        label: Reload
+        action: reloadAsset
+        variant: secondary

@@ -116,10 +116,10 @@ Not a dsl-view feature: I found no support for it in the renderer or the docs (g
 4. A "simulate another user" button calls a route that bumps the version, so the conflict is reproducible in one click.
 5. The failure reaches the user through the action notification. A reload button re-fetches the source.
 
-To check in phase 0:
-- Whether `Form` submits a bound field it does not display (`version`), or needs a read-only field.
-- What the form does to the user's edits when the source reloads after a conflict. `Form` resets its state when the server data changes (`Form.tsx:48-59`), so the user's unsaved edits would be replaced by the reload.
-- Whether the 409 message is shown as is.
+Checked in the browser (2026-11-15), `asset-edit.yaml` against the in-memory backend:
+- `Form` submits every key of its `initialData`, displayed or not: `version` reached the backend with no hidden field.
+- A 409 is shown as an error toast, `Action "saveAsset" failed (HTTP 409): <backend message>`; the user's edits stay and "Unsaved changes" remains.
+- After any successful action, every source of the page reloads (not only the listed `reloadSources`; an empty `reloadSources: []` stops it). A changed `initialData` then replaces the user's unsaved edits in the `Form`, silently: typing "keep-me" then running another action put the old value back. So a background refresh can erase an edit before the conflict is ever detected. The demo's "Simulate another user" button sets `reloadSources: []` to reproduce what a second browser tab does.
 
 ## Keeping it complete
 
@@ -166,3 +166,12 @@ Spike in `showcase/app-module-showcase`: one page, one backend route, one playgr
 | Enum option lists | Must come from the component's real type: `error` is not a `Badge` variant (`danger` is) and the badge silently fell back to the default look. Whether a warning reaches the console is not checked. |
 | `Card` `header` | A single `Markdown` node rendered an empty header; a list with one `Tag` rendered. Cause not investigated (Markdown, or a single node instead of a list). Use the list form. |
 | Not yet checked | `Form` submitting a hidden `version`; `Form` reset on reload; `$concat` for the "Current node" text; the generator; this repo's tooling on the module; CI cost |
+
+## Findings on dsl-view while building (2026-11-15)
+
+| Finding | Evidence | Status |
+|---|---|---|
+| A `$sources` url with an optional `{placeholder}` is skipped when the value is empty, so a list cannot take an optional `search` or `status` query param | `useSourceLoader` warning "path placeholder(s) resolved to empty"; the task module works around it with a backend-computed query string | Not changed; the showcase list has no server-side filter |
+| After an action, all page sources reload, and a `Form` silently replaces unsaved edits when the reloaded data differs | Browser test above | Not changed; to report to the owner of `Form` / the page runner |
+| `Card` header with a single `Markdown` renders empty | Phase 0 | Not investigated |
+| An invalid enum value on `Badge` falls back to the default look | Phase 0 | Console warning not checked |
