@@ -1033,6 +1033,8 @@ First published version containing the change (`dsl-ui` and `dsl-renderer` share
 | `2026.11.7-332` | `CompactSelect` with `urlParam` and NO `placeholder`: a present but empty param (`?name=`) is now read like an absent one (it shows `defaultValue`, and with `storageKey` restores a stored option and keeps the entry), because no option can represent the empty text and the select used to show its first option while the page used its defaults. With a `placeholder` nothing changes. |
 | `2026.11.8-334` | `ShellItem.badge` also accepts `{ count?, tone?, icon?, label? }` (`ShellBadge`): an `icon` (info, success, warning, error) replaces the count, `tone` colours the pill (neutral, info, success, warning, danger), `label` is the accessible text and tooltip. A plain number is unchanged. **Visible change:** the pill of the current row or tab is neutral (`bg-surface text-content ring-border`) instead of tinted with the accent. |
 | `2026.11.8-336` | A plain count badge on a `ShellItem` (no `label`, no `icon`) has the tooltip "<item label>: <count>" (it was empty). The accessible name is unchanged. |
+| `2026.11.14-338` | `ToastProvider`: a long unbreakable word in a message wraps inside the bubble (it pushed the dismiss button out, so the toast could not be closed). |
+| `2026.11.14-339` | `ToastProvider`: the dismiss button sits top right, level with the first line, with a larger hit area and full opacity; the message is written in the content ink on every variant (the light error text was 4.41:1) with a 4px accent edge, the icon keeps the variant colour. |
 
 ## Pitfalls
 
