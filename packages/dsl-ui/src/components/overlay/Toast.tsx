@@ -35,7 +35,7 @@ const variantIcons: Record<ToastVariant, React.ReactNode> = {
 };
 
 const dismissButtonClass =
-	'shrink-0 rounded opacity-60 hover:opacity-100 transition-opacity cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-current';
+	'shrink-0 self-start mt-1 rounded opacity-60 hover:opacity-100 transition-opacity cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-current';
 
 // Toasts shown at once; the older ones wait behind the "+N more" control (an error is folded, never dropped).
 export const MAX_VISIBLE_TOASTS = 5;
@@ -137,7 +137,8 @@ export function ToastProvider({ children }: ToastProviderProps) {
 						].join(' ')}
 					>
 						{variantIcons[toast.variant]}
-						<span className="flex-1">
+						{/* min-w-0 lets the flex item shrink below its longest word; break-words then wraps that word instead of pushing the dismiss button out of the bubble */}
+						<span className="flex-1 min-w-0 break-words">
 							{toast.message}
 							{toast.count > 1 ? ` ×${toast.count}` : ''}
 						</span>

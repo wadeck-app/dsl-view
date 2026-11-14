@@ -234,6 +234,26 @@ describe('ToastProvider stack', () => {
 		expect(screen.queryByRole('button', { name: /more|fewer/i })).toBeNull();
 	});
 
+	// jsdom has no layout: assert the classes that keep a long unbreakable word inside the bubble (min-w-0 lets the flex
+	// item shrink, the wrap rule breaks the word) and the dismiss button on the first line of a multi-line message.
+	it('keeps the dismiss button reachable when the message has a long unbreakable word', () => {
+		const longWord = 'x'.repeat(100);
+		function LongTrigger() {
+			const toast = useToast();
+			return <button onClick={() => toast.error(`failed: ${longWord}`)}>long</button>;
+		}
+		render(
+			<ToastProvider>
+				<LongTrigger />
+			</ToastProvider>
+		);
+		fireEvent.click(screen.getByText('long'));
+		const message = screen.getByText(/failed: x+/);
+		expect(message.className).toContain('min-w-0');
+		expect(message.className).toMatch(/break-words|\[overflow-wrap:anywhere\]/);
+		expect(screen.getByRole('button', { name: 'Dismiss' }).className).toContain('self-start');
+	});
+
 	it('brings the next older toast into view when a shown one is dismissed', () => {
 		setupMany();
 		for (let n = 1; n <= 6; n++) {
