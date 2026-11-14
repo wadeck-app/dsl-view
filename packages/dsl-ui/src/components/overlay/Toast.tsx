@@ -1,4 +1,4 @@
-import { CheckCircle, Info, X, XCircle } from 'lucide-react';
+import { CheckCircle, Info, X } from 'lucide-react';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 export type ToastVariant = 'success' | 'error' | 'info';
@@ -30,7 +30,8 @@ const variantStyles: Record<ToastVariant, string> = {
 
 const variantIcons: Record<ToastVariant, React.ReactNode> = {
 	success: <CheckCircle className="mt-0.5 w-4 h-4 shrink-0 text-success" />,
-	error: <XCircle className="mt-0.5 w-4 h-4 shrink-0 text-danger" />,
+	// No icon on an error: a red circled cross next to the dismiss button reads as a second close control. The red fill and edge say it.
+	error: null,
 	info: <Info className="mt-0.5 w-4 h-4 shrink-0 text-primary" />,
 };
 

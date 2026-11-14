@@ -273,6 +273,19 @@ describe('ToastProvider stack', () => {
 		}
 	});
 
+	// A red circled cross at the left of an error looks like a second close button next to the real one.
+	it('draws no icon on an error toast, only its dismiss button, while success and info keep theirs', () => {
+		setup();
+		fireEvent.click(screen.getByText('fail'));
+		fireEvent.click(screen.getByText('ok'));
+		fireEvent.click(screen.getByText('info'));
+		expect(screen.getByRole('alert').querySelectorAll('svg')).toHaveLength(1);
+		expect(screen.getByRole('alert').querySelector('button svg')).not.toBeNull();
+		for (const bubble of screen.getAllByRole('status')) {
+			expect(bubble.querySelectorAll('svg')).toHaveLength(2);
+		}
+	});
+
 	it('brings the next older toast into view when a shown one is dismissed', () => {
 		setupMany();
 		for (let n = 1; n <= 6; n++) {
