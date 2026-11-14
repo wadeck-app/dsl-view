@@ -1035,6 +1035,7 @@ First published version containing the change (`dsl-ui` and `dsl-renderer` share
 | `2026.11.8-336` | A plain count badge on a `ShellItem` (no `label`, no `icon`) has the tooltip "<item label>: <count>" (it was empty). The accessible name is unchanged. |
 | `2026.11.14-338` | `ToastProvider`: a long unbreakable word in a message wraps inside the bubble (it pushed the dismiss button out, so the toast could not be closed). |
 | `2026.11.14-339` | `ToastProvider`: the dismiss button sits top right, level with the first line, with a larger hit area and full opacity; the message is written in the content ink on every variant (the light error text was 4.41:1) with a 4px accent edge, the icon keeps the variant colour. |
+| `2026.11.14-343` | `ToastProvider`: an error toast has no left icon (a red circled cross next to the dismiss button read as a second close control); success and info keep theirs. |
 
 ## Pitfalls
 
