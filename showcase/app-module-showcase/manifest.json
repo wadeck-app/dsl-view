@@ -1,0 +1,11 @@
+{
+  "id": "showcase",
+  "extensionPoints": [
+    {
+      "kind": "page",
+      "slot": "nav",
+      "label": "Showcase",
+      "view": { "type": "path", "value": "./src/dsl-views/home.yaml" }
+    }
+  ]
+}

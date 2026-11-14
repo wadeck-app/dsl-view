@@ -1,0 +1,37 @@
+# Spike: one playground frame (Badge) with controls bound to page variables, plus one source read.
+$sources:
+  ping:
+    url: GET /api/modules/showcase/ping
+
+$vars:
+  label: hello
+  variant: info
+
+$type: VerticalStack
+items:
+  - $type: PageHeader
+    title: Showcase
+    subtitle: Spike of the playground frame
+  - $type: Card
+    header:
+      - $type: Tag
+        label: Badge
+    items:
+      - $type: HorizontalStack
+        items:
+          - $type: FieldText
+            label: label
+            bind: label
+          - $type: FieldSelect
+            label: variant
+            bind: variant
+            options:
+              - { value: info, label: info }
+              - { value: success, label: success }
+              - { value: warning, label: warning }
+              - { value: danger, label: danger }
+      - $type: Badge
+        label: $vars.label
+        variant: $vars.variant
+  - $type: Markdown
+    text: $concat('Backend answered at ', $sources.ping.at)
