@@ -25,6 +25,32 @@ export default function setup(ctx: ModuleContext): void {
 
   ctx.registerRoute('GET', '/ping', (_req, reply) => reply.send({ ok: true, at: new Date().toISOString() }));
 
+  // Routes that fail on demand, to show how errors reach the user (toasts, source errors) and a slow one for loading states.
+  const FAILURES: Record<string, { status: number; error: string }> = {
+    short: { status: 500, error: 'Something went wrong.' },
+    long: {
+      status: 503,
+      error:
+        'Could not load the data: the machine daemon is not running (no C:\\Users\\someone\\.config\\machine\\daemon.port.json): start it with `machine daemon` and retry. If it keeps failing, check the log of the service.',
+    },
+    word: { status: 502, error: `Upstream refused the request: ${'x'.repeat(100)}` },
+  };
+  ctx.registerRoute('POST', '/fail/:kind', (req, reply) => {
+    const failure = FAILURES[req.params.kind];
+    if (!failure) {
+      return reply.code(404).send({ error: `Unknown failure "${req.params.kind}". Known: ${Object.keys(FAILURES).join(', ')}.` });
+    }
+    return reply.code(failure.status).send({ error: failure.error });
+  });
+  ctx.registerRoute('GET', '/fail/:kind', (req, reply) => {
+    const failure = FAILURES[req.params.kind];
+    return reply.code(failure?.status ?? 404).send({ error: failure?.error ?? 'Unknown failure.' });
+  });
+  ctx.registerRoute('GET', '/slow', async (_req, reply) => {
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    return reply.send({ done: true });
+  });
+
   ctx.registerRoute('GET', '/assets', (req, reply) => {
     const query = (req.query ?? {}) as { search?: string; status?: string };
     return reply.send({ items: store.list(query) });

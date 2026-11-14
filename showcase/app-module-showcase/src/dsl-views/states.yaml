@@ -1,0 +1,83 @@
+# States: how loading, empty and failing look. Components used - ActionButton, ToastProvider (through the notifier),
+# Skeleton, Spinner, FetchSpinner, Badge, DataTable (empty), JsonViewer.
+$sources:
+  slow:
+    url: GET /api/modules/showcase/slow
+  broken:
+    url: GET /api/modules/showcase/fail/long
+    inlineErrors: true
+  nothing:
+    url: GET /api/modules/showcase/assets
+
+$actions:
+  failShort:
+    url: POST /api/modules/showcase/fail/short
+  failLong:
+    url: POST /api/modules/showcase/fail/long
+  failWord:
+    url: POST /api/modules/showcase/fail/word
+
+$type: VerticalStack
+items:
+  - $type: PageHeader
+    title: States
+    subtitle: How the app looks while loading, when a list is empty and when a call fails.
+  - $type: Card
+    header:
+      - $type: Tag
+        label: Error notifications
+    items:
+      - $type: Markdown
+        text: Each button calls a route that fails. The message reaches the user as an error toast (`ToastProvider`) that stays until dismissed. The third one carries a 100-character word with no space, which must wrap inside the bubble with the close button still reachable.
+      - $type: HorizontalStack
+        wrap: true
+        items:
+          - $type: ActionButton
+            label: Short error
+            action: failShort
+            variant: secondary
+          - $type: ActionButton
+            label: Long error with a path
+            action: failLong
+            variant: secondary
+          - $type: ActionButton
+            label: Error with a 100-character word
+            action: failWord
+            variant: secondary
+  - $type: Card
+    header:
+      - $type: Tag
+        label: Source failure
+    items:
+      - $type: Markdown
+        text: A source that fails is answered as data (`inlineErrors`), so the page keeps rendering and shows the message where it belongs.
+      - $type: Badge
+        $if: $sources.broken.error
+        label: $sources.broken.error
+        variant: danger
+  - $type: Card
+    header:
+      - $type: Tag
+        label: Loading
+    items:
+      - $type: Markdown
+        text: The `slow` source answers after 3 seconds.
+      - $type: Skeleton
+        $if: "!$sources.slow.done"
+        variant: line
+        count: 3
+      - $type: Badge
+        $if: $sources.slow.done
+        label: Loaded
+        variant: success
+  - $type: Card
+    header:
+      - $type: Tag
+        label: Empty list
+    items:
+      - $type: DataTable
+        rows: []
+        emptyMessage: Nothing to show yet. Create an asset on the Assets page.
+        columns:
+          - field: name
+            label: Name

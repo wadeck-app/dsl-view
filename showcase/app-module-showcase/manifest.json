@@ -4,6 +4,7 @@
     { "kind": "page", "slot": "nav", "label": "Overview", "path": "/", "view": { "type": "path", "value": "./src/dsl-views/home.yaml" } },
     { "kind": "page", "slot": "nav", "label": "Assets", "path": "/assets", "separatorBefore": true, "groupLabel": "Equipment loans", "view": { "type": "path", "value": "./src/dsl-views/assets.yaml" } },
     { "kind": "page", "slot": "route", "path": "/assets/:id", "view": { "type": "path", "value": "./src/dsl-views/asset-edit.yaml" } },
+    { "kind": "page", "slot": "nav", "label": "States", "path": "/states", "separatorBefore": true, "groupLabel": "Behaviour", "view": { "type": "path", "value": "./src/dsl-views/states.yaml" } },
     { "kind": "page", "slot": "nav", "label": "Controls", "path": "/components/controls", "separatorBefore": true, "groupLabel": "Components", "view": { "type": "path", "value": "./src/dsl-views/components-controls.yaml" } },
     { "kind": "page", "slot": "nav", "label": "Display", "path": "/components/display", "view": { "type": "path", "value": "./src/dsl-views/components-display.yaml" } },
     { "kind": "page", "slot": "nav", "label": "Form", "path": "/components/form", "view": { "type": "path", "value": "./src/dsl-views/components-form.yaml" } },
