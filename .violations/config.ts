@@ -29,5 +29,11 @@ export default {
     // A dark: variant applies under ANY .dark ancestor, so a component using one cannot be nested
     // inside a ThemeScope that re-asserts light. Tokens resolve against the nearest scope instead.
     './.violations/rules/no-dark-variant.ts': true,
+    // showcase/app-module-showcase makes violations auto-activate the app-module manifest rule, which needs
+    // @wadeck-app/app-core-sdk installed here. The module is validated by `app-core-cli check` instead
+    // (see showcase/README.md); installing the SDK for one rule is a separate decision.
+    '@wadeck-app/app-core-sdk/violations': { $severity: false },
+    // An app-module backend entry must be named src/backend/index.ts (app-core's fixed layout), not a barrel.
+    'ts/no-barrel-index': { $exclude: ['showcase/**/src/backend/index.ts'] },
   },
 } satisfies ViolationsConfig

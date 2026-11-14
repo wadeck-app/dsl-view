@@ -1,11 +1,14 @@
 {
   "id": "showcase",
   "extensionPoints": [
-    {
-      "kind": "page",
-      "slot": "nav",
-      "label": "Showcase",
-      "view": { "type": "path", "value": "./src/dsl-views/home.yaml" }
-    }
+    { "kind": "page", "slot": "nav", "label": "Overview", "path": "/", "view": { "type": "path", "value": "./src/dsl-views/home.yaml" } },
+    { "kind": "page", "slot": "nav", "label": "Controls", "path": "/components/controls", "separatorBefore": true, "groupLabel": "Components", "view": { "type": "path", "value": "./src/dsl-views/components-controls.yaml" } },
+    { "kind": "page", "slot": "nav", "label": "Display", "path": "/components/display", "view": { "type": "path", "value": "./src/dsl-views/components-display.yaml" } },
+    { "kind": "page", "slot": "nav", "label": "Form", "path": "/components/form", "view": { "type": "path", "value": "./src/dsl-views/components-form.yaml" } },
+    { "kind": "page", "slot": "nav", "label": "Layout", "path": "/components/layout", "view": { "type": "path", "value": "./src/dsl-views/components-layout.yaml" } },
+    { "kind": "page", "slot": "nav", "label": "Navigation", "path": "/components/navigation", "view": { "type": "path", "value": "./src/dsl-views/components-navigation.yaml" } },
+    { "kind": "page", "slot": "nav", "label": "Overlay", "path": "/components/overlay", "view": { "type": "path", "value": "./src/dsl-views/components-overlay.yaml" } },
+    { "kind": "page", "slot": "nav", "label": "Table", "path": "/components/table", "view": { "type": "path", "value": "./src/dsl-views/components-table.yaml" } },
+    { "kind": "page", "slot": "nav", "label": "Dev", "path": "/components/dev", "view": { "type": "path", "value": "./src/dsl-views/components-dev.yaml" } }
   ]
 }
