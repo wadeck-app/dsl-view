@@ -154,3 +154,18 @@ describe('theme.css solid-fill ink', () => {
 		expect(contrast(tokenValue(lightBody, token), tokenValue(lightBody, '--color-surface'))).toBeGreaterThanOrEqual(4.5);
 	});
 });
+
+// ToastProvider writes its message in --color-content on the variant fill, so it does not depend on the accent text
+// tokens (light danger-text on danger-bg was 4.41:1, under AA). Measured here on the stylesheet, in both themes.
+describe('theme.css toast ink', () => {
+	for (const [theme, body] of [
+		['light', lightBody],
+		['dark', darkBody],
+	] as const) {
+		for (const fill of ['--color-danger-bg', '--color-success-bg', '--color-primary-light']) {
+			it(`keeps --color-content readable (7:1) on ${fill} in the ${theme} theme`, () => {
+				expect(contrast(tokenValue(body, '--color-content'), tokenValue(body, fill))).toBeGreaterThanOrEqual(7);
+			});
+		}
+	}
+});

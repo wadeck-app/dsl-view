@@ -23,19 +23,19 @@ export const ToastContext = createContext<ToastContextValue | null>(null);
 const TOAST_DURATION_MS = 4000;
 
 const variantStyles: Record<ToastVariant, string> = {
-	success: 'bg-success-bg border-success text-success-text',
-	error: 'bg-danger-bg border-danger text-danger-text',
-	info: 'bg-primary-light border-primary text-primary',
+	success: 'bg-success-bg border-success text-content',
+	error: 'bg-danger-bg border-danger text-content',
+	info: 'bg-primary-light border-primary text-content',
 };
 
 const variantIcons: Record<ToastVariant, React.ReactNode> = {
-	success: <CheckCircle className="w-4 h-4 shrink-0" />,
-	error: <XCircle className="w-4 h-4 shrink-0" />,
-	info: <Info className="w-4 h-4 shrink-0" />,
+	success: <CheckCircle className="mt-0.5 w-4 h-4 shrink-0 text-success" />,
+	error: <XCircle className="mt-0.5 w-4 h-4 shrink-0 text-danger" />,
+	info: <Info className="mt-0.5 w-4 h-4 shrink-0 text-primary" />,
 };
 
 const dismissButtonClass =
-	'shrink-0 self-start mt-1 rounded opacity-60 hover:opacity-100 transition-opacity cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-current';
+	'shrink-0 -m-1 p-1 rounded hover:bg-muted-bg transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-current';
 
 // Toasts shown at once; the older ones wait behind the "+N more" control (an error is folded, never dropped).
 export const MAX_VISIBLE_TOASTS = 5;
@@ -132,7 +132,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
 						key={toast.id}
 						role={toast.variant === 'error' ? 'alert' : 'status'}
 						className={[
-							'pointer-events-auto flex items-center gap-2 rounded border px-3 py-2 text-sm shadow-md min-w-48 max-w-sm',
+							'pointer-events-auto flex items-start gap-2 rounded border border-l-4 px-3 py-2 text-sm shadow-md min-w-48 max-w-sm',
 							variantStyles[toast.variant],
 						].join(' ')}
 					>

@@ -251,7 +251,26 @@ describe('ToastProvider stack', () => {
 		const message = screen.getByText(/failed: x+/);
 		expect(message.className).toContain('min-w-0');
 		expect(message.className).toMatch(/break-words|\[overflow-wrap:anywhere\]/);
-		expect(screen.getByRole('button', { name: 'Dismiss' }).className).toContain('self-start');
+		const bubble = screen.getByRole('alert');
+		// Top right, level with the first line, whatever the message length.
+		expect(bubble.className).toContain('items-start');
+		expect(bubble.className).not.toContain('items-center');
+		const dismiss = screen.getByRole('button', { name: 'Dismiss' });
+		expect(dismiss.className).not.toContain('opacity-60');
+		// A 12px icon alone is a poor target: the padding makes the hit area larger without moving the icon.
+		expect(dismiss.className).toMatch(/\bp-1\b/);
+	});
+
+	it('writes the message in the content ink on every variant, with a thick accent edge', () => {
+		setup();
+		fireEvent.click(screen.getByText('fail'));
+		fireEvent.click(screen.getByText('ok'));
+		fireEvent.click(screen.getByText('info'));
+		for (const bubble of [screen.getByRole('alert'), ...screen.getAllByRole('status')]) {
+			expect(bubble.className).toContain('text-content');
+			expect(bubble.className).toContain('border-l-4');
+			expect(bubble.className).not.toMatch(/text-(danger|success)-text|text-primary\b/);
+		}
 	});
 
 	it('brings the next older toast into view when a shown one is dismissed', () => {
