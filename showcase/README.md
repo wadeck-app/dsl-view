@@ -42,7 +42,7 @@ A component with a required prop that is not a scalar (a list, a node) is "descr
 
 ## Not done yet
 
-- Server-side list filters (blocked by the optional-placeholder finding in the plan), interaction pages ($brains, filters in the URL, `AbTest`, theming).
+- Server-side list filters (blocked by the optional-placeholder finding in the plan) and an `AbTest` example (it only does something when the shell runs experiments).
 - CI: the staleness test runs in the publish workflow; `app-core-cli check` runs by hand only (the CLI is not installed in CI).
 
 ## Registering in the real app-core
