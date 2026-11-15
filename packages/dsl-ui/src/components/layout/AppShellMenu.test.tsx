@@ -1161,6 +1161,19 @@ describe('menuVariant resizable', () => {
 			expect(screen.getByRole('link', { name: 'Ok' }).querySelector('[data-menu-label]')).not.toHaveAttribute('title');
 		});
 
+		// A caption smaller than the links under it read as an afterthought: same size, told apart by weight and colour.
+		it('draws a group caption as large as a link, heavier and in the content colour', () => {
+			mount({ menu: longMenu });
+			const caption = classes(screen.getByText(LONG_CAPTION));
+			const link = classes(screen.getByRole('link', { name: 'Ok' }));
+			expect(link).toContain('text-sm');
+			expect(caption).toContain('text-sm');
+			expect(caption).not.toContain('text-xs');
+			expect(caption).toContain('font-semibold');
+			expect(caption).toContain('text-content');
+			expect(caption).not.toContain('text-muted');
+		});
+
 		it('cuts a long separator caption the same way', () => {
 			localStorage.setItem(STORAGE_KEY, '8');
 			mount({ menu: longMenu });
