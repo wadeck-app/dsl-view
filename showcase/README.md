@@ -43,3 +43,16 @@ A component with a required prop that is not a scalar (a list, a node) is "descr
 
 - Server-side list filters (blocked by the optional-placeholder finding in the plan), interaction pages ($brains, filters in the URL, `AbTest`, theming).
 - CI: the staleness test runs in the publish workflow; `app-core-cli check` runs by hand only (the CLI is not installed in CI).
+
+## Registering in the real app-core
+
+`dev` runs a separate app-core. To see the module in the one on this machine (port 4850), package it and register the manifest by path; app-core has no `register` command, the call is the one of the SDK `register` subpath:
+
+```sh
+cd showcase/app-module-showcase
+BUNDLE_VERSION=<yyyy.mm.dd>-<n> app-core-cli package .      # no leading zero in <n>: it must be valid semver
+curl -X POST localhost:4850/api/modules/register -H 'Content-Type: application/json' \
+  -d '{"id":"showcase","source":{"type":"file","path":"<absolute path of dist-module/manifest.json>"}}'
+```
+
+Registering again reloads the module (run `package` first after a change). `POST /api/modules/unregister` with `{"id":"showcase"}` removes it. The module stays tied to that `dist-module` folder; it is not published to npm.
