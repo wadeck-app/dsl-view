@@ -176,3 +176,4 @@ Spike in `showcase/app-module-showcase`: one page, one backend route, one playgr
 | `Card` header with a single `Markdown` renders empty | Phase 0 | Not investigated |
 | An invalid enum value on `Badge` falls back to the default look | Phase 0 | Console warning not checked |
 | A `FieldDate` bound value is an ISO datetime at local midnight (`2026-11-30T23:00:00.000Z` for 1 Dec in UTC+1), not a date | Reservations page, seen in the backend payload | Not changed; the demo stores what it gets and formats columns with `format: date` |
+| A `$brains.$http.get` whose `{id}` comes from a page variable runs once at mount with the variable empty: the URL placeholder becomes an empty string (console warning) and the call goes to the collection URL | Interactions page, console in the real app-core | Not changed; no way found to hold the brain until the variable is set |

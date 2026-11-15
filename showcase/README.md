@@ -35,6 +35,7 @@ A component with a required prop that is not a scalar (a list, a node) is "descr
 | Asset (route `/assets/:id`) | `Form` with optimistic locking (`version`, HTTP 409, "Simulate another user saving"), manifest tabs (Details, History) |
 | Loan request | `Stepper` wizard on page variables |
 | Reservations | Select fed by a source, date fields, an action with a body, HTTP 409 on overlapping dates |
+| Interactions | A brain re-run by a page variable, a filter kept in the URL, a forced dark `ThemeScope` |
 | Settings | `Tabs`, `Collapsible`, `Switch`, `ThemePicker` |
 | States | Error toasts (short, long path, 100-character word), source failure, loading, empty list |
 | Dashboard widget | `StatTile` sized by the manifest (`width`, `height`) |

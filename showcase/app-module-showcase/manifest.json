@@ -9,6 +9,7 @@
     { "kind": "widget", "slot": "dashboard", "label": "Demo assets", "width": 2, "height": 1, "view": { "type": "path", "value": "./src/dsl-views/widget-stats.yaml" } },
     { "kind": "page", "slot": "nav", "label": "Loan request", "path": "/wizard", "view": { "type": "path", "value": "./src/dsl-views/wizard.yaml" } },
     { "kind": "page", "slot": "nav", "label": "Settings", "path": "/settings", "view": { "type": "path", "value": "./src/dsl-views/settings.yaml" } },
+    { "kind": "page", "slot": "nav", "label": "Interactions", "path": "/interactions", "view": { "type": "path", "value": "./src/dsl-views/interactions.yaml" } },
     { "kind": "page", "slot": "nav", "label": "States", "path": "/states", "separatorBefore": true, "groupLabel": "Behaviour", "view": { "type": "path", "value": "./src/dsl-views/states.yaml" } },
     { "kind": "page", "slot": "nav", "label": "Controls", "path": "/components/controls", "separatorBefore": true, "groupLabel": "Components", "view": { "type": "path", "value": "./src/dsl-views/components-controls.yaml" } },
     { "kind": "page", "slot": "nav", "label": "Display", "path": "/components/display", "view": { "type": "path", "value": "./src/dsl-views/components-display.yaml" } },

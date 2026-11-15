@@ -1,0 +1,63 @@
+# Interactions: a brain that reacts to a page variable, a filter stored in the URL, a forced dark theme.
+# Components used - FieldSelect, CompactSelect, Markdown, Card, ThemeScope. AbTest is not shown: it only does something
+# when the shell runs experiments.
+$sources:
+  options:
+    url: GET /api/modules/showcase/asset-options
+
+$vars:
+  selectedId: ""
+
+$brains:
+  fetchDetail:
+    $brain: $brains.$http.get
+    url: GET /api/modules/showcase/assets/{id}
+    id: $vars.selectedId
+    $outputs: [name, quantity, status, version]
+
+$type: VerticalStack
+items:
+  - $type: PageHeader
+    title: Interactions
+    subtitle: How components talk to each other without custom code.
+  - $type: Card
+    header:
+      - $type: Tag
+        label: Brain on a page variable
+    items:
+      - $type: Markdown
+        text: The select writes `$vars.selectedId`. The `fetchDetail` brain declares that variable as an input, so it runs again at every change and publishes the asset's fields under `$brains.fetchDetail`.
+      - $type: FieldSelect
+        label: Asset
+        bind: selectedId
+        placeholder: Choose an asset
+        options: $sources.options.items
+      - $type: Markdown
+        $if: $brains.fetchDetail.name
+        text: "$concat('**', $brains.fetchDetail.name, '**: ', $brains.fetchDetail.quantity, ' in stock, ', $brains.fetchDetail.status, ', version ', $brains.fetchDetail.version)"
+  - $type: Card
+    header:
+      - $type: Tag
+        label: Filter stored in the URL
+    items:
+      - $type: Markdown
+        text: The select keeps its value in the `status` query parameter, so a reload or a shared link keeps it, and any `$sources` entry can read `$urlParam.status`.
+      - $type: CompactSelect
+        ariaLabel: Status
+        urlParam: status
+        placeholder: Any status
+        options:
+          - { value: available, label: available }
+          - { value: loaned, label: loaned }
+          - { value: maintenance, label: maintenance }
+      - $type: Markdown
+        text: "$concat('`$urlParam.status` is: ', $urlParam.status)"
+  - $type: ThemeScope
+    theme: dark
+    className: p-4 rounded-lg
+    items:
+      - $type: Markdown
+        text: A `ThemeScope` paints its subtree in the dark palette whatever the app theme is.
+      - $type: Badge
+        label: dark scope
+        variant: info
