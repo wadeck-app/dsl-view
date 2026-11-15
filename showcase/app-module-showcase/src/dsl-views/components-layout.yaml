@@ -11,6 +11,7 @@ $vars:
   HorizontalStack__align: "items-start"
   HorizontalStack__justify: "justify-start"
   HorizontalStack__fill: false
+  HorizontalStack__wrap: false
   PageContent__maxWidth: "sm"
   PageSection__title: "PageSection"
   ScrollArea__scheme: "auto"
@@ -252,13 +253,17 @@ items:
           - $type: "Switch"
             label: "fill"
             bind: "HorizontalStack__fill"
+          - $type: "Switch"
+            label: "wrap"
+            bind: "HorizontalStack__wrap"
       - $type: "HorizontalStack"
         gap: "$vars.HorizontalStack__gap"
         align: "$vars.HorizontalStack__align"
         justify: "$vars.HorizontalStack__justify"
         fill: "$vars.HorizontalStack__fill"
+        wrap: "$vars.HorizontalStack__wrap"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `gap` | gap-0 / gap-0.5 / gap-1 / gap-1.5 / gap-2 / gap-2.5 / gap-3 / gap-4 / gap-5 / gap-6 / gap-7 / gap-8 / gap-9 / gap-10 / gap-12 / gap-16 | no |\n| `align` | items-start / items-center / items-end / items-stretch / items-baseline | no |\n| `justify` | justify-start / justify-center / justify-end / justify-between / justify-around / justify-evenly | no |\n| `fill` | boolean | no |\n| `items` | array | no |\n| `itemSizes` | array | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `gap` | gap-0 / gap-0.5 / gap-1 / gap-1.5 / gap-2 / gap-2.5 / gap-3 / gap-4 / gap-5 / gap-6 / gap-7 / gap-8 / gap-9 / gap-10 / gap-12 / gap-16 | no |\n| `align` | items-start / items-center / items-end / items-stretch / items-baseline | no |\n| `justify` | justify-start / justify-center / justify-end / justify-between / justify-around / justify-evenly | no |\n| `fill` | boolean | no |\n| `wrap` | boolean | no |\n| `items` | array | no |\n| `itemSizes` | array | no |"
   - $type: "Card"
     header:
       - $type: "Tag"

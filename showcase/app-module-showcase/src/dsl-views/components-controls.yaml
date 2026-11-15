@@ -260,7 +260,7 @@ items:
       - $type: "Markdown"
         text: "_Not playable yet (required props without a sample: options)._"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `urlParam` | string | no |\n| `resetUrlParams` | array | no |\n| `options` | array | yes |\n| `ariaLabel` | string | yes |\n| `placeholder` | string | no |\n| `disabled` | boolean | no |\n| `defaultValue` | string | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `urlParam` | string | no |\n| `resetUrlParams` | array | no |\n| `options` | array | yes |\n| `ariaLabel` | string | yes |\n| `placeholder` | string | no |\n| `disabled` | boolean | no |\n| `defaultValue` | string | no |\n| `storageKey` | string | no |"
   - $type: "Card"
     header:
       - $type: "Tag"

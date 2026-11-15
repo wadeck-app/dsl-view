@@ -72,6 +72,12 @@ function loadSchemas() {
 	if (!fs.existsSync(file)) {
 		fail(`${file} is missing: build dsl-ui first (npm run build in packages/dsl-ui).`);
 	}
+	// A dist older than its source describes props that no longer match: the committed views would then differ from what
+	// CI (which builds first) generates. Say so instead of writing wrong views.
+	const source = path.resolve(HERE, '../../packages/dsl-ui/src/schemas/generated-node-schemas.ts');
+	if (fs.statSync(file).mtimeMs < fs.statSync(source).mtimeMs) {
+		fail(`${file} is older than ${source}: rebuild dsl-ui first (npm run build in packages/dsl-ui).`);
+	}
 	return import(`file:///${file.replace(/\\/g, '/')}`);
 }
 
