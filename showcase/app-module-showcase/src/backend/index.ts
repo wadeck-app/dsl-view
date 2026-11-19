@@ -24,7 +24,14 @@ export default function setup(ctx: ModuleContext): void {
     }
   }
 
-  ctx.registerRoute('GET', '/ping', (_req, reply) => reply.send({ ok: true, at: new Date().toISOString() }));
+  // The update test of app-core-cli reads this (see module-authoring.md, "Update test of app-core-cli"). Without it the
+  // module is tested through its pages, and the States page fails on purpose (503 on /fail/long).
+  ctx.registerRoute('GET', '/health', (_req, reply) =>
+    // Nothing outside the process to test, and the demo data may be emptied by the user: the backend answering is the check.
+    reply.send({ ok: true, checks: [{ name: 'backend answers', ok: true }] })
+  );
+
+  ctx.registerRoute('GET', '/ping',(_req, reply) => reply.send({ ok: true, at: new Date().toISOString() }));
 
   // Routes that fail on demand, to show how errors reach the user (toasts, source errors) and a slow one for loading states.
   const FAILURES: Record<string, { status: number; error: string }> = {
