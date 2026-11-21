@@ -804,9 +804,16 @@ columns:
 
 Icon vocabulary (`icon:` of an action item, link column, `StatTile`/`Badge` links): `archive`, `arrow-right`, `check`, `chevron-right`, `copy`, `download`, `external-link`, `eye`, `file-text`, `info`, `link`, `list`, `pencil`, `play`, `plus`, `refresh-cw`, `rocket`, `rotate-ccw`, `search`, `send`, `trash`, `x`. An unknown name logs an error listing them and shows `external-link`.
 
-## Removable `Badge` (React only)
+## Removable `Badge`
 
-`<Badge label="Sudo" variant="danger" tone="subtle" onRemove={leave} removeLabel="Leave sudo mode" />`: a cross inside the badge calls `onRemove`. The badge is outlined in its variant colour; the cross lights up on hover and keyboard focus. `removeLabel` defaults to `Remove <label>`. A function prop, so not available in YAML. Combined with `href` the cross is not shown and an error is logged.
+```yaml
+$actions:
+  leaveSudo: { url: POST /api/sudo/leave }
+...
+- { $type: Badge, label: Sudo, variant: danger, tone: subtle, onRemove: $leaveSudo, removeLabel: Leave sudo mode }
+```
+
+`onRemove` takes a page action (`$name`) or, in React, a function. The badge is outlined in its variant colour and the cross lights up on hover and keyboard focus. `removeLabel` defaults to `Remove <label>`. Combined with `href` the cross is not shown and an error is logged.
 
 ## Links: `StatTile`, `Badge`, `DataTable`
 
