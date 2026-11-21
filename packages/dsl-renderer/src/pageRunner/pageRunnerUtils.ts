@@ -4,6 +4,12 @@ import type { Notify } from '../notifier.js';
 export interface ActionSpec {
 	url?: string;
 	resultKey?: string;
+	/**
+	 * true (with `resultKey`, no `url`) = the action removes what is stored under `resultKey` instead of storing something.
+	 * It is how a node shown while `$resultKey` is truthy (a DialogForm's `visible`, a Dialog or Drawer `open`) is closed:
+	 * `closeX: { resultKey: dlgX, clear: true }`, wired as `onClose: $closeX`.
+	 */
+	clear?: boolean;
 	/** true = reload all sources; string[] = reload only the named sources (also invalidates their cache entries) */
 	reloadSources?: boolean | string[];
 	/**

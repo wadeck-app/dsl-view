@@ -1,7 +1,8 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { resetReportedMessages } from '../dev/reportOnce.js';
 import { useFormContext } from '../form/Form.js';
 import { DialogForm } from './DialogForm.js';
 
@@ -36,6 +37,43 @@ describe('DialogForm', () => {
 		await user.click(screen.getByRole('button', { name: 'Cancel' }));
 		expect(onClose).toHaveBeenCalledTimes(1);
 		expect(onSubmit).not.toHaveBeenCalled();
+	});
+
+	// `visible` is controlled by the caller: a dialog that cannot say it wants to close stays open for ever. In YAML it is
+	// `onClose: $closeX` with `closeX: { resultKey: <the visible key>, clear: true }`.
+	describe('without onClose', () => {
+		beforeEach(() => resetReportedMessages());
+
+		it('says how to wire it when Cancel is pressed and nothing can close the dialog', async () => {
+			const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			render(<DialogForm title="New item" visible onSubmit={vi.fn().mockResolvedValue(undefined)} fields={<NameField />} />);
+			await userEvent.setup().click(screen.getByRole('button', { name: 'Cancel' }));
+			const messages = warn.mock.calls.map(c => String(c[0]));
+			expect(messages).toHaveLength(1);
+			expect(messages[0]).toContain('[DialogForm] "New item"');
+			expect(messages[0]).toContain('onClose');
+			expect(messages[0]).toContain('clear: true');
+			warn.mockRestore();
+		});
+
+		it('says it too after a successful Save', async () => {
+			const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			render(<DialogForm title="New item" visible onSubmit={vi.fn().mockResolvedValue(undefined)} fields={<NameField />} />);
+			const user = userEvent.setup();
+			await user.type(screen.getByLabelText('name'), 'Ada');
+			await user.click(screen.getByRole('button', { name: 'Save' }));
+			await waitFor(() => expect(warn).toHaveBeenCalled());
+			warn.mockRestore();
+		});
+
+		it('stays silent when onClose is given', async () => {
+			const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			const { onClose } = renderDialog();
+			await userEvent.setup().click(screen.getByRole('button', { name: 'Cancel' }));
+			expect(onClose).toHaveBeenCalledTimes(1);
+			expect(warn).not.toHaveBeenCalled();
+			warn.mockRestore();
+		});
 	});
 
 	it('Save submits the typed data, then closes', async () => {

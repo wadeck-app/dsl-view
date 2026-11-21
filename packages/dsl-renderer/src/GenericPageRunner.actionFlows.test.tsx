@@ -242,6 +242,58 @@ ${body}
 		await waitFor(() => expect(screen.getByTestId('extra').textContent).toMatch(/^\{"_ts":\d+\}$/));
 	});
 
+	// A dialog is open while its `visible: $key` is truthy; a url-less action can only store something truthy, so without
+	// `clear` nothing could ever close it (project-owner, DialogForm opened by an action).
+	it('a url-less action with clear removes the value stored under resultKey: a named handler closes what a row action opened', async () => {
+		const yaml = `
+$actions:
+  openX:
+    resultKey: dlg
+  closeX:
+    resultKey: dlg
+    clear: true
+$type: Probe
+handler: closeX
+action: openX
+resultKey: dlg
+`;
+		const { fetcher } = renderPage(yaml);
+		fireEvent.click(screen.getByText('row'));
+		await waitFor(() => expect(screen.getByTestId('extra').textContent).toBe('{"id":"r1"}'));
+		fireEvent.click(screen.getByText('form'));
+		await waitFor(() => expect(screen.getByTestId('extra').textContent).toBe('null'));
+		expect(screen.getByTestId('result').textContent).toBe('null');
+		expect(fetcher).not.toHaveBeenCalled();
+	});
+
+	it('a url-less action with clear also closes through the row-action path', async () => {
+		const yaml = `
+$actions:
+  openX:
+    resultKey: dlg
+  closeX:
+    resultKey: dlg
+    clear: true
+$type: Probe
+handler: openX
+action: closeX
+resultKey: dlg
+`;
+		renderPage(yaml);
+		fireEvent.click(screen.getByText('form'));
+		await waitFor(() => expect(screen.getByTestId('extra').textContent).toMatch(/^\{"_ts":\d+\}$/));
+		fireEvent.click(screen.getByText('row'));
+		await waitFor(() => expect(screen.getByTestId('extra').textContent).toBe('null'));
+	});
+
+	it('accepts clear as an action key without the unknown-key error', async () => {
+		const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		renderPage(PAGE('    resultKey: saved\n    clear: true'));
+		fireEvent.click(screen.getByText('form'));
+		await waitFor(() => expect(screen.getByTestId('extra').textContent).toBe('null'));
+		expect(error.mock.calls.map(c => String(c[0])).filter(m => m.includes('unknown action key'))).toEqual([]);
+	});
+
 	it('a url-less action without resultKey is a no-op that resolves undefined', async () => {
 		const { fetcher } = renderPage(PAGE('    confirm: "ok?"'));
 		vi.spyOn(window, 'confirm').mockReturnValue(true);

@@ -122,7 +122,7 @@ items:
         label: "overlay"
     items:
       - $type: "Markdown"
-        text: "Dialog wrapping a Form with Save and Cancel, in create or edit mode depending on initialData.id; pick it to create or edit a record."
+        text: "Dialog wrapping a Form with Save and Cancel, in create or edit mode depending on initialData.id; pick it to create or edit a record. Closes only through `onClose` (YAML: `onClose: $closeX` with an action `{ resultKey, clear: true }`)."
       - $type: "Markdown"
         text: "_Not playable yet (required props without a sample: visible)._"
       - $type: "Markdown"

@@ -9,6 +9,10 @@ $actions:
     resultKey: assetDialog
   openEdit:
     resultKey: assetDialog
+  # Removes assetDialog: the dialog is open while it is set, and closes through onClose (Cancel, the X, a successful Save).
+  closeAsset:
+    resultKey: assetDialog
+    clear: true
   createAsset:
     url: POST /api/modules/showcase/assets
     reloadSources: [assets]
@@ -60,6 +64,7 @@ items:
     initialData: $assetDialog
     onSubmit: $createAsset
     onSubmitEdit: $updateAsset
+    onClose: $closeAsset
     size: md
     fields:
       - $type: FieldText

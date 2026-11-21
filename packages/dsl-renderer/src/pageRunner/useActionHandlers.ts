@@ -236,6 +236,12 @@ export function useActionHandlers(params: {
 						if (spec.requestKey && mountedRef.current) {
 							setExtras(prev => ({ ...prev, [spec.requestKey!]: body }));
 						}
+					} else if (spec.resultKey && spec.clear) {
+						// No-URL action that closes: remove what an opening action stored under resultKey.
+						result = undefined;
+						if (mountedRef.current) {
+							setExtras(prev => ({ ...prev, [spec.resultKey!]: undefined }));
+						}
 					} else if (spec.resultKey) {
 						// No-URL action: store extraBody (or a timestamp sentinel) in extras under resultKey
 						result = extraBody ?? { _ts: Date.now() };
@@ -275,7 +281,9 @@ export function useActionHandlers(params: {
 				spec = normalizeAction(rawSpec);
 				if (!spec.url) {
 					// No-URL row action: store the row under resultKey (e.g. openEdit stores the selected row)
-					if (spec.resultKey && mountedRef.current) {
+					if (spec.resultKey && spec.clear && mountedRef.current) {
+						setExtras(prev => ({ ...prev, [spec!.resultKey!]: undefined }));
+					} else if (spec.resultKey && mountedRef.current) {
 						setExtras(prev => ({ ...prev, [spec!.resultKey!]: row }));
 					} else if (!spec.resultKey) {
 						// Existing pages may rely on such an action being inert (no UI feedback), so it is a console

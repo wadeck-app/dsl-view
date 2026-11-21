@@ -274,6 +274,28 @@ import { appRegistry } from './registry.js';
 - A missing `params` value, an unknown `action` (the error lists the page's actions) and an action with neither `url` nor `resultKey` (a one-time `console.warn`) send nothing. Use it, not a `Form` with `fields: []` (its save button stays disabled until the form is dirty).
 - A prop tagged `@resolveDeep` in a component resolves the expressions inside a map or list (today only `ActionButton.params`).
 
+### Opening and closing a dialog (`resultKey`, `clear`)
+
+A `DialogForm` is open while its `visible` is truthy, and the page owns that value: a url-less action with a `resultKey` stores the clicked row (or `{ _ts }`) there to open it, and an action with `clear: true` removes it to close it. The dialog does not close itself; without `onClose` it stays open and logs how to wire it (development only).
+
+```yaml
+$actions:
+  openItem:  { resultKey: itemDialog }              # row action or onClick: $openItem; stores the row (edit) or { _ts } (create)
+  closeItem: { resultKey: itemDialog, clear: true } # stores nothing: removes itemDialog
+  saveItem:  { url: POST /api/items, reloadSources: [items] }
+$type: DialogForm
+title: Item
+visible: $itemDialog
+initialData: $itemDialog
+onSubmit: $saveItem
+onClose: $closeItem    # Cancel, the X, Escape and a successful Save
+fields: [...]
+```
+
+- `clear` needs `resultKey` and no `url`; it works as a named handler (`onClose: $closeItem`) and as a row action.
+- The same wiring closes a `Dialog` or `ConfirmDialog` (`open: $itemDialog`, `onOpenChange: $closeItem`, called when the user closes it) and a `Drawer` (`open: $itemDialog`, `onClose: $closeItem`). Only `DialogForm` warns when it has no close handler.
+- A failed save keeps the dialog open with the typed values: `onClose` runs only after `onSubmit` resolved.
+
 ### Editable payload: edit, validate, then push
 
 A bound field (`bind: payload`) with no `Form` and no table row around it edits the page variable `$vars.payload`. A `$vars` entry written as an expression is seeded once, when the expression first resolves (a source arrives after the first render); it is never re-seeded or overwritten once the page, a brain or the user has set the variable, so a poll cannot erase an edit. `requestKey` echoes the body the server accepted, which lets the page tell that the text changed since the last successful validation. `ctx.$setVar(key, value)` is what bound fields call to write a variable.
