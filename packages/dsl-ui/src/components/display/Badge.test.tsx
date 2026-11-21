@@ -1,6 +1,7 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { Badge } from './Badge.js';
+import { resetReportedMessages } from '../dev/reportOnce.js';
 
 describe('Badge', () => {
     it('renders label', () => {
@@ -86,4 +87,58 @@ describe('Badge tone', () => {
 
 		expect(box('subtle')).toBe(box('solid'));
 	});
+});
+
+describe('Badge removable', () => {
+    it('renders no remove button without onRemove', () => {
+        render(<Badge label="Sudo" variant="danger" />);
+        expect(screen.queryByRole('button')).toBeNull();
+    });
+
+    it('calls onRemove when the cross is clicked, and names the button after the label', () => {
+        const onRemove = vi.fn();
+        render(<Badge label="Sudo" variant="danger" onRemove={onRemove} />);
+        fireEvent.click(screen.getByRole('button', { name: 'Remove Sudo' }));
+        expect(onRemove).toHaveBeenCalledOnce();
+    });
+
+    it('removeLabel overrides the button name', () => {
+        render(<Badge label="Sudo" onRemove={vi.fn()} removeLabel="Leave sudo mode" />);
+        expect(screen.getByRole('button', { name: 'Leave sudo mode' })).toBeInTheDocument();
+    });
+
+    it('danger subtle badge uses the danger background, text and border', () => {
+        const { container } = render(<Badge label="Sudo" variant="danger" tone="subtle" onRemove={vi.fn()} />);
+        expect(container.firstChild).toHaveClass('bg-danger-bg', 'text-danger-text', 'border', 'border-danger');
+    });
+
+    it('a removable badge has exactly one border colour, whatever the variant and tone', () => {
+        for (const variant of ['default', 'primary', 'success', 'warning', 'danger', 'info'] as const) {
+            for (const tone of ['solid', 'subtle'] as const) {
+                const { container, unmount } = render(<Badge label="x" variant={variant} tone={tone} onRemove={vi.fn()} />);
+                const colours = Array.from((container.firstChild as HTMLElement).classList).filter(c => /^border-/.test(c));
+                expect(colours, `${variant}/${tone}`).toHaveLength(1);
+                unmount();
+            }
+        }
+    });
+
+    it('the cross reacts to hover and keyboard focus', () => {
+        render(<Badge label="Sudo" variant="danger" onRemove={vi.fn()} />);
+        const cls = screen.getByRole('button').className;
+        expect(cls).toMatch(/hover:bg-/);
+        expect(cls).toMatch(/focus-visible:ring-/);
+        expect(cls).toMatch(/cursor-pointer/);
+    });
+});
+
+describe('Badge removable with href', () => {
+    it('shows no cross and says why', () => {
+        resetReportedMessages();
+        const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+        render(<Badge label="Docs" href="/docs" onRemove={vi.fn()} />);
+        expect(screen.queryByRole('button')).toBeNull();
+        expect(error).toHaveBeenCalledWith(expect.stringContaining('has both href and onRemove'));
+        error.mockRestore();
+    });
 });

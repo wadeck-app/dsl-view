@@ -46,3 +46,18 @@ export const AllVariants: Story = {
         </div>
     ),
 };
+
+// The cross lights up on hover and keyboard focus; the badge is outlined in its variant colour.
+export const Removable: Story = {
+    args: { label: 'Sudo', variant: 'danger', tone: 'subtle', onRemove: () => {}, removeLabel: 'Leave sudo mode' },
+};
+
+export const RemovableAllVariants: Story = {
+    render: () => (
+        <div className="flex flex-wrap gap-2">
+            {(['default', 'primary', 'success', 'warning', 'danger', 'info'] as const).map(variant => (
+                <Badge key={variant} label={variant} variant={variant} tone="subtle" onRemove={() => {}} />
+            ))}
+        </div>
+    ),
+};

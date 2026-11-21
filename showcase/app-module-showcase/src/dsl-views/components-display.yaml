@@ -91,7 +91,7 @@ items:
         label: "display"
     items:
       - $type: "Markdown"
-        text: "Rounded status pill with variant colours, solid or subtle tone, optionally a link; use for a status value, Tag for free-form labels."
+        text: "Rounded status pill with variant colours, solid or subtle tone, optionally a link or removable (`onRemove`: outlined in its variant colour, with a cross that lights up on hover and focus; a function prop, so React code only, not YAML); use for a status value, Tag for free-form labels."
       - $type: "HorizontalStack"
         wrap: true
         items:
