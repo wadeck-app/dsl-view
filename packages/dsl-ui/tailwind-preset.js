@@ -49,7 +49,7 @@ const dslUiRoot = dirname(fileURLToPath(import.meta.url)).replace(/\\/g, '/');
 export const dslUiContent = [`${dslUiRoot}/src/**/*.{ts,tsx}`];
 
 /** @type {Partial<import('tailwindcss').Config>} */
-export default {
+const preset = {
 	// Both selectors: dsl-ui's useTheme toggles a `dark` class, while consumers that
 	// predate it switch on [data-theme="dark"]. theme.css matches the same pair.
 	darkMode: ['variant', ['&:is(.dark *)', '&:is([data-theme="dark"] *)']],
@@ -122,3 +122,20 @@ export default {
 		'bg-green-500', 'bg-rose-500', 'bg-teal-500',
 	],
 };
+
+// Tailwind 3 cannot give a plain `var(--color-x)` an opacity modifier: `bg-primary/10`, `ring-info-text/30` and
+// `hover:bg-danger/80` generated NO css, so the element silently lost its tint, ring or hover. Each colour becomes a
+// function: with a modifier it mixes the token with transparent (a token holds any CSS colour, so no rgb channels
+// are needed); without one it is the plain `var(...)`, exactly as before. Call it with `{}` to read the plain value.
+const withOpacityModifier = value => ({ opacityValue } = {}) => {
+	if (opacityValue === undefined || String(opacityValue).startsWith('var(')) {
+		return value;
+	}
+	return `color-mix(in srgb, ${value} calc(${opacityValue} * 100%), transparent)`;
+};
+for (const [name, value] of Object.entries(preset.theme.extend.colors)) {
+	preset.theme.extend.colors[name] = withOpacityModifier(value);
+}
+
+export default preset;
+

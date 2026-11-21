@@ -87,6 +87,7 @@
 		"knownKeys": [
 			"disabled",
 			"disabledReason",
+			"form",
 			"icon",
 			"label",
 			"loading",

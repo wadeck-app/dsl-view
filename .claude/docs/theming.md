@@ -64,9 +64,9 @@ The dark variant is configured as a descendant selector (`&:is(.dark *)`), so it
 Not fixable in the selector: excluding `.light` descendants breaks the mirror case, dark nested
 inside light, and CSS cannot express "nearest ancestor wins" for a variant. Tokens get it for free.
 
-## No opacity modifier on a theme colour
+## Opacity modifier on a theme colour
 
-Theme colours are plain `var(--color-x)` values, which Tailwind 3 cannot give an alpha: `border-warning-text/30`, `bg-primary/10` and `ring-danger-text/30` generate NO CSS. The element silently gets the default (pale grey) border colour instead. Use the plain token, or `color-mix` for a tint: `hover:bg-[color-mix(in_srgb,currentColor_20%,transparent)]`.
+`bg-primary/10`, `ring-info-text/30` and `hover:bg-danger/80` work: the preset turns a modified colour into `color-mix(in srgb, var(--color-x) N%, transparent)`. Before the fix they generated no CSS at all (Tailwind 3 cannot add alpha to a plain `var()`), so a consumer app that copied the colour mapping instead of using `tailwind-preset` still has the problem.
 
 ## Named hues
 

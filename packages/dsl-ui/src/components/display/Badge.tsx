@@ -49,8 +49,7 @@ const SOLID_CLASSES: Record<BadgeVariant, string> = {
     primary:  'bg-primary text-on-solid',
     success:  'bg-success text-on-solid',
     // Warning has no readable solid form: white on the amber fill fails contrast, so it uses
-    // its subtle pair in both tones. (A faint border on it, `border-warning-text/20`, generated no CSS: the theme colours are plain
-    // `var()` values, which Tailwind 3 cannot give an opacity modifier. Use the plain token or none.)
+    // its subtle pair in both tones.
     warning:  'bg-warning-bg text-warning-text',
     danger:   'bg-danger text-on-solid',
     info:     'bg-info-bg text-info-text',

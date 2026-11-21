@@ -12,7 +12,10 @@ const declaredTokens = new Set(
 	[...themeCss.matchAll(/--color-([\w-]+)\s*:/g)].map(m => m[1]!)
 );
 
-const colors: Record<string, string> = preset.theme.extend.colors;
+// Each colour is a function (it adds the opacity modifier); called without one it returns the plain `var(...)`.
+const colors: Record<string, string> = Object.fromEntries(
+	Object.entries(preset.theme.extend.colors as Record<string, (options?: object) => string>).map(([name, resolve]) => [name, resolve({})])
+);
 
 /** Token each colour maps to, e.g. bg-secondary -> bg-secondary. */
 function mappedToken(value: string): string | null {
@@ -94,7 +97,7 @@ describe('tailwind-preset ring offset', () => {
 // resolve to nothing and inherit the page ink, unreadable on a solid badge. The fallback is the old hard-coded white.
 describe('tailwind-preset on-solid ink', () => {
 	it('falls back to white for a palette that predates --color-on-solid', () => {
-		expect(preset.theme.extend.colors['on-solid']).toBe('var(--color-on-solid, #ffffff)');
+		expect(colors['on-solid']).toBe('var(--color-on-solid, #ffffff)');
 	});
 });
 
@@ -127,5 +130,41 @@ describe('tailwind-preset shell-bar spacing', () => {
 		expect(css).toMatch(/top:\s*var\(--app-shell-bar-height, 0px\)/);
 		expect(css).toMatch(/height:\s*var\(--app-shell-bar-height, 0px\)/);
 		expect(css).toMatch(/scroll-margin-top:\s*var\(--app-shell-bar-height, 0px\)/);
+	});
+});
+
+// Theme colours are plain var() values; Tailwind 3 cannot give those an opacity modifier, so `bg-primary/10`,
+// `ring-info-text/30` and `hover:bg-danger/80` generated NO css and the element silently lost its tint/ring/hover.
+describe('tailwind-preset opacity modifier', () => {
+	const compile = async (classes: string): Promise<string> => {
+		const { default: postcss } = await import('postcss');
+		const { default: tailwindcss } = await import('tailwindcss');
+		const result = await postcss([
+			tailwindcss({ presets: [preset], content: [{ raw: classes, extension: 'html' }], corePlugins: { preflight: false } }),
+		]).process('@tailwind utilities;', { from: undefined });
+		return result.css;
+	};
+
+	it('tints a theme colour: bg-primary/10', async () => {
+		const css = await compile('bg-primary/10');
+		expect(css).toMatch(/background-color:\s*color-mix\(in srgb,\s*var\(--color-primary\)\s*calc\(0\.1 \* 100%\),\s*transparent\)/);
+	});
+
+	it('works for ring, border and hover variants too', async () => {
+		const css = await compile('ring-info-text/30 border-warning-text/20 hover:bg-danger/80');
+		expect(css).toContain('color-mix(in srgb, var(--color-info-text)');
+		expect(css).toContain('color-mix(in srgb, var(--color-warning-text)');
+		expect(css).toMatch(/\.hover\\:bg-danger\\\/80:hover/);
+	});
+
+	it('leaves a plain class (no modifier) exactly as before', async () => {
+		const css = await compile('bg-primary border-danger');
+		expect(css).toMatch(/background-color:\s*var\(--color-primary\)/);
+		expect(css).toMatch(/border-color:\s*var\(--color-danger\)/);
+		expect(css).not.toContain('color-mix');
+	});
+
+	it('keeps the on-solid fallback with a modifier', async () => {
+		expect(await compile('text-on-solid/50')).toContain('var(--color-on-solid, #ffffff)');
 	});
 });

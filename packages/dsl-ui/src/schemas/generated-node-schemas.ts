@@ -42,6 +42,7 @@ export const ButtonActionNodeSchema = baseNode.extend({
 	disabledReason: z.string().optional(),
 	loading: dsl(z.boolean()).optional(),
 	type: dsl(z.enum(['button', 'submit'])).optional(),
+	form: z.string().optional(),
 });
 
 const CheckboxOptionSchema = z.object({

@@ -15,7 +15,7 @@ Maintenance: add a row here in the same change that adds, renames or removes a c
 | Component | Category | Key props | What it is / when to use |
 |---|---|---|---|
 | `ActionButton` | atomic | action, label, params, body, icon, iconOnly, variant | Button that runs a named `$actions` entry from anywhere on a page; use instead of ButtonAction when the page runner should dispatch the request and track pending state. |
-| `ButtonAction` | atomic | label, variant, icon, size, onClick, loading, disabled | Plain labelled button with explicit onClick, loading and optional icon node; use when you wire the handler yourself rather than running a `$actions` entry. |
+| `ButtonAction` | atomic | label, variant, icon, size, onClick, loading, disabled, type, form | Plain labelled button with explicit onClick, loading and optional icon node; `type: submit` with `form: <form id>` submits a form the button is not inside of (a Dialog footer); use when you wire the handler yourself rather than running a `$actions` entry. |
 | `Checkbox` | atomic | label, checked, onChange, disabled, className | Single native checkbox input with an optional text label that makes the whole row clickable; use for one boolean, CheckboxGroup for several. |
 | `CheckboxGroup` | atomic | options, value, onChange, label, orientation | Fieldset of checkboxes bound to a string array, with optional legend and vertical or horizontal layout; use for multi-select from a few options. |
 | `ChipButton` | disposition | active, onClick, children, color, shape, emphasis | Toggle chip button with pill or square shape and palette colours, showing an active state; use for filter toggles or picking items in a grid. |

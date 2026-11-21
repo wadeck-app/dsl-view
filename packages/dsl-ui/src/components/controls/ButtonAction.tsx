@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { reportAuthoringMistake } from '@dsl-ui/utils/devDiagnostics.js';
+
 import { Button } from './_Button.js';
 
 export interface ButtonActionProps {
@@ -20,13 +22,21 @@ export interface ButtonActionProps {
 	disabledReason?: string;
 	loading?: boolean;
 	type?: 'button' | 'submit';
+	/**
+	 * Id of the <form> this button submits (HTML `form` attribute), for a button that sits outside it, such as the footer of a
+	 * Dialog. Only meaningful with `type="submit"`: with the default `type="button"` it does nothing, and says so in the console.
+	 */
+	form?: string;
 }
 
 /**
  * @registryCategory atomic
  * @registryTags button action
  */
-export function ButtonAction({ label, variant = 'primary', icon, size, onClick, disabled, disabledReason, loading, type = 'button' }: ButtonActionProps) {
+export function ButtonAction({ label, variant = 'primary', icon, size, onClick, disabled, disabledReason, loading, type = 'button', form }: ButtonActionProps) {
+	if (form !== undefined && type !== 'submit') {
+		reportAuthoringMistake(`[ButtonAction] "${label}" has form="${form}" but type="${type}": only a submit button submits a form. Set type="submit".`);
+	}
 	return (
 		<Button
 			variant={variant}
@@ -36,6 +46,7 @@ export function ButtonAction({ label, variant = 'primary', icon, size, onClick, 
 			disabledReason={disabledReason}
 			loading={loading}
 			type={type}
+			form={form}
 		>
 			{icon && !loading && icon}
 			{label}

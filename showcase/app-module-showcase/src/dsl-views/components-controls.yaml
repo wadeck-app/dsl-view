@@ -108,7 +108,7 @@ items:
         label: "controls"
     items:
       - $type: "Markdown"
-        text: "Plain labelled button with explicit onClick, loading and optional icon node; use when you wire the handler yourself rather than running a `$actions` entry."
+        text: "Plain labelled button with explicit onClick, loading and optional icon node; `type: submit` with `form: <form id>` submits a form the button is not inside of (a Dialog footer); use when you wire the handler yourself rather than running a `$actions` entry."
       - $type: "HorizontalStack"
         wrap: true
         items:
@@ -159,7 +159,7 @@ items:
         loading: "$vars.ButtonAction__loading"
         type: "$vars.ButtonAction__type"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `label` | string | yes |\n| `variant` | primary / secondary / danger / danger-outline / success | no |\n| `icon` | array | no |\n| `size` | sm / md | no |\n| `disabled` | boolean | no |\n| `disabledReason` | string | no |\n| `loading` | boolean | no |\n| `type` | button / submit | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `label` | string | yes |\n| `variant` | primary / secondary / danger / danger-outline / success | no |\n| `icon` | array | no |\n| `size` | sm / md | no |\n| `disabled` | boolean | no |\n| `disabledReason` | string | no |\n| `loading` | boolean | no |\n| `type` | button / submit | no |\n| `form` | string | no |"
   - $type: "Card"
     header:
       - $type: "Tag"

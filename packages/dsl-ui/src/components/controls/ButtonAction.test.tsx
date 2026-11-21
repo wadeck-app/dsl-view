@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { ButtonAction } from './ButtonAction.js';
+import { resetReportedMessages } from '../dev/reportOnce.js';
 
 describe('ButtonAction', () => {
 	it('renders its label and reports clicks', () => {
@@ -65,5 +66,37 @@ describe('ButtonAction', () => {
 
 		const { container: small } = render(<ButtonAction label="B" size="sm" />);
 		expect((small.firstElementChild as HTMLElement).className).toContain('px-3');
+	});
+});
+
+// A dialog keeps its buttons in a footer, outside the <form>: the HTML `form` attribute ties the button to the form by id.
+describe('ButtonAction form attribute', () => {
+	it('submits a form it is not inside of, by id', () => {
+		const onSubmit = vi.fn((event: React.FormEvent) => event.preventDefault());
+		render(
+			<div>
+				<form id="pin-form" onSubmit={onSubmit}>
+					<input aria-label="PIN" />
+				</form>
+				<ButtonAction label="Unlock" type="submit" form="pin-form" />
+			</div>
+		);
+		fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+		expect(onSubmit).toHaveBeenCalledOnce();
+	});
+
+	it('sets no form attribute by default', () => {
+		render(<ButtonAction label="Run" />);
+		expect(screen.getByRole('button', { name: 'Run' })).not.toHaveAttribute('form');
+	});
+});
+
+describe('ButtonAction form without type submit', () => {
+	it('says why nothing is submitted', () => {
+		resetReportedMessages();
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+		render(<ButtonAction label="Unlock" form="pin-form" />);
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('only a submit button submits a form'));
+		warn.mockRestore();
 	});
 });
