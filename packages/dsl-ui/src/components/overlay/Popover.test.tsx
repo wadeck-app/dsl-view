@@ -236,3 +236,47 @@ describe('Popover trigger accessibility', () => {
 		expect(trigger).toHaveAttribute('aria-expanded', 'true');
 	});
 });
+
+// With A open, clicking the trigger of B closes A and opens B. A's close handed focus back to A's trigger, which B's
+// focus-outside rule read as "focus left B": B closed at once. Focus goes back only when it has nowhere else to be.
+describe('Popover next to another popover', () => {
+	it('stays open when it is opened while another popover is open', async () => {
+		const { default: userEvent } = await import('@testing-library/user-event');
+		const user = userEvent.setup();
+		render(
+			<div>
+				<Popover trigger={<button>Open A</button>}>
+					<p>Panel A</p>
+				</Popover>
+				<Popover trigger={<button>Open B</button>}>
+					<p>Panel B</p>
+				</Popover>
+			</div>
+		);
+		await user.click(screen.getByRole('button', { name: 'Open A' }));
+		await screen.findByText('Panel A');
+		await user.click(screen.getByRole('button', { name: 'Open B' }));
+		await waitFor(() => expect(screen.queryByText('Panel A')).not.toBeInTheDocument());
+		// Let the focus hand-over of A's closing run before judging B.
+		await new Promise(resolve => setTimeout(resolve, 50));
+		expect(screen.getByText('Panel B')).toBeInTheDocument();
+		// Focus is where B put it (its panel), not handed back to A's trigger.
+		expect(document.activeElement).not.toBe(screen.getByRole('button', { name: 'Open A' }));
+	});
+
+	it('still returns focus to its trigger when it closes and focus has gone nowhere else', async () => {
+		const { default: userEvent } = await import('@testing-library/user-event');
+		const user = userEvent.setup();
+		render(
+			<Popover trigger={<button>Open</button>}>
+				<button>Inside</button>
+			</Popover>
+		);
+		const trigger = screen.getByRole('button', { name: 'Open' });
+		await user.click(trigger);
+		await user.click(await screen.findByRole('button', { name: 'Inside' }));
+		await user.keyboard('{Escape}');
+		await waitFor(() => expect(screen.queryByRole('button', { name: 'Inside' })).not.toBeInTheDocument());
+		expect(document.activeElement).toBe(trigger);
+	});
+});

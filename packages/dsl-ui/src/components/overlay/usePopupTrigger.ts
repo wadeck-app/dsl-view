@@ -29,7 +29,14 @@ export function usePopupTrigger(open: boolean, popup: 'menu' | 'dialog') {
 		ref,
 		onCloseAutoFocus: (event: Event) => {
 			event.preventDefault();
-			control()?.focus();
+			// Only hand focus back when it has nowhere else to be: on <body> (the content that held it is gone) or still inside
+			// the closing content. When the user just clicked another control (the trigger of another popup that is now
+			// opening), taking focus from it would make that popup read "focus left me" and close at once.
+			const active = document.activeElement;
+			const closing = event.target instanceof Node ? event.target : null;
+			if (active === null || active === document.body || closing?.contains(active)) {
+				control()?.focus();
+			}
 		},
 	};
 }
