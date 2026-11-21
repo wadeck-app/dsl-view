@@ -107,20 +107,33 @@ describe('Badge removable', () => {
         expect(screen.getByRole('button', { name: 'Leave sudo mode' })).toBeInTheDocument();
     });
 
-    it('danger subtle badge uses the danger background, text and border', () => {
+    it('danger subtle badge uses the danger background and text, outlined by an inset ring (no border: the height stays the same)', () => {
         const { container } = render(<Badge label="Sudo" variant="danger" tone="subtle" onRemove={vi.fn()} />);
-        expect(container.firstChild).toHaveClass('bg-danger-bg', 'text-danger-text', 'border', 'border-danger');
+        expect(container.firstChild).toHaveClass('bg-danger-bg', 'text-danger-text', 'ring-1', 'ring-inset', 'ring-danger');
+        expect(container.firstChild).not.toHaveClass('border');
     });
 
-    it('a removable badge has exactly one border colour, whatever the variant and tone', () => {
+    it('a removable badge has no border and exactly one ring colour, whatever the variant and tone', () => {
         for (const variant of ['default', 'primary', 'success', 'warning', 'danger', 'info'] as const) {
             for (const tone of ['solid', 'subtle'] as const) {
                 const { container, unmount } = render(<Badge label="x" variant={variant} tone={tone} onRemove={vi.fn()} />);
-                const colours = Array.from((container.firstChild as HTMLElement).classList).filter(c => /^border-/.test(c));
-                expect(colours, `${variant}/${tone}`).toHaveLength(1);
+                const classes = Array.from((container.firstChild as HTMLElement).classList);
+                expect(classes.filter(c => /^border/.test(c)), `${variant}/${tone} border`).toEqual([]);
+                expect(classes.filter(c => /^ring-(?!1$|inset$)/.test(c)), `${variant}/${tone} ring`).toHaveLength(1);
                 unmount();
             }
         }
+    });
+
+    it('subtle: the cross turns into a solid disc of the variant on hover, focus ring in the text colour', () => {
+        render(<Badge label="Sudo" variant="danger" tone="subtle" onRemove={vi.fn()} />);
+        expect(screen.getByRole('button')).toHaveClass('hover:bg-danger', 'hover:text-on-solid', 'focus-visible:ring-danger-text');
+    });
+
+    it('has a native tooltip on the badge and none on the cross', () => {
+        const { container } = render(<Badge label="Sudo" title="Sudo mode is on" onRemove={vi.fn()} />);
+        expect(container.firstChild).toHaveAttribute('title', 'Sudo mode is on');
+        expect(screen.getByRole('button')).not.toHaveAttribute('title');
     });
 
     it('the cross reacts to hover and keyboard focus', () => {
@@ -140,5 +153,12 @@ describe('Badge removable with href', () => {
         expect(screen.queryByRole('button')).toBeNull();
         expect(error).toHaveBeenCalledWith(expect.stringContaining('has both href and onRemove'));
         error.mockRestore();
+    });
+});
+
+describe('Badge title', () => {
+    it('sets the native tooltip on a plain badge', () => {
+        const { container } = render(<Badge label="x" title="More" />);
+        expect(container.firstChild).toHaveAttribute('title', 'More');
     });
 });

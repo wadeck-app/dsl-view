@@ -813,7 +813,7 @@ $actions:
 - { $type: Badge, label: Sudo, variant: danger, tone: subtle, onRemove: $leaveSudo, removeLabel: Leave sudo mode }
 ```
 
-`onRemove` takes a page action (`$name`) or, in React, a function. The badge is outlined in its variant colour and the cross lights up on hover and keyboard focus. `removeLabel` defaults to `Remove <label>`. Combined with `href` the cross is not shown and an error is logged.
+`onRemove` takes a page action (`$name`) or, in React, a function. The badge is outlined by an inset ring in its variant colour (same height as other badges); the cross becomes a solid disc on hover and shows a focus ring on keyboard focus. `title` sets one tooltip for the whole badge. `removeLabel` defaults to `Remove <label>`. Combined with `href` the cross is not shown and an error is logged.
 
 ## Links: `StatTile`, `Badge`, `DataTable`
 

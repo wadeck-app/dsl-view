@@ -32,13 +32,15 @@ export interface BadgeProps {
     /** Opens `href` as an external URL in a new tab. */
     external?: boolean;
     /**
-     * Makes the badge removable: a cross inside it calls this. The badge then carries a border in its variant colour
-     * (the cross needs a visible container) and the cross lights up on hover and keyboard focus.
+     * Makes the badge removable: a cross inside it calls this. The badge then carries an inset ring in its variant colour
+     * (same height as the other badges) and the cross shows a solid disc on hover and a focus ring on keyboard focus.
      * Not available together with `href`: a link badge is not removable, `onRemove` is ignored with an error in the console.
      */
     onRemove?: () => void;
     /** Accessible name of the cross. Default: "Remove <label>". */
     removeLabel?: string;
+    /** Native tooltip of the whole badge (the cross has none). */
+    title?: string;
 }
 
 // @formatter:off
@@ -63,14 +65,25 @@ const SUBTLE_CLASSES: Record<BadgeVariant, string> = {
     info:     'bg-info-bg text-info-text',
 };
 
-// A removable badge is outlined in its own colour, whichever tone it has.
-const REMOVABLE_BORDER_CLASSES: Record<BadgeVariant, string> = {
-    default:  'border-border',
-    primary:  'border-primary',
-    success:  'border-success',
-    warning:  'border-warning',
-    danger:   'border-danger',
-    info:     'border-info-text',
+// A removable badge is outlined in its own colour by an INSET ring, not a border: a border would make it 2px taller than the
+// other badges of the row.
+const REMOVABLE_RING_CLASSES: Record<BadgeVariant, string> = {
+    default:  'ring-1 ring-inset ring-border',
+    primary:  'ring-1 ring-inset ring-primary',
+    success:  'ring-1 ring-inset ring-success',
+    warning:  'ring-1 ring-inset ring-warning',
+    danger:   'ring-1 ring-inset ring-danger',
+    info:     'ring-1 ring-inset ring-info-text',
+};
+
+// Cross of a subtle badge: a solid disc on hover (the variant's accent with its ink) and a focus ring in the variant's text colour.
+const REMOVE_SUBTLE_CLASSES: Record<BadgeVariant, string> = {
+    default:  'hover:bg-muted hover:text-surface focus-visible:ring-muted',
+    primary:  'hover:bg-primary hover:text-on-solid focus-visible:ring-primary',
+    success:  'hover:bg-success hover:text-on-solid focus-visible:ring-success-text',
+    warning:  'hover:bg-warning-text hover:text-warning-bg focus-visible:ring-warning-text',
+    danger:   'hover:bg-danger hover:text-on-solid focus-visible:ring-danger-text',
+    info:     'hover:bg-info-text hover:text-info-bg focus-visible:ring-info-text',
 };
 
 const SIZE_CLASSES: Record<NonNullable<BadgeProps['size']>, string> = {
@@ -79,11 +92,9 @@ const SIZE_CLASSES: Record<NonNullable<BadgeProps['size']>, string> = {
 };
 // @formatter:on
 
-// The cross takes the badge's ink (currentColor): the hover tint follows the variant and works in both themes.
-const REMOVE_BUTTON_CLASSES =
-    'ml-1 -mr-1 inline-flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded-full opacity-70 transition ' +
-    'hover:opacity-100 hover:bg-[color-mix(in_srgb,currentColor_20%,transparent)] ' +
-    'focus:outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-current';
+const REMOVE_BUTTON_CLASSES = 'ml-1 -mr-1 inline-flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2';
+// A solid badge is already filled with the accent: a disc of the same colour would not show, so the cross gets a tint of its own ink.
+const REMOVE_SOLID_CLASSES = 'hover:bg-[color-mix(in_srgb,currentColor_25%,transparent)] focus-visible:ring-current';
 
 // A link badge keeps the badge's look; hover and keyboard focus are the only additions.
 const LINK_CLASSES =
@@ -93,7 +104,7 @@ const LINK_CLASSES =
  * @registryCategory atomic
  * @registryTags badge status
  */
-export function Badge({ label, variant = 'default', tone = 'solid', size = 'sm', href, external = false, onRemove, removeLabel }: BadgeProps) {
+export function Badge({ label, variant = 'default', tone = 'solid', size = 'sm', href, external = false, onRemove, removeLabel, title }: BadgeProps) {
     // Only the solid fills of these variants paint text-on-solid.
     useWarnMissingOnSolidToken(tone !== 'subtle' && (variant === 'primary' || variant === 'success' || variant === 'danger'));
     const baseClasses = classFor('Badge', 'variant', variant, tone === 'subtle' ? SUBTLE_CLASSES : SOLID_CLASSES, 'default');
@@ -102,27 +113,32 @@ export function Badge({ label, variant = 'default', tone = 'solid', size = 'sm',
     if (onRemove && target) {
         reportAuthoringError(`[Badge] "${label}" has both href and onRemove: a link badge is not removable, the cross is not shown. Drop one of them.`);
     }
-    // Outline: replace the variant's own border (default and warning solid have one) by the one of the variant.
+    // Outline: the variant's own border (default solid has one) gives way to an inset ring, so the height stays that of the other badges.
     const variantClasses = removable
-        ? `${baseClasses.replace(/(^|\s)border(-\S+)?(?=\s|$)/g, ' ').trim()} border ${classFor('Badge', 'variant', variant, REMOVABLE_BORDER_CLASSES, 'default')}`
+        ? `${baseClasses.replace(/(^|\s)border(-\S+)?(?=\s|$)/g, ' ').trim()} ${classFor('Badge', 'variant', variant, REMOVABLE_RING_CLASSES, 'default')}`
         : baseClasses;
+    const removeToneClasses = tone === 'subtle' ? classFor('Badge', 'variant', variant, REMOVE_SUBTLE_CLASSES, 'default') : REMOVE_SOLID_CLASSES;
     const classes = `inline-flex items-center rounded-full font-medium ${variantClasses} ${classFor('Badge', 'size', size, SIZE_CLASSES, 'sm')}`;
     if (target) {
         return (
-            <AppLink href={target} external={external} aria-label={label} className={`${classes} ${LINK_CLASSES}`}>
+            <AppLink href={target} external={external} aria-label={label} title={title} className={`${classes} ${LINK_CLASSES}`}>
                 {label}
             </AppLink>
         );
     }
     if (removable) {
         return (
-            <span className={classes}>
+            <span className={classes} title={title}>
                 {label}
-                <button type="button" onClick={onRemove} aria-label={removeLabel ?? `Remove ${label}`} className={REMOVE_BUTTON_CLASSES}>
+                <button type="button" onClick={onRemove} aria-label={removeLabel ?? `Remove ${label}`} className={`${REMOVE_BUTTON_CLASSES} ${removeToneClasses}`}>
                     <X size={12} aria-hidden="true" />
                 </button>
             </span>
         );
     }
-    return <span className={classes}>{label}</span>;
+    return (
+        <span className={classes} title={title}>
+            {label}
+        </span>
+    );
 }

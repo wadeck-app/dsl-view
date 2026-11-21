@@ -65,6 +65,7 @@
 			"onRemove",
 			"removeLabel",
 			"size",
+			"title",
 			"tone",
 			"variant"
 		]

@@ -91,7 +91,7 @@ items:
         label: "display"
     items:
       - $type: "Markdown"
-        text: "Rounded status pill with variant colours, solid or subtle tone, optionally a link or removable (`onRemove`: outlined in its variant colour, with a cross that lights up on hover and focus; a function prop, so React code only, not YAML); use for a status value, Tag for free-form labels."
+        text: "Rounded status pill with variant colours, solid or subtle tone, optionally a link or removable (`onRemove: $action`: inset ring in its variant colour so the height stays that of other badges, a cross that becomes a solid disc on hover); `title` is the tooltip of the whole badge; use for a status value, Tag for free-form labels."
       - $type: "HorizontalStack"
         wrap: true
         items:
@@ -144,7 +144,7 @@ items:
         href: "$vars.Badge__href"
         external: "$vars.Badge__external"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `label` | string | yes |\n| `variant` | default / primary / success / warning / danger / info | no |\n| `tone` | solid / subtle | no |\n| `size` | sm / md | no |\n| `href` | string | no |\n| `external` | boolean | no |\n| `removeLabel` | string | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `label` | string | yes |\n| `variant` | default / primary / success / warning / danger / info | no |\n| `tone` | solid / subtle | no |\n| `size` | sm / md | no |\n| `href` | string | no |\n| `external` | boolean | no |\n| `removeLabel` | string | no |\n| `title` | string | no |"
   - $type: "Card"
     header:
       - $type: "Tag"

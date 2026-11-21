@@ -191,6 +191,7 @@ export const BadgeNodeSchema = baseNode.extend({
 	href: z.string().optional(),
 	external: dsl(z.boolean()).optional(),
 	removeLabel: z.string().optional(),
+	title: z.string().optional(),
 });
 
 const ChartSeriesConfigSchema = z.object({

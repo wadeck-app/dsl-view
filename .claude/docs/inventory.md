@@ -44,7 +44,7 @@ Maintenance: add a row here in the same change that adds, renames or removes a c
 | Component | Category | Key props | What it is / when to use |
 |---|---|---|---|
 | `Avatar` | atomic | src, alt, fallback, size | Round user image with a text fallback (given, or first two characters of alt, or '?') in sm, md or lg size. |
-| `Badge` | atomic | label, variant, tone, size, href, external, onRemove, removeLabel | Rounded status pill with variant colours, solid or subtle tone, optionally a link or removable (`onRemove: $action`: outlined in its variant colour, with a cross that lights up on hover and focus); use for a status value, Tag for free-form labels. |
+| `Badge` | atomic | label, variant, tone, size, href, external, onRemove, removeLabel, title | Rounded status pill with variant colours, solid or subtle tone, optionally a link or removable (`onRemove: $action`: inset ring in its variant colour so the height stays that of other badges, a cross that becomes a solid disc on hover); `title` is the tooltip of the whole badge; use for a status value, Tag for free-form labels. |
 | `Chart` | composite | data, xAxisKey, xAxisType, series, xFormat, yFormat, variant | Recharts line, bar and area chart from source rows with time or category x axis, dual y axes and sparkline variant; shows skeleton while data is undefined. |
 | `DateText` | atomic | value, dateStyle, part, relative | Plain text date or time formatted per the date settings with exact instant as tooltip; use for a static value, RelativeDate for a live 'ago' label. |
 | `FetchSpinner` | atomic | loading | Small spinning loader icon shown only while `loading` is true and rendering nothing otherwise; use inline next to content being fetched, Spinner for a standalone one. |

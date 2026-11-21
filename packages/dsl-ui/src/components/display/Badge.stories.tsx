@@ -61,3 +61,13 @@ export const RemovableAllVariants: Story = {
         </div>
     ),
 };
+
+// Same height as a plain badge next to it (an inset ring, not a border), with a tooltip on the badge only.
+export const RemovableNextToPlain: Story = {
+    render: () => (
+        <div className="flex items-center gap-2">
+            <Badge label="Relay connected" variant="success" tone="subtle" />
+            <Badge label="Sudo" variant="danger" tone="subtle" title="Sudo mode: sensitive actions are unlocked" onRemove={() => {}} removeLabel="Leave sudo mode" />
+        </div>
+    ),
+};
