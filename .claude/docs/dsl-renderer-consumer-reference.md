@@ -1059,6 +1059,7 @@ First published version containing the change (`dsl-ui` and `dsl-renderer` share
 | `2026.11.14-339` | `ToastProvider`: the dismiss button sits top right, level with the first line, with a larger hit area and full opacity; the message is written in the content ink on every variant (the light error text was 4.41:1) with a 4px accent edge, the icon keeps the variant colour. |
 | `2026.11.14-343` | `ToastProvider`: an error toast has no left icon (a red circled cross next to the dismiss button read as a second close control); success and info keep theirs. |
 | `2026.11.15-356` | The caption of a side-menu group (`separator` with a `label`) is as large as a link (`text-sm`), semibold and in the content colour; it was `text-xs` and muted, smaller than the links under it. |
+| `2026.11.21-359` | `$actions`: `clear: true` (with `resultKey`, no `url`) removes the value stored under `resultKey`, so a `DialogForm` (`visible: $key`) or a Dialog/Drawer opened by a url-less action can be closed: `closeX: { resultKey: key, clear: true }`, wired as `onClose: $closeX` (`onOpenChange` on Dialog and ConfirmDialog). `DialogForm` without `onClose` logs how to wire it (development only). See "Opening and closing a dialog". |
 
 ## Pitfalls
 
