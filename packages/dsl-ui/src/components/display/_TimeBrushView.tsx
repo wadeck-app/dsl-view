@@ -1,7 +1,8 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Surface } from 'recharts';
 
 import { useDateFormat } from '@dsl-ui/dates/DateFormatContext.js';
+import { reportAuthoringMistake } from '@dsl-ui/utils/devDiagnostics.js';
 
 import { Button } from '../controls/_Button.js';
 import { formatBrushDate } from './timeSeriesFormat.js';
@@ -58,11 +59,17 @@ function overviewPath(rows: Record<string, unknown>[], extent: TimeWindow, width
 }
 
 /** Brush body: the checked settings (see `TimeBrush`) drawn at a measured width. Renders nothing until there is something to show. */
-export function TimeBrushView({ data, xKey, valueKey, kind, domain, syncGroup, height, yAxisWidth, marginRight }: TimeBrushSettings): React.ReactElement | null {
+export function TimeBrushView({ data, xKey, valueKey, kind, domain, initialWindow, initialWindowProblem, syncGroup, height, yAxisWidth, marginRight }: TimeBrushSettings): React.ReactElement | null {
 	const dates = useDateFormat();
 	const rows = useMemo(() => recordRows(data), [data]);
 	const ownExtent = useMemo<TimeWindow | null>(() => domain ?? xExtent(rows, xKey), [domain, rows, xKey]);
-	const { window: win, extent, setWindow } = useSyncWindow(syncGroup, ownExtent);
+	// A value that cannot be a window is ignored, never an alert: say so once (development builds).
+	useEffect(() => {
+		if (initialWindowProblem) {
+			reportAuthoringMistake(`[TimeBrush] ${initialWindowProblem}`);
+		}
+	}, [initialWindowProblem]);
+	const { window: win, extent, setWindow } = useSyncWindow(syncGroup, ownExtent, initialWindow);
 	// A callback ref: the strip only exists once there is something to show, so it can mount after the first render.
 	const [setStrip, width, strip] = useElementWidth();
 	const drag = useRef<{ mode: DragMode; startX: number; win: TimeWindow } | null>(null);

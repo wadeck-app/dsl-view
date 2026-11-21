@@ -507,7 +507,7 @@ items:
         valueKey: "$vars.TimeBrush__valueKey"
         kind: "$vars.TimeBrush__kind"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `data` | array | no |\n| `xKey` | string | no |\n| `valueKey` | string | yes |\n| `kind` | line / bars | no |\n| `domain` | array | no |\n| `syncGroup` | string | no |\n| `height` | number | no |\n| `yAxisWidth` | number | no |\n| `marginRight` | number | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `data` | array | no |\n| `xKey` | string | no |\n| `valueKey` | string | yes |\n| `kind` | line / bars | no |\n| `domain` | array | no |\n| `initialWindow` | array | no |\n| `syncGroup` | string | no |\n| `height` | number | no |\n| `yAxisWidth` | number | no |\n| `marginRight` | number | no |"
   - $type: "Card"
     header:
       - $type: "Tag"
@@ -522,4 +522,4 @@ items:
       - $type: "Markdown"
         text: "_Not playable yet (required props without a sample: series)._"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `data` | array | no |\n| `xKey` | string | no |\n| `domain` | array | no |\n| `series` | array | yes |\n| `bands` | array | no |\n| `rangeAreas` | array | no |\n| `legendItems` | array | no |\n| `gapDashAfterDays` | number | no |\n| `syncGroup` | string | no |\n| `title` | string | no |\n| `height` | number | no |\n| `yUnit` | string | no |\n| `yFormat` | number / clock | no |\n| `yDecimals` | number | no |\n| `yIncludeZero` | boolean | no |\n| `yAxisWidth` | number | no |\n| `marginRight` | number | no |\n| `emptyMessage` | string | no |\n| `xFormat` | date / time / datetime | no |\n| `yRightFormat` | number / clock | no |\n| `yRightUnit` | string | no |\n| `yRightDecimals` | number | no |\n| `yRightIncludeZero` | boolean | no |\n| `yRightAxisWidth` | number | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `data` | array | no |\n| `xKey` | string | no |\n| `domain` | array | no |\n| `initialWindow` | array | no |\n| `series` | array | yes |\n| `bands` | array | no |\n| `rangeAreas` | array | no |\n| `legendItems` | array | no |\n| `gapDashAfterDays` | number | no |\n| `syncGroup` | string | no |\n| `title` | string | no |\n| `height` | number | no |\n| `yUnit` | string | no |\n| `yFormat` | number / clock | no |\n| `yDecimals` | number | no |\n| `yIncludeZero` | boolean | no |\n| `yAxisWidth` | number | no |\n| `marginRight` | number | no |\n| `emptyMessage` | string | no |\n| `xFormat` | date / time / datetime | no |\n| `yRightFormat` | number / clock | no |\n| `yRightUnit` | string | no |\n| `yRightDecimals` | number | no |\n| `yRightIncludeZero` | boolean | no |\n| `yRightAxisWidth` | number | no |"

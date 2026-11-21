@@ -80,6 +80,13 @@ export interface TimeSeriesChartProps {
 	/** Shared x domain `[min, max]` in ms with min < max; without it, the extent of the data (plus half a day on each side). */
 	domain?: number[];
 	/**
+	 * Window `[from, to]` (ms, same unit as `domain`) the sync group opens on, while `domain` stays the full extent so the user can zoom out to
+	 * everything: a period select (1 month ... all) is then only the starting zoom. Applied on mount and again when the two numbers change;
+	 * clamped to the extent. Absent or null = the whole extent. Pan, zoom and brush in between are kept; reset (button, key 0, double click)
+	 * goes to the whole extent. Not two finite numbers with from < to: ignored with one development warning.
+	 */
+	initialWindow?: number[];
+	/**
 	 * At least one. Maps carry expressions too (`name: $sources.x.label`).
 	 * @resolveDeep
 	 * @itemKeys TimeSeriesSeries

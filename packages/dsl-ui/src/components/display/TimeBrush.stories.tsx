@@ -58,6 +58,22 @@ export const TwoChartsAndABrush: Story = {
 	),
 };
 
+/** The group opens on the last 30 days while the strip and the domain keep the whole period: zoom out or Reset shows everything. */
+export const OpensOnTheLastThirtyDays: Story = {
+	render: () => {
+		const last = daily[daily.length - 1]!.t;
+		const window = [last - 30 * DAY, last];
+		return (
+			<TimeSeriesSyncProvider>
+				<div className="flex flex-col gap-3" style={{ width: 760 }}>
+					<TimeSeriesChart data={daily} syncGroup="period" initialWindow={window} height={170} title="Series A" yAxisWidth={64} marginRight={24} series={[{ key: 'a', name: 'Series A', dots: 2 }]} />
+					<TimeBrush data={daily} syncGroup="period" initialWindow={window} valueKey="a" yAxisWidth={64} marginRight={24} />
+				</div>
+			</TimeSeriesSyncProvider>
+		);
+	},
+};
+
 export const InvalidProps: Story = {
 	render: args => (
 		<div style={{ width: 760 }}>

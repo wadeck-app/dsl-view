@@ -15,6 +15,8 @@ export interface TimeBrushProps {
 	kind?: 'line' | 'bars';
 	/** Shared x domain `[min, max]` in ms with min < max; without it, the extent of the data. Give the charts of the group the same one. */
 	domain?: number[];
+	/** Window `[from, to]` (ms) the sync group opens on; the strip still shows the whole extent. Same rules as `TimeSeriesChart.initialWindow`. */
+	initialWindow?: number[];
 	/** The charts and brushes with the same group share one time window. @default 'default' */
 	syncGroup?: string;
 	/** Height of the overview strip in px. @default 56 */

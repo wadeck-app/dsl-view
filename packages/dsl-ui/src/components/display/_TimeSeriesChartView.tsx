@@ -2,6 +2,7 @@ import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Area, CartesianGrid, ComposedChart, Customized, Line, ReferenceArea, ReferenceLine, XAxis, YAxis } from 'recharts';
 
 import { useDateFormat } from '@dsl-ui/dates/DateFormatContext.js';
+import { reportAuthoringMistake } from '@dsl-ui/utils/devDiagnostics.js';
 
 import { TimeSeriesBars } from './_TimeSeriesBars.js';
 import { TimeSeriesLegend } from './_TimeSeriesLegend.js';
@@ -64,7 +65,14 @@ export function TimeSeriesChartView(props: TimeSeriesChartSettings): React.React
 	const rows = useMemo(() => recordRows(data), [data]);
 
 	const ownExtent = useMemo<TimeWindow | null>(() => props.domain ?? xExtent(rows, xKey), [props.domain, rows, xKey]);
-	const { window: win, extent, setWindow } = useSyncWindow(syncGroup, ownExtent);
+	// A value that cannot be a window is ignored, never an alert: say so once (development builds).
+	const { initialWindow, initialWindowProblem } = props;
+	useEffect(() => {
+		if (initialWindowProblem) {
+			reportAuthoringMistake(`[TimeSeriesChart] ${initialWindowProblem}`);
+		}
+	}, [initialWindowProblem]);
+	const { window: win, extent, setWindow } = useSyncWindow(syncGroup, ownExtent, initialWindow);
 
 	const gapMs = gapDashAfterDays === null ? null : gapDashAfterDays * DAY_MS;
 	const segments = useMemo<Segments[]>(

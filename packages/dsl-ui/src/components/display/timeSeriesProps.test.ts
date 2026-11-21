@@ -268,7 +268,7 @@ describe('checkTimeBrushProps', () => {
 	});
 
 	it('defaults, and what is given wins (0 included)', () => {
-		expect(brushOf({ valueKey: 'v' })).toStrictEqual({ data: undefined, xKey: 't', valueKey: 'v', kind: 'line', domain: undefined, syncGroup: 'default', height: 56, yAxisWidth: 56, marginRight: 16 });
+		expect(brushOf({ valueKey: 'v' })).toStrictEqual({ data: undefined, xKey: 't', valueKey: 'v', kind: 'line', domain: undefined, initialWindow: null, initialWindowProblem: null, syncGroup: 'default', height: 56, yAxisWidth: 56, marginRight: 16 });
 		const given = brushOf({ valueKey: 'v', height: 0, yAxisWidth: 0, marginRight: 0, syncGroup: 'g', xKey: 'x', domain: [1, 2], data: [] });
 		expect(given).toMatchObject({ height: 0, yAxisWidth: 0, marginRight: 0, syncGroup: 'g', xKey: 'x', domain: [1, 2], data: [] });
 	});

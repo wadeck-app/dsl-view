@@ -19,6 +19,10 @@ interface GroupState {
 	extent: TimeWindow | null;
 	/** null = the whole extent. */
 	window: TimeWindow | null;
+	/** `initialWindow` declared by each component (by id), in declaration order: the last one is the effective one. */
+	initials: Map<string, TimeWindow>;
+	/** Value (key) of the initial window applied last; a component declaring the same value again changes nothing. */
+	applied: string | null;
 }
 
 export interface GroupSnapshot {
@@ -29,6 +33,13 @@ export interface GroupSnapshot {
 export interface SyncStore {
 	/** A component announces its data extent. A changed group extent (a new period) resets the window to the whole extent. */
 	setExtent: (group: string, id: string, extent: TimeWindow | null) => void;
+	/**
+	 * A component declares the window its group starts with (null = withdraws its declaration). Applied once per VALUE (compared by the
+	 * two numbers): a second component declaring the same value, or a re-render, never resets what the user did since. A changed value is
+	 * applied again; the last withdrawal puts the window back on the whole extent. A change of the group extent applies the effective
+	 * initial window instead of resetting to the whole extent.
+	 */
+	setInitialWindow: (group: string, id: string, win: TimeWindow | null) => void;
 	/** Sets the shared window (clamped to the extent); a window covering the whole extent is stored as null. */
 	setWindow: (group: string, win: TimeWindow | null) => void;
 	getSnapshot: (group: string) => GroupSnapshot;
@@ -56,7 +67,7 @@ export function createSyncStore(): SyncStore {
 	const state = (group: string): GroupState => {
 		let s = groups.get(group);
 		if (!s) {
-			s = { extents: new Map(), extent: null, window: null };
+			s = { extents: new Map(), extent: null, window: null, initials: new Map(), applied: null };
 			groups.set(group, s);
 		}
 		return s;
@@ -68,10 +79,20 @@ export function createSyncStore(): SyncStore {
 		listeners.get(group)?.forEach(fn => fn());
 	};
 
+	/** The initial window to show now: the effective declaration clamped to the extent; null = the whole extent. */
+	const initialFor = (s: GroupState): TimeWindow | null => {
+		const last = [...s.initials.values()].pop();
+		if (!last || !s.extent) {
+			return null;
+		}
+		const clamped = clampWindow(last, s.extent);
+		return isFullWindow(clamped, s.extent) ? null : clamped;
+	};
+
 	// Nothing registered and nobody listening: forget the group, a store must not keep state of unmounted pages.
 	const forgetIfUnused = (group: string): void => {
 		const s = groups.get(group);
-		if (s && s.extents.size === 0 && (listeners.get(group)?.size ?? 0) === 0) {
+		if (s && s.extents.size === 0 && s.initials.size === 0 && (listeners.get(group)?.size ?? 0) === 0) {
 			groups.delete(group);
 			snapshots.delete(group);
 			listeners.delete(group);
@@ -90,8 +111,29 @@ export function createSyncStore(): SyncStore {
 			const changed = !s.extent || !next || s.extent[0] !== next[0] || s.extent[1] !== next[1];
 			s.extent = next;
 			if (changed) {
-				s.window = null;
+				s.window = initialFor(s);
 				publish(group);
+			}
+			forgetIfUnused(group);
+		},
+		setInitialWindow(group, id, win) {
+			const s = state(group);
+			if (win === null) {
+				s.initials.delete(id);
+				if (s.initials.size === 0 && s.applied !== null) {
+					s.applied = null;
+					s.window = null;
+					publish(group);
+				}
+			} else {
+				s.initials.delete(id);
+				s.initials.set(id, win);
+				const key = `${win[0]}:${win[1]}`;
+				if (key !== s.applied) {
+					s.applied = key;
+					s.window = initialFor(s);
+					publish(group);
+				}
 			}
 			forgetIfUnused(group);
 		},
@@ -153,16 +195,26 @@ export interface SyncedWindow {
 	setWindow: (w: TimeWindow | null) => void;
 }
 
-/** Shared window of a group; registers this component's own `extent` under a stable id. */
-export function useSyncWindow(group: string, extent: TimeWindow | null): SyncedWindow {
+/**
+ * Shared window of a group; registers this component's own `extent` under a stable id. `initialWindow` (already validated, null or
+ * absent = none) is the window the group starts with and takes again when its value changes; see `SyncStore.setInitialWindow`.
+ */
+export function useSyncWindow(group: string, extent: TimeWindow | null, initialWindow?: TimeWindow | null): SyncedWindow {
 	const store = useSyncStore();
 	const id = useId();
 	const from = extent?.[0];
 	const to = extent?.[1];
+	const initFrom = initialWindow?.[0];
+	const initTo = initialWindow?.[1];
 	useEffect(() => {
 		store.setExtent(group, id, from === undefined || to === undefined ? null : [from, to]);
 		return () => store.setExtent(group, id, null);
 	}, [store, group, id, from, to]);
+	// After the extent effect: the extent is known when the window is applied.
+	useEffect(() => {
+		store.setInitialWindow(group, id, initFrom === undefined || initTo === undefined ? null : [initFrom, initTo]);
+		return () => store.setInitialWindow(group, id, null);
+	}, [store, group, id, initFrom, initTo]);
 	const snap = useSyncExternalStore(
 		useCallback(fn => store.subscribe(group, fn), [store, group]),
 		() => store.getSnapshot(group),
@@ -171,5 +223,7 @@ export function useSyncWindow(group: string, extent: TimeWindow | null): SyncedW
 	const set = useCallback((w: TimeWindow | null) => store.setWindow(group, w), [store, group]);
 	// Before the effect has run (first render) the group has no extent yet: use the component's own.
 	const effectiveExtent = snap.extent ?? extent;
-	return { window: snap.window ?? effectiveExtent, extent: effectiveExtent, setWindow: set };
+	// Same for the initial window: the first frame already draws it instead of flashing the whole extent.
+	const firstFrame = snap.extent === null && effectiveExtent !== null && initialWindow ? clampWindow(initialWindow, effectiveExtent) : null;
+	return { window: snap.window ?? firstFrame ?? effectiveExtent, extent: effectiveExtent, setWindow: set };
 }

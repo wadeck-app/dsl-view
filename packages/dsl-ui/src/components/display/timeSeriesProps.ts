@@ -55,6 +55,9 @@ export interface TimeSeriesChartSettings {
 	data: unknown[] | undefined;
 	xKey: string;
 	domain: TimeWindow | undefined;
+	/** The window the sync group starts with (valid, else null); see `initialWindowProblem` for why a given value was not usable. */
+	initialWindow: TimeWindow | null;
+	initialWindowProblem: string | null;
 	series: SeriesSettings[];
 	bands: BandSettings[];
 	rangeAreas: RangeAreaSettings[];
@@ -84,6 +87,8 @@ export interface TimeBrushSettings {
 	valueKey: string;
 	kind: 'line' | 'bars';
 	domain: TimeWindow | undefined;
+	initialWindow: TimeWindow | null;
+	initialWindowProblem: string | null;
 	syncGroup: string;
 	height: number;
 	yAxisWidth: number;
@@ -220,6 +225,20 @@ function domainOf(raw: unknown): TimeWindow | undefined {
 	return [raw[0], raw[1]];
 }
 
+/** Why `initialWindow` cannot be used, or null when it is absent, null or a valid [from, to]. Never throws: a bad value is ignored with a warning, not an alert. */
+export function initialWindowProblem(raw: unknown): string | null {
+	if (raw === undefined || raw === null) {
+		return null;
+	}
+	const ok = Array.isArray(raw) && raw.length === 2 && raw.every(v => typeof v === 'number' && Number.isFinite(v)) && (raw[0] as number) < (raw[1] as number);
+	return ok ? null : `initialWindow must be [from, to] in milliseconds with from < to, got ${show(raw)}; it is ignored and the whole extent is shown.`;
+}
+
+/** The usable `initialWindow`: a valid [from, to], else null (absent, null or invalid: see `initialWindowProblem`). */
+export function parseInitialWindow(raw: unknown): TimeWindow | null {
+	return initialWindowProblem(raw) === null && Array.isArray(raw) ? [raw[0] as number, raw[1] as number] : null;
+}
+
 function dataOf(raw: unknown, hint: string): unknown[] | undefined {
 	if (raw === undefined || raw === null) {
 		return undefined;
@@ -323,6 +342,8 @@ function buildChartSettings(node: Record<string, unknown>): TimeSeriesChartSetti
 		data,
 		xKey: text(node['xKey'], 't') || 't',
 		domain: domainOf(node['domain']),
+		initialWindow: parseInitialWindow(node['initialWindow']),
+		initialWindowProblem: initialWindowProblem(node['initialWindow']),
 		series,
 		bands: list(node['bands'], 'bands').map(bandOf),
 		rangeAreas: list(node['rangeAreas'], 'rangeAreas').map(rangeAreaOf),
@@ -369,6 +390,8 @@ function buildBrushSettings(node: Record<string, unknown>): TimeBrushSettings {
 		valueKey: node['valueKey'],
 		kind: kind === 'bars' ? 'bars' : 'line',
 		domain: domainOf(node['domain']),
+		initialWindow: parseInitialWindow(node['initialWindow']),
+		initialWindowProblem: initialWindowProblem(node['initialWindow']),
 		syncGroup: typeof node['syncGroup'] === 'string' && node['syncGroup'] !== '' ? node['syncGroup'] : 'default',
 		height: n('height', 56),
 		yAxisWidth: n('yAxisWidth', DEFAULT_Y_AXIS_WIDTH),
