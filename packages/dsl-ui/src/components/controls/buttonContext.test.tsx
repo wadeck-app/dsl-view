@@ -70,6 +70,6 @@ describe('Button reads ButtonContext', () => {
 		const btn = screen.getByRole('button', { name: 'Danger' });
 		expect(btn.className).toMatch(/bg-danger/);
 		// ghost class should NOT be present
-		expect(btn.className).not.toMatch(/text-muted\b/);
+		expect(btn.className).not.toMatch(/(^|\s)text-muted\b/);
 	});
 });

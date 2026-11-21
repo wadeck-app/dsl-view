@@ -26,7 +26,12 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 // focus-visible, not focus: a mouse click shouldn't paint the keyboard focus ring - that ring
 // is what makes a Tab/ChipButton read as "a button" after clicking it, which they shouldn't.
 const BASE =
-	'inline-flex items-center justify-center rounded font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer';
+	'inline-flex items-center justify-center rounded font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:cursor-not-allowed cursor-pointer';
+
+// An unavailable action. A filled button turns muted: its accent at half opacity reads as ANOTHER colour (on a dark panel, a washed-out
+// orange next to the live orange of a chip). The other variants are neutral or outlines and just fade.
+const FADED = ' disabled:opacity-50';
+const MUTED_FILL = ' disabled:bg-muted-bg disabled:text-muted disabled:hover:bg-muted-bg';
 
 // A button label is short and one line: wrapped, a row of buttons goes uneven (one button 42px high next to a 26px one).
 // 'stack' buttons arrange their own column and keep normal wrapping. A row that is too narrow wraps its buttons whole
@@ -39,17 +44,17 @@ const NOWRAP = 'whitespace-nowrap';
 // the same size. In a row of actions that reads as buttons of three different heights.
 const VARIANT_CLASSES: Record<Variant, string> = {
 	primary:
-		'border border-transparent bg-[var(--color-primary-solid)] text-white hover:bg-[var(--color-primary-solid-hover)] focus-visible:ring-[var(--color-primary-solid)]',
+		'border border-transparent bg-[var(--color-primary-solid)] text-white hover:bg-[var(--color-primary-solid-hover)] focus-visible:ring-[var(--color-primary-solid)]' + MUTED_FILL,
 	secondary:
-		'border border-border bg-surface text-content hover:bg-bg-secondary focus-visible:ring-border',
-	danger: 'border border-transparent bg-danger text-on-solid hover:bg-danger/80 focus-visible:ring-danger',
-	'danger-outline': 'border border-danger text-danger hover:bg-danger-bg focus-visible:ring-danger',
+		'border border-border bg-surface text-content hover:bg-bg-secondary focus-visible:ring-border' + FADED,
+	danger: 'border border-transparent bg-danger text-on-solid hover:bg-danger/80 focus-visible:ring-danger' + MUTED_FILL,
+	'danger-outline': 'border border-danger text-danger hover:bg-danger-bg focus-visible:ring-danger' + FADED,
 	neutral:
-		'border border-transparent bg-muted-bg text-content hover:bg-bg-secondary focus-visible:ring-border',
-	success: 'border border-transparent bg-success text-on-solid hover:bg-success/80 focus-visible:ring-success',
-	ghost: 'border border-transparent text-muted hover:bg-muted-bg hover:text-content focus-visible:ring-border',
+		'border border-transparent bg-muted-bg text-content hover:bg-bg-secondary focus-visible:ring-border' + FADED,
+	success: 'border border-transparent bg-success text-on-solid hover:bg-success/80 focus-visible:ring-success' + MUTED_FILL,
+	ghost: 'border border-transparent text-muted hover:bg-muted-bg hover:text-content focus-visible:ring-border' + FADED,
 	// Deliberately excluded: `link` is text, not a box, so it drops padding and border.
-	link: 'text-primary hover:underline focus-visible:ring-primary px-0 py-0',
+	link: 'text-primary hover:underline focus-visible:ring-primary px-0 py-0' + FADED,
 	/*
 	 * Geometry only. The caller owns fill, ink and outline.
 	 *
@@ -63,7 +68,7 @@ const VARIANT_CLASSES: Record<Variant, string> = {
 	 *
 	 * A variant that contributes no colour cannot lose that argument.
 	 */
-	chip: 'border focus-visible:ring-border',
+	chip: 'border focus-visible:ring-border' + FADED,
 };
 
 const SIZE_CLASSES: Record<Size, string> = {

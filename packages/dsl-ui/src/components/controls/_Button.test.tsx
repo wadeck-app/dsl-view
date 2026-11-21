@@ -98,7 +98,7 @@ describe('Button', () => {
 		);
 		const btn = screen.getByRole('button', { name: 'Danger' });
 		expect(btn.className).toMatch(/bg-danger/);
-		expect(btn.className).not.toMatch(/text-muted\b/);
+		expect(btn.className).not.toMatch(/(^|\s)text-muted\b/);
 	});
 });
 
@@ -168,5 +168,34 @@ describe('Button ink on a solid accent fill', () => {
 		const classes = (container.firstElementChild as HTMLElement).className.split(' ');
 		expect(classes).toContain('text-on-solid');
 		expect(classes).not.toContain('text-white');
+	});
+});
+
+// A filled button whose action is unavailable used to be the same accent at half opacity: on a dark panel that is another colour
+// (a washed-out orange next to the live orange of a chip). It dims towards the muted tokens instead, whatever the accent.
+describe('an unavailable filled button', () => {
+	for (const variant of ['primary', 'danger', 'success'] as const) {
+		it(`${variant} turns muted instead of fading its accent`, () => {
+			render(<Button variant={variant} disabled>Save</Button>);
+			const button = screen.getByRole('button', { name: 'Save' });
+			expect(button).toHaveClass('disabled:bg-muted-bg', 'disabled:text-muted', 'disabled:hover:bg-muted-bg');
+			expect(button).not.toHaveClass('disabled:opacity-50');
+		});
+	}
+
+	it('the other variants keep fading (their colour is already neutral or an outline)', () => {
+		for (const variant of ['secondary', 'danger-outline', 'neutral', 'ghost'] as const) {
+			const { unmount } = render(<Button variant={variant} disabled>Save</Button>);
+			expect(screen.getByRole('button', { name: 'Save' }), variant).toHaveClass('disabled:opacity-50');
+			unmount();
+		}
+	});
+
+	it('every variant still shows the not-allowed cursor', () => {
+		for (const variant of ['primary', 'secondary', 'danger', 'success', 'ghost'] as const) {
+			const { unmount } = render(<Button variant={variant} disabled>Save</Button>);
+			expect(screen.getByRole('button', { name: 'Save' }), variant).toHaveClass('disabled:cursor-not-allowed');
+			unmount();
+		}
 	});
 });
