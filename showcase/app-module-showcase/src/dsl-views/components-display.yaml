@@ -144,7 +144,7 @@ items:
         href: "$vars.Badge__href"
         external: "$vars.Badge__external"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `label` | string | yes |\n| `variant` | default / primary / success / warning / danger / info | no |\n| `tone` | solid / subtle | no |\n| `size` | sm / md | no |\n| `href` | string | no |\n| `external` | boolean | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `label` | string | yes |\n| `variant` | default / primary / success / warning / danger / info | no |\n| `tone` | solid / subtle | no |\n| `size` | sm / md | no |\n| `href` | string | no |\n| `external` | boolean | no |\n| `removeLabel` | string | no |"
   - $type: "Card"
     header:
       - $type: "Tag"

@@ -62,6 +62,8 @@
 			"external",
 			"href",
 			"label",
+			"onRemove",
+			"removeLabel",
 			"size",
 			"tone",
 			"variant"
