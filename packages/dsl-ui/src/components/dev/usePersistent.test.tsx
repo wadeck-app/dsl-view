@@ -103,3 +103,46 @@ describe('when switched off', () => {
 		expect(warn).not.toHaveBeenCalled();
 	});
 });
+
+// A host that turns the tool on after the first render (the shell reads its "A/B tests" setting from the server) must still
+// find what was stored: the fold state of the dock and the choices were lost on every reload otherwise.
+describe('when switched on after the first render', () => {
+	it('usePersistentChoice reads the stored value as soon as it is enabled', () => {
+		localStorage.setItem('ab.fold', 'collapsed');
+		const { result, rerender } = renderHook(({ enabled }) => usePersistentChoice('ab.fold', ['open', 'collapsed'] as const, 'open', 'dock state', undefined, enabled), {
+			initialProps: { enabled: false },
+		});
+		expect(result.current[0]).toBe('open');
+		rerender({ enabled: true });
+		expect(result.current[0]).toBe('collapsed');
+	});
+
+	it('usePersistentChoice lets the URL parameter win, as at mount', () => {
+		localStorage.setItem('ab.tab', 'a');
+		window.history.pushState({}, '', '/?ab.tab=b');
+		const { result, rerender } = renderHook(({ enabled }) => usePersistentChoice('ab.tab', ['a', 'b'] as const, 'a', 'tab', 'ab.tab', enabled), {
+			initialProps: { enabled: false },
+		});
+		rerender({ enabled: true });
+		expect(result.current[0]).toBe('b');
+	});
+
+	it('usePersistentChoice goes back to its initial value when switched off again, and stores nothing', () => {
+		localStorage.setItem('ab.fold', 'collapsed');
+		const { result, rerender } = renderHook(({ enabled }) => usePersistentChoice('ab.fold', ['open', 'collapsed'] as const, 'open', 'dock state', undefined, enabled), {
+			initialProps: { enabled: true },
+		});
+		expect(result.current[0]).toBe('collapsed');
+		rerender({ enabled: false });
+		expect(result.current[0]).toBe('open');
+		expect(localStorage.getItem('ab.fold')).toBe('collapsed');
+	});
+
+	it('usePersistentSet reads the stored list as soon as it is enabled', () => {
+		localStorage.setItem('ab.set', '["a","b"]');
+		const { result, rerender } = renderHook(({ enabled }) => usePersistentSet('ab.set', enabled), { initialProps: { enabled: false } });
+		expect([...result.current[0]]).toEqual([]);
+		rerender({ enabled: true });
+		expect([...result.current[0]]).toEqual(['a', 'b']);
+	});
+});

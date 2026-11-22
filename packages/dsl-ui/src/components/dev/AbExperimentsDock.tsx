@@ -1,13 +1,14 @@
 import React, { useEffect, useSyncExternalStore } from 'react';
 
 import { AbDock } from './AbDock.js';
+import type { AbDockAlign } from './AbDock.js';
 import type { AbStore } from './abStore.js';
 import type { AbTest as AbDockTest } from './abTypes.js';
 
 const reportedHostDuplicates = new Set<string>();
 
 // The one dock of AbExperiments: the host's own tests first, then the ones `<AbTest>` nodes registered.
-export function AbExperimentsDock({ store, hostTests, enabled }: { store: AbStore; hostTests: readonly AbDockTest[]; enabled: boolean }): React.ReactElement {
+export function AbExperimentsDock({ store, hostTests, enabled, align }: { store: AbStore; hostTests: readonly AbDockTest[]; enabled: boolean; align?: AbDockAlign }): React.ReactElement {
 	const registered = useSyncExternalStore(store.subscribe, store.getSnapshot);
 	const hostIds = new Set(hostTests.map((t) => t.id));
 	// A string, so that the effect below re-runs only when the set of clashing ids changes (ids may contain commas).
@@ -20,5 +21,5 @@ export function AbExperimentsDock({ store, hostTests, enabled }: { store: AbStor
 			}
 		}
 	}, [clashingKey]);
-	return <AbDock tests={[...hostTests, ...registered.filter((t) => !hostIds.has(t.id))]} enabled={enabled} />;
+	return <AbDock tests={[...hostTests, ...registered.filter((t) => !hostIds.has(t.id))]} enabled={enabled} align={align} />;
 }

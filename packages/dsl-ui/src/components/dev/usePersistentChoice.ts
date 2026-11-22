@@ -12,7 +12,8 @@ import { announceStoredValue, subscribeToStoredValue } from '@dsl-ui/utils/stora
 // - A change made in another tab of the same origin is applied here too (the `storage` event), and so is a change made
 //   through another instance of this hook with the same key.
 // - `enabled` false (default true): the value is `initial` and nothing is read from or written to the storage or the URL.
-//   It is read at mount: switching it on later does not re-read the storage.
+//   Switching it on later (a host that learns the setting after its first render) reads the storage and the URL at that moment;
+//   switching it off again puts `initial` back, without touching the storage.
 export function usePersistentChoice<T extends string>(
 	key: string,
 	options: readonly T[],
@@ -26,8 +27,8 @@ export function usePersistentChoice<T extends string>(
 	const isOption = (v: string): v is T => (options as readonly string[]).includes(v);
 	const expected = `expected one of: ${options.join(', ')}.`;
 
-	const [value, setValue] = useState<T>(() => {
-		if (!enabled) {
+	const read = (on: boolean): T => {
+		if (!on) {
 			return initial;
 		}
 		const fromUrl = urlParam ? new URLSearchParams(window.location.search).get(urlParam) : null;
@@ -46,7 +47,17 @@ export function usePersistentChoice<T extends string>(
 		}
 		console.warn(`[ab] Ignoring unknown ${label} "${stored}" in localStorage "${key}"; ${expected}`);
 		return initial;
-	});
+	};
+
+	// The value belongs to the `enabled` it was read for: a change of `enabled` re-reads (derived state, no frame with a stale value).
+	const [state, setState] = useState<{ enabled: boolean; value: T }>(() => ({ enabled, value: read(enabled) }));
+	let current = state;
+	if (state.enabled !== enabled) {
+		current = { enabled, value: read(enabled) };
+		setState(current);
+	}
+	const value = current.value;
+	const setValue = (next: T): void => setState({ enabled, value: next });
 
 	useEffect(() => {
 		if (!enabled) {

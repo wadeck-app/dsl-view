@@ -226,3 +226,16 @@ describe('AbDock keys and reminders', () => {
 		expect(dock().querySelector('.flex-wrap')).toBeNull();
 	});
 });
+
+// The shell learns from the server that A/B tests are on after its first render: the dock is enabled late and must still open
+// folded when it was folded before the reload (agent-manager-owner: the fold state was lost on every reload).
+describe('AbDock enabled after the first render', () => {
+	it('opens in the stored fold state', () => {
+		localStorage.setItem(COLLAPSED_DOCK_KEY, 'collapsed');
+		const { rerender } = render(<Harness enabled={false} />);
+		expect(screen.queryByTestId('ab-dock')).toBeNull();
+		rerender(<Harness enabled />);
+		expect(pill()).toBeInTheDocument();
+		expect(screen.getByTestId('ab-dock')).not.toBeVisible();
+	});
+});

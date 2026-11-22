@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef } from 'react';
 
+import type { AbDockAlign } from './AbDock.js';
 import { AbExperimentsDock } from './AbExperimentsDock.js';
 import { createAbStore } from './abStore.js';
 import type { AbStore } from './abStore.js';
@@ -19,6 +20,8 @@ export interface AbExperimentsProps {
 	enabled?: boolean;
 	/** Tests the host declared in code with `useAbTest`, shown in the same dock before the ones declared in views. */
 	tests?: readonly AbDockTest[];
+	/** Side of the strip the dock sits on, so it can leave a bottom action row of the page free. @default 'center' */
+	align?: AbDockAlign;
 	children: React.ReactNode;
 }
 
@@ -33,7 +36,7 @@ export interface AbExperimentsProps {
  *
  * Not a DSL node: it is a React API for the host app's code, so it carries no `@registryCategory`.
  */
-export function AbExperiments({ enabled = isDev(), tests = [], children }: AbExperimentsProps): React.ReactElement {
+export function AbExperiments({ enabled = isDev(), tests = [], align, children }: AbExperimentsProps): React.ReactElement {
 	const outer = useContext(AbExperimentsContext);
 	const storeRef = useRef<AbStore | null>(null);
 	if (storeRef.current === null) {
@@ -52,7 +55,7 @@ export function AbExperiments({ enabled = isDev(), tests = [], children }: AbExp
 	return (
 		<AbExperimentsContext.Provider value={value}>
 			{children}
-			<AbExperimentsDock store={store} hostTests={tests} enabled={enabled} />
+			<AbExperimentsDock store={store} hostTests={tests} enabled={enabled} align={align} />
 		</AbExperimentsContext.Provider>
 	);
 }

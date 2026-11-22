@@ -664,7 +664,7 @@ Host (once, near the root; React, not YAML):
 
 ```tsx
 import { AbExperiments } from '@wadeck-app/dsl-ui';
-<AbExperiments enabled={settings.experiments}>{app}</AbExperiments>   // `tests={[...]}` adds useAbTest tests to the same dock
+<AbExperiments enabled={settings.experiments}>{app}</AbExperiments>   // `tests={[...]}` adds useAbTest tests to the same dock; `align="start" | "end"` moves it off the centre of the bottom edge (default `center`)
 ```
 
 | Situation | Behaviour |
@@ -678,6 +678,7 @@ import { AbExperiments } from '@wadeck-app/dsl-ui';
 | `AbTest` inside a variant | Allowed, with its own id; its row exists while its variant is shown, listed ABOVE the row of its parent (the dock grows upwards, so the clicked row does not move). |
 | `AbExperiments` inside `AbExperiments` | `console.error`; only the outer dock exists. |
 
+- `enabled` may turn on after the first render (a setting fetched from the server): the fold state, the hidden rows and the stored choices are read at that moment, so a reload keeps them.
 - Host tests declared deeper than the `AbExperiments` mount: call `useRegisterAbTests([test, ...])` where `useAbTest` is called. A new array each render is fine; rows are removed on unmount or when a test leaves the array. Same duplicate-id rule as above; without `AbExperiments` it warns once in development.
 - Folding the dock (`AbDock` and `AbExperiments`): the chevron on its top edge, or Escape while the focus is inside it, folds it into an `A/B (N)` pill (N counts every test, hidden rows included); the pill unfolds it. Choices stay applied while folded. State in `localStorage ab.collapsed` (`open` / `collapsed`), synced across tabs; an unknown stored value warns `[ab]` and stays open. Escape elsewhere on the page does nothing.
 - Dock layout (`AbDock` and `AbExperiments`): never wider than the window; a row is one line that never wraps (any number of choices, cells keep their natural width) and scrolls sideways; the chosen option is scrolled into view on change, on resize and when the pointer leaves a row the user scrolled. Below 640px the label is cut at 6rem (full text in its tooltip), the label column has no minimum and the dock keeps 0.5rem at each side; the dock never goes under a side menu (`--ab-dock-inset-left` / `--app-shell-menu-width`), so its width is the window minus that inset, the paddings and the copy button. Labels are `text-xs`, options `text-sm` (32px targets). The hint of the hovered or keyboard-focused option shows above the dock and is the option's `aria-describedby` (the `title` stays). While shown (or folded), the dock appends a spacer of its height to the page flow so the end of the page stays reachable; it only helps when the document scrolls, an app with an inner scroll container must leave the room itself.

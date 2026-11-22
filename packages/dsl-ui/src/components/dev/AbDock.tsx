@@ -17,7 +17,10 @@ export type { AbTest } from './AbTest.js';
 // z-[9999]: stays above every overlay, modal and sticky element of the page.
 // The frame is a strip over the content area (from the left inset to the window's right edge) that centres the dock and
 // lets clicks through (pointer-events-none); the dock and the copy button take them back.
-const FRAME_CLASS = 'pointer-events-none fixed bottom-6 z-[9999] flex items-end justify-center gap-2 px-2 sm:px-4';
+const FRAME_CLASS = 'pointer-events-none fixed bottom-6 z-[9999] flex items-end gap-2 px-2 sm:px-4';
+// Where the dock sits along the strip. Centre by default; a host whose page has an action row at the bottom moves it aside.
+const ALIGN_CLASS = { start: 'justify-start', center: 'justify-center', end: 'justify-end' } as const;
+export type AbDockAlign = keyof typeof ALIGN_CLASS;
 // w-max: as wide as the widest row. min-w-0 lets it shrink; each row then scrolls sideways.
 const DOCK_BOX_CLASS = 'pointer-events-auto relative min-w-0 w-max';
 // Never wider than the strip (so never under a side menu), nor than the window minus a small margin.
@@ -58,7 +61,7 @@ const COLLAPSE_OPTIONS = ['open', 'collapsed'] as const;
  * never reach users. `enabled` forces it on or off, e.g. for a staging build. A production build still contains the
  * code unless the bundler removes the dead branch: do not rely on this to shrink the bundle, only to hide the tool.
  *
- * Placement: centred on the content area, never wider than it. The dock spans from a left inset to the window's right
+ * Placement: centred on the content area by default (`align: 'start' | 'end'` moves it to a side, e.g. away from a bottom action row), never wider than it. The dock spans from a left inset to the window's right
  * edge. The inset is, in order: the `insetLeft` prop (any CSS length), the CSS variable `--ab-dock-inset-left`, the
  * variable `--app-shell-menu-width` that `AppShell` publishes on the document root while mounted, then 0px (no shell:
  * the whole window). So under an `AppShell` nothing has to be configured. A host with its own side menu sets
@@ -81,7 +84,7 @@ const COLLAPSE_OPTIONS = ['open', 'collapsed'] as const;
  *
  * Not a DSL node: it is a React API (hook + component) for the host app's code, so it carries no `@registryCategory`.
  */
-export function AbDock({ tests, enabled = isDev(), insetLeft }: { tests: readonly AbTest[]; enabled?: boolean; insetLeft?: string }): React.ReactElement | null {
+export function AbDock({ tests, enabled = isDev(), insetLeft, align = 'center' }: { tests: readonly AbTest[]; enabled?: boolean; insetLeft?: string; align?: AbDockAlign }): React.ReactElement | null {
 	// Off (production by default): the tool reads nothing from the storage, so a stale value cannot even log a warning.
 	const [hidden, toggleHidden] = usePersistentSet(HIDDEN_TESTS_KEY, enabled);
 	// The fold state is read even with no test yet: a test registering later must find the stored state, not 'open'.
@@ -141,7 +144,7 @@ export function AbDock({ tests, enabled = isDev(), insetLeft }: { tests: readonl
 		<div
 			ref={frameRef}
 			data-testid="ab-dock-frame"
-			className={FRAME_CLASS}
+			className={`${FRAME_CLASS} ${ALIGN_CLASS[align]}`}
 			style={{ left: DOCK_INSET_LEFT, right: 0, ...(insetLeft === undefined ? {} : ({ '--ab-dock-inset-left': insetLeft } as React.CSSProperties)) }}
 		>
 			<div className={DOCK_BOX_CLASS} style={{ maxWidth: DOCK_BOX_MAX_WIDTH }}>

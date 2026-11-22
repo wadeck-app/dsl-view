@@ -221,3 +221,21 @@ describe('AbDock option hint', () => {
 		expect(b1).toHaveAccessibleDescription('b hint 1');
 	});
 });
+
+// A dock centred at the bottom can sit on the action row of the page behind it, folded or not: the host picks the side.
+describe('AbDock align', () => {
+	it.each([
+		['start', 'justify-start'],
+		['center', 'justify-center'],
+		['end', 'justify-end'],
+	] as const)('align %s puts the dock on the %s side of the strip', (align, expected) => {
+		render(<AbDock tests={[testWith('a')]} enabled align={align} />);
+		expect(frame().className).toContain(expected);
+	});
+
+	it('stays centred by default', () => {
+		render(<AbDock tests={[testWith('a')]} enabled />);
+		expect(frame().className).toContain('justify-center');
+		expect(frame().className).not.toContain('justify-end');
+	});
+});
