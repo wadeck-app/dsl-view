@@ -974,6 +974,7 @@ Visible change for every `AppShell` consumer, no option: the current entry (`cur
 - The bar follows `--color-primary`, so `useRootAccent` / `AccentScope` colour it per module. Same bar in the `barOnScroll` `shrink` and `icons` states and in the icons-only `resizable` menu.
 - `ShellItem.accent` is deprecated and ignored (it only coloured the glow); drop it and set the module colour with `useRootAccent`.
 - The tabs overflow list (`moreLabel`) keeps its previous current style.
+- With `moreLabel`, a tab is either in the bar or in the list, never both: a tab cut off, even by a few pixels, is listed and not drawn in the bar (it keeps its box, hidden), and the bar shows no scrollbar. The list opens under its own button, right-aligned to it, or from its left edge when that would leave the window. Without `moreLabel` nothing changes: the bar scrolls and shows its scrollbar.
 
 ## `AppShell` item badge (`ShellItem.badge`)
 

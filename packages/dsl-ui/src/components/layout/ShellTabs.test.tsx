@@ -424,3 +424,84 @@ describe('AppShell tabs observers and edge cases', () => {
 		expect(button.getAttribute('aria-expanded')).toBe('true');
 	});
 });
+
+// A tab cut by a few pixels used to be drawn in the bar AND listed in the panel: a module must appear once. The panel
+// also belongs under its button, not at the edge of the whole top bar (app-core-owner, with the user's screenshot).
+describe('AppShell tabs: a module appears once, the panel sits under its button', () => {
+	beforeEach(fakeLayout);
+	afterEach(restoreLayout);
+
+	const barLink = (name: string) => within(screen.getByRole('navigation', { name: 'Sections' })).getByText(name).closest('a')!;
+	const scrollBy = (px: number) => {
+		const el = screen.getByRole('navigation', { name: 'Sections' });
+		el.scrollLeft = px;
+		act(() => {
+			fireEvent.scroll(el);
+		});
+	};
+
+	it('does not draw in the bar a tab it lists: a tab cut by 12px is listed and invisible, the whole ones are drawn', () => {
+		render(shell(tabs(8, 1), 'More'));
+		scrollBy(12);
+		// Tab 0 is cut by 12px at the left, tab 3 starts at 288 and is cut at the right edge; tabs 1 and 2 are whole.
+		fireEvent.click(screen.getByRole('button', { name: /more/i }));
+		const listed = within(screen.getByRole('navigation', { name: 'More' })).getAllByRole('link').map((a) => a.textContent);
+		expect(listed).toEqual(['Tab 0', 'Tab 3', 'Tab 4', 'Tab 5', 'Tab 6', 'Tab 7']);
+		for (const name of listed) {
+			expect(barLink(name!).className.split(/\s+/), `${name} is listed, so not drawn in the bar`).toContain('invisible');
+		}
+		for (const name of ['Tab 1', 'Tab 2']) {
+			expect(barLink(name).className.split(/\s+/), `${name} is drawn`).not.toContain('invisible');
+		}
+	});
+
+	it('draws every tab when nothing is listed (no moreLabel, or everything fits)', () => {
+		const { unmount } = render(shell(tabs(8, 0)));
+		expect(barLink('Tab 5').className.split(/\s+/)).not.toContain('invisible');
+		unmount();
+		render(shell(tabs(3, 0), 'More'));
+		expect(barLink('Tab 2').className.split(/\s+/)).not.toContain('invisible');
+	});
+
+	it('hides the scrollbar of the bar when the list replaces it, and keeps it without moreLabel', () => {
+		const { unmount } = render(shell(tabs(8, 0), 'More'));
+		expect(screen.getByRole('navigation', { name: 'Sections' }).className).toContain('[scrollbar-width:none]');
+		unmount();
+		render(shell(tabs(8, 0)));
+		expect(screen.getByRole('navigation', { name: 'Sections' }).className).not.toContain('[scrollbar-width:none]');
+	});
+
+	it('anchors the panel to its own button: the wrapper is positioned, the panel right-aligned to it', () => {
+		render(shell(tabs(8, 0), 'More'));
+		const button = screen.getByRole('button', { name: /more/i });
+		fireEvent.click(button);
+		const wrapper = button.parentElement!;
+		expect(wrapper.className.split(/\s+/)).toContain('relative');
+		expect(wrapper.className.split(/\s+/)).not.toContain('static');
+		const panel = screen.getByRole('navigation', { name: 'More' });
+		expect(panel.className.split(/\s+/)).toEqual(expect.arrayContaining(['absolute', 'right-0', 'top-full']));
+	});
+
+	it('moves the panel to the left edge of its button when right-aligned it would leave the window', () => {
+		const real = Element.prototype.getBoundingClientRect;
+		vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+			if (this.tagName === 'NAV' && this.getAttribute('aria-label') === 'More') {
+				return { left: -50, right: 190, top: 44, bottom: 300, width: 240, height: 256, x: -50, y: 44, toJSON: () => ({}) } as DOMRect;
+			}
+			return real.call(this);
+		});
+		render(shell(tabs(8, 0), 'More'));
+		fireEvent.click(screen.getByRole('button', { name: /more/i }));
+		const classes = screen.getByRole('navigation', { name: 'More' }).className.split(/\s+/);
+		expect(classes).toContain('left-0');
+		expect(classes).not.toContain('right-0');
+	});
+
+	it('keeps the panel right-aligned when it fits', () => {
+		render(shell(tabs(8, 0), 'More'));
+		fireEvent.click(screen.getByRole('button', { name: /more/i }));
+		const classes = screen.getByRole('navigation', { name: 'More' }).className.split(/\s+/);
+		expect(classes).toContain('right-0');
+		expect(classes).not.toContain('left-0');
+	});
+});

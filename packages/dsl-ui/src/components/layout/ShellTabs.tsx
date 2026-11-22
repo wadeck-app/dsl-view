@@ -36,10 +36,16 @@ const TAB_OTHER = 'font-medium text-muted hover:bg-muted-bg hover:text-content';
 
 const MORE_BUTTON =
 	'flex h-full shrink-0 items-center gap-1 px-3 text-sm font-medium text-muted transition-colors hover:bg-muted-bg hover:text-content focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary';
-const MORE_PANEL = 'absolute right-0 top-full z-20 flex max-h-[70vh] w-60 flex-col gap-0.5 overflow-y-auto rounded-md border border-border bg-surface p-1 shadow-md';
+// Under its own button, right-aligned to it (`PANEL_START` swaps to its left edge when that would leave the window).
+const PANEL_END = 'right-0';
+const PANEL_START = 'left-0';
+const MORE_PANEL = 'absolute top-full z-20 flex max-h-[70vh] w-60 flex-col gap-0.5 overflow-y-auto rounded-md border border-border bg-surface p-1 shadow-md';
 const MORE_ITEM = 'flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors';
 const MORE_ITEM_CURRENT = 'bg-primary-light font-medium text-primary';
 const MORE_ITEM_OTHER = 'text-muted hover:bg-muted-bg hover:text-content';
+
+// With the list to reach the cut tabs, the bar needs no scrollbar (it is 44px tall and a bar under the tabs reads as a defect).
+const NO_SCROLLBAR = '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
 
 // Tolerance for sub-pixel layout: a tab cut by less than this still counts as fully visible.
 const EDGE_TOLERANCE_PX = 1;
@@ -100,6 +106,9 @@ export function ShellTabs({ tabs, tabsLabel, renderLink, moreLabel, density = 'n
 	const panelId = useId();
 	const [hiddenIds, setHiddenIds] = useState<string[]>([]);
 	const [open, setOpen] = useState(false);
+	// Right-aligned to the button leaves the window on the left (a button near the left edge): align to its left edge instead.
+	const [panelAtStart, setPanelAtStart] = useState(false);
+	const panelRef = useRef<HTMLElement>(null);
 	const currentId = tabs.find((tab) => tab.current)?.id;
 
 	// Read through a ref so that a host re-creating the tabs array on each render does not re-run the effects below.
@@ -155,6 +164,18 @@ export function ShellTabs({ tabs, tabsLabel, renderLink, moreLabel, density = 'n
 		};
 	}, [measure, revealCurrent]);
 
+	// Measured as soon as the panel is open, before paint: it is right-aligned first, and moves only if that cuts it off.
+	useLayoutEffect(() => {
+		if (!open) {
+			setPanelAtStart(false);
+			return;
+		}
+		const panel = panelRef.current;
+		if (panel && panel.getBoundingClientRect().left < 0) {
+			setPanelAtStart(true);
+		}
+	}, [open]);
+
 	// Close on Escape (focus returns to the button) and on a press outside the control.
 	useEffect(() => {
 		if (!open) {
@@ -181,6 +202,9 @@ export function ShellTabs({ tabs, tabsLabel, renderLink, moreLabel, density = 'n
 
 	const hiddenTabs = tabs.filter((tab) => hiddenIds.includes(tab.id));
 	const showMore = moreLabel !== undefined && hiddenTabs.length > 0;
+	// A listed tab is not drawn in the bar (visibility keeps its box, so it can still be measured and scrolled to): a module is
+	// either in the bar or in the list, never both, even when it is cut by a few pixels.
+	const listed = (id: string): boolean => showMore && hiddenIds.includes(id);
 	// The control disappears when nothing is cut off any more: do not leave the panel open on nothing.
 	useEffect(() => {
 		if (!showMore) {
@@ -191,12 +215,12 @@ export function ShellTabs({ tabs, tabsLabel, renderLink, moreLabel, density = 'n
 	return (
 		<>
 			{/* As tall as the top bar (self-stretch). Scrolls instead of wrapping when there are more tabs than the bar can hold. */}
-			<nav ref={navRef} aria-label={tabsLabel} className="flex min-w-0 items-center gap-4 self-stretch overflow-x-auto">
+			<nav ref={navRef} aria-label={tabsLabel} className={`flex min-w-0 items-center gap-4 self-stretch overflow-x-auto ${moreLabel === undefined ? '' : NO_SCROLLBAR}`}>
 				{tabs.map((tab) => (
 					<React.Fragment key={tab.id}>
 						{renderLink({
 							href: tab.href,
-							className: `${TAB_BASE} ${TAB_SIZE[density]} ${tab.current ? TAB_CURRENT : TAB_OTHER}`,
+							className: `${TAB_BASE} ${TAB_SIZE[density]} ${tab.current ? TAB_CURRENT : TAB_OTHER}${listed(tab.id) ? ' invisible' : ''}`,
 							'aria-current': tab.current,
 							// Icons only: the tooltip says what the icon is, and the name stays in the DOM for assistive technology.
 							title: density === 'icons' ? labelWithBadge(tab) : undefined,
@@ -229,7 +253,7 @@ export function ShellTabs({ tabs, tabsLabel, renderLink, moreLabel, density = 'n
 				))}
 			</nav>
 			{showMore && (
-				<div ref={moreRef} className="static flex h-full shrink-0 items-center">
+				<div ref={moreRef} className="relative flex h-full shrink-0 items-center">
 					{/* violations-suppress: react/no-raw-button the shell's overflow disclosure owns its geometry (as tall as the top bar) */}
 					<button ref={buttonRef} type="button" className={MORE_BUTTON} aria-expanded={open} aria-controls={panelId} onClick={() => setOpen((value) => !value)}>
 						{moreLabel}
@@ -238,7 +262,7 @@ export function ShellTabs({ tabs, tabsLabel, renderLink, moreLabel, density = 'n
 					{open && (
 						// Closes when a link inside is used: the host navigates, the tab list changes.
 						// eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
-						<nav id={panelId} aria-label={moreLabel} className={MORE_PANEL} onClick={() => setOpen(false)}>
+						<nav ref={panelRef} id={panelId} aria-label={moreLabel} className={`${MORE_PANEL} ${panelAtStart ? PANEL_START : PANEL_END}`} onClick={() => setOpen(false)}>
 							{hiddenTabs.map((tab) => (
 								<React.Fragment key={tab.id}>
 									{renderLink({
