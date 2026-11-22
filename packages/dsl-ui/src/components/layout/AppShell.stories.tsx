@@ -209,6 +209,23 @@ function MenuVariantDemo({ menuVariant, menu = GROUPED_MENU }: { menuVariant: Sh
 	);
 }
 
+/** `menuHidden` is controlled by the host: here a plain button toggles it. The width of a resizable menu survives the round trip. */
+export const MenuHiddenByTheHost: Story = {
+	render: () => {
+		const [hidden, setHidden] = useState(false);
+		return (
+			<AppShell brand="my-app" tabs={tabs('queue')} tabsLabel="Modules" menu={GROUPED_MENU} menuVariant="resizable" resizeLabel="Resize the menu" menuHidden={hidden}>
+				<div className="p-6 text-content">
+					<button type="button" aria-expanded={!hidden} onClick={() => setHidden(h => !h)} className="rounded border border-border px-3 py-1 text-sm">
+						{hidden ? 'Show navigation' : 'Hide navigation'}
+					</button>
+					<p className="mt-4 text-muted">Drag the menu edge, hide it, show it again: the width is kept.</p>
+				</div>
+			</AppShell>
+		);
+	},
+};
+
 /** The reference: 15rem fixed. */
 export const MenuClassic: Story = { render: () => <MenuVariantDemo menuVariant="classic" /> };
 /** 12rem fixed. */

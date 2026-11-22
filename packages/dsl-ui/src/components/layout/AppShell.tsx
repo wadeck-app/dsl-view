@@ -206,6 +206,13 @@ export interface AppShellProps {
 	 * warning asks for the prop. Ignored by the other variants.
 	 */
 	resizeLabel?: string;
+	/**
+	 * Takes the side menu away (default false, unchanged): no aside, no resize handle, no backdrop, `--app-shell-menu-width` is `0px` so
+	 * everything that follows it (content, A/B dock, sticky bars) takes the whole width. Controlled: the shell keeps no state of its own and
+	 * shows no button; the host decides when and puts its own toggle where it wants (e.g. beside the breadcrumb). Going back to false
+	 * restores the menu with the width it had, a `resizable` width included (the stored value is never touched).
+	 */
+	menuHidden?: boolean;
 	children: React.ReactNode;
 }
 
@@ -237,7 +244,7 @@ let mountedShells = 0;
 const SKIP_LINK =
 	'sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-40 focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:text-content focus:shadow-md';
 
-export function AppShell({ brand, tabs, tabsLabel, menu, actions, renderLink = defaultRenderLink, skipLabel, moreLabel, barOnScroll, menuVariant, resizeLabel, children }: AppShellProps): React.ReactElement {
+export function AppShell({ brand, tabs, tabsLabel, menu, actions, renderLink = defaultRenderLink, skipLabel, moreLabel, barOnScroll, menuVariant, resizeLabel, menuHidden = false, children }: AppShellProps): React.ReactElement {
 	const mainId = useId();
 	const mode = classFor('AppShell', 'barOnScroll', barOnScroll, BAR_ON_SCROLL_MODES, 'steady') as BarOnScroll;
 	const [focusedInside, setFocusedInside] = useState(false);
@@ -251,9 +258,11 @@ export function AppShell({ brand, tabs, tabsLabel, menu, actions, renderLink = d
 	const asideRef = useRef<HTMLElement>(null);
 	// The two variants that compute their width: `fit` measures the entries, `resizable` is dragged. Both are off (no
 	// measure, no storage read) for the others.
-	const fitRem = useFitMenuWidth(variant === 'fit', asideRef, menuFitKey(menu));
+	const fitRem = useFitMenuWidth(variant === 'fit' && !menuHidden, asideRef, menuFitKey(menu));
 	const resize = useResizableMenuWidth(variant === 'resizable');
-	const menuWidth = isFixedWidthVariant(variant) ? MENU_FIXED_WIDTH[variant] : variant === 'fit' ? `${fitRem}rem` : `${resize.rem}rem`;
+	const variantWidth = isFixedWidthVariant(variant) ? MENU_FIXED_WIDTH[variant] : variant === 'fit' ? `${fitRem}rem` : `${resize.rem}rem`;
+	// Hidden: no column. The variant's own state (a dragged width) lives in the hooks above and survives.
+	const menuWidth = menuHidden ? '0px' : variantWidth;
 	// A `resizable` menu under 6rem has no room for a label: icons (or initials) only, the label as tooltip.
 	const iconsOnly = variant === 'resizable' && resize.rem < MENU_ICONS_ONLY_BELOW_REM;
 
@@ -290,12 +299,14 @@ export function AppShell({ brand, tabs, tabsLabel, menu, actions, renderLink = d
 			    scroll), and the bar is shorter than that while it animates or after a small scroll: without this, the strip
 			    between them shows the page background. Same width variable and right border as the menu, so it follows a drag.
 			    Not interactive, not announced, painted before the (positioned) bar and menu so both stay above it. */}
+			{!menuHidden && (
 			<div
 				aria-hidden="true"
 				data-testid="shell-menu-backdrop"
 				className="pointer-events-none absolute inset-y-0 left-0 border-r border-border bg-surface"
 				style={{ width: `var(${APP_SHELL_MENU_WIDTH_VAR})` }}
 			/>
+			)}
 			{/* 44px, no border: a soft shadow separates it from the page. Sticky, z-30: above the content's own stickies (z-10),
 			    below the menu flyout label (z-40) and the dialogs, toasts and popovers (z-50). Fixed height, whatever the tab:
 			    a tab can fill it from top to bottom. A shrunk bar gives back the height it lost as a bottom margin, so the
@@ -321,7 +332,7 @@ export function AppShell({ brand, tabs, tabsLabel, menu, actions, renderLink = d
 				{actions}
 			</header>
 			<div className="flex min-h-0 flex-1">
-				<ShellSideMenu menu={menu} renderLink={renderLink} width={menuWidth} asideRef={asideRef} resize={variant === 'resizable' ? resize : undefined} resizeLabel={resizeLabel} iconsOnly={iconsOnly} />
+				{!menuHidden && <ShellSideMenu menu={menu} renderLink={renderLink} width={menuWidth} asideRef={asideRef} resize={variant === 'resizable' ? resize : undefined} resizeLabel={resizeLabel} iconsOnly={iconsOnly} />}
 				<main id={mainId} tabIndex={-1} className="min-w-0 flex-1 focus:outline-none">
 					{children}
 				</main>

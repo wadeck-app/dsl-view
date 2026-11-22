@@ -1073,6 +1073,7 @@ First published version containing the change (`dsl-ui` and `dsl-renderer` share
 | `2026.11.14-343` | `ToastProvider`: an error toast has no left icon (a red circled cross next to the dismiss button read as a second close control); success and info keep theirs. |
 | `2026.11.15-356` | The caption of a side-menu group (`separator` with a `label`) is as large as a link (`text-sm`), semibold and in the content colour; it was `text-xs` and muted, smaller than the links under it. |
 | `2026.11.21-359` | `$actions`: `clear: true` (with `resultKey`, no `url`) removes the value stored under `resultKey`, so a `DialogForm` (`visible: $key`) or a Dialog/Drawer opened by a url-less action can be closed: `closeX: { resultKey: key, clear: true }`, wired as `onClose: $closeX` (`onOpenChange` on Dialog and ConfirmDialog). `DialogForm` without `onClose` logs how to wire it (development only). See "Opening and closing a dialog". |
+| `2026.11.22-370` | `AppShell` `menuHidden` (boolean, default false = unchanged): no aside, resize handle or backdrop, `--app-shell-menu-width` is `0px` (content, A/B dock and sticky bars take the whole width). Controlled and button-less: the host owns the toggle (e.g. beside the breadcrumb). Showing it again restores the width, a `resizable` one included (the stored value is never touched). Also in this range: `Badge` `onRemove`/`removeLabel`/`title`, `ButtonAction` `form`, opacity modifiers on theme colours, `TimeSeriesChart`/`TimeBrush` `initialWindow`, A/B dock `align` and late `enabled`. |
 
 ## Pitfalls
 
