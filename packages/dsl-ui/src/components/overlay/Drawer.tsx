@@ -2,7 +2,7 @@ import { X } from 'lucide-react';
 import React, { createContext, useCallback, useContext, useEffect, useId, useRef } from 'react';
 import ReactDOM from 'react-dom';
 
-import { focusFirstIn, trapTab } from '@dsl-ui/utils/focusTrap.js';
+import { focusInitialIn, trapTab } from '@dsl-ui/utils/focusTrap.js';
 
 import { Button } from '../controls/_Button.js';
 import { classFor } from '@dsl-ui/utils/warnUnknownChoice.js';
@@ -111,7 +111,7 @@ export function Drawer({
 			requestAnimationFrame(() => {
 				const drawer = drawerRef.current;
 				if (!drawer) return;
-				focusFirstIn(drawer);
+				focusInitialIn(drawer);
 			});
 		} else {
 			if (previousFocusRef.current instanceof HTMLElement) {

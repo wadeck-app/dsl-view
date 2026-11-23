@@ -2,7 +2,7 @@ import { X } from 'lucide-react';
 import React, { createContext, useCallback, useContext, useEffect, useId, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 
-import { focusFirstIn, trapTab } from '@dsl-ui/utils/focusTrap.js';
+import { focusInitialIn, trapTab } from '@dsl-ui/utils/focusTrap.js';
 
 import { Button } from '../controls/_Button.js';
 
@@ -57,6 +57,11 @@ export function Dialog({
 	const dialogRef = useRef<HTMLDivElement>(null);
 	const previousFocusRef = useRef<Element | null>(null);
 	const isOpenRef = useRef(isOpen);
+	// Read while rendering, before the commit: a field with React's `autoFocus` takes the focus during the commit, so by the time
+	// an effect runs `activeElement` is already inside the dialog and focus would never go back to the trigger.
+	if (isOpen && !isOpenRef.current) {
+		previousFocusRef.current = document.activeElement;
+	}
 	useEffect(() => {
 		isOpenRef.current = isOpen;
 	}, [isOpen]);
@@ -108,12 +113,11 @@ export function Dialog({
 	// Focus management: trap focus when open, restore when closed
 	useEffect(() => {
 		if (isOpen) {
-			previousFocusRef.current = document.activeElement;
-			// Focus the first focusable element inside the dialog
+			// Focus what asks for it (data-autofocus, a field that took it itself), else the first focusable element inside the dialog
 			requestAnimationFrame(() => {
 				const dialog = dialogRef.current;
 				if (!dialog) return;
-				focusFirstIn(dialog);
+				focusInitialIn(dialog);
 			});
 		} else {
 			// Restore focus to the element that was focused before opening

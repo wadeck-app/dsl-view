@@ -33,6 +33,27 @@ export function focusFirstIn(container: HTMLElement): void {
 }
 
 /**
+ * The initial focus of a modal, in this order:
+ * 1. the first element marked `data-autofocus` that can take the focus (React renders `autoFocus` as a call to focus(), not as
+ *    an attribute, so the marker is the way to ask declaratively; a marked control that is disabled is skipped);
+ * 2. an element inside the container that already has the focus (a field with React's `autoFocus`): it is left alone, the
+ *    modal does not take the focus back from what asked for it;
+ * 3. otherwise the first focusable element, or the container (see `focusFirstIn`).
+ */
+export function focusInitialIn(container: HTMLElement): void {
+	const marked = Array.from(container.querySelectorAll<HTMLElement>('[data-autofocus]')).find((el) => el.matches(FOCUSABLE_SELECTOR) || el.hasAttribute('tabindex'));
+	if (marked) {
+		marked.focus();
+		return;
+	}
+	const active = document.activeElement;
+	if (active instanceof HTMLElement && active !== container && container.contains(active)) {
+		return;
+	}
+	focusFirstIn(container);
+}
+
+/**
  * Keeps Tab and Shift+Tab inside a modal container. Call it from the keydown handler while the modal is open.
  * Returns true when it moved focus itself (and cancelled the key), false when the browser must handle the key.
  *

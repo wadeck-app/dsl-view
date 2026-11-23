@@ -516,3 +516,22 @@ describe('Drawer', () => {
 		});
 	});
 });
+
+describe('Drawer initial focus', () => {
+	it('keeps the focus on a field that took it itself, and honours data-autofocus', async () => {
+		const { unmount } = renderDrawer({ children: <input aria-label="PIN" autoFocus /> });
+		await new Promise(resolve => setTimeout(resolve, 60));
+		expect(document.activeElement).toBe(screen.getByLabelText('PIN'));
+		unmount();
+		renderDrawer({
+			children: (
+				<div>
+					<input aria-label="First" />
+					<input aria-label="Second" data-autofocus="" />
+				</div>
+			),
+		});
+		await new Promise(resolve => setTimeout(resolve, 60));
+		expect(document.activeElement).toBe(screen.getByLabelText('Second'));
+	});
+});

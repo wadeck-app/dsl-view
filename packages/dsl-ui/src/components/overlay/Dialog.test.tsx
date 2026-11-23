@@ -359,3 +359,52 @@ describe('Dialog', () => {
 		expect(screen.getByText('Controlled Dialog')).toBeInTheDocument();
 	});
 });
+
+// The dialog moved the focus to its first control (the close button) one frame after opening, taking it from a field that had
+// asked for it (a PIN field with `autoFocus`): the field, or any element marked data-autofocus, keeps the focus.
+describe('Dialog initial focus', () => {
+	const open = async (children: React.ReactNode) => {
+		const user = userEvent.setup();
+		render(
+			<Dialog title="T" trigger={<button>Open</button>}>
+				{children}
+			</Dialog>
+		);
+		await user.click(screen.getByRole('button', { name: 'Open' }));
+		await screen.findByRole('dialog');
+		// The initial focus is decided one animation frame after the dialog mounts.
+		await new Promise(resolve => setTimeout(resolve, 60));
+		return user;
+	};
+
+	it('keeps the focus on a field that took it itself (React autoFocus)', async () => {
+		await open(<input aria-label="PIN" autoFocus />);
+		expect(document.activeElement).toBe(screen.getByLabelText('PIN'));
+	});
+
+	it('gives the focus to the element marked data-autofocus, not to the first control', async () => {
+		await open(
+			<div>
+				<input aria-label="First" />
+				<input aria-label="Second" data-autofocus="" />
+			</div>
+		);
+		expect(document.activeElement).toBe(screen.getByLabelText('Second'));
+	});
+
+	it('still goes to the first control (the close button) when nothing asks for the focus', async () => {
+		await open(<input aria-label="Name" />);
+		expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Close dialog' }));
+	});
+
+	it('ignores a marked element that cannot take the focus and falls back to the first control', async () => {
+		await open(<input aria-label="Locked" data-autofocus="" disabled />);
+		expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Close dialog' }));
+	});
+
+	it('still returns the focus to the trigger when it closes', async () => {
+		const user = await open(<input aria-label="PIN" autoFocus />);
+		await user.keyboard('{Escape}');
+		expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Open' }));
+	});
+});
