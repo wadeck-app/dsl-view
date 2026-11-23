@@ -84,7 +84,7 @@ items:
         label: "overlay"
     items:
       - $type: "Markdown"
-        text: "Modal dialog with title, focus trap, optional trigger and actions footer, in four sizes; pick it for custom content, ConfirmDialog or DialogForm for ready-made ones."
+        text: "Modal dialog with title, focus trap, optional trigger and actions footer, in four sizes (initial focus: an element marked `data-autofocus`, else a field that took it itself, else the first control); pick it for custom content, ConfirmDialog or DialogForm for ready-made ones."
       - $type: "HorizontalStack"
         wrap: true
         items:
@@ -137,7 +137,7 @@ items:
         label: "overlay"
     items:
       - $type: "Markdown"
-        text: "Modal side panel sliding from left, right or bottom with optional title, footer and close button; pick it over Dialog for a larger contextual panel."
+        text: "Modal side panel sliding from left, right or bottom with optional title, footer and close button (same initial focus rule as Dialog); pick it over Dialog for a larger contextual panel."
       - $type: "HorizontalStack"
         wrap: true
         items:
