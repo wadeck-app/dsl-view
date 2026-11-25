@@ -17,7 +17,7 @@
  *   - Formatting that encodes app state (e.g. "Auto-deletes in N days" is wdrive-specific)
  */
 import { ChevronDown, ChevronRight, ChevronUp, ChevronsUpDown, Loader2 } from 'lucide-react';
-import React, { createContext, useCallback, useContext, useId, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import { Button } from '../controls/_Button.js';
 import { IconButton } from '../controls/IconButton.js';
@@ -724,7 +724,17 @@ export interface DataTableProps<T extends Record<string, unknown>> {
 	/** Enable row multi-selection. */
 	selectable?: boolean;
 	/** Actions available when rows are selected. */
-	batchActions?: Array<{ label: string; action: string; variant?: 'primary' | 'danger' | 'ghost' | 'success' }>;
+	batchActions?: Array<{
+		label: string;
+		action: string;
+		/** Default `secondary` (neutral). `danger-outline` is the destructive action short of solid red. */
+		variant?: 'primary' | 'secondary' | 'neutral' | 'danger' | 'danger-outline' | 'ghost' | 'success';
+		/**
+		 * Keep the selection after this action instead of clearing it (default: cleared). Use it for an action that asks for
+		 * a confirmation: cancelling must not lose the selection. Rows that leave the table are dropped from the selection.
+		 */
+		keepSelection?: boolean;
+	}>;
 	/**
 	 * Called when a batch action is triggered with the selected rows.
 	 * Defaults to the page's `$actions` batch handler (ctx.onBatchAction).
@@ -971,6 +981,16 @@ export function DataTable<T extends Record<string, unknown>>({
 
 	const clearSelection = useCallback(() => setSelectedIds([]), []);
 
+	// A row that left the table (deleted, filtered out by the source, reloaded elsewhere) cannot stay selected: the toolbar would
+	// count rows nobody can see and a batch action would not reach them. Pruned by id, so a reload with new objects keeps the selection.
+	useEffect(() => {
+		const present = new Set(rowIds.values());
+		setSelectedIds(prev => {
+			const kept = prev.filter(id => present.has(id));
+			return kept.length === prev.length ? prev : kept;
+		});
+	}, [rowIds]);
+
 	// Derive current page row IDs for select-all calculation
 	const currentPageIds = sortedRows.map(idOf);
 	const allSelected = currentPageIds.length > 0 && currentPageIds.every(id => selectedIds.includes(id));
@@ -1005,7 +1025,9 @@ export function DataTable<T extends Record<string, unknown>>({
 					onClick={() => {
 						const selectedRows = rows.filter(r => selectedIds.includes(idOf(r)));
 						onBatchAction?.(action.action, selectedRows);
-						clearSelection();
+						if (action.keepSelection !== true) {
+							clearSelection();
+						}
 					}}
 				>
 					{action.label}
@@ -1117,7 +1139,7 @@ export function DataTable<T extends Record<string, unknown>>({
 									return (
 										<th
 											key={col.key}
-											className={headerCellClass('px-3 py-2 font-normal whitespace-nowrap', fills)}
+											className={headerCellClass(`px-3 py-2 font-normal whitespace-nowrap${col.isActions ? ' text-right' : ''}`, fills)}
 											style={col.width ? { width: `${col.width * 4}px` } : undefined}
 										>
 											{col.label}
@@ -1231,10 +1253,11 @@ export function DataTable<T extends Record<string, unknown>>({
 													return (
 														<td
 															key={col.key}
-															className="px-3 py-1.5"
+															// The actions sit at the end of the row, in a column only as wide as its icons unless a width is given.
+															className={col.width ? 'px-3 py-1.5' : 'w-px whitespace-nowrap px-3 py-1.5'}
 															style={col.width ? { width: `${col.width * 4}px` } : undefined}
 														>
-															<div className="flex items-center gap-1">
+															<div className="flex items-center justify-end gap-1">
 																{col.actions.map((item, ii) => {
 																	if (item.condition) {
 																		const negate = item.condition.startsWith('!');

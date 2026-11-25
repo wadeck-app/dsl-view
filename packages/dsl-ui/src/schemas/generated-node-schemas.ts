@@ -955,7 +955,8 @@ export const DataTableNodeSchema = baseNode.extend({
 	batchActions: dsl(z.array(z.object({
 		label: z.string(),
 		action: z.string(),
-		variant: z.enum(['primary', 'danger', 'ghost', 'success']).optional(),
+		variant: z.enum(['primary', 'secondary', 'neutral', 'danger', 'danger-outline', 'ghost', 'success']).optional(),
+		keepSelection: z.boolean().optional(),
 	}))).optional(),
 	actionPending: dsl(z.record(z.string(), z.boolean())).optional(),
 	actionPendingRows: dsl(z.record(z.string(), z.array(z.string()))).optional(),
