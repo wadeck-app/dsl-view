@@ -3,6 +3,7 @@
 export * from './ActionBar.js';
 export * from './Collapsible.js';
 export * from './Divider.js';
+export * from './HeaderActions.js';
 export * from './HorizontalStack.js';
 export * from './PageContent.js';
 export * from './Section.js';
