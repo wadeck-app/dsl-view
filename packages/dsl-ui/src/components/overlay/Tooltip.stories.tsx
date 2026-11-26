@@ -1,15 +1,15 @@
 import type { Meta, StoryObj } from '@storybook/react';
 
 import { Button } from '../controls/_Button.js';
-import { HoverCard } from './HoverCard.js';
+import { Tooltip } from './Tooltip.js';
 
-const meta: Meta<typeof HoverCard> = {
-	title: 'Overlay/HoverCard',
-	component: HoverCard,
+const meta: Meta<typeof Tooltip> = {
+	title: 'Overlay/Tooltip',
+	component: Tooltip,
 	parameters: { layout: 'centered' },
 };
 export default meta;
-type Story = StoryObj<typeof HoverCard>;
+type Story = StoryObj<typeof Tooltip>;
 
 const ROWS = [
 	{ label: 'Model', value: 'opus' },
@@ -21,17 +21,17 @@ const ROWS = [
 
 export const Rows: Story = {
 	render: () => (
-		<HoverCard rows={ROWS}>
+		<Tooltip rows={ROWS}>
 			<Button>Hover or focus me</Button>
-		</HoverCard>
+		</Tooltip>
 	),
 };
 
 export const RowsAndContent: Story = {
 	render: () => (
-		<HoverCard rows={ROWS.slice(0, 3)} content={<p className="text-muted">Started 2 minutes ago.</p>}>
+		<Tooltip rows={ROWS.slice(0, 3)} content={<p className="text-muted">Started 2 minutes ago.</p>}>
 			<Button>With a note</Button>
-		</HoverCard>
+		</Tooltip>
 	),
 };
 
@@ -40,9 +40,9 @@ export const NearTheEdge: Story = {
 	parameters: { layout: 'fullscreen' },
 	render: () => (
 		<div className="flex h-screen items-start justify-end p-2">
-			<HoverCard rows={ROWS}>
+			<Tooltip rows={ROWS}>
 				<Button>Top right corner</Button>
-			</HoverCard>
+			</Tooltip>
 		</div>
 	),
 };

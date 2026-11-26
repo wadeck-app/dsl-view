@@ -217,6 +217,7 @@
 			"options",
 			"placeholder",
 			"resetUrlParams",
+			"size",
 			"storageKey",
 			"urlParam"
 		]
@@ -710,23 +711,6 @@
 			]
 		}
 	},
-	"HoverCard": {
-		"knownKeys": [
-			"align",
-			"content",
-			"delay",
-			"disabled",
-			"items",
-			"rows",
-			"side"
-		],
-		"allowedChildren": {
-			"items": [
-				"atomic",
-				"composite"
-			]
-		}
-	},
 	"IconButton": {
 		"knownKeys": [
 			"aria-label",
@@ -1162,8 +1146,13 @@
 	},
 	"Tooltip": {
 		"knownKeys": [
+			"align",
 			"content",
-			"items"
+			"delay",
+			"describe",
+			"items",
+			"rows",
+			"side"
 		],
 		"allowedChildren": {
 			"items": [

@@ -89,6 +89,7 @@ export const CompactSelectNodeSchema = baseNode.extend({
 	ariaLabel: z.string(),
 	placeholder: z.string().optional(),
 	disabled: dsl(z.boolean()).optional(),
+	size: dsl(z.enum(['md', 'sm'])).optional(),
 	defaultValue: z.string().optional(),
 	storageKey: z.string().optional(),
 });
@@ -884,21 +885,6 @@ export const DrawerNodeSchema = baseNode.extend({
 	hideCloseButton: dsl(z.boolean()).optional(),
 });
 
-const HoverCardRowSchema = z.object({
-	label: z.string(),
-	value: z.array(z.unknown()).optional(),
-});
-
-export const HoverCardNodeSchema = baseNode.extend({
-	rows: dsl(z.array(HoverCardRowSchema)).optional(),
-	content: dsl(z.array(z.unknown())).optional(),
-	side: dsl(z.enum(['top', 'right', 'bottom', 'left'])).optional(),
-	align: dsl(z.enum(['start', 'center', 'end'])).optional(),
-	delay: dsl(z.number()).optional(),
-	disabled: dsl(z.boolean()).optional(),
-	items: dsl(z.array(z.unknown())).optional(),
-});
-
 export const PopoverNodeSchema = baseNode.extend({
 	trigger: dsl(z.array(z.unknown())).optional(),
 	items: dsl(z.array(z.unknown())).optional(),
@@ -912,8 +898,18 @@ export const ToastProviderNodeSchema = baseNode.extend({
 	items: dsl(z.array(z.unknown())).optional(),
 });
 
+const TooltipRowSchema = z.object({
+	label: z.string(),
+	value: z.array(z.unknown()).optional(),
+});
+
 export const TooltipNodeSchema = baseNode.extend({
-	content: z.string(),
+	content: dsl(z.array(z.unknown())).optional(),
+	rows: dsl(z.array(TooltipRowSchema)).optional(),
+	side: dsl(z.enum(['top', 'right', 'bottom', 'left'])).optional(),
+	align: dsl(z.enum(['start', 'center', 'end'])).optional(),
+	delay: dsl(z.number()).optional(),
+	describe: dsl(z.boolean()).optional(),
 	items: dsl(z.array(z.unknown())).optional(),
 });
 

@@ -34,7 +34,8 @@ describe('DataTable actions column: `icon` authored in YAML', () => {
 		const buttons = screen.getAllByRole('button', { name: 'Push test event' });
 		expect(buttons).toHaveLength(2);
 		for (const button of buttons) {
-			expect(button.getAttribute('title')).toBe('Push test event');
+			// the label is the tooltip (shown on focus), not a native title
+			expect(button.hasAttribute('title')).toBe(false);
 			// icon-only: the label is the name, not visible text
 			expect(button.textContent).toBe('');
 			expect(iconOf(button)?.getAttribute('class')).toContain('lucide-rocket');

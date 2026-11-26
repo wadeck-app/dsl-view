@@ -4,14 +4,20 @@ import { ChevronDown } from 'lucide-react';
 import { useOptionalUrlParam } from '../../context/UrlParamContext.js';
 import { reportAuthoringMistake } from '@dsl-ui/utils/devDiagnostics.js';
 import type { FieldSelectOption } from '../form/FieldSelect.js';
+import { warnUnknownChoice } from '@dsl-ui/utils/warnUnknownChoice.js';
 import { useStoredUrlChoice } from './useStoredUrlChoice.js';
 
 // pr-8 reserves the chevron's column. A native select draws its own arrow inside the box, so the
 // arrow is suppressed with appearance-none and drawn here instead, the same treatment FieldSelect
 // gives it -- at the tighter padding a toolbar row needs, and sized to its content rather than w-full.
 // @formatter:off
-const selectClass  = 'appearance-none rounded border border-border bg-surface text-content pl-2 pr-8 py-1 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed';
-const chevronClass = 'pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted';
+const selectBase   = 'appearance-none rounded border border-border bg-surface text-content pl-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed';
+const chevronBase  = 'pointer-events-none absolute top-1/2 -translate-y-1/2 text-muted';
+// sm is the toolbar scale shared with SearchBar sm, ChipButton and RefreshButton (22px); it is also the one that fits inside a chip.
+const SIZES = {
+	md: { select: 'pr-8 py-1 text-sm', chevron: 'right-2 h-3.5 w-3.5' },
+	sm: { select: 'pr-6 py-0.5 text-xs', chevron: 'right-1.5 h-3 w-3' },
+} as const;
 // @formatter:on
 
 export interface CompactSelectProps {
@@ -45,6 +51,11 @@ export interface CompactSelectProps {
 	/** The empty choice. Omitted, there is no empty option to pick by accident. */
 	placeholder?: string;
 	disabled?: boolean;
+	/**
+	 * `md` (default) is the standalone select. `sm` is the toolbar height shared with `SearchBar size="sm"`, `ChipButton` and
+	 * `RefreshButton`, and the one to use inline inside a chip.
+	 */
+	size?: 'md' | 'sm';
 	/**
 	 * Value shown while the `urlParam` is absent from the URL, e.g. the choice a page's sources assume when they
 	 * receive no parameter. It is only displayed: the URL is not written until the user picks something. Ignored
@@ -91,7 +102,9 @@ export interface CompactSelectProps {
  * @registryTags select compact toolbar
  * @registryBind formData onChange
  */
-export function CompactSelect({ urlParam, resetUrlParams, value: valueProp, options, onChange: onChangeProp, ariaLabel, placeholder, disabled, defaultValue: defaultProp, storageKey: storageKeyProp }: CompactSelectProps) {
+export function CompactSelect({ urlParam, resetUrlParams, value: valueProp, options, onChange: onChangeProp, ariaLabel, placeholder, disabled, defaultValue: defaultProp, storageKey: storageKeyProp, size = 'md' }: CompactSelectProps) {
+	warnUnknownChoice('CompactSelect', 'size', size, SIZES);
+	const sizeClasses = SIZES[size] ?? SIZES.md;
 	const [rawUrlValue, setUrlValue] = useOptionalUrlParam(urlParam, { resetUrlParams });
 	// Without a placeholder no option can represent the empty text, so `?name=` is not a choice: it counts as absent for
 	// the display, the default and the stored value alike. With a placeholder the empty text stays a choice.
@@ -127,7 +140,7 @@ export function CompactSelect({ urlParam, resetUrlParams, value: valueProp, opti
 			<select
 				value={value}
 				onChange={e => onChange(e.target.value)}
-				className={selectClass}
+				className={`${selectBase} ${sizeClasses.select}`}
 				aria-label={ariaLabel}
 				disabled={disabled}
 			>
@@ -143,7 +156,7 @@ export function CompactSelect({ urlParam, resetUrlParams, value: valueProp, opti
 					</option>
 				))}
 			</select>
-			<ChevronDown className={chevronClass} aria-hidden="true" />
+			<ChevronDown className={`${chevronBase} ${sizeClasses.chevron}`} aria-hidden="true" />
 		</span>
 	);
 }

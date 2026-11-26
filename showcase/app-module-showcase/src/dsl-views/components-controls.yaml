@@ -20,6 +20,7 @@ $vars:
   ColorPicker__label: "ColorPicker"
   CompactSelect__ariaLabel: "sample"
   CompactSelect__disabled: false
+  CompactSelect__size: "md"
   IconButton__aria-label: "sample"
   IconButton__size: "icon"
   LiveToggle__live: false
@@ -256,11 +257,11 @@ items:
         label: "controls"
     items:
       - $type: "Markdown"
-        text: "Label-less native select sized for toolbars, optionally backed by a URL param (`defaultValue` is shown while the param is absent; `storageKey` remembers the choice in localStorage and restores it to the URL, one extra refetch; with `urlParam`, a value no option carries shows as a disabled `Unknown: <value>`); use instead of FieldSelect in a row of controls, or PageSizeSelect for non-page-size choices."
+        text: "Label-less native select sized for toolbars (`size=\"sm\"` is the 22px toolbar height shared with `SearchBar size=\"sm\"`, `ChipButton` and `RefreshButton`, and the one to put inside a chip), optionally backed by a URL param (`defaultValue` is shown while the param is absent; `storageKey` remembers the choice in localStorage and restores it to the URL, one extra refetch; with `urlParam`, a value no option carries shows as a disabled `Unknown: <value>`); use instead of FieldSelect in a row of controls, or PageSizeSelect for non-page-size choices."
       - $type: "Markdown"
         text: "_Not playable yet (required props without a sample: options)._"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `urlParam` | string | no |\n| `resetUrlParams` | array | no |\n| `options` | array | yes |\n| `ariaLabel` | string | yes |\n| `placeholder` | string | no |\n| `disabled` | boolean | no |\n| `defaultValue` | string | no |\n| `storageKey` | string | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `urlParam` | string | no |\n| `resetUrlParams` | array | no |\n| `options` | array | yes |\n| `ariaLabel` | string | yes |\n| `placeholder` | string | no |\n| `disabled` | boolean | no |\n| `size` | md / sm | no |\n| `defaultValue` | string | no |\n| `storageKey` | string | no |"
   - $type: "Card"
     header:
       - $type: "Tag"
@@ -284,7 +285,7 @@ items:
         label: "controls"
     items:
       - $type: "Markdown"
-        text: "Icon-only ghost button that requires an aria-label, also used as tooltip; use for compact toolbar actions without visible text."
+        text: "Icon-only ghost button that requires an aria-label, shown as a Tooltip on hover and keyboard focus (no native title); use for compact toolbar actions without visible text."
       - $type: "HorizontalStack"
         wrap: true
         items:

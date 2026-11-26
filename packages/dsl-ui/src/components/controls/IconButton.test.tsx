@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import React from 'react';
 import { ButtonContext } from './buttonContext.js';
@@ -15,9 +15,21 @@ describe('IconButton', () => {
 		expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument();
 	});
 
-	it('title attribute equals aria-label', () => {
+	// The native title is unstyled, appears after a long fixed delay, is not reachable by keyboard and dismisses itself when
+	// its text changes: the aria-label is shown by the Tooltip instead.
+	it('sets no native title: the aria-label is shown by the Tooltip on keyboard focus', () => {
 		render(<IconButton icon={<span />} aria-label="Edit item" />);
-		expect(screen.getByRole('button', { name: 'Edit item' })).toHaveAttribute('title', 'Edit item');
+		const button = screen.getByRole('button', { name: 'Edit item' });
+		expect(button).not.toHaveAttribute('title');
+		act(() => button.focus());
+		expect(screen.getByTestId('tooltip-card')).toHaveTextContent('Edit item');
+	});
+
+	it('does not describe itself by its own name (the name is not read twice)', () => {
+		render(<IconButton icon={<span />} aria-label="Edit item" />);
+		const button = screen.getByRole('button', { name: 'Edit item' });
+		expect(button).not.toHaveAttribute('aria-describedby');
+		expect(screen.queryByRole('tooltip')).toBeNull();
 	});
 
 	it('defaults to a ghost, 9x9 icon button', () => {

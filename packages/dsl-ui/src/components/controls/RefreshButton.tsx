@@ -4,7 +4,7 @@ import React from 'react';
 import { reportAuthoringError } from '@dsl-ui/utils/devDiagnostics.js';
 
 const refreshButtonClass =
-	'flex items-center gap-1 rounded border border-border bg-surface px-2 py-1 text-xs text-muted hover:text-content disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer';
+	'flex items-center gap-1 rounded border border-border bg-surface px-2 py-0.5 text-xs text-muted hover:text-content disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer';
 
 export interface RefreshButtonProps {
 	/**
