@@ -15,6 +15,7 @@ export * from './FieldTags.js';
 export * from './FieldNumber.js';
 export * from './FieldReadOnly.js';
 export * from './FieldSelect.js';
+export * from './FieldSecret.js';
 export * from './FieldText.js';
 export * from './FieldTextarea.js';
 export * from './FieldTime.js';
