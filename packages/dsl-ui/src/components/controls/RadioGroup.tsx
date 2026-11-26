@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import * as RadixRadioGroup from '@radix-ui/react-radio-group';
 import { classFor } from '@dsl-ui/utils/warnUnknownChoice.js';
 
@@ -43,10 +43,11 @@ export function RadioGroup({
 	label,
 	orientation = 'vertical',
 }: RadioGroupProps) {
+	const legendId = useId();
 	return (
 		<fieldset className="border-0 p-0 m-0">
-			{label && <legend className={LEGEND_CLASS}>{label}</legend>}
-			<RadixRadioGroup.Root value={value} onValueChange={onChange} orientation={orientation}>
+			{label && <legend id={legendId} className={LEGEND_CLASS}>{label}</legend>}
+			<RadixRadioGroup.Root aria-labelledby={label ? legendId : undefined} value={value} onValueChange={onChange} orientation={orientation}>
 				<div className={classFor('RadioGroup', 'orientation', orientation, ORIENTATION_CLASS, 'vertical')}>
 					{options.map((opt) => (
 						<label

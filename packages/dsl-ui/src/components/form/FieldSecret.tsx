@@ -11,6 +11,7 @@ const inputClass =
 export interface FieldSecretHandle {
 	read: () => string;
 	clear: () => void;
+	focus: () => void;
 }
 
 export interface FieldSecretProps {
@@ -24,6 +25,13 @@ export interface FieldSecretProps {
 	placeholder?: string;
 	/** Fired on Enter in the field. Read the text through the ref then: it is never passed as an argument. */
 	onEnter?: () => void;
+	/** The input's name. Needed, with `autoComplete`, for a browser to save and fill the value. Default: none. */
+	name?: string;
+	/**
+	 * `off` (default) keeps password managers and autofill away. `current-password` or `new-password` lets the browser save
+	 * and fill the value (give it a `name`, and a hidden username field next to it for the browser to pair them).
+	 */
+	autoComplete?: 'off' | 'current-password' | 'new-password';
 	/** Label of the button that shows the text. Default "Show". */
 	showLabel?: string;
 	/** Label of the button that hides the text again. Default "Hide". */
@@ -36,7 +44,7 @@ export interface FieldSecretProps {
  * The field wipes itself when it unmounts. It is for React code: a DSL page cannot hold a ref.
  */
 export const FieldSecret = React.forwardRef<FieldSecretHandle, FieldSecretProps>(function FieldSecret(
-	{ label, description, required, error, disabled, placeholder, onEnter, showLabel = 'Show', hideLabel = 'Hide' },
+	{ label, description, required, error, disabled, placeholder, onEnter, name, autoComplete = 'off', showLabel = 'Show', hideLabel = 'Hide' },
 	ref
 ) {
 	const inputRef = useRef<HTMLInputElement>(null);
@@ -52,6 +60,7 @@ export const FieldSecret = React.forwardRef<FieldSecretHandle, FieldSecretProps>
 					inputRef.current.value = '';
 				}
 			},
+			focus: () => inputRef.current?.focus(),
 		}),
 		[]
 	);
@@ -74,11 +83,12 @@ export const FieldSecret = React.forwardRef<FieldSecretHandle, FieldSecretProps>
 						{...control}
 						ref={inputRef}
 						type={revealed ? 'text' : 'password'}
-						autoComplete="off"
+						name={name}
+						autoComplete={autoComplete}
 						spellCheck={false}
-						// Keeps password managers (1Password, LastPass) from offering to fill or save it.
-						data-1p-ignore=""
-						data-lpignore="true"
+						// Keeps password managers (1Password, LastPass) from offering to fill or save it, unless the owner allows it.
+						data-1p-ignore={autoComplete === 'off' ? '' : undefined}
+						data-lpignore={autoComplete === 'off' ? 'true' : undefined}
 						disabled={disabled}
 						placeholder={placeholder}
 						onKeyDown={event => {

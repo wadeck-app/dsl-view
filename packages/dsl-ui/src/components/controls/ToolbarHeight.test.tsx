@@ -4,6 +4,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { Button } from './_Button.js';
 import { ChipButton } from './ChipButton.js';
 import { CompactSelect } from './CompactSelect.js';
 import { RefreshButton } from './RefreshButton.js';
@@ -47,5 +48,16 @@ describe('toolbar height scale', () => {
 		const { container } = render(<CompactSelect ariaLabel="Pick" options={OPTIONS} value="a" onChange={vi.fn()} size="sm" />);
 		expect(container.querySelector('svg')).toHaveClass('h-3', 'w-3');
 		expect(screen.getByRole('combobox')).toHaveClass('pr-6');
+	});
+
+	it('Button size="xs" is a text action on the same 22px scale (a sm button stays 26px)', () => {
+		render(
+			<>
+				<Button size="xs">Lock</Button>
+				<Button size="sm">Save</Button>
+			</>
+		);
+		expect(vertical(screen.getByRole('button', { name: 'Lock' }))).toEqual({ py: 'py-0.5', text: 'text-xs' });
+		expect(vertical(screen.getByRole('button', { name: 'Save' }))).toEqual({ py: 'py-1', text: 'text-xs' });
 	});
 });

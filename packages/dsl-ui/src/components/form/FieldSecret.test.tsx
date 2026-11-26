@@ -79,4 +79,31 @@ describe('FieldSecret', () => {
 		render(<FieldSecret label="Passphrase" disabled />);
 		expect(input()).toBeDisabled();
 	});
+
+	it('stays out of password managers by default: no name, autocomplete off, ignore markers', () => {
+		render(<FieldSecret label="Passphrase" />);
+		expect(input()).not.toHaveAttribute('name');
+		expect(input()).toHaveAttribute('data-1p-ignore');
+		expect(input()).toHaveAttribute('data-lpignore', 'true');
+	});
+
+	it('autoComplete="current-password" with a name lets the browser save and fill it (no ignore markers)', () => {
+		render(<FieldSecret label="Passphrase" name="passphrase" autoComplete="current-password" />);
+		expect(input()).toHaveAttribute('name', 'passphrase');
+		expect(input()).toHaveAttribute('autocomplete', 'current-password');
+		expect(input()).not.toHaveAttribute('data-1p-ignore');
+		expect(input()).not.toHaveAttribute('data-lpignore');
+	});
+
+	it('autoComplete="new-password" is also allowed', () => {
+		render(<FieldSecret label="Passphrase" autoComplete="new-password" />);
+		expect(input()).toHaveAttribute('autocomplete', 'new-password');
+	});
+
+	it('the handle can move the focus to the field', () => {
+		const ref = React.createRef<FieldSecretHandle>();
+		render(<FieldSecret label="Passphrase" ref={ref} />);
+		act(() => ref.current!.focus());
+		expect(document.activeElement).toBe(input());
+	});
 });

@@ -10,7 +10,7 @@ import { useButtonContext } from './buttonContext.js';
 import { classFor } from '@dsl-ui/utils/warnUnknownChoice.js';
 
 type Variant = 'primary' | 'secondary' | 'danger' | 'danger-outline' | 'neutral' | 'success' | 'ghost' | 'link' | 'chip';
-type Size = 'sm' | 'md' | 'icon' | 'icon-field' | 'icon-sm' | 'icon-xs' | 'none';
+type Size = 'xs' | 'sm' | 'md' | 'icon' | 'icon-field' | 'icon-sm' | 'icon-xs' | 'none';
 type Shape = 'default' | 'stack';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -72,6 +72,8 @@ const VARIANT_CLASSES: Record<Variant, string> = {
 };
 
 const SIZE_CLASSES: Record<Size, string> = {
+	// xs is the 22px toolbar scale (SearchBar sm, ChipButton, RefreshButton, CompactSelect sm): a text action beside them.
+	xs: 'px-2 py-0.5 text-xs gap-1',
 	sm: 'px-3 py-1 text-xs gap-1.5',
 	md: 'px-4 py-2 text-sm gap-2',
 	icon: 'h-9 w-9 p-0',
