@@ -5,6 +5,7 @@ import { useOptionalUrlParam } from '../../context/UrlParamContext.js';
 import { reportAuthoringMistake } from '@dsl-ui/utils/devDiagnostics.js';
 import type { FieldSelectOption } from '../form/FieldSelect.js';
 import { warnUnknownChoice } from '@dsl-ui/utils/warnUnknownChoice.js';
+import { Tooltip } from '../overlay/Tooltip.js';
 import { useStoredUrlChoice } from './useStoredUrlChoice.js';
 
 // pr-8 reserves the chevron's column. A native select draws its own arrow inside the box, so the
@@ -56,6 +57,8 @@ export interface CompactSelectProps {
 	 * `RefreshButton`, and the one to use inline inside a chip.
 	 */
 	size?: 'md' | 'sm';
+	/** A hint shown through the Tooltip on hover and keyboard focus, and used as the select's description (not a native title). */
+	tooltip?: string;
 	/**
 	 * Value shown while the `urlParam` is absent from the URL, e.g. the choice a page's sources assume when they
 	 * receive no parameter. It is only displayed: the URL is not written until the user picks something. Ignored
@@ -102,9 +105,10 @@ export interface CompactSelectProps {
  * @registryTags select compact toolbar
  * @registryBind formData onChange
  */
-export function CompactSelect({ urlParam, resetUrlParams, value: valueProp, options, onChange: onChangeProp, ariaLabel, placeholder, disabled, defaultValue: defaultProp, storageKey: storageKeyProp, size = 'md' }: CompactSelectProps) {
+export function CompactSelect({ urlParam, resetUrlParams, value: valueProp, options, onChange: onChangeProp, ariaLabel, placeholder, disabled, defaultValue: defaultProp, storageKey: storageKeyProp, size = 'md', tooltip }: CompactSelectProps) {
 	warnUnknownChoice('CompactSelect', 'size', size, SIZES);
 	const sizeClasses = SIZES[size] ?? SIZES.md;
+	const hintId = React.useId();
 	const [rawUrlValue, setUrlValue] = useOptionalUrlParam(urlParam, { resetUrlParams });
 	// Without a placeholder no option can represent the empty text, so `?name=` is not a choice: it counts as absent for
 	// the display, the default and the stored value alike. With a placeholder the empty text stays a choice.
@@ -134,7 +138,7 @@ export function CompactSelect({ urlParam, resetUrlParams, value: valueProp, opti
 	// page still uses that value. The empty text is "nothing chosen" and keeps its existing display.
 	const unlisted = urlParam != null && typeof value === 'string' && value !== '' && !options.some(opt => opt.value === value);
 	const onChange = urlParam != null ? setUrlValue : onChangeProp;
-	return (
+	const select = (
 		<span className="relative inline-flex">
 			{/* violations-suppress: react/no-raw-input CompactSelect IS the atomic wrapper for this select interaction, as PageSizeSelect is for pagination */}
 			<select
@@ -142,6 +146,7 @@ export function CompactSelect({ urlParam, resetUrlParams, value: valueProp, opti
 				onChange={e => onChange(e.target.value)}
 				className={`${selectBase} ${sizeClasses.select}`}
 				aria-label={ariaLabel}
+				aria-describedby={tooltip ? hintId : undefined}
 				disabled={disabled}
 			>
 				{placeholder !== undefined && <option value="">{placeholder}</option>}
@@ -159,4 +164,11 @@ export function CompactSelect({ urlParam, resetUrlParams, value: valueProp, opti
 			<ChevronDown className={`${chevronBase} ${sizeClasses.chevron}`} aria-hidden="true" />
 		</span>
 	);
+	// The tooltip wraps a span, not the select: the description is wired to the select here instead.
+	return tooltip ? (
+		<Tooltip content={tooltip} describe={false}>
+			{select}
+			<span id={hintId} className="sr-only">{tooltip}</span>
+		</Tooltip>
+	) : select;
 }

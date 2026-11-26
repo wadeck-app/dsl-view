@@ -16,7 +16,12 @@ export interface ButtonActionProps {
 	 */
 	icon?: React.ReactNode;
 	/** Geometry belongs to the design system; callers pick a size, never a padding. */
-	size?: 'sm' | 'md';
+	size?: 'xs' | 'sm' | 'md';
+	/**
+	 * The accessible name when it must say more than the visible `label`: repeated row actions ("Allow <command>"). Named `ariaLabel`
+	 * because the entries generator skips `aria-*` props, so the DOM spelling would be unreachable from a DSL page.
+	 */
+	ariaLabel?: string;
 	onClick?: () => void;
 	disabled?: boolean;
 	disabledReason?: string;
@@ -33,7 +38,7 @@ export interface ButtonActionProps {
  * @registryCategory atomic
  * @registryTags button action
  */
-export function ButtonAction({ label, variant = 'primary', icon, size, onClick, disabled, disabledReason, loading, type = 'button', form }: ButtonActionProps) {
+export function ButtonAction({ label, variant = 'primary', icon, size, onClick, disabled, disabledReason, loading, type = 'button', form, ariaLabel }: ButtonActionProps) {
 	if (form !== undefined && type !== 'submit') {
 		reportAuthoringMistake(`[ButtonAction] "${label}" has form="${form}" but type="${type}": only a submit button submits a form. Set type="submit".`);
 	}
@@ -47,6 +52,7 @@ export function ButtonAction({ label, variant = 'primary', icon, size, onClick, 
 			loading={loading}
 			type={type}
 			form={form}
+			aria-label={ariaLabel}
 		>
 			{icon && !loading && icon}
 			{label}

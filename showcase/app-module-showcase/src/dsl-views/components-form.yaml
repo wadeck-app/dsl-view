@@ -582,7 +582,7 @@ items:
         label: "$vars.FieldWrapper__label"
         required: "$vars.FieldWrapper__required"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `label` | string | yes |\n| `description` | string | no |\n| `required` | boolean | no |\n| `error` | string | no |\n| `items` | array | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `label` | string | yes |\n| `description` | string | no |\n| `required` | boolean | no |\n| `error` | string | no |\n| `id` | string | no |\n| `items` | array | no |"
   - $type: "Card"
     header:
       - $type: "Tag"

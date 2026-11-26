@@ -27,6 +27,8 @@ export interface FieldSecretProps {
 	onEnter?: () => void;
 	/** The input's name. Needed, with `autoComplete`, for a browser to save and fill the value. Default: none. */
 	name?: string;
+	/** The input's id (the label is wired to it). Default: generated. */
+	id?: string;
 	/**
 	 * `off` (default) keeps password managers and autofill away. `current-password` or `new-password` lets the browser save
 	 * and fill the value (give it a `name`, and a hidden username field next to it for the browser to pair them).
@@ -44,7 +46,7 @@ export interface FieldSecretProps {
  * The field wipes itself when it unmounts. It is for React code: a DSL page cannot hold a ref.
  */
 export const FieldSecret = React.forwardRef<FieldSecretHandle, FieldSecretProps>(function FieldSecret(
-	{ label, description, required, error, disabled, placeholder, onEnter, name, autoComplete = 'off', showLabel = 'Show', hideLabel = 'Hide' },
+	{ label, description, required, error, disabled, placeholder, onEnter, name, id, autoComplete = 'off', showLabel = 'Show', hideLabel = 'Hide' },
 	ref
 ) {
 	const inputRef = useRef<HTMLInputElement>(null);
@@ -76,7 +78,7 @@ export const FieldSecret = React.forwardRef<FieldSecretHandle, FieldSecretProps>
 	}, []);
 
 	return (
-		<FieldWrapper label={label} description={description} required={required} error={error}>
+		<FieldWrapper id={id} label={label} description={description} required={required} error={error}>
 			{control => (
 				<div className="relative mt-1">
 					<input

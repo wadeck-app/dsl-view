@@ -15,6 +15,8 @@ export interface FieldWrapperProps {
 	required?: boolean;
 	/** Validation message shown under the field. Also marks the control invalid. */
 	error?: string;
+	/** The id of the control (and of the label's `htmlFor`). Default: generated. */
+	id?: string;
 	/**
 	 * The control. Given a node, the first element receives the label id and ARIA state.
 	 * Given a function, it receives those props to spread on the control itself - which is
@@ -36,8 +38,9 @@ export interface FieldWrapperProps {
  * @registryCategory disposition
  * @registryTags field wrapper
  */
-export function FieldWrapper({ label, description, required, error, children }: FieldWrapperProps) {
-	const id = useId();
+export function FieldWrapper({ label, description, required, error, id: idProp, children }: FieldWrapperProps) {
+	const generatedId = useId();
+	const id = idProp ?? generatedId;
 	const errorId = `${id}-error`;
 
 	// Undefined rather than false: React omits the attribute entirely, so a valid field

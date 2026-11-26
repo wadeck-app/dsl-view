@@ -27,7 +27,8 @@ export const ActionButtonNodeSchema = baseNode.extend({
 	icon: z.string().optional(),
 	iconOnly: dsl(z.boolean()).optional(),
 	variant: dsl(z.enum(['primary', 'secondary', 'danger', 'danger-outline', 'success', 'neutral', 'ghost'])).optional(),
-	size: dsl(z.enum(['sm', 'md'])).optional(),
+	size: dsl(z.enum(['xs', 'sm', 'md'])).optional(),
+	ariaLabel: z.string().optional(),
 	disabled: dsl(z.boolean()).optional(),
 	disabledReason: z.string().optional(),
 	actionPending: dsl(z.record(z.string(), z.boolean())).optional(),
@@ -37,7 +38,8 @@ export const ButtonActionNodeSchema = baseNode.extend({
 	label: z.string(),
 	variant: dsl(z.enum(['primary', 'secondary', 'danger', 'danger-outline', 'success'])).optional(),
 	icon: dsl(z.array(z.unknown())).optional(),
-	size: dsl(z.enum(['sm', 'md'])).optional(),
+	size: dsl(z.enum(['xs', 'sm', 'md'])).optional(),
+	ariaLabel: z.string().optional(),
 	disabled: dsl(z.boolean()).optional(),
 	disabledReason: z.string().optional(),
 	loading: dsl(z.boolean()).optional(),
@@ -90,6 +92,7 @@ export const CompactSelectNodeSchema = baseNode.extend({
 	placeholder: z.string().optional(),
 	disabled: dsl(z.boolean()).optional(),
 	size: dsl(z.enum(['md', 'sm'])).optional(),
+	tooltip: z.string().optional(),
 	defaultValue: z.string().optional(),
 	storageKey: z.string().optional(),
 });
@@ -617,6 +620,7 @@ export const FieldWrapperNodeSchema = baseNode.extend({
 	description: z.string().optional(),
 	required: dsl(z.boolean()).optional(),
 	error: z.string().optional(),
+	id: z.string().optional(),
 	items: dsl(z.array(z.unknown())).optional(),
 });
 

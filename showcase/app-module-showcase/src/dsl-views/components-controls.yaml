@@ -4,11 +4,11 @@ $vars:
   ActionButton__label: "ActionButton"
   ActionButton__iconOnly: false
   ActionButton__variant: "primary"
-  ActionButton__size: "sm"
+  ActionButton__size: "xs"
   ActionButton__disabled: false
   ButtonAction__label: "ButtonAction"
   ButtonAction__variant: "primary"
-  ButtonAction__size: "sm"
+  ButtonAction__size: "xs"
   ButtonAction__disabled: false
   ButtonAction__loading: false
   ButtonAction__type: "button"
@@ -83,6 +83,8 @@ items:
             label: "size"
             bind: "ActionButton__size"
             options:
+              - value: "xs"
+                label: "xs"
               - value: "sm"
                 label: "sm"
               - value: "md"
@@ -98,7 +100,7 @@ items:
         size: "$vars.ActionButton__size"
         disabled: "$vars.ActionButton__disabled"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `action` | string | yes |\n| `label` | string | yes |\n| `params` | record | no |\n| `body` | record | no |\n| `icon` | string | no |\n| `iconOnly` | boolean | no |\n| `variant` | primary / secondary / danger / danger-outline / success / neutral / ghost | no |\n| `size` | sm / md | no |\n| `disabled` | boolean | no |\n| `disabledReason` | string | no |\n| `actionPending` | record | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `action` | string | yes |\n| `label` | string | yes |\n| `params` | record | no |\n| `body` | record | no |\n| `icon` | string | no |\n| `iconOnly` | boolean | no |\n| `variant` | primary / secondary / danger / danger-outline / success / neutral / ghost | no |\n| `size` | xs / sm / md | no |\n| `ariaLabel` | string | no |\n| `disabled` | boolean | no |\n| `disabledReason` | string | no |\n| `actionPending` | record | no |"
   - $type: "Card"
     header:
       - $type: "Tag"
@@ -134,6 +136,8 @@ items:
             label: "size"
             bind: "ButtonAction__size"
             options:
+              - value: "xs"
+                label: "xs"
               - value: "sm"
                 label: "sm"
               - value: "md"
@@ -160,7 +164,7 @@ items:
         loading: "$vars.ButtonAction__loading"
         type: "$vars.ButtonAction__type"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `label` | string | yes |\n| `variant` | primary / secondary / danger / danger-outline / success | no |\n| `icon` | array | no |\n| `size` | sm / md | no |\n| `disabled` | boolean | no |\n| `disabledReason` | string | no |\n| `loading` | boolean | no |\n| `type` | button / submit | no |\n| `form` | string | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `label` | string | yes |\n| `variant` | primary / secondary / danger / danger-outline / success | no |\n| `icon` | array | no |\n| `size` | xs / sm / md | no |\n| `ariaLabel` | string | no |\n| `disabled` | boolean | no |\n| `disabledReason` | string | no |\n| `loading` | boolean | no |\n| `type` | button / submit | no |\n| `form` | string | no |"
   - $type: "Card"
     header:
       - $type: "Tag"
@@ -261,7 +265,7 @@ items:
       - $type: "Markdown"
         text: "_Not playable yet (required props without a sample: options)._"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `urlParam` | string | no |\n| `resetUrlParams` | array | no |\n| `options` | array | yes |\n| `ariaLabel` | string | yes |\n| `placeholder` | string | no |\n| `disabled` | boolean | no |\n| `size` | md / sm | no |\n| `defaultValue` | string | no |\n| `storageKey` | string | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `urlParam` | string | no |\n| `resetUrlParams` | array | no |\n| `options` | array | yes |\n| `ariaLabel` | string | yes |\n| `placeholder` | string | no |\n| `disabled` | boolean | no |\n| `size` | md / sm | no |\n| `tooltip` | string | no |\n| `defaultValue` | string | no |\n| `storageKey` | string | no |"
   - $type: "Card"
     header:
       - $type: "Tag"

@@ -32,7 +32,9 @@ export interface ActionButtonProps {
 	iconOnly?: boolean;
 	variant?: 'primary' | 'secondary' | 'danger' | 'danger-outline' | 'success' | 'neutral' | 'ghost';
 	/** Geometry belongs to the design system: callers pick a size, never a padding. */
-	size?: 'sm' | 'md';
+	size?: 'xs' | 'sm' | 'md';
+	/** The accessible name when it must say more than the visible `label` (repeated row actions). An icon-only button is named by `label`. */
+	ariaLabel?: string;
 	/** Keeps the button disabled (e.g. `disabled: $vars.noSelection`). It is enabled by default. */
 	disabled?: boolean;
 	/** Why the button is disabled; shown as a tooltip while it is. */
@@ -66,6 +68,7 @@ export function ActionButton({
 	iconOnly = false,
 	variant = 'primary',
 	size,
+	ariaLabel,
 	disabled,
 	disabledReason,
 	onAction,
@@ -105,7 +108,7 @@ export function ActionButton({
 	const busy = pending || actionPending?.[action] === true;
 	const showOnlyIcon = iconOnly && Boolean(icon);
 	const iconElement = icon && !busy ? iconByName(icon, 'ActionButton.icon') : null;
-	const resolvedSize = showOnlyIcon ? (size === 'sm' ? 'icon-sm' : 'icon') : size;
+	const resolvedSize = showOnlyIcon ? (size === 'xs' ? 'icon-xs' : size === 'sm' ? 'icon-sm' : 'icon') : size;
 
 	return (
 		<Button
@@ -116,7 +119,7 @@ export function ActionButton({
 			disabledReason={unwired ? 'Not rendered inside a page: there is no action to run' : disabledReason}
 			loading={busy}
 			aria-busy={busy || undefined}
-			aria-label={showOnlyIcon ? label : undefined}
+			aria-label={showOnlyIcon ? label : ariaLabel}
 			title={showOnlyIcon ? label : undefined}
 		>
 			{iconElement}
