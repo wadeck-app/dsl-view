@@ -134,6 +134,7 @@ Maintenance: add a row here in the same change that adds, renames or removes a c
 | `Drawer` | disposition | open, onClose, children, side, title, footer, size, hideCloseButton | Modal side panel sliding from left, right or bottom with optional title, footer and close button (same initial focus rule as Dialog); pick it over Dialog for a larger contextual panel. |
 | `Popover` | disposition | trigger, children, side, align, open, onOpenChange, className | Floating panel of interactive content anchored to a trigger element, controlled or not; pick it over Tooltip when the content has controls, over ContextMenu when it is not a list of actions. |
 | `ToastProvider` | disposition | children | Provider that renders toast notifications (success, error, info) for its children; success and info auto-dismiss, errors stay until dismissed. |
+| `HoverCard` | disposition | rows, content, side, align, delay, disabled, children | Rich hover and focus card (labelled `rows` plus free `content`), portaled and kept in the viewport, one open at a time, linked via aria-describedby; pick it over Tooltip when the hint is structured, Popover when it has controls. |
 | `Tooltip` | disposition | content, children | Hover and focus text bubble shown above a single wrapped element, linked via aria-describedby; pick it for a short hint, Popover for interactive content. |
 
 ### table

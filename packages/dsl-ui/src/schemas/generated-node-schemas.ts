@@ -884,6 +884,21 @@ export const DrawerNodeSchema = baseNode.extend({
 	hideCloseButton: dsl(z.boolean()).optional(),
 });
 
+const HoverCardRowSchema = z.object({
+	label: z.string(),
+	value: z.array(z.unknown()).optional(),
+});
+
+export const HoverCardNodeSchema = baseNode.extend({
+	rows: dsl(z.array(HoverCardRowSchema)).optional(),
+	content: dsl(z.array(z.unknown())).optional(),
+	side: dsl(z.enum(['top', 'right', 'bottom', 'left'])).optional(),
+	align: dsl(z.enum(['start', 'center', 'end'])).optional(),
+	delay: dsl(z.number()).optional(),
+	disabled: dsl(z.boolean()).optional(),
+	items: dsl(z.array(z.unknown())).optional(),
+});
+
 export const PopoverNodeSchema = baseNode.extend({
 	trigger: dsl(z.array(z.unknown())).optional(),
 	items: dsl(z.array(z.unknown())).optional(),

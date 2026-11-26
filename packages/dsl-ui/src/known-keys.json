@@ -710,6 +710,23 @@
 			]
 		}
 	},
+	"HoverCard": {
+		"knownKeys": [
+			"align",
+			"content",
+			"delay",
+			"disabled",
+			"items",
+			"rows",
+			"side"
+		],
+		"allowedChildren": {
+			"items": [
+				"atomic",
+				"composite"
+			]
+		}
+	},
 	"IconButton": {
 		"knownKeys": [
 			"aria-label",
