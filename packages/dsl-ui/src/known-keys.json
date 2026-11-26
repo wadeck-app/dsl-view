@@ -757,6 +757,14 @@
 			"items"
 		]
 	},
+	"Notice": {
+		"knownKeys": [
+			"label",
+			"showLessLabel",
+			"showMoreLabel",
+			"variant"
+		]
+	},
 	"PageContent": {
 		"knownKeys": [
 			"maxWidth",
@@ -966,6 +974,18 @@
 		"knownKeys": [
 			"label",
 			"size"
+		]
+	},
+	"SplitLayout": {
+		"knownKeys": [
+			"gap",
+			"main",
+			"side",
+			"sideFirstWhenStacked",
+			"sidePosition",
+			"sideWidth",
+			"sticky",
+			"stickyTop"
 		]
 	},
 	"StatTile": {

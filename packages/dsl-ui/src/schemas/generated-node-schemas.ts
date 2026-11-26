@@ -266,6 +266,13 @@ export const MarkdownNodeSchema = baseNode.extend({
 	allowImages: dsl(z.boolean()).optional(),
 });
 
+export const NoticeNodeSchema = baseNode.extend({
+	label: z.string(),
+	variant: z.unknown().optional(),
+	showMoreLabel: z.string().optional(),
+	showLessLabel: z.string().optional(),
+});
+
 export const PageHeaderNodeSchema = baseNode.extend({
 	title: z.string(),
 	subtitle: z.string().optional(),
@@ -720,6 +727,17 @@ export const SectionNodeSchema = baseNode.extend({
 	title: z.string().optional(),
 	fill: dsl(z.boolean()).default(false),
 	items: dsl(z.array(z.unknown())).optional(),
+});
+
+export const SplitLayoutNodeSchema = baseNode.extend({
+	main: dsl(z.array(z.unknown())).optional(),
+	side: dsl(z.array(z.unknown())).optional(),
+	sidePosition: dsl(z.enum(['right', 'left'])).optional(),
+	sideWidth: dsl(z.enum(['narrow', 'normal', 'wide'])).optional(),
+	sticky: dsl(z.boolean()).optional(),
+	stickyTop: dsl(z.enum(['top-0', 'top-4', 'top-16', 'top-32'])).optional(),
+	gap: z.unknown().optional(),
+	sideFirstWhenStacked: dsl(z.boolean()).optional(),
 });
 
 const StatTileTrendSchema = z.object({

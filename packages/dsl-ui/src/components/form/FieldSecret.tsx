@@ -81,6 +81,7 @@ export const FieldSecret = React.forwardRef<FieldSecretHandle, FieldSecretProps>
 		<FieldWrapper id={id} label={label} description={description} required={required} error={error}>
 			{control => (
 				<div className="relative mt-1">
+					{/* violations-suppress: react/no-raw-input FieldSecret IS the atomic wrapper for an uncontrolled secret input */}
 					<input
 						{...control}
 						ref={inputRef}

@@ -166,6 +166,13 @@ describe('Tooltip card', () => {
 		expect(card()).toBeNull();
 	});
 
+	it('its wrapper carries a class, not an inline style (modules pin "no inline style")', () => {
+		render(tree());
+		const wrapper = trigger().parentElement as HTMLElement;
+		expect(wrapper).toHaveClass('inline-flex');
+		expect(wrapper).not.toHaveAttribute('style');
+	});
+
 	it('is not triggered by an ancestor that happens to carry the class "group"', () => {
 		render(
 			<div className="group">

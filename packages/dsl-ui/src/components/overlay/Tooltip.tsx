@@ -142,7 +142,7 @@ export function Tooltip({ content, rows, side = 'top', align = 'center', delay =
 		<RadixPopover.Root open={open && !nothingToShow}>
 			<RadixPopover.Anchor asChild>
 				<span
-					style={{ display: 'inline-flex' }}
+					className="inline-flex"
 					onPointerEnter={event => {
 						// A touch has no hover: the card would open on every tap and stay.
 						if (event.pointerType === 'touch') {
