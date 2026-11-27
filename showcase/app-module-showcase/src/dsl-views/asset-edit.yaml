@@ -60,7 +60,7 @@ items:
         variants:
           spinner:
             label: Spinner
-            hint: Reference: the arc before the label (widens the button).
+            hint: "Reference: the arc before the label (widens the button)."
             view:
               $type: ButtonSave
               label: Save
@@ -110,7 +110,7 @@ items:
         variants:
           spinner:
             label: Spinner
-            hint: Reference: the arc before the label (widens the button).
+            hint: "Reference: the arc before the label (widens the button)."
             view:
               $type: ActionButton
               label: Simulate another user saving

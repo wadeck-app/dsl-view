@@ -54,7 +54,6 @@ items:
         text: "$concat('`$urlParam.status` is: ', $urlParam.status)"
   - $type: ThemeScope
     theme: dark
-    className: p-4 rounded-lg
     items:
       - $type: Markdown
         text: A `ThemeScope` paints its subtree in the dark palette whatever the app theme is.
