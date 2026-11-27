@@ -3,6 +3,7 @@ import React from 'react';
 import type { ComponentRegistry } from '../ComponentRegistry.js';
 import { EXTENSION_SLOT_TYPE, KNOWN_DSL_KEYS, omitNavKeys } from '../dslKeys.js';
 import { evaluateOperatorExpression } from '../expression.js';
+import { NodeErrorBoundary } from './NodeErrorBoundary.js';
 import { warnMissingCtxPrefix } from './warnCtxPrefix.js';
 import { warnInvalidNodeProps } from './warnInvalidNodeProps.js';
 import { warnInvalidChildren, warnUnknownNodeKeys } from './warnUnknownKeys.js';
@@ -150,7 +151,11 @@ export function DslRenderer({ node, registry, ctx = {} }: RendererProps): React.
 		}
 	}
 
-	return entry.render({ node, registry, ctx: childCtx });
+	return (
+		<NodeErrorBoundary type={type} node={node}>
+			{entry.render({ node, registry, ctx: childCtx })}
+		</NodeErrorBoundary>
+	);
 }
 
 // items ordering/multiplicity is owned by whatever populates the $sources entry (e.g. a server-side

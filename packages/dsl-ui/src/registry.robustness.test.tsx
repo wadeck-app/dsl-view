@@ -128,6 +128,11 @@ function renderOnce(node: Record<string, unknown>, formData: Record<string, unkn
 			</RouterProvider>
 		</MemoryRouter>,
 	);
+	// The renderer contains a node that throws in a box naming it (NodeErrorBoundary), so nothing escapes to the Catcher: the box is the crash.
+	const box = [...view.container.querySelectorAll('[role="alert"]')].find(element => element.textContent?.includes('] failed to render:'));
+	if (box && escaped === undefined) {
+		escaped = new Error((box.textContent ?? '').split('failed to render:').slice(1).join('failed to render:').trim());
+	}
 	view.unmount();
 	return escaped;
 }

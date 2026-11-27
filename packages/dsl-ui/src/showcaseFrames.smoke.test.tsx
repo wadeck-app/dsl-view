@@ -1,7 +1,7 @@
 // Every frame of the generated showcase pages (components-*.yaml) must render with its starting $vars. A component that throws
 // on a props combination the generator cannot see (SearchBar needs `urlParam` or `value` + `onChange`) blanks the whole page
 // in the showcase module, so it is caught here, one test per component, before the page ships.
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -74,18 +74,18 @@ describe('the generated showcase frames render', () => {
 	it.each(frames.map(frame => [`${frame.file} / ${frame.component}`, frame] as const))('%s', (_name, frame) => {
 		vi.spyOn(console, 'error').mockImplementation(() => undefined);
 		vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-		expect(() =>
-			render(
-				// The host (the app shell) provides the router, the URL params and the toasts; a frame may rely on all three.
-				<MemoryRouter>
-					<RouterProvider>
-						<ToastProvider>
-							<DslRenderer node={frame.node} registry={registry} ctx={{ $vars: frame.vars, $setVar: () => undefined }} />
-						</ToastProvider>
-					</RouterProvider>
-				</MemoryRouter>
-			)
-		).not.toThrow();
+		// The host (the app shell) provides the router, the URL params and the toasts; a frame may rely on all three.
+		render(
+			<MemoryRouter>
+				<RouterProvider>
+					<ToastProvider>
+						<DslRenderer node={frame.node} registry={registry} ctx={{ $vars: frame.vars, $setVar: () => undefined }} />
+					</ToastProvider>
+				</RouterProvider>
+			</MemoryRouter>
+		);
+		// The renderer contains a node that throws in a box naming it: that box is the failure, not an exception.
+		expect(screen.queryByText(/failed to render/)).toBeNull();
 	});
 });
 
@@ -111,6 +111,7 @@ describe('the shell showcase pages render', () => {
 			</MemoryRouter>
 		);
 		expect(container.querySelectorAll('h1').length).toBeLessThanOrEqual(1);
+		expect(screen.queryByText(/failed to render/)).toBeNull();
 	});
 
 	it('the header trail page puts its h1 and its two actions in the slot, none in the body', () => {
