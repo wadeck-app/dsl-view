@@ -6,7 +6,8 @@ import { Button } from './_Button.js';
 
 export interface ButtonActionProps {
 	label: string;
-	variant?: 'primary' | 'secondary' | 'danger' | 'danger-outline' | 'success';
+	/** `ghost` (muted text, no fill, a hover tint) and `link` are the quiet ones: list rows, disclosure headers, footers. `neutral` is a soft grey fill. */
+	variant?: 'primary' | 'secondary' | 'neutral' | 'danger' | 'danger-outline' | 'success' | 'ghost' | 'link';
 	/**
 	 * Leading icon. Dropped while `loading`, where the spinner occupies that slot.
 	 *

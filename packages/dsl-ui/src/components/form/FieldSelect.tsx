@@ -7,8 +7,10 @@ import { FieldWrapper } from './FieldWrapper.js';
 // so symmetric px-3 left the glyph flush against the border; the arrow is suppressed with
 // appearance-none and drawn here instead, inset like every other trailing affordance.
 // @formatter:off
-const selectClass  = 'mt-1 block w-full appearance-none rounded border border-border bg-surface text-content pl-3 pr-9 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed';
+const selectBase   = 'block w-full appearance-none rounded border border-border bg-surface text-content pl-3 pr-9 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed';
 const chevronClass = 'pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted';
+// sm matches ButtonAction sm (26px): py-1 text-xs.
+const SIZE_CLASS = { md: 'py-2 text-sm', sm: 'py-1 text-xs' } as const;
 // @formatter:on
 
 export interface FieldSelectOption {
@@ -28,6 +30,10 @@ export interface FieldSelectProps {
 	required?: boolean;
 	/** Validation message. Handled by FieldWrapper. */
 	error?: string;
+	/** Hides the label visually (it stays the accessible name): for inline filters and fields in a row. */
+	hideLabel?: boolean;
+	/** `md` (default, 38px) or `sm` (26px, as ButtonAction sm). */
+	size?: 'md' | 'sm';
 }
 
 // Reported once per received type, not once per render.
@@ -38,7 +44,7 @@ const reportedBadOptions = new Set<string>();
  * @registryTags field select
  * @registryBind formData onChange
  */
-export function FieldSelect({ label, description, value, onChange, options: optionsProp, placeholder, disabled, required, error }: FieldSelectProps) {
+export function FieldSelect({ label, description, value, onChange, options: optionsProp, placeholder, disabled, required, error, hideLabel, size = 'md' }: FieldSelectProps) {
 	// `options: $sources.authors` is undefined until the source has loaded: show an empty list meanwhile instead of
 	// crashing the page on `.map`. Anything else that is not a list is an authoring mistake and is reported once.
 	const received: unknown = optionsProp;
@@ -50,14 +56,14 @@ export function FieldSelect({ label, description, value, onChange, options: opti
 	return (
 		// Function form: the control is nested inside the positioning wrapper the chevron
 		// needs, so FieldWrapper cannot reach it by cloning its first child.
-		<FieldWrapper label={label} description={description} required={required} error={error}>
+		<FieldWrapper label={label} description={description} required={required} error={error} hideLabel={hideLabel}>
 			{control => (
 				<div className="relative">
 					<select
 						value={value}
 						onChange={e => onChange(e.target.value)}
 						disabled={disabled}
-						className={selectClass}
+						className={`${hideLabel ? '' : 'mt-1 '}${selectBase} ${SIZE_CLASS[size] ?? SIZE_CLASS.md}`}
 						{...control}
 					>
 						{placeholder && <option value="">{placeholder}</option>}

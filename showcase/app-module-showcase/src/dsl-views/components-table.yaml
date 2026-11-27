@@ -141,7 +141,7 @@ items:
         focusExpand: "$vars.SearchBar__focusExpand"
         size: "$vars.SearchBar__size"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `urlParam` | string | no |\n| `resetUrlParams` | array | no |\n| `value` | string | no |\n| `placeholder` | string | no |\n| `debounceMs` | number | no |\n| `focusExpand` | boolean | no |\n| `size` | sm / md | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `urlParam` | string | no |\n| `resetUrlParams` | array | no |\n| `value` | string | no |\n| `placeholder` | string | no |\n| `debounceMs` | number | no |\n| `focusExpand` | boolean | no |\n| `size` | sm / md | no |\n| `inputRef` | unknown | no |\n| `onKeyDown` | unknown | no |\n| `ariaControls` | string | no |"
   - $type: "Card"
     header:
       - $type: "Tag"

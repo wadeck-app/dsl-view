@@ -29,6 +29,10 @@ export interface TooltipProps {
 	 * tooltip repeats the trigger's own accessible name (an icon button labelled by the same text).
 	 */
 	describe?: boolean;
+	/** Extra classes for the wrapper span (a module sizes it). */
+	className?: string;
+	/** Data attributes are passed to the wrapper span too (a module targets it). */
+	[dataAttribute: `data-${string}`]: string | undefined;
 	/** @slot tag:atomic, tag:composite */
 	children: React.ReactNode;
 }
@@ -75,7 +79,8 @@ function Details({ rows, content }: Pick<TooltipProps, 'rows' | 'content'>) {
  * @registryTags tooltip hover card rows details
  * @uiexception hover-only - Tooltips are intentionally hover-triggered; they cannot be permanently visible without defeating their purpose (screen real estate and visual noise). This is the sole accepted exception to UX §6.
  */
-export function Tooltip({ content, rows, side = 'top', align = 'center', delay = 300, describe = true, children }: TooltipProps) {
+export function Tooltip({ content, rows, side = 'top', align = 'center', delay = 300, describe = true, className, children, ...dataAttributes }: TooltipProps) {
+	const anchorRef = useRef<HTMLSpanElement>(null);
 	const id = React.useId();
 	const [open, setOpen] = useState(false);
 	const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -114,12 +119,19 @@ export function Tooltip({ content, rows, side = 'top', align = 'center', delay =
 				close();
 			}
 		};
-		// Capture: scroll does not bubble, and any scrolling ancestor moves the trigger away from the card.
+		// Capture: scroll does not bubble. Only a scroll that moves the trigger closes the card (the page, or an ancestor of the
+		// trigger): a log scrolling elsewhere, live, must not.
+		const onScroll = (event: Event) => {
+			const target = event.target;
+			if (!(target instanceof Element) || anchorRef.current === null || target.contains(anchorRef.current)) {
+				close();
+			}
+		};
 		document.addEventListener('keydown', onKey);
-		window.addEventListener('scroll', close, true);
+		window.addEventListener('scroll', onScroll, true);
 		return () => {
 			document.removeEventListener('keydown', onKey);
-			window.removeEventListener('scroll', close, true);
+			window.removeEventListener('scroll', onScroll, true);
 		};
 	}, [open, close]);
 
@@ -142,12 +154,15 @@ export function Tooltip({ content, rows, side = 'top', align = 'center', delay =
 		<RadixPopover.Root open={open && !nothingToShow}>
 			<RadixPopover.Anchor asChild>
 				<span
-					className="inline-flex"
+					{...dataAttributes}
+					className={className ? `inline-flex ${className}` : 'inline-flex'}
 					onPointerEnter={event => {
 						// A touch has no hover: the card would open on every tap and stay.
 						if (event.pointerType === 'touch') {
 							return;
 						}
+						// The anchor Radix positions against takes its own ref; the wrapper is remembered from the events instead.
+						anchorRef.current = event.currentTarget;
 						clearTimer();
 						timer.current = setTimeout(show, delay);
 					}}
@@ -155,6 +170,7 @@ export function Tooltip({ content, rows, side = 'top', align = 'center', delay =
 					onPointerDown={close}
 					onClick={close}
 					onFocus={event => {
+						anchorRef.current = event.currentTarget;
 						if (focusIsFromKeyboard(event.target)) {
 							show();
 						}

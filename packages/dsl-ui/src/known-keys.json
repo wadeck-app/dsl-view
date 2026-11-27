@@ -581,10 +581,12 @@
 			"description",
 			"disabled",
 			"error",
+			"hideLabel",
 			"label",
 			"options",
 			"placeholder",
-			"required"
+			"required",
+			"size"
 		]
 	},
 	"FieldTags": {
@@ -606,9 +608,11 @@
 			"bind",
 			"description",
 			"error",
+			"hideLabel",
 			"label",
 			"readOnly",
-			"required"
+			"required",
+			"size"
 		]
 	},
 	"FieldTextarea": {
@@ -642,6 +646,7 @@
 		"knownKeys": [
 			"description",
 			"error",
+			"hideLabel",
 			"id",
 			"items",
 			"label",
@@ -719,7 +724,8 @@
 		"knownKeys": [
 			"aria-label",
 			"icon",
-			"size"
+			"size",
+			"tooltip"
 		]
 	},
 	"JsonViewer": {
@@ -910,9 +916,12 @@
 	},
 	"SearchBar": {
 		"knownKeys": [
+			"ariaControls",
 			"debounceMs",
 			"focusExpand",
+			"inputRef",
 			"onChange",
+			"onKeyDown",
 			"placeholder",
 			"resetUrlParams",
 			"size",

@@ -45,13 +45,19 @@ export interface SearchBarProps {
 	focusExpand?: boolean;
 	/** 'md' (default) is the original geometry. 'sm' matches a ChipButton for mixed toolbars. */
 	size?: 'sm' | 'md';
+	/** The input element, for a page that focuses it (a "/" shortcut). React only. */
+	inputRef?: React.Ref<HTMLInputElement>;
+	/** Called for the keys typed in the input (Escape to clear, arrows into a list). React only. */
+	onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
+	/** The id of the list this search filters (aria-controls on the input). */
+	ariaControls?: string;
 }
 
 /**
  * @registryCategory composite
  * @registryTags filter search
  */
-export function SearchBar({ urlParam, resetUrlParams, value: valueProp, onChange: onChangeProp, placeholder, debounceMs = 300, focusExpand = false, size = 'md' }: SearchBarProps) {
+export function SearchBar({ urlParam, resetUrlParams, value: valueProp, onChange: onChangeProp, placeholder, debounceMs = 300, focusExpand = false, size = 'md', inputRef, onKeyDown, ariaControls }: SearchBarProps) {
 	const [urlValue, setUrlValue] = useOptionalUrlParam(urlParam, { resetUrlParams });
 	if (urlParam == null && (valueProp === undefined || onChangeProp === undefined)) {
 		throw new Error('[SearchBar] needs either "urlParam" or both "value" and "onChange"');
@@ -114,8 +120,12 @@ export function SearchBar({ urlParam, resetUrlParams, value: valueProp, onChange
 			/>
 			{/* violations-suppress: react/no-raw-input SearchBar IS the atomic search-input wrapper - this is intentional, mirrors Button.tsx */}
 			<input
+				// A DSL page can write any value for these React-only props: only a ref (function or object) and a function are used.
+				ref={typeof inputRef === 'function' || (typeof inputRef === 'object' && inputRef !== null) ? inputRef : undefined}
 				type="search"
 				aria-label={placeholder || 'Search'}
+				aria-controls={ariaControls}
+				onKeyDown={typeof onKeyDown === 'function' ? onKeyDown : undefined}
 				placeholder={placeholder}
 				value={localValue}
 				onChange={handleChange}

@@ -37,11 +37,15 @@ $vars:
   FieldSelect__label: "FieldSelect"
   FieldSelect__disabled: false
   FieldSelect__required: false
+  FieldSelect__hideLabel: false
+  FieldSelect__size: "md"
   FieldTags__label: "FieldTags"
   FieldTags__required: false
   FieldTags__disabled: false
   FieldTags__allowDuplicates: false
   FieldText__label: "FieldText"
+  FieldText__hideLabel: false
+  FieldText__size: "md"
   FieldText__readOnly: false
   FieldText__required: false
   FieldTextarea__label: "FieldTextarea"
@@ -55,6 +59,7 @@ $vars:
   FieldTime__required: false
   FieldWrapper__label: "FieldWrapper"
   FieldWrapper__required: false
+  FieldWrapper__hideLabel: false
   TimePicker__is12Hour: false
   TimePicker__disabled: false
   TimePicker__open: false
@@ -412,7 +417,7 @@ items:
       - $type: "Markdown"
         text: "_Not playable yet (required props without a sample: options)._"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `label` | string | yes |\n| `description` | string | no |\n| `options` | array | yes |\n| `placeholder` | string | no |\n| `disabled` | boolean | no |\n| `required` | boolean | no |\n| `error` | string | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `label` | string | yes |\n| `description` | string | no |\n| `options` | array | yes |\n| `placeholder` | string | no |\n| `disabled` | boolean | no |\n| `required` | boolean | no |\n| `error` | string | no |\n| `hideLabel` | boolean | no |\n| `size` | md / sm | no |"
   - $type: "Card"
     header:
       - $type: "Tag"
@@ -464,6 +469,17 @@ items:
             label: "label"
             bind: "FieldText__label"
           - $type: "Switch"
+            label: "hideLabel"
+            bind: "FieldText__hideLabel"
+          - $type: "FieldSelect"
+            label: "size"
+            bind: "FieldText__size"
+            options:
+              - value: "md"
+                label: "md"
+              - value: "sm"
+                label: "sm"
+          - $type: "Switch"
             label: "readOnly"
             bind: "FieldText__readOnly"
           - $type: "Switch"
@@ -471,10 +487,12 @@ items:
             bind: "FieldText__required"
       - $type: "FieldText"
         label: "$vars.FieldText__label"
+        hideLabel: "$vars.FieldText__hideLabel"
+        size: "$vars.FieldText__size"
         readOnly: "$vars.FieldText__readOnly"
         required: "$vars.FieldText__required"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `label` | string | yes |\n| `description` | string | no |\n| `readOnly` | boolean | no |\n| `required` | boolean | no |\n| `error` | string | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `label` | string | yes |\n| `hideLabel` | boolean | no |\n| `size` | md / sm | no |\n| `description` | string | no |\n| `readOnly` | boolean | no |\n| `required` | boolean | no |\n| `error` | string | no |"
   - $type: "Card"
     header:
       - $type: "Tag"
@@ -578,11 +596,15 @@ items:
           - $type: "Switch"
             label: "required"
             bind: "FieldWrapper__required"
+          - $type: "Switch"
+            label: "hideLabel"
+            bind: "FieldWrapper__hideLabel"
       - $type: "FieldWrapper"
         label: "$vars.FieldWrapper__label"
         required: "$vars.FieldWrapper__required"
+        hideLabel: "$vars.FieldWrapper__hideLabel"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `label` | string | yes |\n| `description` | string | no |\n| `required` | boolean | no |\n| `error` | string | no |\n| `id` | string | no |\n| `items` | array | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `label` | string | yes |\n| `description` | string | no |\n| `required` | boolean | no |\n| `error` | string | no |\n| `id` | string | no |\n| `hideLabel` | boolean | no |\n| `items` | array | no |"
   - $type: "Card"
     header:
       - $type: "Tag"

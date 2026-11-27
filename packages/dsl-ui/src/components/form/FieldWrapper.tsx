@@ -17,6 +17,8 @@ export interface FieldWrapperProps {
 	error?: string;
 	/** The id of the control (and of the label's `htmlFor`). Default: generated. */
 	id?: string;
+	/** Hides the label visually (it stays the accessible name): for inline filters and fields in a row. */
+	hideLabel?: boolean;
 	/**
 	 * The control. Given a node, the first element receives the label id and ARIA state.
 	 * Given a function, it receives those props to spread on the control itself - which is
@@ -38,7 +40,7 @@ export interface FieldWrapperProps {
  * @registryCategory disposition
  * @registryTags field wrapper
  */
-export function FieldWrapper({ label, description, required, error, id: idProp, children }: FieldWrapperProps) {
+export function FieldWrapper({ label, description, required, error, id: idProp, hideLabel, children }: FieldWrapperProps) {
 	const generatedId = useId();
 	const id = idProp ?? generatedId;
 	const errorId = `${id}-error`;
@@ -64,7 +66,7 @@ export function FieldWrapper({ label, description, required, error, id: idProp, 
 
 	return (
 		<div>
-			<label htmlFor={id} className="block text-sm font-medium text-content">
+			<label htmlFor={id} className={hideLabel ? 'sr-only' : 'block text-sm font-medium text-content'}>
 				{label}
 				{/* Decoration: aria-required on the control is what assistive tech reads. */}
 				{required && <span aria-hidden="true"> *</span>}

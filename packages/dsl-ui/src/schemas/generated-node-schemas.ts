@@ -36,7 +36,7 @@ export const ActionButtonNodeSchema = baseNode.extend({
 
 export const ButtonActionNodeSchema = baseNode.extend({
 	label: z.string(),
-	variant: dsl(z.enum(['primary', 'secondary', 'danger', 'danger-outline', 'success'])).optional(),
+	variant: dsl(z.enum(['primary', 'secondary', 'neutral', 'danger', 'danger-outline', 'success', 'ghost', 'link'])).optional(),
 	icon: dsl(z.array(z.unknown())).optional(),
 	size: dsl(z.enum(['xs', 'sm', 'md'])).optional(),
 	ariaLabel: z.string().optional(),
@@ -101,6 +101,7 @@ export const IconButtonNodeSchema = baseNode.extend({
 	icon: dsl(z.array(z.unknown())).optional(),
 	'aria-label': z.string(),
 	size: dsl(z.enum(['icon', 'icon-field', 'icon-sm', 'icon-xs'])).optional(),
+	tooltip: z.string().optional(),
 });
 
 export const LiveToggleNodeSchema = baseNode.extend({
@@ -573,6 +574,8 @@ export const FieldSelectNodeSchema = baseNode.extend({
 	disabled: dsl(z.boolean()).optional(),
 	required: dsl(z.boolean()).optional(),
 	error: z.string().optional(),
+	hideLabel: dsl(z.boolean()).optional(),
+	size: dsl(z.enum(['md', 'sm'])).optional(),
 });
 
 export const FieldTagsNodeSchema = baseNode.extend({
@@ -591,6 +594,8 @@ export const FieldTagsNodeSchema = baseNode.extend({
 export const FieldTextNodeSchema = baseNode.extend({
 	bind: z.string().optional(),
 	label: z.string(),
+	hideLabel: dsl(z.boolean()).optional(),
+	size: dsl(z.enum(['md', 'sm'])).optional(),
 	description: z.string().optional(),
 	readOnly: dsl(z.boolean()).optional(),
 	required: dsl(z.boolean()).optional(),
@@ -628,6 +633,7 @@ export const FieldWrapperNodeSchema = baseNode.extend({
 	required: dsl(z.boolean()).optional(),
 	error: z.string().optional(),
 	id: z.string().optional(),
+	hideLabel: dsl(z.boolean()).optional(),
 	items: dsl(z.array(z.unknown())).optional(),
 });
 
@@ -932,6 +938,7 @@ export const TooltipNodeSchema = baseNode.extend({
 	align: dsl(z.enum(['start', 'center', 'end'])).optional(),
 	delay: dsl(z.number()).optional(),
 	describe: dsl(z.boolean()).optional(),
+	className: z.string().optional(),
 	items: dsl(z.array(z.unknown())).optional(),
 });
 
@@ -1044,6 +1051,9 @@ export const SearchBarNodeSchema = baseNode.extend({
 	debounceMs: dsl(z.number()).optional(),
 	focusExpand: dsl(z.boolean()).optional(),
 	size: dsl(z.enum(['sm', 'md'])).optional(),
+	inputRef: z.unknown().optional(),
+	onKeyDown: z.unknown().optional(),
+	ariaControls: z.string().optional(),
 });
 
 const SortStateSchema = z.object({
