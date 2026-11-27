@@ -8,8 +8,8 @@ export interface IconButtonProps extends Omit<ButtonProps, 'children' | 'size'> 
 	icon: React.ReactNode;
 	'aria-label': string;
 	size?: 'icon' | 'icon-field' | 'icon-sm' | 'icon-xs';
-	/** A text longer than the aria-label, shown in the tooltip card instead of it; it then also describes the button. */
-	tooltip?: string;
+	/** A text longer than the aria-label, shown in the tooltip card instead of it; it then also describes the button. `false` shows no tooltip card at all (the button sits in something that already labels it, or owns its hover). */
+	tooltip?: string | false;
 }
 
 /**
@@ -35,7 +35,7 @@ export function IconButton({
 	);
 	// A title given by the caller stays the native one it asked for. Otherwise the label is the tooltip: the same text is
 	// already the accessible name, so the tooltip does not describe the button a second time; a longer `tooltip` does.
-	return rest.title !== undefined ? (
+	return rest.title !== undefined || tooltip === false ? (
 		button
 	) : (
 		<Tooltip content={tooltip ?? ariaLabel} describe={tooltip !== undefined}>

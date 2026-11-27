@@ -46,6 +46,8 @@ export const ButtonActionNodeSchema = baseNode.extend({
 	loading: dsl(z.boolean()).optional(),
 	type: dsl(z.enum(['button', 'submit'])).optional(),
 	form: z.string().optional(),
+	ariaExpanded: dsl(z.boolean()).optional(),
+	ariaControls: z.string().optional(),
 });
 
 const CheckboxOptionSchema = z.object({
@@ -104,7 +106,7 @@ export const IconButtonNodeSchema = baseNode.extend({
 	icon: dsl(z.array(z.unknown())).optional(),
 	'aria-label': z.string(),
 	size: dsl(z.enum(['icon', 'icon-field', 'icon-sm', 'icon-xs'])).optional(),
-	tooltip: z.string().optional(),
+	tooltip: dsl(z.union([z.string(), z.literal(false)])).optional(),
 });
 
 export const LiveToggleNodeSchema = baseNode.extend({
@@ -616,6 +618,7 @@ export const FieldTextNodeSchema = baseNode.extend({
 	readOnly: dsl(z.boolean()).optional(),
 	required: dsl(z.boolean()).optional(),
 	error: z.string().optional(),
+	icon: dsl(z.array(z.unknown())).optional(),
 });
 
 export const FieldTextareaNodeSchema = baseNode.extend({
@@ -1102,6 +1105,9 @@ export const SearchBarNodeSchema = baseNode.extend({
 	inputRef: z.unknown().optional(),
 	onKeyDown: z.unknown().optional(),
 	ariaControls: z.string().optional(),
+	width: dsl(z.enum(['sm', 'md', 'lg', 'full'])).optional(),
+	ariaLabel: z.string().optional(),
+	ariaDescribedBy: z.string().optional(),
 });
 
 const SortStateSchema = z.object({

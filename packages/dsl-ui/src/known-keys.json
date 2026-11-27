@@ -141,6 +141,8 @@
 	},
 	"ButtonAction": {
 		"knownKeys": [
+			"ariaControls",
+			"ariaExpanded",
 			"ariaLabel",
 			"disabled",
 			"disabledReason",
@@ -940,6 +942,7 @@
 			"description",
 			"error",
 			"hideLabel",
+			"icon",
 			"label",
 			"readOnly",
 			"required",
@@ -1420,6 +1423,8 @@
 	"SearchBar": {
 		"knownKeys": [
 			"ariaControls",
+			"ariaDescribedBy",
+			"ariaLabel",
 			"debounceMs",
 			"focusExpand",
 			"inputRef",
@@ -1429,7 +1434,8 @@
 			"resetUrlParams",
 			"size",
 			"urlParam",
-			"value"
+			"value",
+			"width"
 		],
 		"category": "composite",
 		"tags": [

@@ -32,6 +32,23 @@ export interface FieldWrapperProps {
 	children: React.ReactNode | ((control: FieldControlProps) => React.ReactNode);
 }
 
+// What the wrapper adds to the control. It only overrides what it has something to say about: an `id` the caller gave is kept when the
+// wrapper was told the same one, an ARIA attribute the caller wrote stays unless the wrapper has its own value, and `aria-describedby` lists both.
+function mergeControl(child: React.ReactElement<Record<string, unknown>>, control: FieldControlProps): Record<string, unknown> {
+	const own = child.props;
+	const merged: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(control)) {
+		if (value !== undefined) {
+			merged[key] = value;
+		}
+	}
+	const described = [own['aria-describedby'], control['aria-describedby']].filter(Boolean).join(' ');
+	if (described) {
+		merged['aria-describedby'] = described;
+	}
+	return merged;
+}
+
 /**
  * Label, description, required marker and validation message for one field.
  *
@@ -69,7 +86,7 @@ export function FieldWrapper({ label, description, required, error, id: idProp, 
 		? children(control)
 		: React.Children.map(children, (child, i) =>
 			i === 0 && React.isValidElement(child)
-				? React.cloneElement(child as React.ReactElement<Record<string, unknown>>, { ...control })
+				? React.cloneElement(child as React.ReactElement<Record<string, unknown>>, mergeControl(child as React.ReactElement<Record<string, unknown>>, control))
 				: child);
 
 	return (

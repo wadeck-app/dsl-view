@@ -33,13 +33,17 @@ export interface ButtonActionProps {
 	 * Dialog. Only meaningful with `type="submit"`: with the default `type="button"` it does nothing, and says so in the console.
 	 */
 	form?: string;
+	/** For a button that opens or closes something (a disclosure, a menu): whether it is open. Sets aria-expanded. */
+	ariaExpanded?: boolean;
+	/** Id of what the button opens or closes (aria-controls). */
+	ariaControls?: string;
 }
 
 /**
  * @registryCategory atomic
  * @registryTags button action
  */
-export function ButtonAction({ label, variant = 'primary', icon, size, onClick, disabled, disabledReason, loading, type = 'button', form, ariaLabel }: ButtonActionProps) {
+export function ButtonAction({ label, variant = 'primary', icon, size, onClick, disabled, disabledReason, loading, type = 'button', form, ariaLabel, ariaExpanded, ariaControls }: ButtonActionProps) {
 	if (form !== undefined && type !== 'submit') {
 		reportAuthoringMistake(`[ButtonAction] "${label}" has form="${form}" but type="${type}": only a submit button submits a form. Set type="submit".`);
 	}
@@ -54,6 +58,8 @@ export function ButtonAction({ label, variant = 'primary', icon, size, onClick, 
 			type={type}
 			form={form}
 			aria-label={ariaLabel}
+			aria-expanded={ariaExpanded}
+			aria-controls={ariaControls}
 		>
 			{icon && !loading && icon}
 			{label}

@@ -51,14 +51,22 @@ export interface SearchBarProps {
 	onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
 	/** The id of the list this search filters (aria-controls on the input). */
 	ariaControls?: string;
+	/** Width of the bar: `sm` 10rem, `md` 13rem (default), `lg` 18rem, `full` fills its container. Ignored with `focusExpand`, which sets its own widths. */
+	width?: 'sm' | 'md' | 'lg' | 'full';
+	/** The accessible name of the input when the placeholder is not a good one (the placeholder is the default). */
+	ariaLabel?: string;
+	/** Id of the element that describes the input (aria-describedby). */
+	ariaDescribedBy?: string;
 }
+
+const WIDTH_CLASS = { sm: 'w-40', md: 'w-52', lg: 'w-72', full: 'w-full' } as const;
 
 /**
  * @registryCategory composite
  * @registryTags filter search
  * @requiresOneOf urlParam | value
  */
-export function SearchBar({ urlParam, resetUrlParams, value: valueProp, onChange: onChangeProp, placeholder, debounceMs = 300, focusExpand = false, size = 'md', inputRef, onKeyDown, ariaControls }: SearchBarProps) {
+export function SearchBar({ urlParam, resetUrlParams, value: valueProp, onChange: onChangeProp, placeholder, debounceMs = 300, focusExpand = false, size = 'md', inputRef, onKeyDown, ariaControls, width = 'md', ariaLabel, ariaDescribedBy }: SearchBarProps) {
 	const [urlValue, setUrlValue] = useOptionalUrlParam(urlParam, { resetUrlParams });
 	if (urlParam == null && (valueProp === undefined || onChangeProp === undefined)) {
 		throw new Error('[SearchBar] needs either "urlParam" or both "value" and "onChange"');
@@ -114,7 +122,7 @@ export function SearchBar({ urlParam, resetUrlParams, value: valueProp, onChange
 	}
 
 	return (
-		<div role="search" className={focusExpand ? 'relative flex items-center' : 'relative flex items-center w-52'}>
+		<div role="search" className={focusExpand ? 'relative flex items-center' : `relative flex items-center ${WIDTH_CLASS[width] ?? WIDTH_CLASS.md}`}>
 			<Search
 				className={searchIconClass}
 				aria-hidden="true"
@@ -124,7 +132,8 @@ export function SearchBar({ urlParam, resetUrlParams, value: valueProp, onChange
 				// A DSL page can write any value for these React-only props: only a ref (function or object) and a function are used.
 				ref={typeof inputRef === 'function' || (typeof inputRef === 'object' && inputRef !== null) ? inputRef : undefined}
 				type="search"
-				aria-label={placeholder || 'Search'}
+				aria-label={ariaLabel || placeholder || 'Search'}
+				aria-describedby={ariaDescribedBy}
 				aria-controls={ariaControls}
 				onKeyDown={typeof onKeyDown === 'function' ? onKeyDown : undefined}
 				placeholder={placeholder}

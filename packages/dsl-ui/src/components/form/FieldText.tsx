@@ -22,6 +22,8 @@ export interface FieldTextProps
 	required?: boolean;
 	/** Validation message. Handled by FieldWrapper. */
 	error?: string;
+	/** A leading icon inside the field (a search glass, a unit). Decoration: the label stays the accessible name. */
+	icon?: React.ReactNode;
 }
 
 /**
@@ -29,26 +31,31 @@ export interface FieldTextProps
  * @registryTags field
  * @registryBind formData onChange
  */
-export function FieldText({ label, description, value, onChange, readOnly, required, error, className, hideLabel, size = 'md', ...rest }: FieldTextProps) {
-	const inputClass = `${hideLabel ? '' : 'mt-1 '}${inputBase} ${SIZE_CLASS[size] ?? SIZE_CLASS.md}`;
+export function FieldText({ label, description, value, onChange, readOnly, required, error, className, hideLabel, size = 'md', icon, ...rest }: FieldTextProps) {
+	const inputClass = `${hideLabel ? '' : 'mt-1 '}${inputBase} ${SIZE_CLASS[size] ?? SIZE_CLASS.md}${icon ? ' pl-9' : ''}`;
+	const classes = `${inputClass}${className ? ` ${className}` : ''}`;
+	// An id the caller gave is the control's id (the label points at it); the wrapper adds ARIA state without erasing the caller's.
 	return (
-		<FieldWrapper label={label} description={description} required={required} error={error} hideLabel={hideLabel}>
-			{readOnly ? (
-				<input
-					readOnly
-					value={value}
-					className={`${inputClass}${className ? ` ${className}` : ''}`}
-					{...rest}
-				/>
-			) : (
-				<input
-					type="text"
-					value={value}
-					onChange={e => onChange(e.target.value)}
-					className={`${inputClass}${className ? ` ${className}` : ''}`}
-					{...rest}
-				/>
-			)}
+		<FieldWrapper label={label} description={description} required={required} error={error} hideLabel={hideLabel} id={rest.id}>
+			{control => {
+				const given = Object.fromEntries(Object.entries(control).filter(([, value]) => value !== undefined));
+				const aria = { ...rest, ...given, 'aria-describedby': [rest['aria-describedby'], control['aria-describedby']].filter(Boolean).join(' ') || undefined };
+				const input = readOnly ? (
+					<input readOnly value={value} className={classes} {...aria} />
+				) : (
+					<input type="text" value={value} onChange={e => onChange(e.target.value)} className={classes} {...aria} />
+				);
+				return icon ? (
+					<div className="relative">
+						<span aria-hidden="true" className={`pointer-events-none absolute left-3 flex items-center text-muted ${hideLabel ? 'inset-y-0' : 'bottom-0 top-1'}`}>
+							{icon}
+						</span>
+						{input}
+					</div>
+				) : (
+					input
+				);
+			}}
 		</FieldWrapper>
 	);
 }

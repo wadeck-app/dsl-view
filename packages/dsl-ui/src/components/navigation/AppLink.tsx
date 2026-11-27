@@ -10,6 +10,8 @@ export interface AppLinkProps {
 	className?: string;
 	'aria-label'?: string;
 	title?: string;
+	/** One line cut with an ellipsis when it does not fit (the link then fills its row: it is `block`). */
+	truncate?: boolean;
 	onClick?: React.MouseEventHandler<HTMLAnchorElement>;
 	children: React.ReactNode;
 }
@@ -37,8 +39,9 @@ export function usableLinkTarget(href: string | undefined, external: boolean, wh
  * work; an external one opens in a new tab with `noopener noreferrer`. Without a router above it an
  * internal target is a plain anchor: the navigation still works, with a page load.
  */
-export function AppLink({ href, external = false, className, onClick, children, ...rest }: AppLinkProps) {
+export function AppLink({ href, external = false, className: classNameProp, truncate = false, onClick, children, ...rest }: AppLinkProps) {
 	const inRouter = useInRouterContext();
+	const className = truncate ? [classNameProp, 'block min-w-0 truncate'].filter(Boolean).join(' ') : classNameProp;
 	if (external) {
 		return (
 			<a href={href} target="_blank" rel="noopener noreferrer" className={className} onClick={onClick} {...rest}>
