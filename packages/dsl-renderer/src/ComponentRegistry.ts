@@ -32,6 +32,7 @@ export interface ComponentRegistryEntry {
 	itemKeys?: Record<string, ItemKeysSpec>;
 	providesContext?: string[]; // context variable names provided (from createContext() calls)
 	requiresContext?: string[]; // context variable names required (from useContext() calls)
+	requiresOneOf?: string[][]; // alternatives of which a node must write one (from @requiresOneOf), checked by the compiler
 }
 
 export type ComponentRegistry = Record<string, ComponentRegistryEntry>;

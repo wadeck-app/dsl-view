@@ -56,6 +56,7 @@ export interface SearchBarProps {
 /**
  * @registryCategory composite
  * @registryTags filter search
+ * @requiresOneOf urlParam | value
  */
 export function SearchBar({ urlParam, resetUrlParams, value: valueProp, onChange: onChangeProp, placeholder, debounceMs = 300, focusExpand = false, size = 'md', inputRef, onKeyDown, ariaControls }: SearchBarProps) {
 	const [urlValue, setUrlValue] = useOptionalUrlParam(urlParam, { resetUrlParams });

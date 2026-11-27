@@ -532,6 +532,7 @@ interface DiscoveredComponent {
 	itemKeys?: Record<string, ItemKeysSpec>;
 	providesContext: string[];
 	requiresContext: string[];
+	requiresOneOf: string[][];
 	sourcePath: string;
 }
 
@@ -556,12 +557,14 @@ function discoverComponents(srcDir: string, hookWrappers: Map<string, string[]>)
 			let tags: string[] = [];
 			let bindPattern: string[] | null = null;
 			let lazy = false;
+			let requiresOneOf: string[][] = [];
 
 			for (const tag of jsDoc.getTags()) {
 				const tagName = tag.getTagName();
 				const text = tag.getCommentText()?.trim() ?? '';
 				if (tagName === 'registryCategory') category = text;
 				else if (tagName === 'registryTags') tags = parseRegistryTags(text, name, absPath);
+				else if (tagName === 'requiresOneOf') requiresOneOf = parseRequiresOneOf(text);
 				else if (tagName === 'registryBind') bindPattern = text.split(/\s+/).filter(Boolean);
 				else if (tagName === 'registryLazy') lazy = true;
 			}
@@ -576,7 +579,8 @@ function discoverComponents(srcDir: string, hookWrappers: Map<string, string[]>)
 					...extractProvidesContextFromProviderJsx(fn),
 				])];
 				const requiresContext = extractRequiresContext(fn, hookWrappers);
-				discovered.push({ name, category, tags, bindPattern, lazy, allowedChildren, knownKeys, mapSlots, itemKeys, providesContext, requiresContext, sourcePath: absPath });
+				checkRequiresOneOf(requiresOneOf, knownKeys, name, absPath);
+				discovered.push({ name, category, tags, bindPattern, lazy, allowedChildren, knownKeys, mapSlots, itemKeys, providesContext, requiresContext, requiresOneOf, sourcePath: absPath });
 			}
 		}
 	}
@@ -598,6 +602,24 @@ function parseRegistryTags(text: string, component: string, file: string): strin
 		throw new Error(`[registry] ${component} (${file}): @registryTags must be lowercase kebab-case words separated by spaces, found ${bad.map(tag => `"${tag}"`).join(', ')}. Put any description on its own line under a blank line, after the tags.`);
 	}
 	return tags;
+}
+
+/** `@requiresOneOf urlParam | value+onChange` -> [['urlParam'], ['value', 'onChange']]: alternatives split on |, props of a group on +. First line only. */
+function parseRequiresOneOf(text: string): string[][] {
+	const firstLine = text.split(/\r?\n/)[0] ?? '';
+	return firstLine
+		.split('|')
+		.map(group => group.split('+').map(prop => prop.trim()).filter(Boolean))
+		.filter(group => group.length > 0);
+}
+
+/** Every prop named in `@requiresOneOf` must be one the component declares: a typo would silently disable the check. */
+function checkRequiresOneOf(groups: string[][], knownKeys: string[], component: string, file: string): void {
+	for (const prop of groups.flat()) {
+		if (!knownKeys.includes(prop)) {
+			throw new Error(`[registry] ${component} (${file}): @requiresOneOf names "${prop}", which is not a prop of ${component}. Props: ${knownKeys.join(', ')}.`);
+		}
+	}
 }
 
 // ─── Simple render block generation ───────────────────────────────────────────
@@ -1137,6 +1159,9 @@ ${usesProcessEnv ? PROCESS_ENV_DECLARATION : ''}`;
 			}
 			if (c.requiresContext.length > 0) {
 				lines.push(`${entryVar}.requiresContext = ${JSON.stringify(c.requiresContext)};`);
+			}
+			if ((c.requiresOneOf?.length ?? 0) > 0) {
+				lines.push(`${entryVar}.requiresOneOf = ${JSON.stringify(c.requiresOneOf)};`);
 			}
 			return lines.join('\n');
 		})

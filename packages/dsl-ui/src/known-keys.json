@@ -1425,6 +1425,14 @@
 		"tags": [
 			"filter",
 			"search"
+		],
+		"requiresOneOf": [
+			[
+				"urlParam"
+			],
+			[
+				"value"
+			]
 		]
 	},
 	"Section": {

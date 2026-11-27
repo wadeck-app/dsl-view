@@ -31,7 +31,8 @@ export interface CompiledDslDiagnostic {
 		// A child whose tags and category are none of the tags the slot allows (`@slot tag:x`).
 		| 'slot-tag-mismatch'
 		// A component under none of the registry components that provide a context it needs (ButtonSave outside a Form).
-		| 'missing-context';
+		| 'missing-context'
+		| 'missing-prop-group';
 	message: string;
 }
 

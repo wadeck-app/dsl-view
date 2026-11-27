@@ -31,6 +31,8 @@ export interface DslKeysEntry {
 	/** Contexts the component reads and the ones it provides to what it renders (from useContext / Provider). */
 	requiresContext?: string[];
 	providesContext?: string[];
+	/** Alternatives of which a node must write at least one (a group is props that go together): `[['urlParam'], ['value']]`. */
+	requiresOneOf?: string[][];
 	nodeSchema?: z.ZodSchema;
 	/** The generated schema of the component's props (a registry entry carries it outside production). A JSON manifest has none. */
 	propSchema?: z.ZodSchema;
@@ -41,7 +43,7 @@ export type DslKeysManifest = Record<string, DslKeysEntry>;
 
 /** Serializable subset of a registry (no render functions, no schemas), meant to be shipped as JSON. */
 export function buildKnownKeysManifest(
-	entries: Array<{ name: string; knownKeys?: string[]; allowedChildren?: Record<string, string[]>; mapSlots?: Record<string, MapSlotSpec>; itemKeys?: Record<string, ItemKeysSpec>; category?: string; tags?: string[]; requiresContext?: string[]; providesContext?: string[] }>
+	entries: Array<{ name: string; knownKeys?: string[]; allowedChildren?: Record<string, string[]>; mapSlots?: Record<string, MapSlotSpec>; itemKeys?: Record<string, ItemKeysSpec>; category?: string; tags?: string[]; requiresContext?: string[]; providesContext?: string[]; requiresOneOf?: string[][] }>
 ): DslKeysManifest {
 	const manifest: DslKeysManifest = {};
 	for (const entry of [...entries].sort((a, b) => a.name.localeCompare(b.name))) {
@@ -54,6 +56,7 @@ export function buildKnownKeysManifest(
 			...(entry.tags && entry.tags.length > 0 ? { tags: [...entry.tags] } : {}),
 			...(entry.requiresContext && entry.requiresContext.length > 0 ? { requiresContext: [...entry.requiresContext] } : {}),
 			...(entry.providesContext && entry.providesContext.length > 0 ? { providesContext: [...entry.providesContext] } : {}),
+			...(entry.requiresOneOf && entry.requiresOneOf.length > 0 ? { requiresOneOf: entry.requiresOneOf.map(group => [...group]) } : {}),
 		};
 	}
 	return manifest;
@@ -146,6 +149,7 @@ function walk(node: unknown, manifest: DslKeysManifest, nodePath: string, diagno
 	}
 
 	diagnostics.push(...checkPropValues(record, type, nodePath, entry));
+	diagnostics.push(...checkPropGroups(record, type, nodePath, entry, placement.placement ?? 'error'));
 
 	// Recursion is only possible via allowedChildren - the sole metadata that says
 	// where child DSL nodes live in this component's props. A component with no
@@ -253,6 +257,29 @@ function checkRequiredContext(type: string, nodePath: string, entry: DslKeysEntr
 		}
 	}
 	return diagnostics;
+}
+
+// A component that needs one of several alternatives (SearchBar: `urlParam`, or `value`) throws at render when the node has none.
+// A group holds when every prop of it is written with a non-empty value; a node that may inherit props is not blamed.
+function checkPropGroups(record: Record<string, unknown>, type: string, nodePath: string, entry: DslKeysEntry, mode: 'error' | 'warning'): CompiledDslDiagnostic[] {
+	const groups = entry.requiresOneOf;
+	if (!groups || groups.length === 0 || record['$extends'] !== undefined || record['$source'] !== undefined) {
+		return [];
+	}
+	const given = (key: string): boolean => record[key] !== undefined && record[key] !== null && record[key] !== '';
+	if (groups.some(group => group.every(given))) {
+		return [];
+	}
+	const wanted = groups.map(group => group.join(' + ')).join(' or ');
+	return [
+		{
+			severity: mode,
+			type,
+			nodePath,
+			code: 'missing-prop-group',
+			message: `[${type}] needs ${wanted}: none of them is written, so it fails to render. Add one.${mode === 'warning' ? ' (Reported as a warning while the page is being migrated: it will become an error.)' : ''}`,
+		},
+	];
 }
 
 // The literal values the component's generated schema rejects: a typo'd enum, a map where a list is expected. These

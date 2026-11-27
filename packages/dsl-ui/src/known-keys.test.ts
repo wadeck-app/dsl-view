@@ -76,3 +76,16 @@ describe('known-keys.json DataTable columns', () => {
 		]);
 	});
 });
+
+describe('known-keys.json SearchBar alternatives', () => {
+	it('reports a SearchBar that has neither urlParam nor value, before it fails to render', async () => {
+		if (!fs.existsSync(unknownKeysPath)) {
+			throw new Error(`dsl-renderer is not built (${unknownKeysPath} missing): run \`npm run build\` in packages/dsl-renderer first.`);
+		}
+		const { findUnknownKeys } = await import(/* @vite-ignore */ unknownKeysPath);
+		expect(findUnknownKeys({ $type: 'SearchBar', placeholder: 'x' }, manifest)).toEqual([
+			expect.objectContaining({ code: 'missing-prop-group', severity: 'error', type: 'SearchBar', message: expect.stringContaining('urlParam or value') }),
+		]);
+		expect(findUnknownKeys({ $type: 'SearchBar', urlParam: 'q' }, manifest)).toEqual([]);
+	});
+});
