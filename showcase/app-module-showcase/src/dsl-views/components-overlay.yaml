@@ -245,7 +245,7 @@ items:
         label: "overlay"
     items:
       - $type: "Markdown"
-        text: "Hint card for a single wrapped element: portaled and kept in the viewport (never clipped), opens after a hover delay or on keyboard focus, closes on leave, click, Escape and scroll, one at a time; `content` is text or any node, `rows` gives labelled details; linked via aria-describedby. Pick it for a hint or structured details, Popover for interactive content."
+        text: "Hint card for a single wrapped element: portaled and kept in the viewport (never clipped), opens after a hover delay or on keyboard focus, closes on leave, click, Escape and scroll, one at a time; `content` is text or any node, `rows` gives labelled details (a long unbreakable value wraps inside the card; a row can `clamp` to 1-4 lines; `maxWidth` xs to lg widens the card); linked via aria-describedby. Pick it for a hint or structured details, Popover for interactive content."
       - $type: "HorizontalStack"
         wrap: true
         items:
@@ -279,4 +279,4 @@ items:
         align: "$vars.Tooltip__align"
         describe: "$vars.Tooltip__describe"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `content` | array | no |\n| `rows` | array | no |\n| `side` | top / right / bottom / left | no |\n| `align` | start / center / end | no |\n| `delay` | number | no |\n| `describe` | boolean | no |\n| `items` | array | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `content` | array | no |\n| `rows` | array | no |\n| `maxWidth` | unknown | no |\n| `side` | top / right / bottom / left | no |\n| `align` | start / center / end | no |\n| `delay` | number | no |\n| `describe` | boolean | no |\n| `items` | array | no |"

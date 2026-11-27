@@ -6,13 +6,19 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 // surfaces which flip with the .dark class) - matches the pre-migration raw
 // palette colors which had no dark-mode variant. Arbitrary hex values keep
 // exact visual parity without introducing a new semantic token.
-const cardClass = 'pointer-events-none z-50 w-max max-w-xs rounded bg-[#111827] px-2 py-1 text-xs text-white whitespace-normal';
+// The ring gives the card an edge on a dark page, where the dark surface alone disappears.
+const cardClass = 'pointer-events-none z-50 w-max rounded bg-[#111827] px-2 py-1 text-xs text-white ring-1 ring-white/15 whitespace-normal';
+// Full class names: Tailwind reads the source text.
+const MAX_WIDTH = { xs: 'max-w-xs', sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-lg' } as const;
+const CLAMP = { 1: 'line-clamp-1', 2: 'line-clamp-2', 3: 'line-clamp-3', 4: 'line-clamp-4' } as const;
 const arrowClass = 'fill-[#111827]';
 // @formatter:on
 
 export interface TooltipRow {
 	label: string;
 	value: React.ReactNode;
+	/** Cut the value after this many lines (1 to 4) with an ellipsis; the full text stays available to assistive technology. */
+	clamp?: 1 | 2 | 3 | 4;
 }
 
 export interface TooltipProps {
@@ -20,6 +26,8 @@ export interface TooltipProps {
 	content?: React.ReactNode;
 	/** Labelled rows (label on the left, value on the right) for structured details; shown before `content`. */
 	rows?: TooltipRow[];
+	/** Widest the card may grow: xs 320px (default), sm 384px, md 448px, lg 512px. */
+	maxWidth?: keyof typeof MAX_WIDTH;
 	side?: 'top' | 'right' | 'bottom' | 'left';
 	align?: 'start' | 'center' | 'end';
 	/** Milliseconds the pointer must rest on the trigger before the card opens (keyboard focus opens it at once). Default 300. */
@@ -57,11 +65,11 @@ function Details({ rows, content }: Pick<TooltipProps, 'rows' | 'content'>) {
 	return (
 		<>
 			{hasRows && (
-				<dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-left">
+				<dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5 text-left">
 					{rows.map(row => (
 						<React.Fragment key={row.label}>
 							<dt className="text-white/70">{row.label}</dt>
-							<dd className="text-right">{row.value}</dd>
+							<dd className={['min-w-0 text-left [overflow-wrap:anywhere]', row.clamp ? CLAMP[row.clamp] : ''].filter(Boolean).join(' ')}>{row.value}</dd>
 						</React.Fragment>
 					))}
 				</dl>
@@ -79,7 +87,7 @@ function Details({ rows, content }: Pick<TooltipProps, 'rows' | 'content'>) {
  * @registryTags tooltip hover card rows details
  * @uiexception hover-only - Tooltips are intentionally hover-triggered; they cannot be permanently visible without defeating their purpose (screen real estate and visual noise). This is the sole accepted exception to UX §6.
  */
-export function Tooltip({ content, rows, side = 'top', align = 'center', delay = 300, describe = true, className, children, ...dataAttributes }: TooltipProps) {
+export function Tooltip({ content, rows, maxWidth = 'xs', side = 'top', align = 'center', delay = 300, describe = true, className, children, ...dataAttributes }: TooltipProps) {
 	const anchorRef = useRef<HTMLSpanElement>(null);
 	const id = React.useId();
 	const [open, setOpen] = useState(false);
@@ -196,7 +204,7 @@ export function Tooltip({ content, rows, side = 'top', align = 'center', delay =
 					// The card describes the trigger: the focus stays where it is, before and after.
 					onOpenAutoFocus={event => event.preventDefault()}
 					onCloseAutoFocus={event => event.preventDefault()}
-					className={cardClass}
+					className={`${cardClass} ${MAX_WIDTH[maxWidth]}`}
 					data-testid="tooltip-card"
 				>
 					<Details rows={rows} content={content} />

@@ -930,11 +930,13 @@ export const ToastProviderNodeSchema = baseNode.extend({
 const TooltipRowSchema = z.object({
 	label: z.string(),
 	value: z.array(z.unknown()).optional(),
+	clamp: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]).optional(),
 });
 
 export const TooltipNodeSchema = baseNode.extend({
 	content: dsl(z.array(z.unknown())).optional(),
 	rows: dsl(z.array(TooltipRowSchema)).optional(),
+	maxWidth: z.unknown().optional(),
 	side: dsl(z.enum(['top', 'right', 'bottom', 'left'])).optional(),
 	align: dsl(z.enum(['start', 'center', 'end'])).optional(),
 	delay: dsl(z.number()).optional(),

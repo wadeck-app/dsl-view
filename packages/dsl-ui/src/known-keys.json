@@ -1765,6 +1765,7 @@
 			"delay",
 			"describe",
 			"items",
+			"maxWidth",
 			"rows",
 			"side"
 		],
