@@ -9,10 +9,13 @@ export interface SwitchProps {
     size?: 'sm' | 'md';
 }
 
-const TRACK_BASE = 'relative inline-flex items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-solid)] focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed bg-gray-300 data-[state=checked]:bg-[var(--color-primary-solid)]';
+const TRACK_BASE = 'relative inline-flex items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-solid)] focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed data-[state=checked]:bg-[var(--color-primary-solid)]';
+// Off: a tint of the muted token with an inset outline, so the track shows on a light and on a dark surface (a fixed light grey was a bright pill in the dark theme).
+const TRACK_OFF = 'bg-muted/30 ring-1 ring-inset ring-muted/50';
 const TRACK_SIZE: Record<'sm' | 'md', string> = { sm: 'w-9 h-5', md: 'w-11 h-6' };
 
-const THUMB_BASE = 'block rounded-full bg-white shadow-sm transition-transform';
+const THUMB_BASE = 'block rounded-full shadow-sm transition-transform';
+const THUMB_COLOR = { off: 'bg-muted', on: 'bg-white' } as const;
 // OFF: 2px gap from left edge. ON: track_width - thumb_width - 2px (symmetric gap)
 // sm: 36 - 16 - 2 = 18px. md: 44 - 20 - 2 = 22px
 const THUMB_TRANSLATE_OFF = 'translate-x-0.5';
@@ -31,9 +34,9 @@ export function Switch({ label, checked, onChange, disabled, size = 'md' }: Swit
                 checked={checked}
                 onCheckedChange={onChange}
                 disabled={disabled}
-                className={`${TRACK_BASE} ${TRACK_SIZE[size]}`}
+                className={`${TRACK_BASE} ${TRACK_SIZE[size]}${checked ? '' : ` ${TRACK_OFF}`}`}
             >
-                <RadixSwitch.Thumb className={`${THUMB_BASE} ${THUMB_SIZE[size]} ${checked ? THUMB_TRANSLATE_ON[size] : THUMB_TRANSLATE_OFF}`} />
+                <RadixSwitch.Thumb className={`${THUMB_BASE} ${checked ? THUMB_COLOR.on : THUMB_COLOR.off} ${THUMB_SIZE[size]} ${checked ? THUMB_TRANSLATE_ON[size] : THUMB_TRANSLATE_OFF}`} />
             </RadixSwitch.Root>
             {label && <span className="text-sm text-content">{label}</span>}
         </label>
