@@ -3,5 +3,6 @@
   "Progress": { "defaults": { "value": 40, "max": 100 }, "controls": ["valueLabel"] },
   "Skeleton": { "defaults": { "count": 3 }, "controls": ["count", "width", "height"] },
   "Spinner": { "defaults": { "label": "Loading" } },
+  "SearchBar": { "props": { "urlParam": "q" } },
   "Avatar": { "defaults": { "alt": "Ada Lovelace", "fallback": "AL" }, "controls": ["fallback"] }
 }

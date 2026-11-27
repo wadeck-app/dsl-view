@@ -138,6 +138,7 @@ items:
               - value: "md"
                 label: "md"
       - $type: "SearchBar"
+        urlParam: "q"
         focusExpand: "$vars.SearchBar__focusExpand"
         size: "$vars.SearchBar__size"
       - $type: "Markdown"
