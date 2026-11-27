@@ -233,3 +233,33 @@ describe('compileDslDocument input errors', () => {
 		expect(compileDslDocument(`$type: Label\nlabel: hi\n`, registry).sourcePath).toBeUndefined();
 	});
 });
+
+describe('placement mode through the compiler', () => {
+	const Bar: ComponentRegistryEntry = { name: 'Bar', category: 'disposition', tags: [], allowedChildren: { items: ['button'] }, knownKeys: ['items'], render: () => null };
+	const Plain: ComponentRegistryEntry = { name: 'Plain', category: 'atomic', tags: ['text'], knownKeys: ['label'], render: () => null };
+	const placementRegistry = createRegistry([Bar, Plain]);
+	const yamlText = '$type: Bar\nitems:\n  - $type: Plain\n    label: x\n';
+
+	it('a misplaced child fails the compile by default', () => {
+		const artifact = compileDslDocument(yamlText, placementRegistry);
+		expect(artifact.diagnostics.map(d => [d.code, d.severity])).toEqual([['slot-tag-mismatch', 'error']]);
+	});
+
+	it('placement "warning" keeps the finding but lets the page compile', () => {
+		const artifact = compileDslDocument(yamlText, placementRegistry, { placement: 'warning' });
+		expect(artifact.diagnostics.map(d => [d.code, d.severity])).toEqual([['slot-tag-mismatch', 'warning']]);
+	});
+
+	it('compileDslPagesDir takes the same option: hasErrors is false in warning mode, true otherwise', () => {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dsl-placement-'));
+		try {
+			fs.writeFileSync(path.join(dir, 'page.yaml'), yamlText);
+			expect(compileDslPagesDir(dir, placementRegistry).hasErrors).toBe(true);
+			const soft = compileDslPagesDir(dir, placementRegistry, { placement: 'warning' });
+			expect(soft.hasErrors).toBe(false);
+			expect(soft.results[0]!.diagnostics.map(d => d.severity)).toEqual(['warning']);
+		} finally {
+			fs.rmSync(dir, { recursive: true, force: true });
+		}
+	});
+});

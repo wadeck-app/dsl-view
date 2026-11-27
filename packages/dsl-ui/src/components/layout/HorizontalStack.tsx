@@ -46,7 +46,7 @@ export interface HorizontalStackProps {
 	 * @default false
 	 */
 	wrap?: boolean;
-	/** @slot tag:layout, tag:table, tag:form, tag:display, tag:composite, tag:atomic */
+	/** @slot tag:atomic, tag:composite, tag:disposition */
 	children: React.ReactNode;
 	/**
 	 * Per-child sizing, parallel array to `children` (same length/order).

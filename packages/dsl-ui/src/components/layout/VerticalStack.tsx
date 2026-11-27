@@ -21,7 +21,7 @@ export interface VerticalStackProps {
 	 * @default false
 	 */
 	fill?: boolean;
-	/** @slot tag:layout, tag:table, tag:form, tag:display, tag:composite, tag:atomic */
+	/** @slot tag:atomic, tag:composite, tag:disposition */
 	children: React.ReactNode;
 }
 

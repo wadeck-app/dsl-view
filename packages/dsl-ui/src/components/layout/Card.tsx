@@ -4,7 +4,7 @@ import { fillClasses, joinClasses } from '@dsl-ui/utils/fillClasses.js';
 import { classFor } from '@dsl-ui/utils/warnUnknownChoice.js';
 
 export interface CardProps {
-    /** @slot tag:layout, tag:display, tag:composite */
+    /** @slot tag:atomic, tag:composite, tag:disposition */
     children: React.ReactNode;
     className?: string;
     padding?: 'none' | 'sm' | 'md' | 'lg';

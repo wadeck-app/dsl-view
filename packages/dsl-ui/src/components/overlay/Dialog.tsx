@@ -14,13 +14,13 @@ export function useDialogClose(): (() => void) | null {
 
 export interface DialogProps {
 	title: string;
-	/** @slot tag:btn */
+	/** @slot tag:button */
 	trigger?: React.ReactNode;
 	open?: boolean;
 	onOpenChange?: (open: boolean) => void;
-	/** @slot tag:field, tag:layout, tag:table, tag:display, tag:composite */
+	/** @slot tag:atomic, tag:composite, tag:disposition */
 	children: React.ReactNode;
-	/** @slot tag:btn */
+	/** @slot tag:button */
 	actions?: React.ReactNode;
 	size?: 'sm' | 'md' | 'lg' | 'xl';
 }

@@ -339,9 +339,12 @@ describe('metadata block', () => {
 		expect(manifest['Card']).toEqual({
 			knownKeys: ['aria-label', 'footer', 'items', 'title'],
 			allowedChildren: { items: ['layout', 'atomic'], footer: ['atomic'] },
+			// The constraints a page is checked against: what the component is (category, tags) and the contexts it needs or gives.
+			category: 'disposition',
+			tags: ['layout', 'container'],
 		});
-		expect(manifest['Empty']).toEqual({ knownKeys: [] });
-		expect(manifest['FieldText']).toEqual({ knownKeys: ['bind', 'label'] });
+		expect(manifest['Empty']).toMatchObject({ knownKeys: [] });
+		expect(manifest['FieldText']).toMatchObject({ knownKeys: ['bind', 'label'] });
 		expect(Object.keys(manifest)).toHaveLength(19);
 	});
 });

@@ -3,7 +3,7 @@ import React from 'react';
 import { ButtonContext, useProvideButtonContext } from '../controls/buttonContext.js';
 
 export interface ActionBarProps {
-	/** @slot tag:btn */
+	/** @slot tag:button */
 	children: React.ReactNode;
 	className?: string;
 }

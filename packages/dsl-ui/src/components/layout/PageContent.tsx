@@ -17,13 +17,9 @@ const MAX_WIDTH_CLASSES: Record<PageContentMaxWidth, string> = {
 // @formatter:on
 
 export interface PageContentProps {
-	// The full set of tags actually carried by every top-level page-section component used
-	// across src/dsl/pages/*.yaml today (PageHeader, Section, Chart, DataTable, PageTabs,
-	// ActionBar, Form, Stepper, VersionHistory, FileUpload, FileDropZone, FileNavigator,
-	// KeyManagement, ScopeManager, ScopeTabs, HorizontalStack/Tabs). Previously stale
-	// (only layout/composite, matching nothing real) - kept in sync manually until a
-	// broader category tag exists (see plan Partie 5ter).
-	/** @slot tag:layout, tag:composite, tag:header, tag:content, tag:chart, tag:table, tag:tabs, tag:navigation, tag:action-bar, tag:form, tag:stepper, tag:wizard, tag:upload, tag:dropzone, tag:file, tag:navigator, tag:browser, tag:keys, tag:security, tag:scopes, tag:admin, tag:management, tag:versions, tag:history */
+	// A page section is any component: the three categories cover the whole library. This list used to name the tags of one
+	// app's pages (upload, dropzone, keys...), which no component of this library carries and which blocked real pages.
+	/** @slot tag:atomic, tag:composite, tag:disposition */
 	sections: React.ReactNode;
 	/** @default 'xl' */
 	maxWidth?: PageContentMaxWidth;

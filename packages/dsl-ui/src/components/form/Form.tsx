@@ -19,7 +19,7 @@ export interface FormProps {
 	fields: React.ReactNode;
 	// ButtonSave/ButtonCancel carry tag:form-specific (not tag:action-bar) - they are the
 	// form-bound action buttons meant to live here (ctx['onSubmit']/ctx['isPending']-driven).
-	/** @slot tag:action-bar, tag:form-specific */
+	/** @slot tag:action-bar, tag:form-specific, tag:button */
 	actions: React.ReactNode;
 	onSubmit: (formData: Record<string, unknown>) => Promise<void>;
 	/** Initial server data - Form owns the editable copy internally. */

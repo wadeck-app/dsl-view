@@ -10,7 +10,7 @@ export interface SectionProps {
 	 * @default false
 	 */
 	fill?: boolean;
-	/** @slot tag:layout, tag:table, tag:form, tag:display, tag:composite */
+	/** @slot tag:atomic, tag:composite, tag:disposition */
 	children: React.ReactNode;
 }
 

@@ -553,6 +553,17 @@ Shape errors, all `error`, all because the node would render nothing:
 | `missing-type` | A map in a slot, or the page itself, has no `$type`. |
 | `invalid-slot` | A slot (`items`) is neither a list nor an expression string; `items:` with nothing under it counts. |
 
+Placement constraints a component declares, checked from the registry entry (the shipped `known-keys.json` carries them too: `category`, `tags`, `requiresContext`, `providesContext`):
+
+| Code | Severity | Meaning |
+|---|---|---|
+| `slot-tag-mismatch` | error | A child sits in a slot whose `@slot tag:x` list contains none of the child's `@registryTags` or its category (a button in `Form.fields`). A slot with no tag, an expression string, and a child whose entry has neither category nor tags are not judged. |
+| `missing-context` | warning | A component needs a context that a registry component provides (`ButtonSave` needs `FormContext`, from `Form`) and has no such ancestor. Only a warning: `requiresContext` comes from `useContext` calls, so it also lists optional contexts, and an app may provide one (`RouterContext`) that its views never contain. |
+
+A misplaced child blocks by default: that is the point (a plain button in an `ActionBar`, where the design wants an `ActionButton`). To migrate an existing app module step by step, pass `{ placement: 'warning' }` to `compileDslDocument` / `compileDslPagesDir` (or `findUnknownKeys`): the same finding is reported as a warning that says it will become an error, and the page compiles. Remove the option once the warnings are fixed; it is not a place to stay. `{ providedContexts: ['ToastContext'] }` declares the contexts the app shell provides around its views, so `missing-context` does not report them. A provider with no slot for nodes (`RouterProvider`) is treated as app-level and is never expected in a view.
+
+The `@slot` vocabulary is kept honest by `slotVocabulary.test.ts` in dsl-ui: every tag a slot allows must be a tag or the category of at least one component, so a slot can never be declared against a word nothing carries (it used to name `btn`, `display` and one app's page tags). The container slots (`PageContent`, `Section`, `Card`, `HorizontalStack`, `VerticalStack`, `Dialog`, `Collapsible`) take the three categories, i.e. any component.
+
 An invalid YAML file makes `compileDslDocument` throw `[dslCompiler] <file>: invalid YAML - …` (the file name js-yaml does not give). `$actions` keys the compiler does not know are `unknown-action-key` errors.
 
 Build-time generators (Vite plugins) fail or warn loudly instead of skipping:

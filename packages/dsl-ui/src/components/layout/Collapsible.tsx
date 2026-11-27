@@ -6,7 +6,7 @@ export interface CollapsibleProps {
     title: string;
     defaultOpen?: boolean;
     /**
-     * @slot tag:field, tag:layout, tag:atomic
+     * @slot tag:atomic, tag:composite, tag:disposition
      */
     children: React.ReactNode;
 }

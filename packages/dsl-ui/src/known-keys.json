@@ -15,7 +15,18 @@
 				],
 				"nodeKey": "view"
 			}
-		}
+		},
+		"category": "disposition",
+		"tags": [
+			"layout"
+		],
+		"requiresContext": [
+			"AbParentContext",
+			"AbExperimentsContext"
+		],
+		"providesContext": [
+			"AbParentContext"
+		]
 	},
 	"ActionBar": {
 		"knownKeys": [
@@ -23,9 +34,16 @@
 		],
 		"allowedChildren": {
 			"items": [
-				"btn"
+				"button"
 			]
-		}
+		},
+		"category": "disposition",
+		"tags": [
+			"action-bar"
+		],
+		"providesContext": [
+			"ButtonContext"
+		]
 	},
 	"ActionButton": {
 		"knownKeys": [
@@ -42,6 +60,11 @@
 			"params",
 			"size",
 			"variant"
+		],
+		"category": "atomic",
+		"tags": [
+			"button",
+			"action"
 		]
 	},
 	"Avatar": {
@@ -50,12 +73,25 @@
 			"fallback",
 			"size",
 			"src"
+		],
+		"category": "atomic",
+		"tags": [
+			"avatar",
+			"user",
+			"profile",
+			"image"
 		]
 	},
 	"BackLink": {
 		"knownKeys": [
 			"label",
 			"to"
+		],
+		"category": "atomic",
+		"tags": [
+			"back",
+			"navigation",
+			"link"
 		]
 	},
 	"Badge": {
@@ -69,12 +105,22 @@
 			"title",
 			"tone",
 			"variant"
+		],
+		"category": "atomic",
+		"tags": [
+			"badge",
+			"status"
 		]
 	},
 	"Breadcrumb": {
 		"knownKeys": [
 			"currentPath",
 			"onNavigate"
+		],
+		"category": "atomic",
+		"tags": [
+			"navigation",
+			"breadcrumb"
 		]
 	},
 	"BulkActionsToolbar": {
@@ -82,6 +128,14 @@
 			"items",
 			"onClearSelection",
 			"selectedCount"
+		],
+		"category": "atomic",
+		"tags": [
+			"table",
+			"bulk",
+			"actions",
+			"selection",
+			"toolbar"
 		]
 	},
 	"ButtonAction": {
@@ -97,6 +151,11 @@
 			"size",
 			"type",
 			"variant"
+		],
+		"category": "atomic",
+		"tags": [
+			"button",
+			"action"
 		]
 	},
 	"ButtonCancel": {
@@ -104,6 +163,11 @@
 			"disabled",
 			"label",
 			"onCancel"
+		],
+		"category": "atomic",
+		"tags": [
+			"button",
+			"form-specific"
 		]
 	},
 	"ButtonLink": {
@@ -113,6 +177,12 @@
 			"size",
 			"to",
 			"variant"
+		],
+		"category": "atomic",
+		"tags": [
+			"link",
+			"navigation",
+			"button"
 		]
 	},
 	"ButtonSave": {
@@ -122,6 +192,14 @@
 			"isPending",
 			"label",
 			"onClick"
+		],
+		"category": "atomic",
+		"tags": [
+			"button",
+			"form-specific"
+		],
+		"requiresContext": [
+			"FormContext"
 		]
 	},
 	"Card": {
@@ -137,15 +215,30 @@
 		],
 		"allowedChildren": {
 			"items": [
-				"layout",
-				"display",
-				"composite"
+				"atomic",
+				"composite",
+				"disposition"
 			]
-		}
+		},
+		"category": "disposition",
+		"tags": [
+			"card",
+			"container",
+			"surface"
+		]
 	},
 	"CardActions": {
 		"knownKeys": [
 			"items"
+		],
+		"category": "disposition",
+		"tags": [
+			"card-actions",
+			"card",
+			"actions"
+		],
+		"providesContext": [
+			"ButtonContext"
 		]
 	},
 	"Chart": {
@@ -161,6 +254,10 @@
 			"xFormat",
 			"yFormat",
 			"yUnit"
+		],
+		"category": "composite",
+		"tags": [
+			"chart"
 		]
 	},
 	"CheckboxGroup": {
@@ -169,6 +266,12 @@
 			"label",
 			"options",
 			"orientation"
+		],
+		"category": "atomic",
+		"tags": [
+			"checkbox",
+			"group",
+			"field"
 		]
 	},
 	"ChipButton": {
@@ -187,7 +290,13 @@
 			"items": [
 				"atomic"
 			]
-		}
+		},
+		"category": "disposition",
+		"tags": [
+			"chip",
+			"filter",
+			"toggle"
+		]
 	},
 	"Collapsible": {
 		"knownKeys": [
@@ -197,17 +306,28 @@
 		],
 		"allowedChildren": {
 			"items": [
-				"field",
-				"layout",
-				"atomic"
+				"atomic",
+				"composite",
+				"disposition"
 			]
-		}
+		},
+		"category": "disposition",
+		"tags": [
+			"collapsible",
+			"accordion",
+			"expandable"
+		]
 	},
 	"ColorPicker": {
 		"knownKeys": [
 			"bind",
 			"label",
 			"options"
+		],
+		"category": "atomic",
+		"tags": [
+			"field",
+			"picker"
 		]
 	},
 	"CompactSelect": {
@@ -223,6 +343,12 @@
 			"storageKey",
 			"tooltip",
 			"urlParam"
+		],
+		"category": "atomic",
+		"tags": [
+			"select",
+			"compact",
+			"toolbar"
 		]
 	},
 	"ConfirmDialog": {
@@ -239,7 +365,13 @@
 			"message": [
 				"content"
 			]
-		}
+		},
+		"category": "composite",
+		"tags": [
+			"dialog",
+			"modal",
+			"overlay"
+		]
 	},
 	"ContextMenu": {
 		"knownKeys": [
@@ -249,6 +381,14 @@
 			"open",
 			"side",
 			"trigger"
+		],
+		"category": "disposition",
+		"tags": [
+			"context-menu",
+			"dropdown",
+			"menu",
+			"kebab",
+			"overlay"
 		]
 	},
 	"CronBuilder": {
@@ -256,6 +396,12 @@
 			"onChange",
 			"onClose",
 			"value"
+		],
+		"category": "composite",
+		"tags": [
+			"cron",
+			"schedule",
+			"form"
 		]
 	},
 	"DataTable": {
@@ -349,7 +495,18 @@
 					}
 				}
 			}
-		}
+		},
+		"category": "composite",
+		"tags": [
+			"table"
+		],
+		"requiresContext": [
+			"RouterContext"
+		],
+		"providesContext": [
+			"DataTableSelectionCtx",
+			"DataTableFilterCtx"
+		]
 	},
 	"DatePicker": {
 		"knownKeys": [
@@ -361,6 +518,12 @@
 			"minDate",
 			"onSelect",
 			"placeholder"
+		],
+		"category": "atomic",
+		"tags": [
+			"field",
+			"date",
+			"calendar"
 		]
 	},
 	"DateRangePicker": {
@@ -374,6 +537,13 @@
 			"onOpenChange",
 			"open",
 			"placeholder"
+		],
+		"category": "atomic",
+		"tags": [
+			"field",
+			"date",
+			"range",
+			"calendar"
 		]
 	},
 	"DateText": {
@@ -382,11 +552,22 @@
 			"part",
 			"relative",
 			"value"
+		],
+		"category": "atomic",
+		"tags": [
+			"date",
+			"time",
+			"text"
 		]
 	},
 	"DeleteButton": {
 		"knownKeys": [
 			"items"
+		],
+		"category": "atomic",
+		"tags": [
+			"button",
+			"delete"
 		]
 	},
 	"Dialog": {
@@ -401,23 +582,39 @@
 		],
 		"allowedChildren": {
 			"trigger": [
-				"btn"
+				"button"
 			],
 			"items": [
-				"field",
-				"layout",
-				"table",
-				"display",
-				"composite"
+				"atomic",
+				"composite",
+				"disposition"
 			],
 			"actions": [
-				"btn"
+				"button"
 			]
-		}
+		},
+		"category": "disposition",
+		"tags": [
+			"dialog",
+			"modal",
+			"overlay"
+		],
+		"providesContext": [
+			"DialogCloseContext"
+		]
 	},
 	"DialogFooter": {
 		"knownKeys": [
 			"items"
+		],
+		"category": "disposition",
+		"tags": [
+			"dialog-footer",
+			"dialog",
+			"footer"
+		],
+		"providesContext": [
+			"ButtonContext"
 		]
 	},
 	"DialogForm": {
@@ -435,12 +632,23 @@
 			"fields": [
 				"field"
 			]
-		}
+		},
+		"category": "composite",
+		"tags": [
+			"dialog",
+			"form"
+		]
 	},
 	"Divider": {
 		"knownKeys": [
 			"label",
 			"orientation"
+		],
+		"category": "atomic",
+		"tags": [
+			"divider",
+			"separator",
+			"line"
 		]
 	},
 	"Drawer": {
@@ -453,11 +661,26 @@
 			"side",
 			"size",
 			"title"
+		],
+		"category": "disposition",
+		"tags": [
+			"drawer",
+			"panel",
+			"overlay",
+			"slide"
+		],
+		"providesContext": [
+			"DrawerCloseContext"
 		]
 	},
 	"FetchSpinner": {
 		"knownKeys": [
 			"loading"
+		],
+		"category": "atomic",
+		"tags": [
+			"loading",
+			"spinner"
 		]
 	},
 	"FieldAsyncSelect": {
@@ -474,6 +697,14 @@
 			"noOptionsMessage",
 			"placeholder",
 			"required"
+		],
+		"category": "atomic",
+		"tags": [
+			"field",
+			"async",
+			"select",
+			"search",
+			"combobox"
 		]
 	},
 	"FieldAutocomplete": {
@@ -484,6 +715,12 @@
 			"label",
 			"options",
 			"placeholder"
+		],
+		"category": "atomic",
+		"tags": [
+			"field",
+			"autocomplete",
+			"search"
 		]
 	},
 	"FieldDate": {
@@ -499,6 +736,11 @@
 			"minDate",
 			"placeholder",
 			"required"
+		],
+		"category": "atomic",
+		"tags": [
+			"field",
+			"date"
 		]
 	},
 	"FieldDateRange": {
@@ -514,6 +756,12 @@
 			"minDate",
 			"placeholder",
 			"required"
+		],
+		"category": "atomic",
+		"tags": [
+			"field",
+			"date",
+			"range"
 		]
 	},
 	"FieldDateTime": {
@@ -534,6 +782,13 @@
 			"open",
 			"required",
 			"timePlaceholder"
+		],
+		"category": "atomic",
+		"tags": [
+			"field",
+			"date",
+			"time",
+			"datetime"
 		]
 	},
 	"FieldMultiSelect": {
@@ -548,6 +803,11 @@
 			"options",
 			"placeholder",
 			"required"
+		],
+		"category": "atomic",
+		"tags": [
+			"field",
+			"multi-select"
 		]
 	},
 	"FieldNumber": {
@@ -564,6 +824,10 @@
 			"suffix",
 			"unlimited",
 			"unlimitedValue"
+		],
+		"category": "atomic",
+		"tags": [
+			"field"
 		]
 	},
 	"FieldReadOnly": {
@@ -573,6 +837,14 @@
 			"label",
 			"mono",
 			"value"
+		],
+		"category": "atomic",
+		"tags": [
+			"field",
+			"readonly"
+		],
+		"requiresContext": [
+			"ToastContext"
 		]
 	},
 	"FieldSelect": {
@@ -587,6 +859,11 @@
 			"placeholder",
 			"required",
 			"size"
+		],
+		"category": "atomic",
+		"tags": [
+			"field",
+			"select"
 		]
 	},
 	"FieldTags": {
@@ -601,6 +878,12 @@
 			"name",
 			"placeholder",
 			"required"
+		],
+		"category": "atomic",
+		"tags": [
+			"field",
+			"tags",
+			"input"
 		]
 	},
 	"FieldText": {
@@ -613,6 +896,10 @@
 			"readOnly",
 			"required",
 			"size"
+		],
+		"category": "atomic",
+		"tags": [
+			"field"
 		]
 	},
 	"FieldTextarea": {
@@ -627,6 +914,10 @@
 			"readOnly",
 			"required",
 			"rows"
+		],
+		"category": "atomic",
+		"tags": [
+			"field"
 		]
 	},
 	"FieldTime": {
@@ -640,6 +931,11 @@
 			"minuteStep",
 			"placeholder",
 			"required"
+		],
+		"category": "atomic",
+		"tags": [
+			"field",
+			"time"
 		]
 	},
 	"FieldWrapper": {
@@ -656,11 +952,27 @@
 			"items": [
 				"atomic"
 			]
-		}
+		},
+		"category": "disposition",
+		"tags": [
+			"field",
+			"wrapper"
+		]
 	},
 	"FigureRow": {
 		"knownKeys": [
 			"items"
+		],
+		"category": "composite",
+		"tags": [
+			"figures",
+			"kpi",
+			"metrics",
+			"stats",
+			"row",
+			"sparkline",
+			"trend",
+			"dashboard"
 		]
 	},
 	"FilterBar": {
@@ -671,6 +983,12 @@
 			"onSearchChange",
 			"placeholder",
 			"search"
+		],
+		"category": "composite",
+		"tags": [
+			"filter",
+			"search",
+			"bar"
 		]
 	},
 	"FilterChips": {
@@ -680,6 +998,10 @@
 			"onChange",
 			"options",
 			"value"
+		],
+		"category": "composite",
+		"tags": [
+			"filter"
 		]
 	},
 	"Form": {
@@ -695,9 +1017,17 @@
 			],
 			"actions": [
 				"action-bar",
-				"form-specific"
+				"form-specific",
+				"button"
 			]
-		}
+		},
+		"category": "composite",
+		"tags": [
+			"form"
+		],
+		"providesContext": [
+			"FormContext"
+		]
 	},
 	"HorizontalStack": {
 		"knownKeys": [
@@ -711,14 +1041,37 @@
 		],
 		"allowedChildren": {
 			"items": [
-				"layout",
-				"table",
-				"form",
-				"display",
+				"atomic",
 				"composite",
-				"atomic"
+				"disposition"
 			]
-		}
+		},
+		"category": "disposition",
+		"tags": [
+			"layout",
+			"IN",
+			"SCOPE:",
+			"horizontal",
+			"flex",
+			"container",
+			"with",
+			"configurable",
+			"gap,",
+			"alignment,",
+			"and",
+			"justification.",
+			"OUT",
+			"OF",
+			"SCOPE:",
+			"business-specific",
+			"layouts",
+			"-",
+			"use",
+			"PageHeader.headerActions",
+			"for",
+			"header+button",
+			"patterns."
+		]
 	},
 	"IconButton": {
 		"knownKeys": [
@@ -726,6 +1079,11 @@
 			"icon",
 			"size",
 			"tooltip"
+		],
+		"category": "atomic",
+		"tags": [
+			"button",
+			"icon"
 		]
 	},
 	"JsonViewer": {
@@ -733,6 +1091,12 @@
 			"field",
 			"maxHeight",
 			"row"
+		],
+		"category": "atomic",
+		"tags": [
+			"json",
+			"viewer",
+			"code"
 		]
 	},
 	"Link": {
@@ -741,6 +1105,12 @@
 			"href",
 			"label",
 			"variant"
+		],
+		"category": "atomic",
+		"tags": [
+			"link",
+			"anchor",
+			"navigation"
 		]
 	},
 	"LiveToggle": {
@@ -748,6 +1118,12 @@
 			"live",
 			"onChange",
 			"urlParam"
+		],
+		"category": "atomic",
+		"tags": [
+			"live",
+			"toggle",
+			"refresh"
 		]
 	},
 	"Markdown": {
@@ -756,11 +1132,24 @@
 			"collapsed",
 			"maxHeight",
 			"text"
+		],
+		"category": "atomic",
+		"tags": [
+			"markdown",
+			"text"
 		]
 	},
 	"NavBar": {
 		"knownKeys": [
 			"items"
+		],
+		"category": "disposition",
+		"tags": [
+			"nav-bar",
+			"navigation"
+		],
+		"providesContext": [
+			"ButtonContext"
 		]
 	},
 	"Notice": {
@@ -769,6 +1158,14 @@
 			"showLessLabel",
 			"showMoreLabel",
 			"variant"
+		],
+		"category": "atomic",
+		"tags": [
+			"notice",
+			"message",
+			"feedback",
+			"alert",
+			"banner"
 		]
 	},
 	"PageContent": {
@@ -778,32 +1175,15 @@
 		],
 		"allowedChildren": {
 			"sections": [
-				"layout",
+				"atomic",
 				"composite",
-				"header",
-				"content",
-				"chart",
-				"table",
-				"tabs",
-				"navigation",
-				"action-bar",
-				"form",
-				"stepper",
-				"wizard",
-				"upload",
-				"dropzone",
-				"file",
-				"navigator",
-				"browser",
-				"keys",
-				"security",
-				"scopes",
-				"admin",
-				"management",
-				"versions",
-				"history"
+				"disposition"
 			]
-		}
+		},
+		"category": "disposition",
+		"tags": [
+			"content"
+		]
 	},
 	"PageHeader": {
 		"knownKeys": [
@@ -818,12 +1198,23 @@
 				"button",
 				"action"
 			]
-		}
+		},
+		"category": "composite",
+		"tags": [
+			"header"
+		]
 	},
 	"PageSection": {
 		"knownKeys": [
 			"actions",
 			"items",
+			"title"
+		],
+		"category": "disposition",
+		"tags": [
+			"page-section",
+			"page",
+			"header",
 			"title"
 		]
 	},
@@ -835,6 +1226,11 @@
 			"resetUrlParams",
 			"urlParam",
 			"value"
+		],
+		"category": "atomic",
+		"tags": [
+			"pagination",
+			"select"
 		]
 	},
 	"PageTabs": {
@@ -843,6 +1239,11 @@
 			"onChange",
 			"tabs",
 			"urlParam"
+		],
+		"category": "disposition",
+		"tags": [
+			"tabs",
+			"navigation"
 		]
 	},
 	"Pagination": {
@@ -852,6 +1253,10 @@
 			"size",
 			"total",
 			"urlParam"
+		],
+		"category": "atomic",
+		"tags": [
+			"pagination"
 		]
 	},
 	"Popover": {
@@ -862,6 +1267,13 @@
 			"open",
 			"side",
 			"trigger"
+		],
+		"category": "disposition",
+		"tags": [
+			"popover",
+			"overlay",
+			"panel",
+			"interactive"
 		]
 	},
 	"Progress": {
@@ -874,6 +1286,12 @@
 			"value",
 			"valueLabel",
 			"variant"
+		],
+		"category": "atomic",
+		"tags": [
+			"progress",
+			"bar",
+			"loading"
 		]
 	},
 	"RadioGroup": {
@@ -882,6 +1300,12 @@
 			"label",
 			"options",
 			"orientation"
+		],
+		"category": "atomic",
+		"tags": [
+			"radio",
+			"group",
+			"field"
 		]
 	},
 	"RefreshButton": {
@@ -891,6 +1315,11 @@
 			"onClick",
 			"onRefresh",
 			"source"
+		],
+		"category": "atomic",
+		"tags": [
+			"refresh",
+			"button"
 		]
 	},
 	"RelativeDate": {
@@ -899,11 +1328,26 @@
 			"format",
 			"live",
 			"tooltip"
+		],
+		"category": "atomic",
+		"tags": [
+			"date",
+			"relative",
+			"time"
 		]
 	},
 	"RouterProvider": {
 		"knownKeys": [
 			"items"
+		],
+		"category": "disposition",
+		"tags": [
+			"router",
+			"navigation"
+		],
+		"providesContext": [
+			"RouterContext",
+			"UrlParamContext"
 		]
 	},
 	"ScrollArea": {
@@ -912,6 +1356,13 @@
 			"fill",
 			"items",
 			"scheme"
+		],
+		"category": "disposition",
+		"tags": [
+			"scroll",
+			"overflow",
+			"pane",
+			"scrollbar"
 		]
 	},
 	"SearchBar": {
@@ -927,6 +1378,11 @@
 			"size",
 			"urlParam",
 			"value"
+		],
+		"category": "composite",
+		"tags": [
+			"filter",
+			"search"
 		]
 	},
 	"Section": {
@@ -937,13 +1393,15 @@
 		],
 		"allowedChildren": {
 			"items": [
-				"layout",
-				"table",
-				"form",
-				"display",
-				"composite"
+				"atomic",
+				"composite",
+				"disposition"
 			]
-		}
+		},
+		"category": "disposition",
+		"tags": [
+			"content"
+		]
 	},
 	"Skeleton": {
 		"knownKeys": [
@@ -952,6 +1410,12 @@
 			"height",
 			"variant",
 			"width"
+		],
+		"category": "atomic",
+		"tags": [
+			"skeleton",
+			"loading",
+			"placeholder"
 		]
 	},
 	"Slider": {
@@ -963,6 +1427,14 @@
 			"min",
 			"showValue",
 			"step"
+		],
+		"category": "atomic",
+		"tags": [
+			"slider",
+			"range",
+			"input",
+			"number",
+			"field"
 		]
 	},
 	"SortableColumn": {
@@ -971,18 +1443,37 @@
 			"label",
 			"onSort",
 			"sortKey"
+		],
+		"category": "atomic",
+		"tags": [
+			"table",
+			"sort",
+			"column",
+			"header"
 		]
 	},
 	"SparklineView": {
 		"knownKeys": [
 			"ariaLabel",
 			"points"
+		],
+		"category": "atomic",
+		"tags": [
+			"sparkline",
+			"trend",
+			"inline",
+			"chart"
 		]
 	},
 	"Spinner": {
 		"knownKeys": [
 			"label",
 			"size"
+		],
+		"category": "atomic",
+		"tags": [
+			"loading",
+			"spinner"
 		]
 	},
 	"SplitLayout": {
@@ -995,6 +1486,13 @@
 			"sideWidth",
 			"sticky",
 			"stickyTop"
+		],
+		"category": "disposition",
+		"tags": [
+			"layout",
+			"split",
+			"sidebar",
+			"responsive"
 		]
 	},
 	"StatTile": {
@@ -1009,6 +1507,13 @@
 			"nowrap",
 			"trend",
 			"value"
+		],
+		"category": "disposition",
+		"tags": [
+			"stat",
+			"kpi",
+			"metric",
+			"dashboard"
 		]
 	},
 	"Stepper": {
@@ -1017,6 +1522,11 @@
 			"onCancel",
 			"onComplete",
 			"steps"
+		],
+		"category": "disposition",
+		"tags": [
+			"stepper",
+			"wizard"
 		]
 	},
 	"Switch": {
@@ -1025,16 +1535,33 @@
 			"disabled",
 			"label",
 			"size"
+		],
+		"category": "atomic",
+		"tags": [
+			"switch",
+			"toggle",
+			"boolean",
+			"field"
 		]
 	},
 	"TabButton": {
 		"knownKeys": [
 			"active"
-		]
+		],
+		"category": "atomic"
 	},
 	"TableRowActions": {
 		"knownKeys": [
 			"items"
+		],
+		"category": "disposition",
+		"tags": [
+			"table-row-actions",
+			"row",
+			"actions"
+		],
+		"providesContext": [
+			"ButtonContext"
 		]
 	},
 	"Tabs": {
@@ -1043,6 +1570,11 @@
 			"onChange",
 			"tabs",
 			"value"
+		],
+		"category": "disposition",
+		"tags": [
+			"tabs",
+			"layout"
 		]
 	},
 	"Tag": {
@@ -1050,6 +1582,12 @@
 			"color",
 			"label",
 			"onRemove"
+		],
+		"category": "atomic",
+		"tags": [
+			"tag",
+			"chip",
+			"label"
 		]
 	},
 	"ThemePicker": {
@@ -1057,6 +1595,14 @@
 			"bind",
 			"label",
 			"options"
+		],
+		"category": "composite",
+		"tags": [
+			"field",
+			"picker"
+		],
+		"requiresContext": [
+			"ThemeContext"
 		]
 	},
 	"ThemeScope": {
@@ -1065,6 +1611,15 @@
 			"surface",
 			"theme",
 			"tokens"
+		],
+		"category": "disposition",
+		"tags": [
+			"theme",
+			"scope",
+			"palette",
+			"dark",
+			"light",
+			"surface"
 		]
 	},
 	"TimeBrush": {
@@ -1079,6 +1634,12 @@
 			"valueKey",
 			"xKey",
 			"yAxisWidth"
+		],
+		"category": "composite",
+		"tags": [
+			"chart",
+			"timeseries",
+			"brush"
 		]
 	},
 	"TimePicker": {
@@ -1090,6 +1651,12 @@
 			"onOpenChange",
 			"open",
 			"placeholder"
+		],
+		"category": "atomic",
+		"tags": [
+			"field",
+			"time",
+			"clock"
 		]
 	},
 	"TimeSeriesChart": {
@@ -1164,7 +1731,12 @@
 					"color"
 				]
 			}
-		}
+		},
+		"category": "composite",
+		"tags": [
+			"chart",
+			"timeseries"
+		]
 	},
 	"ToastProvider": {
 		"knownKeys": [
@@ -1175,7 +1747,15 @@
 				"layout",
 				"content"
 			]
-		}
+		},
+		"category": "disposition",
+		"tags": [
+			"toast",
+			"provider"
+		],
+		"providesContext": [
+			"ToastContext"
+		]
 	},
 	"Tooltip": {
 		"knownKeys": [
@@ -1192,7 +1772,15 @@
 				"atomic",
 				"composite"
 			]
-		}
+		},
+		"category": "disposition",
+		"tags": [
+			"tooltip",
+			"hover",
+			"card",
+			"rows",
+			"details"
+		]
 	},
 	"TreeView": {
 		"knownKeys": [
@@ -1202,11 +1790,26 @@
 			"onExpandChange",
 			"onSelect",
 			"selectedId"
+		],
+		"category": "composite",
+		"tags": [
+			"tree",
+			"treeview",
+			"hierarchy",
+			"expandable"
 		]
 	},
 	"UnsavedBadge": {
 		"knownKeys": [
 			"hasChanges"
+		],
+		"category": "atomic",
+		"tags": [
+			"status",
+			"form-specific"
+		],
+		"requiresContext": [
+			"FormContext"
 		]
 	},
 	"VerticalStack": {
@@ -1217,13 +1820,14 @@
 		],
 		"allowedChildren": {
 			"items": [
-				"layout",
-				"table",
-				"form",
-				"display",
+				"atomic",
 				"composite",
-				"atomic"
+				"disposition"
 			]
-		}
+		},
+		"category": "disposition",
+		"tags": [
+			"layout"
+		]
 	}
 }

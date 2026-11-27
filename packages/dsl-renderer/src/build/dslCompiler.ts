@@ -7,6 +7,7 @@ import type { CompiledDslArtifact, CompiledDslDiagnostic } from '../compiledDslA
 import { COMPILED_DSL_FORMAT_VERSION } from '../compiledDslArtifact.js';
 import { computeRegistryFingerprint } from '../registryHash.js';
 import { findUnknownKeys } from './unknownKeys.js';
+import type { PlacementOptions } from './unknownKeys.js';
 
 export type { CompiledDslArtifact, CompiledDslDiagnostic } from '../compiledDslArtifact.js';
 export { COMPILED_DSL_FORMAT_VERSION } from '../compiledDslArtifact.js';
@@ -34,7 +35,7 @@ function uncheckedPropsWarning(registry: ComponentRegistry): CompiledDslDiagnost
 export function compileDslDocument(
 	yamlText: string,
 	registry: ComponentRegistry,
-	options?: { sourcePath?: string }
+	options?: { sourcePath?: string } & PlacementOptions
 ): CompiledDslArtifact {
 	let doc: Record<string, unknown>;
 	try {
@@ -45,7 +46,7 @@ export function compileDslDocument(
 		throw new Error(`[dslCompiler] ${where}: invalid YAML - ${error instanceof Error ? error.message : String(error)}`, { cause: error });
 	}
 	// The unknown-key walk lives in unknownKeys.ts (shared with CLIs that only have a JSON manifest).
-	const diagnostics: CompiledDslDiagnostic[] = findUnknownKeys(doc, registry);
+	const diagnostics: CompiledDslDiagnostic[] = findUnknownKeys(doc, registry, { placement: options?.placement, providedContexts: options?.providedContexts });
 	const unchecked = uncheckedPropsWarning(registry);
 	if (unchecked) {
 		diagnostics.push(unchecked);
@@ -63,7 +64,8 @@ export function compileDslDocument(
 
 export function compileDslPagesDir(
 	pagesDir: string,
-	registry: ComponentRegistry
+	registry: ComponentRegistry,
+	options?: PlacementOptions
 ): { results: CompiledDslArtifact[]; hasErrors: boolean } {
 	const yamlFiles = fs
 		.readdirSync(pagesDir)
@@ -76,7 +78,7 @@ export function compileDslPagesDir(
 	for (const filename of yamlFiles) {
 		const filePath = path.join(pagesDir, filename);
 		const yamlText = fs.readFileSync(filePath, 'utf-8');
-		const artifact = compileDslDocument(yamlText, registry, { sourcePath: filePath });
+		const artifact = compileDslDocument(yamlText, registry, { sourcePath: filePath, ...options });
 		if (artifact.diagnostics.some((d) => d.severity === 'error')) {
 			hasErrors = true;
 		}

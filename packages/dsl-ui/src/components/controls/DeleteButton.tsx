@@ -7,6 +7,7 @@ export type DeleteButtonProps = Omit<ButtonProps, 'variant' | 'size'>;
 /**
  * Danger-styled delete button. variant and size are hardcoded and cannot be overridden.
  * @registryCategory atomic
+ * @registryTags button delete
  */
 export function DeleteButton({ children = 'Delete', ...rest }: DeleteButtonProps) {
 	return (

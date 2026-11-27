@@ -19,7 +19,7 @@ const THUMB_CLASS = 'block w-4 h-4 rounded-full bg-[var(--color-primary-solid)] 
 
 /**
  * @registryCategory atomic
- * @registryTags slider range input number
+ * @registryTags slider range input number field
  * @registryBind formData onChange
  */
 export function Slider({ value, onChange, min = 0, max = 100, step = 1, disabled, label, showValue }: SliderProps) {

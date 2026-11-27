@@ -6,6 +6,16 @@ import type { ItemKeysSpec, MapSlotSpec } from '../dslKeys.js';
 import { checkItemKeys, checkNodeKeys, suggestKey } from '../nodeKeyCheck.js';
 import { findInvalidNodeProps } from '../nodePropIssues.js';
 
+/**
+ * Knobs of the placement checks. `placement`: how a child in a slot that does not take it is reported, `error` (default, blocks) or
+ * `warning` (an app module being migrated: same finding, does not block). `providedContexts`: contexts the app shell provides around
+ * its views, never flagged as missing.
+ */
+export interface PlacementOptions {
+	placement?: 'error' | 'warning';
+	providedContexts?: string[];
+}
+
 // Isomorphic and React-free on purpose: a CLI can validate author views against a JSON manifest of the
 // built-in components without loading the renderer or the generated entries.
 
@@ -15,6 +25,12 @@ export interface DslKeysEntry {
 	allowedChildren?: Record<string, string[]>;
 	mapSlots?: Record<string, MapSlotSpec>;
 	itemKeys?: Record<string, ItemKeysSpec>;
+	/** The component's registry category and tags: what a slot's `@slot tag:x` is matched against (a tag, or the category). */
+	category?: string;
+	tags?: string[];
+	/** Contexts the component reads and the ones it provides to what it renders (from useContext / Provider). */
+	requiresContext?: string[];
+	providesContext?: string[];
 	nodeSchema?: z.ZodSchema;
 	/** The generated schema of the component's props (a registry entry carries it outside production). A JSON manifest has none. */
 	propSchema?: z.ZodSchema;
@@ -25,7 +41,7 @@ export type DslKeysManifest = Record<string, DslKeysEntry>;
 
 /** Serializable subset of a registry (no render functions, no schemas), meant to be shipped as JSON. */
 export function buildKnownKeysManifest(
-	entries: Array<{ name: string; knownKeys?: string[]; allowedChildren?: Record<string, string[]>; mapSlots?: Record<string, MapSlotSpec>; itemKeys?: Record<string, ItemKeysSpec> }>
+	entries: Array<{ name: string; knownKeys?: string[]; allowedChildren?: Record<string, string[]>; mapSlots?: Record<string, MapSlotSpec>; itemKeys?: Record<string, ItemKeysSpec>; category?: string; tags?: string[]; requiresContext?: string[]; providesContext?: string[] }>
 ): DslKeysManifest {
 	const manifest: DslKeysManifest = {};
 	for (const entry of [...entries].sort((a, b) => a.name.localeCompare(b.name))) {
@@ -34,6 +50,10 @@ export function buildKnownKeysManifest(
 			...(entry.allowedChildren && Object.keys(entry.allowedChildren).length > 0 ? { allowedChildren: entry.allowedChildren } : {}),
 			...(entry.mapSlots && Object.keys(entry.mapSlots).length > 0 ? { mapSlots: entry.mapSlots } : {}),
 			...(entry.itemKeys && Object.keys(entry.itemKeys).length > 0 ? { itemKeys: entry.itemKeys } : {}),
+			...(entry.category ? { category: entry.category } : {}),
+			...(entry.tags && entry.tags.length > 0 ? { tags: [...entry.tags] } : {}),
+			...(entry.requiresContext && entry.requiresContext.length > 0 ? { requiresContext: [...entry.requiresContext] } : {}),
+			...(entry.providesContext && entry.providesContext.length > 0 ? { providesContext: [...entry.providesContext] } : {}),
 		};
 	}
 	return manifest;
@@ -52,7 +72,7 @@ function describeValue(value: unknown): string {
 // `parent` names the component whose slot holds `node`; it is the diagnostic's type when `node` has none of its own.
 // Neither case renders anything at runtime (renderChildren drops non-maps, DslRenderer renders nothing without a
 // `$type`), so both are errors here: a silently blank node is the failure this check exists to prevent.
-function walk(node: unknown, manifest: DslKeysManifest, nodePath: string, diagnostics: CompiledDslDiagnostic[], skipType?: (type: string) => boolean, parent = '(document)'): void {
+function walk(node: unknown, manifest: DslKeysManifest, nodePath: string, diagnostics: CompiledDslDiagnostic[], skipType?: (type: string) => boolean, parent = '(document)', ctxStack: readonly string[] = [], placement: PlacementOptions = {}): void {
 	if (!node || typeof node !== 'object' || Array.isArray(node)) {
 		diagnostics.push({
 			severity: 'error',
@@ -107,6 +127,8 @@ function walk(node: unknown, manifest: DslKeysManifest, nodePath: string, diagno
 	}
 
 	diagnostics.push(...checkNodeKeys(record, type, nodePath, entry));
+	diagnostics.push(...checkRequiredContext(type, nodePath, entry, manifest, ctxStack, placement.providedContexts ?? []));
+	const childCtxStack = entry.providesContext && entry.providesContext.length > 0 ? [...ctxStack, ...entry.providesContext] : ctxStack;
 
 	if (entry.nodeSchema) {
 		const result = entry.nodeSchema.safeParse(record);
@@ -144,18 +166,93 @@ function walk(node: unknown, manifest: DslKeysManifest, nodePath: string, diagno
 			});
 			continue;
 		}
+		const allowedTags = entry.allowedChildren?.[slotKey] ?? [];
 		slotValue.forEach((child, i) => {
-			walk(child, manifest, `${nodePath}.${slotKey}[${i}]`, diagnostics, skipType, type);
+			const childPath = `${nodePath}.${slotKey}[${i}]`;
+			diagnostics.push(...checkSlotTags(child, slotKey, type, allowedTags, manifest, childPath, placement.placement ?? 'error'));
+			walk(child, manifest, childPath, diagnostics, skipType, type, childCtxStack, placement);
 		});
 	}
 
 	for (const [slotKey, spec] of Object.entries(entry.mapSlots ?? {})) {
-		walkMapSlot(record[slotKey], slotKey, spec, type, manifest, nodePath, diagnostics, skipType);
+		walkMapSlot(record[slotKey], slotKey, spec, type, manifest, nodePath, diagnostics, skipType, childCtxStack, placement);
 	}
 
 	for (const [propKey, spec] of Object.entries(entry.itemKeys ?? {})) {
 		checkItemKeys(record[propKey], propKey, spec, type, `${nodePath}.${propKey}`, diagnostics);
 	}
+}
+
+// A child may sit in a slot when one of its tags, or its category, is among the tags the slot allows (a slot of
+// `atomic` components takes any atomic one). A slot that declares no tag takes anything, and a child whose entry carries
+// neither category nor tags (a hand-written entry, a manifest older than this check) is not judged: nothing to compare.
+function checkSlotTags(child: unknown, slotKey: string, parent: string, allowedTags: string[], manifest: DslKeysManifest, childPath: string, mode: 'error' | 'warning'): CompiledDslDiagnostic[] {
+	if (allowedTags.length === 0 || !child || typeof child !== 'object' || Array.isArray(child)) {
+		return [];
+	}
+	const childType = (child as Record<string, unknown>)['$type'];
+	const childEntry = typeof childType === 'string' ? manifest[childType] : undefined;
+	if (!childEntry || (childEntry.category === undefined && childEntry.tags === undefined)) {
+		return [];
+	}
+	const carried = [...(childEntry.tags ?? []), ...(childEntry.category ? [childEntry.category] : [])];
+	if (carried.some((tag) => allowedTags.includes(tag))) {
+		return [];
+	}
+	return [
+		{
+			severity: mode,
+			type: childType as string,
+			nodePath: childPath,
+			code: 'slot-tag-mismatch',
+			message:
+				`[${childType as string}] is not allowed in "${slotKey}" of ${parent}: the slot takes ${allowedTags.join(', ')} and ${childType as string} is ` +
+				`${(childEntry.tags ?? []).length > 0 ? (childEntry.tags ?? []).join(', ') + ' (' + (childEntry.category ?? 'no category') + ')' : (childEntry.category ?? 'untagged')}. Put it where its kind is accepted, or use a component the slot takes.${mode === 'warning' ? ' (Reported as a warning while the page is being migrated: it will become an error.)' : ''}`,
+		},
+	];
+}
+
+// A context that some registry component provides (Form gives FormContext) should have that component above the one that needs
+// it. A context no registry component provides is set up by the app (theme, toasts): not knowable here, never flagged.
+// A WARNING, not an error, on purpose: requiresContext is detected from useContext calls, which cannot tell a required
+// context from an optional one, and an app may provide a context its views never contain (measured on the real views of
+// seven apps: RouterContext, AbParentContext). A slot-tag mismatch is exact, so that one blocks.
+const providersCache = new WeakMap<DslKeysManifest, Map<string, string[]>>();
+function providersOf(manifest: DslKeysManifest): Map<string, string[]> {
+	let providers = providersCache.get(manifest);
+	if (!providers) {
+		providers = new Map();
+		for (const [name, entry] of Object.entries(manifest)) {
+			// A provider with no slot for nodes (RouterProvider) is set up by the app shell, never expected inside a view.
+			const holdsNodes = Object.keys(entry.allowedChildren ?? {}).length > 0 || Object.keys(entry.mapSlots ?? {}).length > 0;
+			if (!holdsNodes) {
+				continue;
+			}
+			for (const context of entry.providesContext ?? []) {
+				providers.set(context, [...(providers.get(context) ?? []), name]);
+			}
+		}
+		providersCache.set(manifest, providers);
+	}
+	return providers;
+}
+
+function checkRequiredContext(type: string, nodePath: string, entry: DslKeysEntry, manifest: DslKeysManifest, ctxStack: readonly string[], providedContexts: readonly string[]): CompiledDslDiagnostic[] {
+	const diagnostics: CompiledDslDiagnostic[] = [];
+	for (const context of entry.requiresContext ?? []) {
+		const providers = providersOf(manifest).get(context);
+		// A component that provides the context it reads itself (a nested AbTest) is fine.
+		if (providers && !ctxStack.includes(context) && !providedContexts.includes(context) && !(entry.providesContext ?? []).includes(context)) {
+			diagnostics.push({
+				severity: 'warning',
+				type,
+				nodePath,
+				code: 'missing-context',
+				message: `[${type}] needs ${context}, which no ancestor provides: put it inside ${providers.join(' or ')}.`,
+			});
+		}
+	}
+	return diagnostics;
 }
 
 // The literal values the component's generated schema rejects: a typo'd enum, a map where a list is expected. These
@@ -200,7 +297,9 @@ function walkMapSlot(
 	manifest: DslKeysManifest,
 	nodePath: string,
 	diagnostics: CompiledDslDiagnostic[],
-	skipType?: (type: string) => boolean
+	skipType?: (type: string) => boolean,
+	ctxStack: readonly string[] = [],
+	placement: PlacementOptions = {}
 ): void {
 	if (value === undefined) {
 		return;
@@ -253,7 +352,7 @@ function walkMapSlot(
 			});
 			continue;
 		}
-		walk(entry[spec.nodeKey], manifest, `${entryPath}.${spec.nodeKey}`, diagnostics, skipType, type);
+		walk(entry[spec.nodeKey], manifest, `${entryPath}.${spec.nodeKey}`, diagnostics, skipType, type, ctxStack, placement);
 	}
 }
 
@@ -309,7 +408,7 @@ function assertKeysNotStripped(manifest: DslKeysManifest): void {
 export function findUnknownKeys(
 	doc: Record<string, unknown>,
 	manifest: DslKeysManifest,
-	options?: { skipType?: (type: string) => boolean }
+	options?: { skipType?: (type: string) => boolean } & PlacementOptions
 ): CompiledDslDiagnostic[] {
 	assertKeysNotStripped(manifest);
 	const diagnostics: CompiledDslDiagnostic[] = [];
@@ -326,6 +425,6 @@ export function findUnknownKeys(
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const { $sources, $actions, $route, $vars, $brains, ...pageNode } = doc;
 	findUnknownActionKeys($actions, diagnostics);
-	walk(omitNavKeys(pageNode), manifest, '$', diagnostics, options?.skipType);
+	walk(omitNavKeys(pageNode), manifest, '$', diagnostics, options?.skipType, undefined, [], { placement: options?.placement, providedContexts: options?.providedContexts });
 	return diagnostics;
 }
