@@ -585,7 +585,8 @@ interface NumberOptions {
 const filtersTopRowClass = 'flex flex-wrap items-center gap-1.5 border-b border-border px-3 py-2';
 const batchToolbarClass = 'flex items-center gap-3 border-b border-primary bg-primary-light px-3 py-2';
 const floatingBatchToolbarClass =
-	'fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-lg border border-primary bg-primary-light px-4 py-2.5 shadow-lg';
+	// `--floating-bottom-offset` is set by the A/B dock (dev) to the room it takes at the bottom, so this bar sits above it.
+	'fixed bottom-[calc(1.5rem+var(--floating-bottom-offset,0px))] left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-lg border border-primary bg-primary-light px-4 py-2.5 shadow-lg';
 const theadRowClass = 'border-b border-border text-left text-sm text-muted';
 // `fill`: the header cells stay on screen while the rows scroll under them. A row border does not travel with a sticky
 // cell, so the line under the header is drawn as an inset shadow of the cell itself. z-10 sits above the rows and below

@@ -1053,29 +1053,7 @@
 		},
 		"category": "disposition",
 		"tags": [
-			"layout",
-			"IN",
-			"SCOPE:",
-			"horizontal",
-			"flex",
-			"container",
-			"with",
-			"configurable",
-			"gap,",
-			"alignment,",
-			"and",
-			"justification.",
-			"OUT",
-			"OF",
-			"SCOPE:",
-			"business-specific",
-			"layouts",
-			"-",
-			"use",
-			"PageHeader.headerActions",
-			"for",
-			"header+button",
-			"patterns."
+			"layout"
 		]
 	},
 	"IconButton": {

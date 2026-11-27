@@ -561,7 +561,7 @@ function discoverComponents(srcDir: string, hookWrappers: Map<string, string[]>)
 				const tagName = tag.getTagName();
 				const text = tag.getCommentText()?.trim() ?? '';
 				if (tagName === 'registryCategory') category = text;
-				else if (tagName === 'registryTags') tags = text.split(/\s+/).filter(Boolean);
+				else if (tagName === 'registryTags') tags = parseRegistryTags(text, name, absPath);
 				else if (tagName === 'registryBind') bindPattern = text.split(/\s+/).filter(Boolean);
 				else if (tagName === 'registryLazy') lazy = true;
 			}
@@ -582,6 +582,22 @@ function discoverComponents(srcDir: string, hookWrappers: Map<string, string[]>)
 	}
 
 	return discovered;
+}
+
+const REGISTRY_TAG = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
+
+/**
+ * The tags written on the `@registryTags` line, nothing more. TypeScript hands back the whole tag comment, which runs on into
+ * a description placed under it ("IN SCOPE: ..."): only the first line is read, and a word that is not a lowercase kebab-case
+ * tag fails the build naming the component, since a slot accepts a child by its tags.
+ */
+function parseRegistryTags(text: string, component: string, file: string): string[] {
+	const tags = (text.split(/\r?\n/)[0] ?? '').split(/\s+/).filter(Boolean);
+	const bad = tags.filter(tag => !REGISTRY_TAG.test(tag));
+	if (bad.length > 0) {
+		throw new Error(`[registry] ${component} (${file}): @registryTags must be lowercase kebab-case words separated by spaces, found ${bad.map(tag => `"${tag}"`).join(', ')}. Put any description on its own line under a blank line, after the tags.`);
+	}
+	return tags;
 }
 
 // ─── Simple render block generation ───────────────────────────────────────────

@@ -27,6 +27,9 @@ const DOCK_BOX_CLASS = 'pointer-events-auto relative min-w-0 w-max';
 const DOCK_BOX_MAX_WIDTH = 'min(100%, calc(100vw - 1rem))';
 // The frame sits this far above the bottom of the window (bottom-6): the page must leave that room too.
 const FRAME_BOTTOM_OFFSET = '1.5rem';
+// Published on the document root: the height of the dock (or folded pill) plus a gap, for a floating bar that must sit above it.
+export const FLOATING_OFFSET_VARIABLE = '--floating-bottom-offset';
+const FLOATING_OFFSET_GAP = 8;
 // Hint of the hovered or keyboard-focused option, above the dock (absolute: it never moves a row).
 const HINT_CLASS = 'pointer-events-none absolute bottom-full left-1/2 mb-4 w-max max-w-[min(32rem,calc(100vw-2rem))] -translate-x-1/2 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs text-content shadow-lg';
 /**
@@ -115,6 +118,14 @@ export function AbDock({ tests, enabled = isDev(), insetLeft, align = 'center' }
 		observer.observe(frame);
 		return () => observer.disconnect();
 	}, [active]);
+	// The room the frame takes, published for the other floating bars of the page (the DataTable batch bar lifts by it).
+	useEffect(() => {
+		if (!active) {
+			return;
+		}
+		document.documentElement.style.setProperty(FLOATING_OFFSET_VARIABLE, `${reservedHeight + FLOATING_OFFSET_GAP}px`);
+		return () => document.documentElement.style.removeProperty(FLOATING_OFFSET_VARIABLE);
+	}, [active, reservedHeight]);
 	useEffect(() => {
 		const target = focusAfterToggle.current;
 		focusAfterToggle.current = null;
