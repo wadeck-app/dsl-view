@@ -21,6 +21,16 @@ describe('Switch theme', () => {
 		expect(thumb()).not.toHaveClass('bg-white');
 	});
 
+	it('the focus indicator is the same outline on and off, and never a ring (the off track owns the ring)', () => {
+		for (const checked of [false, true]) {
+			const { unmount } = render(<Switch checked={checked} onChange={vi.fn()} />);
+			const track = screen.getByRole('switch');
+			expect(track).toHaveClass('focus-visible:outline', 'focus-visible:outline-2', 'focus-visible:outline-offset-2');
+			expect(track.className).not.toMatch(/focus(-visible)?:ring/);
+			unmount();
+		}
+	});
+
 	it('the on state keeps the accent track and a white thumb', () => {
 		render(<Switch checked onChange={vi.fn()} />);
 		expect(screen.getByRole('switch').className).toContain('data-[state=checked]:bg-[var(--color-primary-solid)]');

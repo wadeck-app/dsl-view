@@ -9,7 +9,8 @@ export interface SwitchProps {
     size?: 'sm' | 'md';
 }
 
-const TRACK_BASE = 'relative inline-flex items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-solid)] focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed data-[state=checked]:bg-[var(--color-primary-solid)]';
+// The focus indicator is an outline, not a ring: the off track already uses the ring (box-shadow) for its inset outline, and a focus ring would replace it, drawing inside the track when off and outside when on.
+const TRACK_BASE = 'relative inline-flex items-center rounded-full transition-colors focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary-solid)] disabled:opacity-50 disabled:cursor-not-allowed data-[state=checked]:bg-[var(--color-primary-solid)]';
 // Off: a tint of the muted token with an inset outline, so the track shows on a light and on a dark surface (a fixed light grey was a bright pill in the dark theme).
 const TRACK_OFF = 'bg-muted/30 ring-1 ring-inset ring-muted/50';
 const TRACK_SIZE: Record<'sm' | 'md', string> = { sm: 'w-9 h-5', md: 'w-11 h-6' };
