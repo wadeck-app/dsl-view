@@ -1,6 +1,7 @@
 import { RefreshCw } from 'lucide-react';
 import React from 'react';
 
+import { Tooltip } from '../overlay/Tooltip.js';
 import { reportAuthoringError } from '@dsl-ui/utils/devDiagnostics.js';
 
 const refreshButtonClass =
@@ -31,13 +32,17 @@ export interface RefreshButtonProps {
 	 * @ctxDefault $refresh
 	 */
 	onRefresh?: (source?: string) => Promise<void>;
+	/** Turns the button off (a permission, a state of the page). */
+	disabled?: boolean;
+	/** Why the button is off; shown in its tooltip while it is. */
+	disabledReason?: string;
 }
 
 /**
  * @registryCategory atomic
  * @registryTags refresh button
  */
-export function RefreshButton({ onClick, loading = false, source, label = 'Refresh', onRefresh }: RefreshButtonProps) {
+export function RefreshButton({ onClick, loading = false, source, label = 'Refresh', onRefresh, disabled = false, disabledReason }: RefreshButtonProps) {
 	const [pending, setPending] = React.useState(false);
 
 	const unwired = !onClick && !onRefresh;
@@ -64,12 +69,12 @@ export function RefreshButton({ onClick, loading = false, source, label = 'Refre
 	};
 
 	const busy = loading || pending;
-	return (
+	const button = (
 		// violations-suppress: react/no-raw-button RefreshButton IS an atomic wrapper for the refresh interaction
 		<button
 			type="button"
 			onClick={handleClick}
-			disabled={busy || unwired}
+			disabled={busy || unwired || disabled}
 			aria-busy={busy || undefined}
 			className={refreshButtonClass}
 			title={unwired ? 'Nothing to refresh: not rendered inside a page' : label}
@@ -79,4 +84,5 @@ export function RefreshButton({ onClick, loading = false, source, label = 'Refre
 			{label}
 		</button>
 	);
+	return disabled && disabledReason ? <Tooltip content={disabledReason}>{button}</Tooltip> : button;
 }

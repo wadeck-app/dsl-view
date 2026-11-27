@@ -17,6 +17,7 @@ $vars:
   ChipButton__shape: "pill"
   ChipButton__emphasis: "subtle"
   ChipButton__aria-pressed: false
+  ChipButton__disabled: false
   ColorPicker__label: "ColorPicker"
   CompactSelect__ariaLabel: "sample"
   CompactSelect__disabled: false
@@ -26,6 +27,7 @@ $vars:
   LiveToggle__live: false
   RadioGroup__orientation: "vertical"
   RefreshButton__loading: false
+  RefreshButton__disabled: false
   Slider__disabled: false
   Slider__showValue: false
   Switch__disabled: false
@@ -235,13 +237,17 @@ items:
           - $type: "Switch"
             label: "aria-pressed"
             bind: "ChipButton__aria-pressed"
+          - $type: "Switch"
+            label: "disabled"
+            bind: "ChipButton__disabled"
       - $type: "ChipButton"
         active: "$vars.ChipButton__active"
         shape: "$vars.ChipButton__shape"
         emphasis: "$vars.ChipButton__emphasis"
         aria-pressed: "$vars.ChipButton__aria-pressed"
+        disabled: "$vars.ChipButton__disabled"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `active` | boolean | yes |\n| `color` | unknown | no |\n| `items` | array | no |\n| `shape` | pill / square | no |\n| `emphasis` | subtle / strong | no |\n| `aria-pressed` | boolean | no |\n| `aria-label` | string | no |\n| `title` | string | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `active` | boolean | yes |\n| `color` | unknown | no |\n| `items` | array | no |\n| `shape` | pill / square | no |\n| `emphasis` | subtle / strong | no |\n| `aria-pressed` | boolean | no |\n| `aria-label` | string | no |\n| `title` | string | no |\n| `disabled` | boolean | no |\n| `disabledReason` | string | no |"
   - $type: "Card"
     header:
       - $type: "Tag"
@@ -400,10 +406,14 @@ items:
           - $type: "Switch"
             label: "loading"
             bind: "RefreshButton__loading"
+          - $type: "Switch"
+            label: "disabled"
+            bind: "RefreshButton__disabled"
       - $type: "RefreshButton"
         loading: "$vars.RefreshButton__loading"
+        disabled: "$vars.RefreshButton__disabled"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `loading` | boolean | no |\n| `source` | string | no |\n| `label` | string | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `loading` | boolean | no |\n| `source` | string | no |\n| `label` | string | no |\n| `disabled` | boolean | no |\n| `disabledReason` | string | no |"
   - $type: "Card"
     header:
       - $type: "Tag"

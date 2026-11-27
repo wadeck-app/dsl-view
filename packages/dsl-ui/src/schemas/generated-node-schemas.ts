@@ -70,6 +70,8 @@ export const ChipButtonNodeSchema = baseNode.extend({
 	'aria-label': z.string().optional(),
 	title: z.string().optional(),
 	className: z.string().optional(),
+	disabled: dsl(z.boolean()).optional(),
+	disabledReason: z.string().optional(),
 });
 
 const ColorOptionSchema = z.object({
@@ -134,6 +136,8 @@ export const RefreshButtonNodeSchema = baseNode.extend({
 	loading: dsl(z.boolean()).optional(),
 	source: z.string().optional(),
 	label: z.string().default('Refresh'),
+	disabled: dsl(z.boolean()).optional(),
+	disabledReason: z.string().optional(),
 });
 
 export const SliderNodeSchema = baseNode.extend({
@@ -409,6 +413,7 @@ export const TimeSeriesChartNodeSchema = baseNode.extend({
 export const ButtonCancelNodeSchema = baseNode.extend({
 	label: z.string().optional(),
 	disabled: dsl(z.boolean()).optional(),
+	disabledReason: z.string().optional(),
 });
 
 export const ButtonSaveNodeSchema = baseNode.extend({
@@ -801,6 +806,8 @@ export const ButtonLinkNodeSchema = baseNode.extend({
 	icon: dsl(z.array(z.unknown())).optional(),
 	variant: dsl(z.enum(['primary', 'secondary', 'danger', 'danger-outline', 'neutral', 'success'])).optional(),
 	size: dsl(z.enum(['sm', 'md'])).optional(),
+	disabled: dsl(z.boolean()).optional(),
+	disabledReason: z.string().optional(),
 });
 
 export const LinkNodeSchema = baseNode.extend({

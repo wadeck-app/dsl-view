@@ -26,6 +26,9 @@ export interface ChipButtonProps {
 	'aria-label'?: string;
 	title?: string;
 	className?: string;
+	disabled?: boolean;
+	/** Why the chip is off; shown in its tooltip while it is. */
+	disabledReason?: string;
 }
 
 const chipBaseClass = 'border px-2.5 py-0.5 text-xs font-medium transition-colors cursor-pointer';

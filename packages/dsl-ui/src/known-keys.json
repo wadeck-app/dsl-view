@@ -161,6 +161,7 @@
 	"ButtonCancel": {
 		"knownKeys": [
 			"disabled",
+			"disabledReason",
 			"label",
 			"onCancel"
 		],
@@ -172,6 +173,8 @@
 	},
 	"ButtonLink": {
 		"knownKeys": [
+			"disabled",
+			"disabledReason",
 			"icon",
 			"label",
 			"size",
@@ -280,6 +283,8 @@
 			"aria-label",
 			"aria-pressed",
 			"color",
+			"disabled",
+			"disabledReason",
 			"emphasis",
 			"items",
 			"onClick",
@@ -1311,6 +1316,8 @@
 	},
 	"RefreshButton": {
 		"knownKeys": [
+			"disabled",
+			"disabledReason",
 			"label",
 			"loading",
 			"onClick",

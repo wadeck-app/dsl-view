@@ -2,6 +2,8 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 
 import { buttonClasses } from '../controls/_Button.js';
+import { Tooltip } from '../overlay/Tooltip.js';
+import { reportAuthoringMistake } from '@dsl-ui/utils/devDiagnostics.js';
 
 export interface ButtonLinkProps {
 	/** Route to navigate to. */
@@ -11,6 +13,10 @@ export interface ButtonLinkProps {
 	icon?: React.ReactNode;
 	variant?: 'primary' | 'secondary' | 'danger' | 'danger-outline' | 'neutral' | 'success';
 	size?: 'sm' | 'md';
+	/** Turns the link off: it is drawn as an off button, has no destination and takes no focus. */
+	disabled?: boolean;
+	/** Why the link is off; shown in its tooltip while it is. */
+	disabledReason?: string;
 }
 
 /**
@@ -29,7 +35,20 @@ export interface ButtonLinkProps {
  * @registryCategory atomic
  * @registryTags link navigation button
  */
-export function ButtonLink({ to, label, icon, variant = 'secondary', size = 'md' }: ButtonLinkProps) {
+export function ButtonLink({ to, label, icon, variant = 'secondary', size = 'md', disabled = false, disabledReason }: ButtonLinkProps) {
+	if (disabled) {
+		if (!disabledReason) {
+			reportAuthoringMistake(`[ButtonLink] "${label}" is off without a disabledReason: the user cannot tell why.`);
+		}
+		// An anchor cannot be turned off: without a destination it is a span announced as disabled.
+		const off = (
+			<span aria-disabled="true" className={`${buttonClasses(variant, size)} cursor-not-allowed opacity-50`}>
+				{icon}
+				{label}
+			</span>
+		);
+		return disabledReason ? <Tooltip content={disabledReason}>{off}</Tooltip> : off;
+	}
 	return (
 		<Link to={to} className={buttonClasses(variant, size)}>
 			{icon}

@@ -18,7 +18,7 @@ Maintenance: add a row here in the same change that adds, renames or removes a c
 | `ButtonAction` | atomic | label, ariaLabel, variant (incl. quiet ghost and link), icon, size (xs 22px, sm, md), onClick, loading, disabled, type, form | Plain labelled button with explicit onClick, loading and optional icon node; `type: submit` with `form: <form id>` submits a form the button is not inside of (a Dialog footer); use when you wire the handler yourself rather than running a `$actions` entry. |
 | `Checkbox` | atomic | label, checked, onChange, disabled, className | Single native checkbox input with an optional text label that makes the whole row clickable; use for one boolean, CheckboxGroup for several. |
 | `CheckboxGroup` | atomic | options, value, onChange, label, orientation | Fieldset of checkboxes bound to a string array, with optional legend and vertical or horizontal layout; use for multi-select from a few options. |
-| `ChipButton` | disposition | active, onClick, children, color, shape, emphasis | Toggle chip button with pill or square shape and palette colours, showing an active state; use for filter toggles or picking items in a grid. |
+| `ChipButton` | disposition | active, onClick, children, color, shape, emphasis, disabled, disabledReason | Toggle chip button with pill or square shape and palette colours, showing an active state; use for filter toggles or picking items in a grid. |
 | `ColorPicker` | atomic | label, options, value, onChange | Row of round colour swatch buttons (blue, violet, orange, green, rose, teal) with a label; use to pick one named accent colour. |
 | `CompactSelect` | atomic | ariaLabel, options, value, onChange, urlParam, defaultValue, storageKey, resetUrlParams, placeholder, size, tooltip | Label-less native select sized for toolbars (`size="sm"` is the 22px toolbar height shared with `SearchBar size="sm"`, `ChipButton` and `RefreshButton`, and the one to put inside a chip), optionally backed by a URL param (`defaultValue` is shown while the param is absent; `storageKey` remembers the choice in localStorage and restores it to the URL, one extra refetch; with `urlParam`, a value no option carries shows as a disabled `Unknown: <value>`); use instead of FieldSelect in a row of controls, or PageSizeSelect for non-page-size choices. |
 | `DeleteButton` | atomic | children, onClick, disabled, disabledReason, loading | Small danger-styled button labelled 'Delete' by default, with variant and size fixed; use for a destructive action instead of configuring a Button. |
@@ -27,7 +27,7 @@ Maintenance: add a row here in the same change that adds, renames or removes a c
 | `PageSizeSelect` | atomic | options, urlParam, value, onChange, default, resetUrlParams | Select of page sizes shown as 'N / page', optionally backed by a URL param with a default; use for pagination page size, CompactSelect for other choices. |
 | `Radio` | atomic | name, value, checked, onChange, disabled | Single native radio input with themed styling and no label or group logic; use RadioGroup when you need options and a bound value. |
 | `RadioGroup` | atomic | options, value, onChange, label, orientation | Fieldset of Radix radio items with labels bound to one string value, vertical or horizontal; use for choosing exactly one of a few visible options. |
-| `RefreshButton` | atomic | source, label, onRefresh, onClick, loading | Small 'Refresh' button that re-fetches one named source or all page sources via the page's `$refresh`, with a spinning icon while running. |
+| `RefreshButton` | atomic | source, label, onRefresh, onClick, loading, disabled, disabledReason | Small 'Refresh' button that re-fetches one named source or all page sources via the page's `$refresh`, with a spinning icon while running. |
 | `Slider` | atomic | value, onChange, min, max, step, label, showValue | Radix single-thumb slider for a number with min, max and step, optional label and displayed value; use to pick a number in a range. |
 | `Switch` | atomic | checked, onChange, label, size, disabled | Radix on/off switch with optional label and sm or md size; use for an immediately-applied boolean setting, Checkbox for form-style booleans. |
 | `TabButton` | atomic | active, children, onClick, variant, className | Ghost button that draws an underline and aria-current when active; use for hand-built tab strips. |
@@ -67,7 +67,7 @@ Maintenance: add a row here in the same change that adds, renames or removes a c
 
 | Component | Category | Key props | What it is / when to use |
 |---|---|---|---|
-| `ButtonCancel` | atomic | onCancel, label, disabled | Cancel button for a form's action row; calls onCancel when clicked. |
+| `ButtonCancel` | atomic | onCancel, label, disabled, disabledReason | Cancel button for a form's action row; calls onCancel when clicked. |
 | `ButtonSave` | atomic | label, onClick, isPending, hasChanges, disabledReason | Primary save button; inside a Form it submits and takes pending/unsaved state from the form, outside it uses onClick. |
 | `CronBuilder` | composite | value, onChange, onClose | Frequency wizard that edits a cron expression and has a cancel button; use for schedule values instead of a free text field. |
 | `DatePicker` | atomic | value, onChange, onSelect, minDate, maxDate, isDateDisabled, dateFormat | Bare date input with calendar popup and no label or error wrapper; use FieldDate for the labelled form field. |
@@ -119,7 +119,7 @@ Maintenance: add a row here in the same change that adds, renames or removes a c
 |---|---|---|---|
 | `BackLink` | atomic | to, label | Sticky "Back" link with an arrow that goes to a given route or one path segment up; pick it over Breadcrumb for a single return link. |
 | `Breadcrumb` | atomic | currentPath, onNavigate | Home button plus clickable path segments built from the current path, navigating through a callback; pick it to show where a nested path sits. |
-| `ButtonLink` | atomic | to, label, icon, variant, size | Router link styled as a button (an anchor, so middle-click works); pick it over a button when the action is a navigation to a route. |
+| `ButtonLink` | atomic | to, label, icon, variant, size, disabled, disabledReason | Router link styled as a button (an anchor, so middle-click works); pick it over a button when the action is a navigation to a route. `disabled` drops the destination and shows `disabledReason` in a tooltip. |
 | `Link` | atomic | href, label, external, variant | Plain text anchor with default, muted or danger style and optional new-tab external icon; pick it for an inline link, not a router navigation. |
 | `PageTabs` | disposition | tabs, urlParam, activeTab, onChange | Tablist whose selected tab can live in the component, be controlled, or be stored in a URL search param; pick it over Tabs when the tab must survive reload or be linked. |
 | `RouterProvider` | disposition | children | Provider that gives descendants router navigation and URL search param read/write, built on react-router; required by components using urlParam. |

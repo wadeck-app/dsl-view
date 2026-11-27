@@ -5,6 +5,7 @@ $vars:
   ButtonLink__label: "ButtonLink"
   ButtonLink__variant: "primary"
   ButtonLink__size: "sm"
+  ButtonLink__disabled: false
   Link__href: "sample"
   Link__label: "Link"
   Link__external: false
@@ -60,7 +61,7 @@ items:
         label: "navigation"
     items:
       - $type: "Markdown"
-        text: "Router link styled as a button (an anchor, so middle-click works); pick it over a button when the action is a navigation to a route."
+        text: "Router link styled as a button (an anchor, so middle-click works); pick it over a button when the action is a navigation to a route. `disabled` drops the destination and shows `disabledReason` in a tooltip."
       - $type: "HorizontalStack"
         wrap: true
         items:
@@ -94,13 +95,17 @@ items:
                 label: "sm"
               - value: "md"
                 label: "md"
+          - $type: "Switch"
+            label: "disabled"
+            bind: "ButtonLink__disabled"
       - $type: "ButtonLink"
         to: "$vars.ButtonLink__to"
         label: "$vars.ButtonLink__label"
         variant: "$vars.ButtonLink__variant"
         size: "$vars.ButtonLink__size"
+        disabled: "$vars.ButtonLink__disabled"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `to` | string | yes |\n| `label` | string | yes |\n| `icon` | array | no |\n| `variant` | primary / secondary / danger / danger-outline / neutral / success | no |\n| `size` | sm / md | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `to` | string | yes |\n| `label` | string | yes |\n| `icon` | array | no |\n| `variant` | primary / secondary / danger / danger-outline / neutral / success | no |\n| `size` | sm / md | no |\n| `disabled` | boolean | no |\n| `disabledReason` | string | no |"
   - $type: "Card"
     header:
       - $type: "Tag"
