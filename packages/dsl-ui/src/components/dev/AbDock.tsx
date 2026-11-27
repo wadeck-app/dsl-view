@@ -124,7 +124,9 @@ export function AbDock({ tests, enabled = isDev(), insetLeft, align = 'center' }
 			return;
 		}
 		document.documentElement.style.setProperty(FLOATING_OFFSET_VARIABLE, `${reservedHeight + FLOATING_OFFSET_GAP}px`);
-		return () => document.documentElement.style.removeProperty(FLOATING_OFFSET_VARIABLE);
+		return () => {
+			document.documentElement.style.removeProperty(FLOATING_OFFSET_VARIABLE);
+		};
 	}, [active, reservedHeight]);
 	useEffect(() => {
 		const target = focusAfterToggle.current;

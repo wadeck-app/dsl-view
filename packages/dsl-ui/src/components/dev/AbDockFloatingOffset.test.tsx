@@ -82,7 +82,7 @@ describe('the floating batch bar lifts above it', () => {
 	function tableWithSelection() {
 		render(
 			<DataTable
-				columns={[{ field: 'name', label: 'Name' }]}
+				columns={[{ key: 'name', label: 'Name', render: row => String(row['name']) }]}
 				rows={[{ id: '1', name: 'one' }]}
 				selectable
 				batchActions={[{ label: 'Delete selected', action: 'delete' }]}
