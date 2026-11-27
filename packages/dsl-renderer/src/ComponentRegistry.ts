@@ -32,6 +32,7 @@ export interface ComponentRegistryEntry {
 	itemKeys?: Record<string, ItemKeysSpec>;
 	providesContext?: string[]; // context variable names provided (from createContext() calls)
 	requiresContext?: string[]; // context variable names required (from useContext() calls)
+	requiresContextWhen?: Array<{ context: string; prop: string; value: string }>; // a host context a prop value needs (from @requiresContextWhen)
 	requiresOneOf?: string[][]; // alternatives of which a node must write one (from @requiresOneOf), checked by the compiler
 }
 

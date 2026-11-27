@@ -30,6 +30,7 @@ function warnIgnored(layout: string, ignored: string[]): void {
 /**
  * @registryCategory composite
  * @registryTags header
+ * @requiresContextWhen HeaderActionsContext placement=trail
  */
 export function PageHeader({ placement = 'page', ...props }: PageHeaderProps) {
 	// The slot lookup lives in a child: a PageHeader works without any provider, so it must not register as requiring one.

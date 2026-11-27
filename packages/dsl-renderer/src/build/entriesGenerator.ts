@@ -533,6 +533,7 @@ interface DiscoveredComponent {
 	providesContext: string[];
 	requiresContext: string[];
 	requiresOneOf: string[][];
+	requiresContextWhen?: Array<{ context: string; prop: string; value: string }>;
 	sourcePath: string;
 }
 
@@ -558,6 +559,7 @@ function discoverComponents(srcDir: string, hookWrappers: Map<string, string[]>)
 			let bindPattern: string[] | null = null;
 			let lazy = false;
 			let requiresOneOf: string[][] = [];
+			const requiresContextWhen: Array<{ context: string; prop: string; value: string }> = [];
 
 			for (const tag of jsDoc.getTags()) {
 				const tagName = tag.getTagName();
@@ -565,6 +567,7 @@ function discoverComponents(srcDir: string, hookWrappers: Map<string, string[]>)
 				if (tagName === 'registryCategory') category = text;
 				else if (tagName === 'registryTags') tags = parseRegistryTags(text, name, absPath);
 				else if (tagName === 'requiresOneOf') requiresOneOf = parseRequiresOneOf(text);
+				else if (tagName === 'requiresContextWhen') requiresContextWhen.push(parseRequiresContextWhen(text, name, absPath));
 				else if (tagName === 'registryBind') bindPattern = text.split(/\s+/).filter(Boolean);
 				else if (tagName === 'registryLazy') lazy = true;
 			}
@@ -580,7 +583,12 @@ function discoverComponents(srcDir: string, hookWrappers: Map<string, string[]>)
 				])];
 				const requiresContext = extractRequiresContext(fn, hookWrappers);
 				checkRequiresOneOf(requiresOneOf, knownKeys, name, absPath);
-				discovered.push({ name, category, tags, bindPattern, lazy, allowedChildren, knownKeys, mapSlots, itemKeys, providesContext, requiresContext, requiresOneOf, sourcePath: absPath });
+				for (const condition of requiresContextWhen) {
+					if (!knownKeys.includes(condition.prop)) {
+						throw new Error(`[registry] ${name} (${absPath}): @requiresContextWhen names "${condition.prop}", which is not a prop of ${name}. Props: ${knownKeys.join(', ')}.`);
+					}
+				}
+				discovered.push({ name, category, tags, bindPattern, lazy, allowedChildren, knownKeys, mapSlots, itemKeys, providesContext, requiresContext, requiresOneOf, requiresContextWhen, sourcePath: absPath });
 			}
 		}
 	}
@@ -611,6 +619,16 @@ function parseRequiresOneOf(text: string): string[][] {
 		.split('|')
 		.map(group => group.split('+').map(prop => prop.trim()).filter(Boolean))
 		.filter(group => group.length > 0);
+}
+
+/** `@requiresContextWhen HeaderActionsContext placement=trail`: the host context a prop value needs. */
+function parseRequiresContextWhen(text: string, component: string, file: string): { context: string; prop: string; value: string } {
+	const [context, condition] = (text.split(/\r?\n/)[0] ?? '').trim().split(/\s+/);
+	const match = condition ? /^([A-Za-z_][\w]*)=(.+)$/.exec(condition) : null;
+	if (!context || !match) {
+		throw new Error(`[registry] ${component} (${file}): @requiresContextWhen must read "<Context> prop=value", found "${text.split(/\r?\n/)[0] ?? ''}".`);
+	}
+	return { context, prop: match[1]!, value: match[2]! };
 }
 
 /** Every prop named in `@requiresOneOf` must be one the component declares: a typo would silently disable the check. */
@@ -1159,6 +1177,9 @@ ${usesProcessEnv ? PROCESS_ENV_DECLARATION : ''}`;
 			}
 			if (c.requiresContext.length > 0) {
 				lines.push(`${entryVar}.requiresContext = ${JSON.stringify(c.requiresContext)};`);
+			}
+			if ((c.requiresContextWhen?.length ?? 0) > 0) {
+				lines.push(`${entryVar}.requiresContextWhen = ${JSON.stringify(c.requiresContextWhen)};`);
 			}
 			if ((c.requiresOneOf?.length ?? 0) > 0) {
 				lines.push(`${entryVar}.requiresOneOf = ${JSON.stringify(c.requiresOneOf)};`);

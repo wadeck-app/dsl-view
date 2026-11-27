@@ -33,6 +33,8 @@ export interface DslKeysEntry {
 	providesContext?: string[];
 	/** Alternatives of which a node must write at least one (a group is props that go together): `[['urlParam'], ['value']]`. */
 	requiresOneOf?: string[][];
+	/** A context the host must provide when a prop has a value (`placement: trail` needs `HeaderActionsContext`). */
+	requiresContextWhen?: Array<{ context: string; prop: string; value: string }>;
 	nodeSchema?: z.ZodSchema;
 	/** The generated schema of the component's props (a registry entry carries it outside production). A JSON manifest has none. */
 	propSchema?: z.ZodSchema;
@@ -43,7 +45,7 @@ export type DslKeysManifest = Record<string, DslKeysEntry>;
 
 /** Serializable subset of a registry (no render functions, no schemas), meant to be shipped as JSON. */
 export function buildKnownKeysManifest(
-	entries: Array<{ name: string; knownKeys?: string[]; allowedChildren?: Record<string, string[]>; mapSlots?: Record<string, MapSlotSpec>; itemKeys?: Record<string, ItemKeysSpec>; category?: string; tags?: string[]; requiresContext?: string[]; providesContext?: string[]; requiresOneOf?: string[][] }>
+	entries: Array<{ name: string; knownKeys?: string[]; allowedChildren?: Record<string, string[]>; mapSlots?: Record<string, MapSlotSpec>; itemKeys?: Record<string, ItemKeysSpec>; category?: string; tags?: string[]; requiresContext?: string[]; providesContext?: string[]; requiresOneOf?: string[][]; requiresContextWhen?: Array<{ context: string; prop: string; value: string }> }>
 ): DslKeysManifest {
 	const manifest: DslKeysManifest = {};
 	for (const entry of [...entries].sort((a, b) => a.name.localeCompare(b.name))) {
@@ -57,6 +59,7 @@ export function buildKnownKeysManifest(
 			...(entry.requiresContext && entry.requiresContext.length > 0 ? { requiresContext: [...entry.requiresContext] } : {}),
 			...(entry.providesContext && entry.providesContext.length > 0 ? { providesContext: [...entry.providesContext] } : {}),
 			...(entry.requiresOneOf && entry.requiresOneOf.length > 0 ? { requiresOneOf: entry.requiresOneOf.map(group => [...group]) } : {}),
+			...(entry.requiresContextWhen && entry.requiresContextWhen.length > 0 ? { requiresContextWhen: entry.requiresContextWhen.map(condition => ({ ...condition })) } : {}),
 		};
 	}
 	return manifest;
@@ -150,6 +153,7 @@ function walk(node: unknown, manifest: DslKeysManifest, nodePath: string, diagno
 
 	diagnostics.push(...checkPropValues(record, type, nodePath, entry));
 	diagnostics.push(...checkPropGroups(record, type, nodePath, entry, placement.placement ?? 'error'));
+	diagnostics.push(...checkHostContexts(record, type, nodePath, entry, ctxStack, placement.providedContexts));
 
 	// Recursion is only possible via allowedChildren - the sole metadata that says
 	// where child DSL nodes live in this component's props. A component with no
@@ -253,6 +257,28 @@ function checkRequiredContext(type: string, nodePath: string, entry: DslKeysEntr
 				nodePath,
 				code: 'missing-context',
 				message: `[${type}] needs ${context}, which no ancestor provides: put it inside ${providers.join(' or ')}.`,
+			});
+		}
+	}
+	return diagnostics;
+}
+
+// A prop value that only works when the host provides a context (PageHeader `placement: trail` and the shell's header slot).
+// Judged only when the host declares what it provides (`providedContexts`): without that list the host is unknown. A warning,
+// because the component still renders without it, just not as the author meant. An `$expression` value is not judged.
+function checkHostContexts(record: Record<string, unknown>, type: string, nodePath: string, entry: DslKeysEntry, ctxStack: readonly string[], provided: readonly string[] | undefined): CompiledDslDiagnostic[] {
+	if (provided === undefined || !entry.requiresContextWhen) {
+		return [];
+	}
+	const diagnostics: CompiledDslDiagnostic[] = [];
+	for (const { context, prop, value } of entry.requiresContextWhen) {
+		if (record[prop] === value && !provided.includes(context) && !ctxStack.includes(context)) {
+			diagnostics.push({
+				severity: 'warning',
+				type,
+				nodePath,
+				code: 'missing-host-context',
+				message: `[${type}] ${prop}: ${value} needs ${context} from the host, which does not provide it: the component renders in place instead. Run it in a host that provides ${context}, or drop ${prop}: ${value}.`,
 			});
 		}
 	}

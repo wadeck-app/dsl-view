@@ -11,6 +11,8 @@ export * from './components/table/index.js';
 
 export * from './dates/index.js';
 export { RouterContext } from './RouterContext.js';
+export { HOST_CONTEXTS } from './hostContexts.js';
+export type { HostContext } from './hostContexts.js';
 export { UrlParamContext, useUrlParam, useOptionalUrlParam } from './context/UrlParamContext.js';
 export type { UrlParamService } from './context/UrlParamContext.js';
 export { opticalOffset, useOpticalCenter } from './hooks/useOpticalCenter.js';

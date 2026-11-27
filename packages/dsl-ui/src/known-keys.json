@@ -1242,6 +1242,13 @@
 		"category": "composite",
 		"tags": [
 			"header"
+		],
+		"requiresContextWhen": [
+			{
+				"context": "HeaderActionsContext",
+				"prop": "placement",
+				"value": "trail"
+			}
 		]
 	},
 	"PageSection": {

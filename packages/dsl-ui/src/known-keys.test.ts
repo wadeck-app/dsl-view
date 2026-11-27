@@ -89,3 +89,18 @@ describe('known-keys.json SearchBar alternatives', () => {
 		expect(findUnknownKeys({ $type: 'SearchBar', urlParam: 'q' }, manifest)).toEqual([]);
 	});
 });
+
+describe('known-keys.json host contexts', () => {
+	it('warns when PageHeader placement trail meets a host that does not provide the header slot', async () => {
+		if (!fs.existsSync(unknownKeysPath)) {
+			throw new Error(`dsl-renderer is not built (${unknownKeysPath} missing): run \`npm run build\` in packages/dsl-renderer first.`);
+		}
+		const { findUnknownKeys } = await import(/* @vite-ignore */ unknownKeysPath);
+		const node = { $type: 'PageHeader', title: 'T', placement: 'trail' };
+		expect(findUnknownKeys(node, manifest, { providedContexts: ['RouterContext'] })).toEqual([
+			expect.objectContaining({ code: 'missing-host-context', severity: 'warning', type: 'PageHeader' }),
+		]);
+		expect(findUnknownKeys(node, manifest, { providedContexts: ['HeaderActionsContext'] })).toEqual([]);
+		expect(findUnknownKeys(node, manifest)).toEqual([]);
+	});
+});

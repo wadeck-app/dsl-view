@@ -32,7 +32,8 @@ export interface CompiledDslDiagnostic {
 		| 'slot-tag-mismatch'
 		// A component under none of the registry components that provide a context it needs (ButtonSave outside a Form).
 		| 'missing-context'
-		| 'missing-prop-group';
+		| 'missing-prop-group'
+		| 'missing-host-context';
 	message: string;
 }
 
