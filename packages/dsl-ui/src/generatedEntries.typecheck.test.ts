@@ -29,8 +29,8 @@ describe('generated entries.tsx for the real dsl-ui components', () => {
 		expect(refreshing[0]).toContain("?? ctx['$refreshing']");
 		// DataTable row/batch buttons follow the page's running actions without any YAML.
 		const pending = content.split('\n').filter((line) => line.includes("node['actionPending']"));
-		// DataTable and the page-level ActionButton: each follows the page's running actions, nothing else does.
-		expect(pending.map((line) => line.match(/'(\w+)\.actionPending'/)?.[1]).sort()).toStrictEqual(['ActionButton', 'DataTable']);
+		// DataTable, the page-level ActionButton and the DialogButton: each follows the page's running actions, nothing else does.
+		expect(pending.map((line) => line.match(/'(\w+)\.actionPending'/)?.[1]).sort()).toStrictEqual(['ActionButton', 'DataTable', 'DialogButton']);
 		for (const line of pending) {
 			expect(line).toContain("?? ctx['$actionPending']");
 		}

@@ -33,7 +33,7 @@ export function useActionHandlers(params: {
 }): {
 	namedHandlers: Record<string, (payload?: unknown) => Promise<unknown>>;
 	/** `options.body` is the request body (a page-level button sends page state; a table row sends none). */
-	onAction: (actionName: string, row: Record<string, unknown>, options?: { body?: unknown }) => Promise<void>;
+	onAction: (actionName: string, row: Record<string, unknown>, options?: { body?: unknown }) => Promise<boolean>;
 	onBatchAction: (actionName: string, rows: Record<string, unknown>[]) => Promise<void>;
 	extras: Record<string, unknown>;
 	/** `<actionName>: true` while at least one call of that action is in flight. Exposed to YAML as `$ctx.$actionPending.<name>`. */
@@ -267,7 +267,8 @@ export function useActionHandlers(params: {
 	}, [$actions, fetcher, getToken, reloadAfterAction, mountedRef, begin, end]);
 
 	const onAction = useCallback(
-		async (actionName: string, row: Record<string, unknown>, options?: { body?: unknown }) => {
+		// Resolves true when the action ran to its end, false when it failed (already reported), was declined or was already running.
+		async (actionName: string, row: Record<string, unknown>, options?: { body?: unknown }): Promise<boolean> => {
 			let spec: ActionSpec | undefined;
 			let flightKey: string | undefined;
 			let rowKey: string | undefined;
@@ -296,17 +297,17 @@ export function useActionHandlers(params: {
 							);
 						}
 					}
-					return;
+					return true;
 				}
 				const id = String(row['id'] ?? '');
 				flightKey = `${actionName}:${id}`;
 				if (!begin(actionName, flightKey, id)) {
 					flightKey = undefined;
-					return;
+					return false;
 				}
 				rowKey = id;
 				if (spec.confirm && !window.confirm(spec.confirm)) {
-					return;
+					return false;
 				}
 				// {key} placeholders come from the clicked row first, then route params, then URL search params.
 				// Resolved here (not left to the host fetcher) so every host gets the same behaviour.
@@ -334,6 +335,7 @@ export function useActionHandlers(params: {
 				}
 				notifySuccess(notifyRef.current, actionName, spec, result);
 				await reloadAfterAction(spec.reloadSources, true);
+				return true;
 			} catch (error) {
 				// A failed call must not leave the previous result readable (a stale `valid: true` next to an error):
 				// the key holds `{ error, status }` instead, and the notifier still shows the message.
@@ -346,6 +348,7 @@ export function useActionHandlers(params: {
 					setExtras(prev => ({ ...prev, [spec!.requestKey!]: undefined }));
 				}
 				reportActionError(actionName, 'row', error, spec);
+				return false;
 			} finally {
 				if (flightKey) {
 					end(actionName, flightKey, rowKey);

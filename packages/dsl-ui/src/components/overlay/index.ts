@@ -3,6 +3,7 @@
 export * from './ConfirmDialog.js';
 export * from './ContextMenu.js';
 export * from './Dialog.js';
+export * from './DialogButton.js';
 export * from './Drawer.js';
 export * from './DialogForm.js';
 export * from './Popover.js';

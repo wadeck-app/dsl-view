@@ -921,6 +921,18 @@ export const DialogNodeSchema = baseNode.extend({
 	size: dsl(z.enum(['sm', 'md', 'lg', 'xl'])).optional(),
 });
 
+export const DialogButtonNodeSchema = baseNode.extend({
+	label: z.string(),
+	variant: dsl(z.enum(['primary', 'secondary', 'danger', 'danger-outline', 'success', 'ghost'])).optional(),
+	action: z.string().optional(),
+	params: dsl(z.record(z.string(), z.unknown())).optional(),
+	body: dsl(z.record(z.string(), z.unknown())).optional(),
+	closesDialog: dsl(z.boolean()).optional(),
+	disabled: dsl(z.boolean()).optional(),
+	disabledReason: z.string().optional(),
+	actionPending: dsl(z.record(z.string(), z.boolean())).optional(),
+});
+
 export const DialogFormNodeSchema = baseNode.extend({
 	title: z.string(),
 	visible: z.unknown(),

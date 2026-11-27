@@ -626,6 +626,28 @@
 			"DialogCloseContext"
 		]
 	},
+	"DialogButton": {
+		"knownKeys": [
+			"action",
+			"actionPending",
+			"body",
+			"closesDialog",
+			"disabled",
+			"disabledReason",
+			"label",
+			"onAction",
+			"params",
+			"variant"
+		],
+		"category": "atomic",
+		"tags": [
+			"button",
+			"dialog-action"
+		],
+		"requiresContext": [
+			"DialogCloseContext"
+		]
+	},
 	"DialogFooter": {
 		"knownKeys": [
 			"items"
