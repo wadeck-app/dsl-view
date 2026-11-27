@@ -985,6 +985,8 @@ const ActionDefSchema = z.object({
 	variant: z.enum(['primary', 'danger', 'danger-outline', 'ghost', 'success']).optional(),
 	action: z.string(),
 	condition: z.string().optional(),
+	enabledWhen: z.string().optional(),
+	disabledReason: z.string().optional(),
 });
 
 const TableColumnSchema = z.object({

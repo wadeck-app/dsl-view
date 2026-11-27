@@ -498,6 +498,8 @@
 									"action",
 									"variant",
 									"condition",
+									"enabledWhen",
+									"disabledReason",
 									"icon"
 								]
 							}

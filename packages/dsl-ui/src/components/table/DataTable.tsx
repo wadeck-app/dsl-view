@@ -243,6 +243,10 @@ export interface DataTableActionItemSpec {
 	variant?: string;
 	/** Row field: shown when truthy; `!field`: shown when falsy. */
 	condition?: string;
+	/** Row field: available when truthy; `!field`: available when falsy. The button stays shown but off for the other rows. */
+	enabledWhen?: string;
+	/** Why the button is off for a row (its tooltip). Default "Not available for this row". */
+	disabledReason?: string;
 	/**
 	 * Icon name (rocket, rotate-ccw, play, trash, archive, send, pencil, ...: the vocabulary of display/iconByName).
 	 * The button becomes icon-only; `label` stays its accessible name and tooltip.
@@ -265,7 +269,7 @@ const NON_YAML_COLUMN_KEYS = ['render', 'isActions', 'actions'];
 export const DATA_TABLE_COLUMN_KEYS = ['field', 'key', 'label', 'width', 'truncate', 'nowrap', 'mono', 'muted', 'sortable', 'format', 'dateStyle', 'badge', 'href', 'external', 'title'] as const;
 export const DATA_TABLE_ACTIONS_COLUMN_KEYS = ['type', 'items', 'width'] as const;
 export const DATA_TABLE_LINK_COLUMN_KEYS = ['type', 'to', 'label', 'icon', 'position', 'external', 'width'] as const;
-export const DATA_TABLE_ACTION_ITEM_KEYS = ['label', 'action', 'variant', 'condition', 'icon'] as const;
+export const DATA_TABLE_ACTION_ITEM_KEYS = ['label', 'action', 'variant', 'condition', 'enabledWhen', 'disabledReason', 'icon'] as const;
 
 type RawYamlColumn = Partial<DataTableColumnSpec> &
 	Partial<Omit<DataTableActionsColumnSpec, 'type'>> &
@@ -537,6 +541,10 @@ export interface ActionDef<T extends Record<string, unknown>> {
 	onClick?: (row: T) => void;
 	/** Row-level condition. "field" = show when row[field] truthy. "!field" = show when falsy. */
 	condition?: string;
+	/** Row-level availability, same grammar as `condition`: the button stays shown but off for the rows that do not qualify. */
+	enabledWhen?: string;
+	/** Why the button is off for a row (its tooltip). */
+	disabledReason?: string;
 }
 
 export interface TableColumn<T extends Record<string, unknown>> {
@@ -1295,16 +1303,12 @@ export function DataTable<T extends Record<string, unknown>>({
 														>
 															<div className="flex items-center justify-end gap-1">
 																{col.actions.map((item, ii) => {
-																	if (item.condition) {
-																		const negate = item.condition.startsWith('!');
-																		const field = negate
-																			? item.condition.slice(1)
-																			: item.condition;
-																		const val = Boolean(row[field]);
-																		if (negate ? val : !val) {
-																			return null;
-																		}
+																	if (item.condition && !rowFieldHolds(item.condition, row)) {
+																		return null;
 																	}
+																	// Shown but off for this row: the reason is its tooltip.
+																	const unavailable = Boolean(item.enabledWhen) && !rowFieldHolds(item.enabledWhen!, row);
+																	const unavailableReason = unavailable ? (item.disabledReason ?? 'Not available for this row') : undefined;
 																	if (!item.icon) {
 																		// Loud, because the alternative is an invisible icon-only
 																		// button - see IconButton's required `icon` prop below.
@@ -1317,6 +1321,8 @@ export function DataTable<T extends Record<string, unknown>>({
 																				type="button"
 																				variant={item.variant ?? 'ghost'}
 																				size="sm"
+																				disabled={unavailable}
+																				disabledReason={unavailableReason}
 																				loading={isRowActionPending(item.action, row, actionPending, actionPendingRows)}
 																				aria-busy={isRowActionPending(item.action, row, actionPending, actionPendingRows) || undefined}
 																				onClick={() => onAction?.(item.action, row)}
@@ -1333,7 +1339,8 @@ export function DataTable<T extends Record<string, unknown>>({
 																			aria-label={item.label}
 																			variant={item.variant ?? 'ghost'}
 																			size="icon-xs"
-																			disabled={isRowActionPending(item.action, row, actionPending, actionPendingRows)}
+																			disabled={unavailable || isRowActionPending(item.action, row, actionPending, actionPendingRows)}
+																			tooltip={unavailableReason}
 																			aria-busy={isRowActionPending(item.action, row, actionPending, actionPendingRows) || undefined}
 																			onClick={() => onAction?.(item.action, row)}
 																		/>
@@ -1412,4 +1419,10 @@ function splitByApplicability<T extends Record<string, unknown>>(selected: T[], 
 		return Boolean(row[negate ? appliesTo.slice(1) : appliesTo]) !== negate;
 	};
 	return { applicable: selected.filter(holds), skipped: selected.filter(row => !holds(row)) };
+}
+
+/** A row field read as a condition: "field" holds when truthy, "!field" when falsy. */
+function rowFieldHolds(spec: string, row: Record<string, unknown>): boolean {
+	const negate = spec.startsWith('!');
+	return Boolean(row[negate ? spec.slice(1) : spec]) !== negate;
 }
