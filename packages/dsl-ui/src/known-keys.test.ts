@@ -101,6 +101,6 @@ describe('known-keys.json host contexts', () => {
 			expect.objectContaining({ code: 'missing-host-context', severity: 'warning', type: 'PageHeader' }),
 		]);
 		expect(findUnknownKeys(node, manifest, { providedContexts: ['HeaderActionsContext'] })).toEqual([]);
-		expect(findUnknownKeys(node, manifest)).toEqual([]);
+		expect(findUnknownKeys(node, manifest)).toEqual([expect.objectContaining({ code: 'host-contexts-unchecked', severity: 'warning' })]);
 	});
 });

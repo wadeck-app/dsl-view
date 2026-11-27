@@ -267,10 +267,25 @@ function checkRequiredContext(type: string, nodePath: string, entry: DslKeysEntr
 // Judged only when the host declares what it provides (`providedContexts`): without that list the host is unknown. A warning,
 // because the component still renders without it, just not as the author meant. An `$expression` value is not judged.
 function checkHostContexts(record: Record<string, unknown>, type: string, nodePath: string, entry: DslKeysEntry, ctxStack: readonly string[], provided: readonly string[] | undefined): CompiledDslDiagnostic[] {
-	if (provided === undefined || !entry.requiresContextWhen) {
+	if (!entry.requiresContextWhen) {
 		return [];
 	}
 	const diagnostics: CompiledDslDiagnostic[] = [];
+	if (provided === undefined) {
+		// Nothing says what the host provides: the node cannot be judged, and saying nothing would look like a pass.
+		for (const { context, prop, value } of entry.requiresContextWhen) {
+			if (record[prop] === value) {
+				diagnostics.push({
+					severity: 'warning',
+					type,
+					nodePath,
+					code: 'host-contexts-unchecked',
+					message: `[${type}] ${prop}: ${value} needs ${context} from the host, and the compiler was not told what the host provides, so this is not checked. Pass the host's contexts as \`providedContexts\` (the names listed in HOST_CONTEXTS of @wadeck-app/dsl-ui).`,
+				});
+			}
+		}
+		return diagnostics;
+	}
 	for (const { context, prop, value } of entry.requiresContextWhen) {
 		if (record[prop] === value && !provided.includes(context) && !ctxStack.includes(context)) {
 			diagnostics.push({

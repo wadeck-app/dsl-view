@@ -33,7 +33,9 @@ export interface CompiledDslDiagnostic {
 		// A component under none of the registry components that provide a context it needs (ButtonSave outside a Form).
 		| 'missing-context'
 		| 'missing-prop-group'
-		| 'missing-host-context';
+		| 'missing-host-context'
+		// A node needs a host context and the compiler was given no `providedContexts`: it could not judge it (a warning, so a pass is never silent).
+		| 'host-contexts-unchecked';
 	message: string;
 }
 

@@ -1,6 +1,6 @@
 // A prop value that only works when the host provides something (PageHeader `placement: trail` needs the shell's header slot) says
 // so with `@requiresContextWhen HeaderActionsContext placement=trail`. The compiler compares it with the contexts the host declares
-// (`providedContexts`); a host that declares none is unknown and is never blamed. It is a warning: without the host feature the
+// (`providedContexts`); a host that declares none cannot be checked: that is reported as a warning (host-contexts-unchecked), never passed over in silence. It is a warning: without the host feature the
 // component still renders, in place, but not as the author meant.
 import fs from 'fs';
 import os from 'os';
@@ -59,8 +59,8 @@ describe('the compiler compares the condition with the host contexts', () => {
 		expect(findUnknownKeys({ $type: 'Header', placement: 'trail' }, manifest, { providedContexts: ['HeaderActionsContext'] })).toEqual([]);
 	});
 
-	it('never blames a host that declares nothing', () => {
-		expect(findUnknownKeys({ $type: 'Header', placement: 'trail' }, manifest)).toEqual([]);
+	it('does not blame a host that declares nothing (it only says it could not check, see below)', () => {
+		expect(findUnknownKeys({ $type: 'Header', placement: 'trail' }, manifest).map(d => d.code)).toEqual(['host-contexts-unchecked']);
 	});
 
 	it('only applies when the prop has the value', () => {
@@ -70,5 +70,20 @@ describe('the compiler compares the condition with the host contexts', () => {
 
 	it('an expression value is not judged', () => {
 		expect(findUnknownKeys({ $type: 'Header', placement: '$vars.placement' }, manifest, { providedContexts: [] })).toEqual([]);
+	});
+});
+
+describe('a host that declares nothing is said so, not silently trusted', () => {
+	it('warns once per node that needs a host context when providedContexts is not given', () => {
+		const diagnostics = findUnknownKeys({ $type: 'Header', placement: 'trail' }, manifest);
+		expect(diagnostics).toHaveLength(1);
+		expect(diagnostics[0]).toMatchObject({ severity: 'warning', code: 'host-contexts-unchecked', type: 'Header', nodePath: '$' });
+		expect(diagnostics[0]!.message).toContain('providedContexts');
+		expect(diagnostics[0]!.message).toContain('HeaderActionsContext');
+	});
+
+	it('stays quiet when the node does not use the value that needs the context', () => {
+		expect(findUnknownKeys({ $type: 'Header', placement: 'page' }, manifest)).toEqual([]);
+		expect(findUnknownKeys({ $type: 'Header' }, manifest)).toEqual([]);
 	});
 });
