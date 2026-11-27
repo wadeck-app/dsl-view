@@ -1,0 +1,44 @@
+# Shell: the page header in the trail row. Components used - PageHeader (placement trail), ButtonAction, Card, Markdown.
+# The shell provides HeaderActionsProvider and draws the slot in the sticky trail row; without a slot the header renders in place.
+$type: VerticalStack
+items:
+  - $type: PageHeader
+    placement: trail
+    title: Header in the trail row
+    icon: PanelTop
+    headerActions:
+      - $type: ButtonAction
+        label: Primary action
+        variant: primary
+      - $type: ButtonAction
+        label: Secondary action
+        variant: secondary
+  - $type: Card
+    header:
+      - $type: Tag
+        label: What to look at
+    items:
+      - $type: Markdown
+        text: |
+          The title above is **not in the page body**: with `placement: trail` the whole header (icon, the single h1, the actions) moves into the shell's trail row as one flex row, and nothing is left in the body (no empty margin).
+
+          - Without a slot in the host the same node renders in place, so the page stays usable in a host that has none.
+          - `headerActions` is a **list**, like every node slot: `headerActions: [ {...}, {...} ]`. A single map renders nothing.
+          - Only one header per page should use `trail`: the slot is one row.
+  - $type: Card
+    header:
+      - $type: Tag
+        label: The YAML
+    items:
+      - $type: Markdown
+        text: |
+          ```yaml
+          - $type: PageHeader
+            placement: trail
+            title: Header in the trail row
+            icon: PanelTop
+            headerActions:
+              - $type: ButtonAction
+                label: Primary action
+                variant: primary
+          ```

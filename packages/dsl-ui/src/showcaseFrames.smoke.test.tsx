@@ -10,6 +10,7 @@ import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
+import { HeaderActionsProvider, HeaderActionsSlot } from './components/layout/HeaderActions.js';
 import { RouterProvider } from './components/navigation/RouterProvider.js';
 import { ToastProvider } from './components/overlay/Toast.js';
 
@@ -85,5 +86,50 @@ describe('the generated showcase frames render', () => {
 				</MemoryRouter>
 			)
 		).not.toThrow();
+	});
+});
+
+// The hand-written shell pages (shell-*.yaml) are whole pages: rendered in a host that has a header-actions slot, as the shell does.
+const shellPages = fs
+	.readdirSync(viewsDir)
+	.filter(file => /^shell-.*\.yaml$/.test(file))
+	.map(file => [file, yaml.load(fs.readFileSync(path.join(viewsDir, file), 'utf8')) as Record<string, unknown>] as const);
+
+describe('the shell showcase pages render', () => {
+	it.each(shellPages)('%s', (_file, node) => {
+		vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		const { container } = render(
+			<MemoryRouter>
+				<RouterProvider>
+					<HeaderActionsProvider>
+						<HeaderActionsSlot />
+						<main data-testid="body">
+							<DslRenderer node={node} registry={registry} ctx={{}} />
+						</main>
+					</HeaderActionsProvider>
+				</RouterProvider>
+			</MemoryRouter>
+		);
+		expect(container.querySelectorAll('h1').length).toBeLessThanOrEqual(1);
+	});
+
+	it('the header trail page puts its h1 and its two actions in the slot, none in the body', () => {
+		const node = shellPages.find(([file]) => file === 'shell-header-trail.yaml')![1];
+		const { getByTestId } = render(
+			<MemoryRouter>
+				<RouterProvider>
+					<HeaderActionsProvider>
+						<HeaderActionsSlot />
+						<main data-testid="body">
+							<DslRenderer node={node} registry={registry} ctx={{}} />
+						</main>
+					</HeaderActionsProvider>
+				</RouterProvider>
+			</MemoryRouter>
+		);
+		const slot = getByTestId('header-actions-slot');
+		expect(slot.querySelector('h1')?.textContent).toBe('Header in the trail row');
+		expect(slot.querySelectorAll('button')).toHaveLength(2);
+		expect(getByTestId('body').querySelector('h1')).toBeNull();
 	});
 });

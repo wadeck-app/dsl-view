@@ -11,6 +11,8 @@
     { "kind": "page", "slot": "nav", "label": "Settings", "path": "/settings", "view": { "type": "path", "value": "./src/dsl-views/settings.yaml" } },
     { "kind": "page", "slot": "nav", "label": "Interactions", "path": "/interactions", "view": { "type": "path", "value": "./src/dsl-views/interactions.yaml" } },
     { "kind": "page", "slot": "nav", "label": "States", "path": "/states", "separatorBefore": true, "groupLabel": "Behaviour", "view": { "type": "path", "value": "./src/dsl-views/states.yaml" } },
+    { "kind": "page", "slot": "nav", "label": "Header trail", "path": "/shell/header-trail", "separatorBefore": true, "groupLabel": "Shell", "view": { "type": "path", "value": "./src/dsl-views/shell-header-trail.yaml" } },
+    { "kind": "page", "slot": "nav", "label": "Collapsible menu", "path": "/shell/collapsible-menu", "navigation": "collapsible", "view": { "type": "path", "value": "./src/dsl-views/shell-collapsible-menu.yaml" } },
     { "kind": "page", "slot": "nav", "label": "Controls", "path": "/components/controls", "separatorBefore": true, "groupLabel": "Components", "view": { "type": "path", "value": "./src/dsl-views/components-controls.yaml" } },
     { "kind": "page", "slot": "nav", "label": "Display", "path": "/components/display", "view": { "type": "path", "value": "./src/dsl-views/components-display.yaml" } },
     { "kind": "page", "slot": "nav", "label": "Form", "path": "/components/form", "view": { "type": "path", "value": "./src/dsl-views/components-form.yaml" } },

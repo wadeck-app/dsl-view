@@ -1,0 +1,18 @@
+# Shell: a page flagged `navigation: collapsible` in the manifest. Components used - PageHeader, Card, Markdown.
+$type: VerticalStack
+items:
+  - $type: PageHeader
+    title: Collapsible menu
+    subtitle: A manifest flag, not a component.
+  - $type: Card
+    header:
+      - $type: Tag
+        label: What to look at
+    items:
+      - $type: Markdown
+        text: |
+          This page is declared in `manifest.json` with `"navigation": "collapsible"`. The shell then leads the trail row with a toggle that hides and shows the side menu; the choice is remembered per browser.
+
+          - The flag is accepted only on a `kind: page` in the `nav` slot (or `<provider>:nav`); on any other slot the manifest is refused with a message.
+          - The same rule holds for `separatorBefore`, `groupLabel` and `count`, which shape the side menu (see the "Equipment loans", "Behaviour" and "Components" groups in this menu).
+          - Menu options such as the resizable variant or the bar shrinking on scroll belong to the host shell, not to a module, so they cannot be shown from here.

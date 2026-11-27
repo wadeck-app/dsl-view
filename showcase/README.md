@@ -38,6 +38,8 @@ A component with a required prop that is not a scalar (a list, a node) is "descr
 | Interactions | A brain re-run by a page variable, a filter kept in the URL, a forced dark `ThemeScope` |
 | Settings | `Tabs`, `Collapsible`, `Switch`, `ThemePicker` |
 | States | Error toasts (short, long path, 100-character word), source failure, loading, empty list |
+| Header trail | `PageHeader placement: trail` with `headerActions` (a list) moved into the shell's trail row |
+| Collapsible menu | The manifest flag `navigation: collapsible` and the menu-only flags |
 | Dashboard widget | `StatTile` sized by the manifest (`width`, `height`) |
 
 ## Not done yet
