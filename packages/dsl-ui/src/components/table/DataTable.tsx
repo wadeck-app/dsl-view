@@ -76,6 +76,12 @@ export function useDataTableFilter() {
 
 interface DataTableSelectionState {
 	selectedIds: string[];
+	/** The selected rows themselves, in table order. */
+	rows: Array<Record<string, unknown>>;
+	/** How many rows are selected. */
+	count: number;
+	/** How many rows the table holds. */
+	total: number;
 	toggleRow: (id: string) => void;
 	toggleAll: (allIds: string[]) => void;
 	clearSelection: () => void;
@@ -735,13 +741,25 @@ export interface DataTableProps<T extends Record<string, unknown>> {
 		 * a confirmation: cancelling must not lose the selection. Rows that leave the table are dropped from the selection.
 		 */
 		keepSelection?: boolean;
+		/**
+		 * Which selected rows the action applies to: a row field ("archivable" = truthy, "!archivable" = falsy, as a row action
+		 * `condition`), or from React a function of the row. Unset: every selected row.
+		 */
+		appliesTo?: string | ((row: T) => boolean);
+		/**
+		 * What to do when only some of the selected rows qualify. `all` (default): the action is off, with the reason, so it never
+		 * silently skips rows. `some`: it runs on the qualifying rows and the label says how many.
+		 */
+		mode?: 'all' | 'some';
+		/** Replaces the default reason shown while the action is off because of `appliesTo`. */
+		disabledReason?: string;
 	}>;
 	/**
 	 * Called when a batch action is triggered with the selected rows.
 	 * Defaults to the page's `$actions` batch handler (ctx.onBatchAction).
 	 * @ctxDefault
 	 */
-	onBatchAction?: (actionName: string, rows: T[]) => void;
+	onBatchAction?: (actionName: string, rows: T[], info?: { skipped: T[] }) => void;
 	/**
 	 * Actions currently running, by action name. Defaults to the page's `$ctx.$actionPending`: while an action runs,
 	 * its batch button is disabled and busy. Row buttons follow `actionPendingRows` when it lists the action, and fall
@@ -1006,6 +1024,7 @@ export function DataTable<T extends Record<string, unknown>>({
 
 	// position:fixed for 'floating' escapes layout entirely, so it never shifts the table
 	// regardless of where in the DOM it renders - 'bottom' stays in flow, after </table>.
+	const selectedRows = rows.filter(r => selectedIds.includes(idOf(r)));
 	const batchToolbar = selectable && selectedIds.length > 0 && batchActions.length > 0 && (
 		<div
 			className={batchActionsPosition === 'floating' ? floatingBatchToolbarClass : fills ? `${batchToolbarClass} shrink-0` : batchToolbarClass}
@@ -1015,30 +1034,46 @@ export function DataTable<T extends Record<string, unknown>>({
 			<span className="text-xs font-medium text-primary">
 				{selectedIds.length} selected
 			</span>
-			{batchActions.map(action => (
-				<Button
-					key={action.action}
-					type="button"
-					variant={action.variant ?? 'secondary'}
-					size="sm"
-					loading={actionPending?.[action.action] === true}
-					aria-busy={actionPending?.[action.action] === true || undefined}
-					onClick={() => {
-						const selectedRows = rows.filter(r => selectedIds.includes(idOf(r)));
-						onBatchAction?.(action.action, selectedRows);
-						if (action.keepSelection !== true) {
-							clearSelection();
-						}
-					}}
-				>
-					{action.label}
-				</Button>
-			))}
+			{batchActions.map(action => {
+				const { applicable, skipped } = splitByApplicability(selectedRows, action.appliesTo);
+				const some = action.mode === 'some';
+				const unavailable = skipped.length > 0 && (some ? applicable.length === 0 : true);
+				const reason = unavailable
+					? (action.disabledReason ?? (applicable.length === 0 && some
+						? `None of the ${selectedRows.length} selected can be handled by "${action.label}"`
+						: `${skipped.length} of ${selectedRows.length} selected cannot be handled by "${action.label}"`))
+					: undefined;
+				return (
+					<Button
+						key={action.action}
+						type="button"
+						variant={action.variant ?? 'secondary'}
+						size="sm"
+						disabled={unavailable}
+						disabledReason={reason}
+						loading={actionPending?.[action.action] === true}
+						aria-busy={actionPending?.[action.action] === true || undefined}
+						onClick={() => {
+							// The third argument exists only for an action that declares `appliesTo`: the others keep their two arguments.
+							if (action.appliesTo === undefined || action.appliesTo === '') {
+								onBatchAction?.(action.action, selectedRows);
+							} else {
+								onBatchAction?.(action.action, some ? applicable : selectedRows, { skipped: some ? skipped : [] });
+							}
+							if (action.keepSelection !== true) {
+								clearSelection();
+							}
+						}}
+					>
+						{some && skipped.length > 0 && applicable.length > 0 ? `${action.label} (${applicable.length} of ${selectedRows.length})` : action.label}
+					</Button>
+				);
+			})}
 		</div>
 	);
 
 	return (
-		<DataTableSelectionCtx.Provider value={{ selectedIds, toggleRow, toggleAll, clearSelection }}>
+		<DataTableSelectionCtx.Provider value={{ selectedIds, rows: selectedRows, count: selectedIds.length, total: rows.length, toggleRow, toggleAll, clearSelection }}>
 			<DataTableFilterCtx.Provider value={{ filters: filterState, setFilter, registerFilterPredicate, tableId: id }}>
 				<div
 					className={[
@@ -1362,4 +1397,19 @@ export function DataTable<T extends Record<string, unknown>>({
 			</DataTableFilterCtx.Provider>
 		</DataTableSelectionCtx.Provider>
 	);
+}
+
+/** Splits the selected rows by a batch action's `appliesTo`: a row field (or its negation with "!"), or a function. */
+function splitByApplicability<T extends Record<string, unknown>>(selected: T[], appliesTo: string | ((row: T) => boolean) | undefined): { applicable: T[]; skipped: T[] } {
+	if (appliesTo === undefined || appliesTo === '') {
+		return { applicable: selected, skipped: [] };
+	}
+	const holds = (row: T): boolean => {
+		if (typeof appliesTo === 'function') {
+			return appliesTo(row);
+		}
+		const negate = appliesTo.startsWith('!');
+		return Boolean(row[negate ? appliesTo.slice(1) : appliesTo]) !== negate;
+	};
+	return { applicable: selected.filter(holds), skipped: selected.filter(row => !holds(row)) };
 }
