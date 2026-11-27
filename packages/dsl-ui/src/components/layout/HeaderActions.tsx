@@ -9,6 +9,10 @@ interface HeaderActionsContextValue {
 	// Set synchronously when the slot attaches: an effect of an actions component can tell "no slot at all" from "slot not rendered yet".
 	slotRef: React.MutableRefObject<HTMLElement | null>;
 	setSlot: (el: HTMLElement | null) => void;
+	// Number of contents currently portaled into the slot.
+	filledCount: number;
+	// Called by a content while it is mounted in the slot; returns the unregister.
+	register: () => () => void;
 }
 
 const HeaderActionsContext = createContext<HeaderActionsContextValue | null>(null);
@@ -21,7 +25,12 @@ export function HeaderActionsProvider({ children }: { children: React.ReactNode 
 		slotRef.current = el;
 		setSlotState(el);
 	}, []);
-	const value = useMemo(() => ({ slot, slotRef, setSlot }), [slot, setSlot]);
+	const [filledCount, setFilledCount] = useState(0);
+	const register = useCallback(() => {
+		setFilledCount(count => count + 1);
+		return () => setFilledCount(count => count - 1);
+	}, []);
+	const value = useMemo(() => ({ slot, slotRef, setSlot, filledCount, register }), [slot, setSlot, filledCount, register]);
 	return <HeaderActionsContext.Provider value={value}>{children}</HeaderActionsContext.Provider>;
 }
 
@@ -40,7 +49,18 @@ export function HeaderActionsSlot({ className }: HeaderActionsSlotProps) {
 			reportAuthoringMistake('[HeaderActionsSlot] no HeaderActionsProvider above it: the actions of a page cannot reach it. Wrap the shell in <HeaderActionsProvider>.');
 		}
 	}, [ctx]);
-	return <div ref={attach} data-testid="header-actions-slot" className={['flex items-center gap-2', className].filter(Boolean).join(' ')} />;
+	return <div ref={attach} data-testid="header-actions-slot" data-filled={ctx ? String(ctx.filledCount > 0) : 'false'} className={['flex items-center gap-2', className].filter(Boolean).join(' ')} />;
+}
+
+/** True while something is portaled into the slot, so the shell can hide its own crumb or change its row layout only then. False without a provider. */
+export function useHeaderActionsFilled(): boolean {
+	const ctx = useContext(HeaderActionsContext);
+	return (ctx?.filledCount ?? 0) > 0;
+}
+
+/** True when a provider is above and its slot is mounted. Internal: lets a component choose between the slot and its own place. */
+export function useHasHeaderActionsSlot(): boolean {
+	return useContext(HeaderActionsContext)?.slot != null;
 }
 
 /**
@@ -58,6 +78,9 @@ export function HeaderActions({ children }: { children: React.ReactNode }) {
 			reportAuthoringMistake('[HeaderActions] no HeaderActionsSlot is mounted: the actions are not shown. The host must render a <HeaderActionsSlot> in the title row.');
 		}
 	}, [ctx, slotRef]);
+	const register = ctx?.register;
+	const hasSlot = ctx?.slot != null;
+	useEffect(() => (hasSlot ? register?.() : undefined), [hasSlot, register]);
 	if (!ctx?.slot) {
 		return null;
 	}
