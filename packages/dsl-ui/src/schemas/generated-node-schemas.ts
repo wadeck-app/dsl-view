@@ -423,6 +423,13 @@ export const ButtonSaveNodeSchema = baseNode.extend({
 	disabledReason: z.string().optional(),
 });
 
+export const ButtonSubmitNodeSchema = baseNode.extend({
+	label: z.string().optional(),
+	variant: dsl(z.enum(['primary', 'danger', 'success', 'secondary'])).optional(),
+	pendingLabel: z.string().optional(),
+	requireChanges: dsl(z.boolean()).optional(),
+});
+
 export const CronBuilderNodeSchema = baseNode.extend({
 	value: z.string(),
 });
@@ -643,10 +650,21 @@ export const FieldWrapperNodeSchema = baseNode.extend({
 	items: dsl(z.array(z.unknown())).optional(),
 });
 
+const FormMessageSchema = z.object({
+	severity: z.enum(['info', 'warning', 'error']),
+	text: z.string(),
+	field: z.string().optional(),
+});
+
 export const FormNodeSchema = baseNode.extend({
 	fields: dsl(z.array(z.unknown())).optional(),
 	actions: dsl(z.array(z.unknown())).optional(),
 	initialData: dsl(z.record(z.string(), z.unknown())).optional(),
+	messages: dsl(z.array(FormMessageSchema)).optional(),
+});
+
+export const FormMessagesNodeSchema = baseNode.extend({
+	className: z.string().optional(),
 });
 
 export const TimePickerNodeSchema = baseNode.extend({

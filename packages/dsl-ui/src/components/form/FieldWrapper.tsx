@@ -1,4 +1,6 @@
-import React, { useId } from 'react';
+import React, { useEffect, useId } from 'react';
+
+import { useFormContext } from './Form.js';
 
 /** Props a field must spread onto its control so the label and ARIA state reach it. */
 export interface FieldControlProps {
@@ -44,6 +46,12 @@ export function FieldWrapper({ label, description, required, error, id: idProp, 
 	const generatedId = useId();
 	const id = idProp ?? generatedId;
 	const errorId = `${id}-error`;
+	// An error on a field blocks the form it sits in, without the page wiring it.
+	const report = useFormContext()?.reportFieldMessage;
+	useEffect(() => {
+		report?.(id, error ? { severity: 'error', field: label, text: error } : null);
+		return () => report?.(id, null);
+	}, [report, id, error, label]);
 
 	// Undefined rather than false: React omits the attribute entirely, so a valid field
 	// is not announced as "invalid, false".

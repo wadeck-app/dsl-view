@@ -68,6 +68,8 @@ Maintenance: add a row here in the same change that adds, renames or removes a c
 | Component | Category | Key props | What it is / when to use |
 |---|---|---|---|
 | `ButtonCancel` | atomic | onCancel, label, disabled, disabledReason | Cancel button for a form's action row; calls onCancel when clicked. |
+| `ButtonSubmit` | atomic | label, variant, pendingLabel, requireChanges | Submit button that follows the form: off with the first error as its reason while an error blocks the form, `pendingLabel` while the save runs, on with the warning count; enabled with nothing modified unless `requireChanges` (a confirm-delete form has no field). Pick it over `ButtonSave` when the form is not a plain "save my edits". |
+| `FormMessages` | atomic | className | Lists the messages of the form it sits in, errors first (errors as alerts, warnings and infos as status); put it in the form's `fields`. |
 | `ButtonSave` | atomic | label, onClick, isPending, hasChanges, disabledReason | Primary save button; inside a Form it submits and takes pending/unsaved state from the form, outside it uses onClick. |
 | `CronBuilder` | composite | value, onChange, onClose | Frequency wizard that edits a cron expression and has a cancel button; use for schedule values instead of a free text field. |
 | `DatePicker` | atomic | value, onChange, onSelect, minDate, maxDate, isDateDisabled, dateFormat | Bare date input with calendar popup and no label or error wrapper; use FieldDate for the labelled form field. |
@@ -87,7 +89,7 @@ Maintenance: add a row here in the same change that adds, renames or removes a c
 | `FieldTextarea` | atomic | label, value, onChange, rows, mono, placeholder, required | Labelled multi-line text input with configurable rows and optional monospace; pick over FieldText for long text. |
 | `FieldTime` | atomic | label, value, onChange, is12Hour, minuteStep, placeholder, required | Labelled form field wrapping TimePicker for a time of day stored as a string. |
 | `FieldWrapper` | disposition | label, children, description, required, error | Renders label, description, required marker and validation message around one control; the Field components use it internally. |
-| `Form` | composite | fields, actions, onSubmit, initialData | Form container that holds field state, tracks unsaved changes and pending state, and calls onSubmit with the collected form data. |
+| `Form` | composite | fields, actions, onSubmit, initialData, messages, validate | Form container that holds field state, tracks unsaved changes and pending state, and calls onSubmit with the collected form data. It also holds the messages (info, warning, error) from the page (`messages`), a validator (`validate`) and its fields (a field `error`): an error blocks the submit, a warning does not. |
 | `TimePicker` | atomic | value, onChange, is12Hour, minuteStep, placeholder, disabled, open | Bare time-of-day input with dropdown and no label wrapper; use FieldTime for the labelled form field. |
 | `UnsavedBadge` | atomic | hasChanges | Shows 'Unsaved changes' text when the form (or hasChanges) has unsaved edits, otherwise renders nothing. |
 

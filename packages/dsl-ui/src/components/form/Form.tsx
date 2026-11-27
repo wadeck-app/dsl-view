@@ -1,11 +1,30 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { contentKey, plainFormData } from '@dsl-ui/utils/contentKey.js';
 
+/** One thing the form has to tell the user: an error blocks the submit, a warning does not, an info is only shown. */
+export interface FormMessage {
+	severity: 'info' | 'warning' | 'error';
+	text: string;
+	/** The label of the field it is about, shown before the text. */
+	field?: string;
+}
+
 export interface FormContextValue {
 	formData: Record<string, unknown>;
 	onChange: (key: string, value: unknown) => void;
 	hasChanges: boolean;
 	isPending: boolean;
+	// The state below is read by children that adapt to it; each is optional so a child treats a form that does not give it as "unknown".
+	/** Every message: the page's, the validator's and the fields'. Errors first, then warnings, then infos. */
+	messages?: FormMessage[];
+	errors?: number;
+	warnings?: number;
+	/** At least one error: the form cannot be submitted. */
+	blocking?: boolean;
+	/** The form can be submitted now: no error and no save running. A page that wants "and modified" adds `hasChanges`. */
+	submittable?: boolean;
+	/** Used by a field to tell the form about its own error; `null` clears it. */
+	reportFieldMessage?: (id: string, message: FormMessage | null) => void;
 }
 
 export const FormContext = createContext<FormContextValue | null>(null);
@@ -24,13 +43,17 @@ export interface FormProps {
 	onSubmit: (formData: Record<string, unknown>) => Promise<void>;
 	/** Initial server data - Form owns the editable copy internally. */
 	initialData?: Record<string, unknown>;
+	/** Messages the page wants shown (a list of { severity, text, field? }); an error blocks the submit. */
+	messages?: FormMessage[];
+	/** Called with the form data on every change; what it returns joins the messages. */
+	validate?: (formData: Record<string, unknown>) => FormMessage[];
 }
 
 /**
  * @registryCategory composite
  * @registryTags form
  */
-export function Form({ fields, actions, onSubmit, initialData: initialDataProp }: FormProps) {
+export function Form({ fields, actions, onSubmit, initialData: initialDataProp, messages: pageMessages, validate }: FormProps) {
 	// A click handler can hand the form the clicked element or event as data: neither is form data, and either would
 	// reach the request body. Identity is kept when nothing was dropped.
 	const initialData = useMemo(() => plainFormData(initialDataProp), [initialDataProp]);
@@ -88,6 +111,25 @@ export function Form({ fields, actions, onSubmit, initialData: initialDataProp }
 
 	const hasChanges = contentKey(formState) !== contentKey(savedState);
 
+	const [fieldMessages, setFieldMessages] = useState<Record<string, FormMessage>>({});
+	const reportFieldMessage = useCallback((id: string, message: FormMessage | null) => {
+		setFieldMessages(prev => {
+			const current = prev[id];
+			if (message === null) {
+				if (current === undefined) {
+					return prev;
+				}
+				const { [id]: _removed, ...rest } = prev;
+				return rest;
+			}
+			return current !== undefined && current.severity === message.severity && current.text === message.text && current.field === message.field ? prev : { ...prev, [id]: message };
+		});
+	}, []);
+	const messages = useMemo(() => collectMessages([...(pageMessages ?? []), ...(validate?.(formState) ?? []), ...Object.values(fieldMessages)]), [pageMessages, validate, formState, fieldMessages]);
+	const errors = messages.filter(message => message.severity === 'error').length;
+	const warnings = messages.filter(message => message.severity === 'warning').length;
+	const blocking = errors > 0;
+
 	const onChange = useCallback((key: string, value: unknown) => {
 		setFormState(prev => ({ ...prev, [key]: value }));
 	}, []);
@@ -96,6 +138,10 @@ export function Form({ fields, actions, onSubmit, initialData: initialDataProp }
 		e.preventDefault();
 		// A second Enter or click while the first save is running must not send the data twice.
 		if (isSubmittingRef.current) {
+			return;
+		}
+		// An error blocks the submit whatever triggered it (Enter in a field included).
+		if (blocking) {
 			return;
 		}
 		isSubmittingRef.current = true;
@@ -126,11 +172,28 @@ export function Form({ fields, actions, onSubmit, initialData: initialDataProp }
 	}
 
 	return (
-		<FormContext.Provider value={{ formData: formState, onChange, hasChanges, isPending }}>
+		<FormContext.Provider value={{ formData: formState, onChange, hasChanges, isPending, messages, errors, warnings, blocking, submittable: !blocking && !isPending, reportFieldMessage }}>
 			<form onSubmit={e => { void handleSubmit(e); }} className="space-y-6">
 				{fields}
 				{actions && <div className="flex items-center gap-4 pt-2">{actions}</div>}
 			</form>
 		</FormContext.Provider>
 	);
+}
+
+const SEVERITY_ORDER: Record<FormMessage['severity'], number> = { error: 0, warning: 1, info: 2 };
+
+// Same message from two sources (a field's error also given by the page) is shown once; errors come first.
+function collectMessages(all: FormMessage[]): FormMessage[] {
+	const seen = new Set<string>();
+	return all
+		.filter(message => {
+			const key = `${message.severity}|${message.field ?? ''}|${message.text}`;
+			if (seen.has(key)) {
+				return false;
+			}
+			seen.add(key);
+			return true;
+		})
+		.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
 }

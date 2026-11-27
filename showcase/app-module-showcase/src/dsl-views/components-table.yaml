@@ -53,7 +53,7 @@ items:
         label: "table"
     items:
       - $type: "Markdown"
-        text: "Full data table with sorting, selection, batch actions, row actions, expandable rows, loading and empty states; pick it for any tabular list of records. The actions column is right-aligned and only as wide as its icons (give `width` to override); a batch action takes `variant` (default `secondary`; `danger-outline` for a destructive one, a row action icon too) and `keepSelection: true` to keep the selection after it (use it before a confirm); rows that leave the table drop out of the selection."
+        text: "Full data table with sorting, selection, batch actions, row actions, expandable rows, loading and empty states; pick it for any tabular list of records. The actions column is right-aligned and only as wide as its icons (give `width` to override); a batch action takes `variant` (default `secondary`; `danger-outline` for a destructive one, a row action icon too) and `keepSelection: true` to keep the selection after it (use it before a confirm); rows that leave the table drop out of the selection. The floating batch bar sits above the dev A/B dock (the dock publishes `--floating-bottom-offset`)."
       - $type: "Markdown"
         text: "_Not playable yet (required props without a sample: rows, columns)._"
       - $type: "Markdown"

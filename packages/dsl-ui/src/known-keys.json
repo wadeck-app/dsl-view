@@ -205,6 +205,22 @@
 			"FormContext"
 		]
 	},
+	"ButtonSubmit": {
+		"knownKeys": [
+			"label",
+			"pendingLabel",
+			"requireChanges",
+			"variant"
+		],
+		"category": "atomic",
+		"tags": [
+			"button",
+			"form-specific"
+		],
+		"requiresContext": [
+			"FormContext"
+		]
+	},
 	"Card": {
 		"knownKeys": [
 			"border",
@@ -962,6 +978,9 @@
 		"tags": [
 			"field",
 			"wrapper"
+		],
+		"requiresContext": [
+			"FormContext"
 		]
 	},
 	"FigureRow": {
@@ -1014,7 +1033,9 @@
 			"actions",
 			"fields",
 			"initialData",
-			"onSubmit"
+			"messages",
+			"onSubmit",
+			"validate"
 		],
 		"allowedChildren": {
 			"fields": [
@@ -1031,6 +1052,17 @@
 			"form"
 		],
 		"providesContext": [
+			"FormContext"
+		]
+	},
+	"FormMessages": {
+		"knownKeys": [],
+		"category": "atomic",
+		"tags": [
+			"field",
+			"form-specific"
+		],
+		"requiresContext": [
 			"FormContext"
 		]
 	},
