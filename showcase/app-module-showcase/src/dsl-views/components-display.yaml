@@ -20,6 +20,7 @@ $vars:
   Markdown__allowImages: false
   PageHeader__title: "PageHeader"
   PageHeader__size: "default"
+  PageHeader__placement: "page"
   Progress__value: 40
   Progress__variant: "default"
   Progress__showValue: false
@@ -282,7 +283,7 @@ items:
         label: "display"
     items:
       - $type: "Markdown"
-        text: "Page or section heading (h1, or h2 for size sm) with optional subtitle, icon or right-side header actions; not every layout renders all props."
+        text: "Page or section heading (h1, or h2 for size sm) with optional subtitle, icon or right-side header actions; not every layout renders all props. `placement: trail` moves the whole header into the host's `HeaderActionsSlot` as one row (in place when no slot is mounted)."
       - $type: "HorizontalStack"
         wrap: true
         items:
@@ -297,11 +298,20 @@ items:
                 label: "default"
               - value: "sm"
                 label: "sm"
+          - $type: "FieldSelect"
+            label: "placement"
+            bind: "PageHeader__placement"
+            options:
+              - value: "page"
+                label: "page"
+              - value: "trail"
+                label: "trail"
       - $type: "PageHeader"
         title: "$vars.PageHeader__title"
         size: "$vars.PageHeader__size"
+        placement: "$vars.PageHeader__placement"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `title` | string | yes |\n| `subtitle` | string | no |\n| `icon` | unknown | no |\n| `headerActions` | array | no |\n| `size` | default / sm | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `title` | string | yes |\n| `subtitle` | string | no |\n| `icon` | unknown | no |\n| `headerActions` | array | no |\n| `size` | default / sm | no |\n| `placement` | page / trail | no |"
   - $type: "Card"
     header:
       - $type: "Tag"
