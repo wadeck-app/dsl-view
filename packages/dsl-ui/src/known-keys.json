@@ -1189,6 +1189,7 @@
 		"knownKeys": [
 			"headerActions",
 			"icon",
+			"placement",
 			"size",
 			"subtitle",
 			"title"

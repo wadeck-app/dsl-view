@@ -32,15 +32,20 @@ function warnIgnored(layout: string, ignored: string[]): void {
  * @registryTags header
  */
 export function PageHeader({ placement = 'page', ...props }: PageHeaderProps) {
+	// The slot lookup lives in a child: a PageHeader works without any provider, so it must not register as requiring one.
+	return placement === 'trail' && props.size !== 'sm' ? <TrailPlacement {...props} /> : <InPlaceHeader {...props} />;
+}
+
+function TrailPlacement(props: PageHeaderProps) {
 	const hasSlot = useHasHeaderActionsSlot();
-	if (placement === 'trail' && hasSlot && props.size !== 'sm') {
-		return (
-			<HeaderActions>
-				<TrailRow {...props} />
-			</HeaderActions>
-		);
+	if (!hasSlot) {
+		return <InPlaceHeader {...props} />;
 	}
-	return <InPlaceHeader {...props} />;
+	return (
+		<HeaderActions>
+			<TrailRow {...props} />
+		</HeaderActions>
+	);
 }
 
 // One flex row: icon, the h1, the subtitle, then the actions pushed to the end. No margins: the host owns the spacing.

@@ -280,6 +280,7 @@ export const PageHeaderNodeSchema = baseNode.extend({
 	icon: dsl(z.union([z.unknown(), z.unknown()])).optional(),
 	headerActions: dsl(z.array(z.unknown())).optional(),
 	size: dsl(z.enum(['default', 'sm'])).optional(),
+	placement: dsl(z.enum(['page', 'trail'])).optional(),
 });
 
 export const ProgressNodeSchema = baseNode.extend({
