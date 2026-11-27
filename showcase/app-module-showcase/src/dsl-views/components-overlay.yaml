@@ -41,7 +41,7 @@ items:
         label: "overlay"
     items:
       - $type: "Markdown"
-        text: "Small Dialog with a message, a Cancel button and a confirm button (danger by default); pick it over Dialog for a yes/no confirmation."
+        text: "Small Dialog with a message, a Cancel button and a confirm button (danger by default); pick it over Dialog for a yes/no confirmation. An action's `confirm` question uses it when the host mounts `useConfirmDialog` (React API, with `ConfirmProvider` of dsl-renderer); otherwise the browser's native confirm."
       - $type: "HorizontalStack"
         wrap: true
         items:

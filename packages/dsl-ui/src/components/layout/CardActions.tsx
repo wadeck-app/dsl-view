@@ -12,7 +12,7 @@ export interface CardActionsProps {
  * @registryTags card-actions card actions
  */
 export function CardActions({ children, className = '' }: CardActionsProps) {
-	const ctx = useProvideButtonContext({ size: 'sm' });
+	const ctx = useProvideButtonContext({ size: 'sm', lockSize: true, owner: 'CardActions' });
 	return (
 		<ButtonContext.Provider value={ctx}>
 			<div className={['flex items-center justify-end gap-2', className].filter(Boolean).join(' ')}>

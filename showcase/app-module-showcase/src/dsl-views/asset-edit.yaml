@@ -52,17 +52,128 @@ items:
         bind: quantity
         min: 0
     actions:
-      - $type: ButtonSave
-        label: Save
+      # A/B (dev dock): how a button shows that its request is running. See ButtonSave.loadingStyle.
+      - $type: AbTest
+        id: save-wait
+        label: Save button wait
+        initial: spinner
+        variants:
+          spinner:
+            label: Spinner
+            hint: Reference: the arc before the label (widens the button).
+            view:
+              $type: ButtonSave
+              label: Save
+              loadingStyle: spinner
+          sweep:
+            label: Sweep
+            hint: A soft band of light crosses the button; the label stays.
+            view:
+              $type: ButtonSave
+              label: Save
+              loadingStyle: sweep
+          dots:
+            label: Dots
+            hint: The label gives way to three waving dots.
+            view:
+              $type: ButtonSave
+              label: Save
+              loadingStyle: dots
+          bar:
+            label: Bar
+            hint: A thin line slides along the bottom edge.
+            view:
+              $type: ButtonSave
+              label: Save
+              loadingStyle: bar
+          pulse:
+            label: Pulse
+            hint: The button breathes and a ring ripples out of it.
+            view:
+              $type: ButtonSave
+              label: Save
+              loadingStyle: pulse
+          orbit:
+            label: Orbit
+            hint: A point of light travels around the border.
+            view:
+              $type: ButtonSave
+              label: Save
+              loadingStyle: orbit
       - $type: UnsavedBadge
   - $type: HorizontalStack
     items:
-      - $type: ActionButton
-        label: Simulate another user saving
-        action: simulateOtherUser
-        params:
-          id: $route.id
-        variant: secondary
+      - $type: AbTest
+        id: action-wait
+        label: Action button wait
+        initial: spinner
+        variants:
+          spinner:
+            label: Spinner
+            hint: Reference: the arc before the label (widens the button).
+            view:
+              $type: ActionButton
+              label: Simulate another user saving
+              action: simulateOtherUser
+              params:
+                id: $route.id
+              variant: secondary
+              loadingStyle: spinner
+          sweep:
+            label: Sweep
+            hint: A soft band of light crosses the button; the label stays.
+            view:
+              $type: ActionButton
+              label: Simulate another user saving
+              action: simulateOtherUser
+              params:
+                id: $route.id
+              variant: secondary
+              loadingStyle: sweep
+          dots:
+            label: Dots
+            hint: The label gives way to three waving dots.
+            view:
+              $type: ActionButton
+              label: Simulate another user saving
+              action: simulateOtherUser
+              params:
+                id: $route.id
+              variant: secondary
+              loadingStyle: dots
+          bar:
+            label: Bar
+            hint: A thin line slides along the bottom edge.
+            view:
+              $type: ActionButton
+              label: Simulate another user saving
+              action: simulateOtherUser
+              params:
+                id: $route.id
+              variant: secondary
+              loadingStyle: bar
+          pulse:
+            label: Pulse
+            hint: The button breathes and a ring ripples out of it.
+            view:
+              $type: ActionButton
+              label: Simulate another user saving
+              action: simulateOtherUser
+              params:
+                id: $route.id
+              variant: secondary
+              loadingStyle: pulse
+          orbit:
+            label: Orbit
+            hint: A point of light travels around the border.
+            view:
+              $type: ActionButton
+              label: Simulate another user saving
+              action: simulateOtherUser
+              params:
+                id: $route.id
+              variant: secondary
+              loadingStyle: orbit
       - $type: ActionButton
         label: Reload
         action: reloadAsset

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { buildCalendarGrid } from './calendarUtils.js';
 import { formatDay, formatDayNumber, formatMonthTitle, parseDay } from './calendarFormat.js';
 import { useDateFormat } from '@dsl-ui/dates/DateFormatContext.js';
@@ -69,6 +69,8 @@ export function DatePicker({
 	});
 	const [focusedDate, setFocusedDate] = useState<Date | null>(value);
 	const calendarRef = useRef<HTMLDivElement>(null);
+	// Marks this picker's own input, so only it (not another picker's) is exempt from closing the calendar.
+	const anchorId = useId();
 
 	// Update input display when value changes externally
 	useEffect(() => {
@@ -187,6 +189,7 @@ export function DatePicker({
 			<Popover.Anchor asChild>
 				<input
 					type="text"
+					data-date-picker-input={anchorId}
 					value={inputValue}
 					onChange={handleInputChange}
 					onKeyDown={handleInputKeyDown}
@@ -203,6 +206,11 @@ export function DatePicker({
 					sideOffset={8}
 					onOpenAutoFocus={e => e.preventDefault()}
 					className={CALENDAR_CLASS}
+					// The input is the anchor, not a Popover.Trigger, so Radix counts a press or a focus on it as outside the calendar and
+					// closes it: a second click on the input closed it (reproduced), and so does the click that opens it in a real browser.
+					onInteractOutside={event => {
+						if (event.target instanceof Element && event.target.getAttribute('data-date-picker-input') === anchorId) event.preventDefault();
+					}}
 					onKeyDown={handleKeyDown}
 					ref={calendarRef}
 					tabIndex={-1}

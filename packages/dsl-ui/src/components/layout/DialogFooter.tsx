@@ -12,7 +12,7 @@ export interface DialogFooterProps {
  * @registryTags dialog-footer dialog footer
  */
 export function DialogFooter({ children, className = '' }: DialogFooterProps) {
-	const ctx = useProvideButtonContext({ size: 'md' });
+	const ctx = useProvideButtonContext({ size: 'md', lockSize: true, owner: 'DialogFooter' });
 	return (
 		<ButtonContext.Provider value={ctx}>
 			<div className={['flex items-center justify-end gap-3 border-t pt-4', className].filter(Boolean).join(' ')}>

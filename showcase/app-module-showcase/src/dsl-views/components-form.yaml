@@ -3,8 +3,10 @@ $vars:
   ButtonCancel__disabled: false
   ButtonSubmit__variant: "primary"
   ButtonSubmit__requireChanges: false
+  ButtonSubmit__loadingStyle: "spinner"
   ButtonSave__isPending: false
   ButtonSave__hasChanges: false
+  ButtonSave__loadingStyle: "spinner"
   CronBuilder__value: "sample"
   DatePicker__disabled: false
   DateRangePicker__disabled: false
@@ -122,11 +124,28 @@ items:
           - $type: "Switch"
             label: "requireChanges"
             bind: "ButtonSubmit__requireChanges"
+          - $type: "FieldSelect"
+            label: "loadingStyle"
+            bind: "ButtonSubmit__loadingStyle"
+            options:
+              - value: "spinner"
+                label: "spinner"
+              - value: "sweep"
+                label: "sweep"
+              - value: "dots"
+                label: "dots"
+              - value: "bar"
+                label: "bar"
+              - value: "pulse"
+                label: "pulse"
+              - value: "orbit"
+                label: "orbit"
       - $type: "ButtonSubmit"
         variant: "$vars.ButtonSubmit__variant"
         requireChanges: "$vars.ButtonSubmit__requireChanges"
+        loadingStyle: "$vars.ButtonSubmit__loadingStyle"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `label` | string | no |\n| `variant` | primary / danger / success / secondary | no |\n| `pendingLabel` | string | no |\n| `requireChanges` | boolean | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `label` | string | no |\n| `variant` | primary / danger / success / secondary | no |\n| `pendingLabel` | string | no |\n| `requireChanges` | boolean | no |\n| `loadingStyle` | spinner / sweep / dots / bar / pulse / orbit | no |"
   - $type: "Card"
     header:
       - $type: "Tag"
@@ -151,7 +170,7 @@ items:
         label: "form"
     items:
       - $type: "Markdown"
-        text: "Primary save button; inside a Form it submits and takes pending/unsaved state from the form, outside it uses onClick."
+        text: "Primary save button; inside a Form it submits and takes pending/unsaved state from the form, outside it uses onClick. `loadingStyle` (sweep, dots, bar, pulse, orbit) shows the wait without changing the button size or label; the default keeps \"Saving...\"."
       - $type: "HorizontalStack"
         wrap: true
         items:
@@ -161,11 +180,28 @@ items:
           - $type: "Switch"
             label: "hasChanges"
             bind: "ButtonSave__hasChanges"
+          - $type: "FieldSelect"
+            label: "loadingStyle"
+            bind: "ButtonSave__loadingStyle"
+            options:
+              - value: "spinner"
+                label: "spinner"
+              - value: "sweep"
+                label: "sweep"
+              - value: "dots"
+                label: "dots"
+              - value: "bar"
+                label: "bar"
+              - value: "pulse"
+                label: "pulse"
+              - value: "orbit"
+                label: "orbit"
       - $type: "ButtonSave"
         isPending: "$vars.ButtonSave__isPending"
         hasChanges: "$vars.ButtonSave__hasChanges"
+        loadingStyle: "$vars.ButtonSave__loadingStyle"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `label` | string | no |\n| `isPending` | boolean | no |\n| `hasChanges` | boolean | no |\n| `disabledReason` | string | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `label` | string | no |\n| `isPending` | boolean | no |\n| `hasChanges` | boolean | no |\n| `disabledReason` | string | no |\n| `loadingStyle` | spinner / sweep / dots / bar / pulse / orbit | no |"
   - $type: "Card"
     header:
       - $type: "Tag"

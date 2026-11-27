@@ -15,6 +15,12 @@ export interface ButtonSubmitProps {
 	 * (a delete confirmation) has nothing to change and must still submit.
 	 */
 	requireChanges?: boolean;
+	/**
+	 * How the wait is shown while the request runs: spinner (default), sweep, dots, bar, pulse, orbit. Every style but `spinner` keeps the
+	 * button the size it has at rest and keeps its label (no `pendingLabel`).
+	 * @default 'spinner'
+	 */
+	loadingStyle?: 'spinner' | 'sweep' | 'dots' | 'bar' | 'pulse' | 'orbit';
 }
 
 /**
@@ -25,7 +31,7 @@ export interface ButtonSubmitProps {
  * @registryCategory atomic
  * @registryTags button form-specific
  */
-export function ButtonSubmit({ label = 'Save', variant = 'primary', pendingLabel = 'Saving...', requireChanges = false }: ButtonSubmitProps) {
+export function ButtonSubmit({ label = 'Save', variant = 'primary', pendingLabel = 'Saving...', requireChanges = false, loadingStyle }: ButtonSubmitProps) {
 	const form = useFormContext();
 	React.useEffect(() => {
 		if (form === null) {
@@ -42,11 +48,13 @@ export function ButtonSubmit({ label = 'Save', variant = 'primary', pendingLabel
 	const firstError = form.messages?.find(message => message.severity === 'error');
 	const unchanged = requireChanges && form.hasChanges === false;
 	const off = form.isPending || form.blocking === true || unchanged;
+	// An animated style says "saving" itself and keeps the label, so the button does not change size; the default style keeps pendingLabel.
+	const keepsLabel = loadingStyle !== undefined && loadingStyle !== 'spinner';
 	const reason = firstError ? (firstError.field ? `${firstError.field}: ${firstError.text}` : firstError.text) : unchanged ? 'No changes to save' : undefined;
 	const warnings = form.warnings ?? 0;
-	const text = form.isPending ? pendingLabel : warnings > 0 ? `${label} · ${warnings} ${warnings === 1 ? 'warning' : 'warnings'}` : label;
+	const text = form.isPending && !keepsLabel ? pendingLabel : warnings > 0 ? `${label} · ${warnings} ${warnings === 1 ? 'warning' : 'warnings'}` : label;
 	return (
-		<Button type="submit" variant={variant} disabled={off} disabledReason={off && !form.isPending ? reason : undefined}>
+		<Button type="submit" variant={variant} disabled={off && !form.isPending} loading={form.isPending} loadingStyle={loadingStyle} disabledReason={off && !form.isPending ? reason : undefined}>
 			{text}
 		</Button>
 	);

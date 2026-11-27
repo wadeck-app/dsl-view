@@ -4,6 +4,7 @@ import { devError, devWarn } from '../engine/devMode.js';
 
 import { KNOWN_ACTION_KEYS } from '../dslKeys.js';
 import { getErrorMessage } from '../errors.js';
+import type { Confirm } from '../confirm.js';
 import type { Notify } from '../notifier.js';
 import { collectRowUrlParams, normalizeAction, notifyFailure, notifySuccess, plainActionPayload, resolveAuthHeaders, substituteUrlParams } from './pageRunnerUtils.js';
 import type { ActionErrorInfo, ActionSpec, Fetcher, PageSpec } from './pageRunnerUtils.js';
@@ -14,6 +15,8 @@ export const BATCH_ROW_KEY = '*';
 export function useActionHandlers(params: {
 	/** Where success/failure feedback goes: the host's notifier, or the runner's inline banner. */
 	notify: Notify;
+	/** How an action's `confirm` question is asked: the host's dialog, or the native one. */
+	confirm: Confirm;
 	/** Called when a row or batch action fails (HTTP error, missing URL placeholder...). */
 	onActionError?: (error: Error, info: ActionErrorInfo) => void;
 	$actions: PageSpec['$actions'];
@@ -45,6 +48,12 @@ export function useActionHandlers(params: {
 	actionPendingRows: Record<string, string[]>;
 } {
 	const { $actions, invalidateSourceCache, mountedRef, routeParams, searchParams, getToken, fetcher, loadSources, onActionError, notify } = params;
+
+	// A ref: the confirmer may change identity per render (an inline callback) without rebuilding every handler.
+	const confirmRef = useRef(params.confirm);
+	useEffect(() => {
+		confirmRef.current = params.confirm;
+	}, [params.confirm]);
 
 	const routeParamsRef = useRef(routeParams);
 	useEffect(() => {
@@ -178,7 +187,7 @@ export function useActionHandlers(params: {
 					return undefined;
 				}
 				try {
-					if (spec.confirm && !window.confirm(spec.confirm)) {
+					if (spec.confirm && !(await confirmRef.current(spec.confirm))) {
 						return undefined;
 					}
 					const authHeaders = await resolveAuthHeaders(getToken);
@@ -306,7 +315,7 @@ export function useActionHandlers(params: {
 					return false;
 				}
 				rowKey = id;
-				if (spec.confirm && !window.confirm(spec.confirm)) {
+				if (spec.confirm && !(await confirmRef.current(spec.confirm))) {
 					return false;
 				}
 				// {key} placeholders come from the clicked row first, then route params, then URL search params.
@@ -378,7 +387,7 @@ export function useActionHandlers(params: {
 				}
 				started = true;
 				// Same guard as a row or form action: a destructive bulk action must ask before it sends anything.
-				if (spec.confirm && !window.confirm(spec.confirm)) {
+				if (spec.confirm && !(await confirmRef.current(spec.confirm))) {
 					return;
 				}
 				// Strip {id} placeholder from batch URL (batch sends ids in body)

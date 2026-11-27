@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { Button } from './_Button.js';
 import { ButtonContext } from './buttonContext.js';
@@ -35,12 +35,13 @@ describe('Button', () => {
 		expect(onSubmit).toHaveBeenCalledTimes(1);
 	});
 
-	it('loading disables the button, shows a spinner and swallows the click', () => {
+	it('loading disables the button, shows a spinner and swallows the click', async () => {
 		const onClick = vi.fn();
 		render(<Button loading onClick={onClick}>Go</Button>);
 		const button = screen.getByRole('button', { name: 'Go' });
 		expect(button).toBeDisabled();
-		expect(button.querySelector('svg')).not.toBeNull();
+		// The arc shows after a short delay (an instant request must not flash it).
+		await waitFor(() => expect(button.querySelector('svg')).not.toBeNull());
 		fireEvent.click(button);
 		expect(onClick).not.toHaveBeenCalled();
 	});

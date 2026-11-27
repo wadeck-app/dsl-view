@@ -22,18 +22,18 @@ describe('ActionBar', () => {
 		const { result } = renderHook(() => useButtonContext(), {
 			wrapper: ({ children }) => <ActionBar>{children}</ActionBar>,
 		});
-		expect(result.current).toEqual({ size: 'sm' });
+		expect(result.current).toMatchObject({ size: 'sm' });
 	});
 
-	it('explicit size prop on child Button wins over context', () => {
+	it('the container owns the size: a size on a child Button is ignored', () => {
 		render(
 			<ActionBar>
 				<Button size="md">Test</Button>
 			</ActionBar>
 		);
 		const btn = screen.getByRole('button', { name: 'Test' });
-		expect(btn).toHaveClass('px-4', 'py-2');
-		expect(btn).not.toHaveClass('py-1');
+		expect(btn).toHaveClass('px-3', 'py-1');
+		expect(btn).not.toHaveClass('py-2');
 	});
 
 	it('inner container context wins over ActionBar context', () => {
@@ -56,7 +56,7 @@ describe('ActionBar', () => {
 				</ButtonContext.Provider>
 			),
 		});
-		expect(result.current).toEqual({ size: 'sm', defaultVariant: 'ghost' });
+		expect(result.current).toMatchObject({ size: 'sm', defaultVariant: 'ghost' });
 	});
 
 	it('applies custom className', () => {

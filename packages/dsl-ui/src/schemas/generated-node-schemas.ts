@@ -32,6 +32,7 @@ export const ActionButtonNodeSchema = baseNode.extend({
 	disabled: dsl(z.boolean()).optional(),
 	disabledReason: z.string().optional(),
 	actionPending: dsl(z.record(z.string(), z.boolean())).optional(),
+	loadingStyle: dsl(z.enum(['spinner', 'sweep', 'dots', 'bar', 'pulse', 'orbit'])).default('spinner'),
 });
 
 export const ButtonActionNodeSchema = baseNode.extend({
@@ -421,6 +422,7 @@ export const ButtonSaveNodeSchema = baseNode.extend({
 	isPending: dsl(z.boolean()).optional(),
 	hasChanges: dsl(z.boolean()).optional(),
 	disabledReason: z.string().optional(),
+	loadingStyle: dsl(z.enum(['spinner', 'sweep', 'dots', 'bar', 'pulse', 'orbit'])).default('spinner'),
 });
 
 export const ButtonSubmitNodeSchema = baseNode.extend({
@@ -428,6 +430,7 @@ export const ButtonSubmitNodeSchema = baseNode.extend({
 	variant: dsl(z.enum(['primary', 'danger', 'success', 'secondary'])).optional(),
 	pendingLabel: z.string().optional(),
 	requireChanges: dsl(z.boolean()).optional(),
+	loadingStyle: dsl(z.enum(['spinner', 'sweep', 'dots', 'bar', 'pulse', 'orbit'])).default('spinner'),
 });
 
 export const CronBuilderNodeSchema = baseNode.extend({

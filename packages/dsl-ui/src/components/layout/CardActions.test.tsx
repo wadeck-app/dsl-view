@@ -22,18 +22,18 @@ describe('CardActions', () => {
 		const { result } = renderHook(() => useButtonContext(), {
 			wrapper: ({ children }) => <CardActions>{children}</CardActions>,
 		});
-		expect(result.current).toEqual({ size: 'sm' });
+		expect(result.current).toMatchObject({ size: 'sm' });
 	});
 
-	it('explicit size prop on child Button wins over context', () => {
+	it('the container owns the size: a size on a child Button is ignored', () => {
 		render(
 			<CardActions>
 				<Button size="md">Test</Button>
 			</CardActions>
 		);
 		const btn = screen.getByRole('button', { name: 'Test' });
-		expect(btn).toHaveClass('px-4', 'py-2');
-		expect(btn).not.toHaveClass('py-1');
+		expect(btn).toHaveClass('px-3', 'py-1');
+		expect(btn).not.toHaveClass('py-2');
 	});
 
 	it('inner container context wins over CardActions context', () => {
@@ -57,7 +57,7 @@ describe('CardActions', () => {
 				</ButtonContext.Provider>
 			),
 		});
-		expect(result.current).toEqual({ size: 'sm', defaultVariant: 'danger' });
+		expect(result.current).toMatchObject({ size: 'sm', defaultVariant: 'danger' });
 	});
 
 	// Buttons used to sit left-aligned in the card footer - Material convention right-aligns

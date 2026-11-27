@@ -8,6 +8,7 @@ import type { ComponentRegistry } from './ComponentRegistry.js';
 import { DslRenderer, omitNavKeys, resolveExpressionValue } from './engine/DslRenderer.js';
 import { devWarn } from './engine/devMode.js';
 import { ActionBanner } from './ActionBanner.js';
+import { useConfirm } from './confirm.js';
 import { NotifierContext, useBannerNotifier } from './notifier.js';
 import type { BrainRegistry } from './pageRunner/brainsTypes.js';
 import { useActionHandlers } from './pageRunner/useActionHandlers.js';
@@ -177,7 +178,9 @@ function PageRunner({
 			reportLoadFailure({ notify, error, source, trigger, shouldNotify: shouldNotifyLoadFailure, namedSources: namedSuppressedSources.current }),
 	});
 
+	const confirm = useConfirm();
 	const { namedHandlers, onAction, onBatchAction, extras, actionPending, actionPendingRows } = useActionHandlers({
+		confirm,
 		notify,
 		$actions,
 		invalidateSourceCache,

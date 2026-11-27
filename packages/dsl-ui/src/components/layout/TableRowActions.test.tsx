@@ -21,18 +21,18 @@ describe('TableRowActions', () => {
 		const { result } = renderHook(() => useButtonContext(), {
 			wrapper: ({ children }) => <TableRowActions>{children}</TableRowActions>,
 		});
-		expect(result.current).toEqual({ size: 'sm', defaultVariant: 'ghost' });
+		expect(result.current).toMatchObject({ size: 'sm', defaultVariant: 'ghost' });
 	});
 
-	it('explicit size prop on child Button wins over context', () => {
+	it('the container owns the size: a size on a child Button is ignored', () => {
 		render(
 			<TableRowActions>
 				<Button size="md">Test</Button>
 			</TableRowActions>
 		);
 		const btn = screen.getByRole('button', { name: 'Test' });
-		expect(btn).toHaveClass('px-4', 'py-2');
-		expect(btn).not.toHaveClass('py-1');
+		expect(btn).toHaveClass('px-3', 'py-1');
+		expect(btn).not.toHaveClass('py-2');
 	});
 
 	it('inner TableRowActions context wins over outer parent context', () => {
@@ -43,7 +43,7 @@ describe('TableRowActions', () => {
 				</ButtonContext.Provider>
 			),
 		});
-		expect(result.current).toEqual({ size: 'sm', defaultVariant: 'ghost' });
+		expect(result.current).toMatchObject({ size: 'sm', defaultVariant: 'ghost' });
 	});
 
 	it('applies custom className', () => {

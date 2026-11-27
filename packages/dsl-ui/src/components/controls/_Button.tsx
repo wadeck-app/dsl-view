@@ -3,10 +3,14 @@ import type { ButtonHTMLAttributes } from 'react';
 
 import { Loader2 } from 'lucide-react';
 
+import { LOADING_BUTTON_CLASSES, LOADING_LABEL_CLASSES, LoadingLayer, useVisualLoading, withoutDisabledLook } from './buttonLoading.js';
+import type { LoadingStyle } from './buttonLoading.js';
+
 import { useWarnMissingOnSolidToken } from '@dsl-ui/utils/onSolidToken.js';
 
 import { Tooltip } from '../overlay/Tooltip.js';
-import { useButtonContext } from './buttonContext.js';
+import { resolveLockedSize, useButtonContext } from './buttonContext.js';
+import { reportAuthoringMistake } from '@dsl-ui/utils/devDiagnostics.js';
 import { classFor } from '@dsl-ui/utils/warnUnknownChoice.js';
 
 type Variant = 'primary' | 'secondary' | 'danger' | 'danger-outline' | 'neutral' | 'success' | 'ghost' | 'link' | 'chip';
@@ -20,6 +24,12 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 	shape?: Shape;
 	disabledReason?: string;
 	loading?: boolean;
+	/**
+	 * How the wait is shown while `loading`. Every style keeps the button the size it has at rest, except `spinner`, which adds the arc.
+	 * The animation shows only after 150 ms and stays at least 500 ms, so an instant request does not flash it.
+	 * @default 'spinner'
+	 */
+	loadingStyle?: LoadingStyle;
 }
 
 // @formatter:off
@@ -116,19 +126,31 @@ export function Button({
 	disabled,
 	disabledReason,
 	loading = false,
+	loadingStyle = 'spinner',
 	children,
 	...props
 }: ButtonProps) {
-	const { size: ctxSize, defaultVariant: ctxVariant } = useButtonContext();
+	const buttonContext = useButtonContext();
+	const { size: ctxSize, defaultVariant: ctxVariant } = buttonContext;
 	// Explicit prop wins, then the context default, then the hardcoded fallback.
 	const resolvedVariant = variant ?? ctxVariant ?? 'primary';
 	// 'chip' always owns its own geometry, so it defaults to 'none' rather than 'md'.
-	const resolvedSize = size ?? ctxSize ?? (resolvedVariant === 'chip' ? 'none' : 'md');
+	const locked = resolveLockedSize(size, buttonContext);
+	if (locked.mismatch) {
+		reportAuthoringMistake(`[Button] ${locked.mismatch}`);
+	}
+	const resolvedSize = locked.size ?? ctxSize ?? (resolvedVariant === 'chip' ? 'none' : 'md');
 	const isDisabled = disabled || loading;
 	// 'stack' shape callers (option-picker style buttons) own their full color and sizing via className -
 	// SIZE_CLASSES/VARIANT_CLASSES would fight with their custom padding and active/inactive color classes.
 	const isStack = shape === 'stack';
 	useWarnMissingOnSolidToken(!isStack && (resolvedVariant === 'danger' || resolvedVariant === 'success'));
+	const visualLoading = useVisualLoading(loading);
+	// A button that only waits keeps its look: the faded / muted fill is for a button that is off. An explicit `disabled` keeps it.
+	const waitingOnly = loading && !disabled;
+	const variantClasses = classFor('Button', 'variant', resolvedVariant, VARIANT_CLASSES, 'primary');
+	const layered = visualLoading && loadingStyle !== 'spinner' && !isStack;
+	const layerStyle = loadingStyle as Exclude<LoadingStyle, 'spinner'>;
 	const btn = (
 		// violations-suppress: react/no-raw-button Button IS the atomic wrapper - this is intentional
 		<button
@@ -137,12 +159,22 @@ export function Button({
 			// action button must not; ButtonSave opts in with an explicit type="submit".
 			type={props.type ?? 'button'}
 			disabled={isDisabled}
-			className={[BASE, !isStack && NOWRAP, !isStack && classFor('Button', 'variant', resolvedVariant, VARIANT_CLASSES, 'primary'), !isStack && classFor('Button', 'size', resolvedSize, SIZE_CLASSES, 'md'), classFor('Button', 'shape', shape, SHAPE_CLASSES, 'default'), className]
+			aria-busy={props['aria-busy'] ?? (loading || undefined)}
+			data-loading={visualLoading ? loadingStyle : undefined}
+			className={[BASE, !isStack && NOWRAP, !isStack && (waitingOnly ? withoutDisabledLook(variantClasses) : variantClasses), !isStack && classFor('Button', 'size', resolvedSize, SIZE_CLASSES, 'md'), classFor('Button', 'shape', shape, SHAPE_CLASSES, 'default'), layered && LOADING_BUTTON_CLASSES[layerStyle], className]
 				.filter(Boolean)
 				.join(' ')}
 		>
-			{loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-			{children}
+			{visualLoading && loadingStyle === 'spinner' && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+			{layered ? (
+				<>
+					<LoadingLayer style={layerStyle} />
+					{/* The label stays in the flow (so the button keeps its size) and above the animated layer; [gap:inherit] keeps the icon-to-text gap. */}
+					<span className={['relative inline-flex items-center justify-center [gap:inherit]', LOADING_LABEL_CLASSES[layerStyle]].filter(Boolean).join(' ')}>{children}</span>
+				</>
+			) : (
+				children
+			)}
 		</button>
 	);
 	if (isDisabled && disabledReason) {

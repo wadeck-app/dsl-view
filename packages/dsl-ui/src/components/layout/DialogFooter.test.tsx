@@ -21,18 +21,18 @@ describe('DialogFooter', () => {
 		const { result } = renderHook(() => useButtonContext(), {
 			wrapper: ({ children }) => <DialogFooter>{children}</DialogFooter>,
 		});
-		expect(result.current).toEqual({ size: 'md' });
+		expect(result.current).toMatchObject({ size: 'md' });
 	});
 
-	it('explicit size prop on child Button wins over context', () => {
+	it('the container owns the size: a size on a child Button is ignored', () => {
 		render(
 			<DialogFooter>
 				<Button size="sm">Test</Button>
 			</DialogFooter>
 		);
 		const btn = screen.getByRole('button', { name: 'Test' });
-		expect(btn).toHaveClass('px-3', 'py-1');
-		expect(btn).not.toHaveClass('py-2');
+		expect(btn).toHaveClass('px-4', 'py-2');
+		expect(btn).not.toHaveClass('py-1');
 	});
 
 	it('inner DialogFooter context wins over outer parent context', () => {

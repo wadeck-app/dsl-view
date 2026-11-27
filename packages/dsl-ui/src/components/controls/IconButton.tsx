@@ -1,4 +1,5 @@
 import React from 'react';
+import { lockedIconSize, useButtonContext } from './buttonContext.js';
 import { Button } from './_Button.js';
 import type { ButtonProps } from './_Button.js';
 import { Tooltip } from '../overlay/Tooltip.js';
@@ -20,13 +21,15 @@ export interface IconButtonProps extends Omit<ButtonProps, 'children' | 'size'> 
 export function IconButton({
 	icon,
 	'aria-label': ariaLabel,
-	size = 'icon',
+	size,
 	variant = 'ghost',
 	tooltip,
 	...rest
 }: IconButtonProps) {
+	// Inside a container that owns the size (ActionBar...) an icon button takes that scale, so a row never mixes a big icon with small buttons.
+	const resolvedSize = size ?? lockedIconSize(useButtonContext()) ?? 'icon';
 	const button = (
-		<Button size={size} variant={variant} aria-label={ariaLabel} {...rest}>
+		<Button size={resolvedSize} variant={variant} aria-label={ariaLabel} {...rest}>
 			{icon}
 		</Button>
 	);

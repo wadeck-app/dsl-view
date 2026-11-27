@@ -12,6 +12,11 @@ export default function setup(ctx: ModuleContext): void {
   const store = new AssetStore();
   const reservations = new ReservationStore(store);
 
+  // The demo store answers in microseconds, so a button that waits for it would flash and its wait animation could never be seen.
+  // Writes take this long, like a real backend would.
+  const WRITE_LATENCY_MS = 900;
+  const slow = (): Promise<void> => new Promise(resolve => setTimeout(resolve, WRITE_LATENCY_MS));
+
   // A store refusal becomes its HTTP status and a message the page shows as is; anything else is a bug and rethrown.
   function guarded(reply: Reply, run: () => unknown): unknown {
     try {
@@ -64,9 +69,10 @@ export default function setup(ctx: ModuleContext): void {
     reply.send({ items: store.list({}).map(a => ({ value: a.id, label: a.name })) })
   );
   ctx.registerRoute('GET', '/reservations', (_req, reply) => reply.send({ items: reservations.list() }));
-  ctx.registerRoute('POST', '/reservations', (req, reply) =>
-    guarded(reply as Reply, () => reservations.create((req.body ?? {}) as ReservationInput))
-  );
+  ctx.registerRoute('POST', '/reservations', async (req, reply) => {
+    await slow();
+    return guarded(reply as Reply, () => reservations.create((req.body ?? {}) as ReservationInput));
+  });
   ctx.registerRoute('DELETE', '/reservations/:id', (req, reply) =>
     guarded(reply as Reply, () => {
       reservations.remove(req.params.id);
@@ -80,9 +86,10 @@ export default function setup(ctx: ModuleContext): void {
   });
   ctx.registerRoute('GET', '/assets/:id', (req, reply) => guarded(reply as Reply, () => store.get(req.params.id)));
   ctx.registerRoute('POST', '/assets', (req, reply) => guarded(reply as Reply, () => store.create((req.body ?? {}) as AssetInput)));
-  ctx.registerRoute('PATCH', '/assets/:id', (req, reply) =>
-    guarded(reply as Reply, () => store.update(req.params.id, (req.body ?? {}) as AssetInput))
-  );
+  ctx.registerRoute('PATCH', '/assets/:id', async (req, reply) => {
+    await slow();
+    return guarded(reply as Reply, () => store.update(req.params.id, (req.body ?? {}) as AssetInput));
+  });
   ctx.registerRoute('DELETE', '/assets/:id', (req, reply) =>
     guarded(reply as Reply, () => {
       store.remove(req.params.id);
@@ -90,5 +97,8 @@ export default function setup(ctx: ModuleContext): void {
     })
   );
   // "Someone else saved": makes the next save of an open edit page fail with 409, so the conflict is reproducible.
-  ctx.registerRoute('POST', '/assets/:id/touch', (req, reply) => guarded(reply as Reply, () => store.touch(req.params.id)));
+  ctx.registerRoute('POST', '/assets/:id/touch', async (req, reply) => {
+    await slow();
+    return guarded(reply as Reply, () => store.touch(req.params.id));
+  });
 }

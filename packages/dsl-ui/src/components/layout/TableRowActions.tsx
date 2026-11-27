@@ -12,7 +12,7 @@ export interface TableRowActionsProps {
  * @registryTags table-row-actions row actions
  */
 export function TableRowActions({ children, className = '' }: TableRowActionsProps) {
-	const ctx = useProvideButtonContext({ size: 'sm', defaultVariant: 'ghost' });
+	const ctx = useProvideButtonContext({ size: 'sm', defaultVariant: 'ghost', lockSize: true, owner: 'TableRowActions' });
 	return (
 		<ButtonContext.Provider value={ctx}>
 			<div className={['flex items-center gap-1', className].filter(Boolean).join(' ')}>

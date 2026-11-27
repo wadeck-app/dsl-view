@@ -14,7 +14,7 @@ Maintenance: add a row here in the same change that adds, renames or removes a c
 
 | Component | Category | Key props | What it is / when to use |
 |---|---|---|---|
-| `ActionButton` | atomic | action, label, params, body, icon, iconOnly, variant, size, ariaLabel | Button that runs a named `$actions` entry from anywhere on a page; use instead of ButtonAction when the page runner should dispatch the request and track pending state. |
+| `ActionButton` | atomic | action, label, params, body, icon, iconOnly, variant, size, ariaLabel, loadingStyle | Button that runs a named `$actions` entry from anywhere on a page; use instead of ButtonAction when the page runner should dispatch the request and track pending state. |
 | `ButtonAction` | atomic | label, ariaLabel, variant (incl. quiet ghost and link), icon, size (xs 22px, sm, md), onClick, loading, disabled, type, form | Plain labelled button with explicit onClick, loading and optional icon node; `type: submit` with `form: <form id>` submits a form the button is not inside of (a Dialog footer); use when you wire the handler yourself rather than running a `$actions` entry. |
 | `Checkbox` | atomic | label, checked, onChange, disabled, className | Single native checkbox input with an optional text label that makes the whole row clickable; use for one boolean, CheckboxGroup for several. |
 | `CheckboxGroup` | atomic | options, value, onChange, label, orientation | Fieldset of checkboxes bound to a string array, with optional legend and vertical or horizontal layout; use for multi-select from a few options. |
@@ -68,9 +68,9 @@ Maintenance: add a row here in the same change that adds, renames or removes a c
 | Component | Category | Key props | What it is / when to use |
 |---|---|---|---|
 | `ButtonCancel` | atomic | onCancel, label, disabled, disabledReason | Cancel button for a form's action row; calls onCancel when clicked. |
-| `ButtonSubmit` | atomic | label, variant, pendingLabel, requireChanges | Submit button that follows the form: off with the first error as its reason while an error blocks the form, `pendingLabel` while the save runs, on with the warning count; enabled with nothing modified unless `requireChanges` (a confirm-delete form has no field). Pick it over `ButtonSave` when the form is not a plain "save my edits". |
+| `ButtonSubmit` | atomic | label, variant, pendingLabel, requireChanges, loadingStyle | Submit button that follows the form: off with the first error as its reason while an error blocks the form, `pendingLabel` while the save runs, on with the warning count; enabled with nothing modified unless `requireChanges` (a confirm-delete form has no field). Pick it over `ButtonSave` when the form is not a plain "save my edits". |
 | `FormMessages` | atomic | className | Lists the messages of the form it sits in, errors first (errors as alerts, warnings and infos as status); put it in the form's `fields`. |
-| `ButtonSave` | atomic | label, onClick, isPending, hasChanges, disabledReason | Primary save button; inside a Form it submits and takes pending/unsaved state from the form, outside it uses onClick. |
+| `ButtonSave` | atomic | label, onClick, isPending, hasChanges, disabledReason, loadingStyle | Primary save button; inside a Form it submits and takes pending/unsaved state from the form, outside it uses onClick. `loadingStyle` (sweep, dots, bar, pulse, orbit) shows the wait without changing the button size or label; the default keeps "Saving...". |
 | `CronBuilder` | composite | value, onChange, onClose | Frequency wizard that edits a cron expression and has a cancel button; use for schedule values instead of a free text field. |
 | `DatePicker` | atomic | value, onChange, onSelect, minDate, maxDate, isDateDisabled, dateFormat | Bare date input with calendar popup and no label or error wrapper; use FieldDate for the labelled form field. |
 | `DateRangePicker` | atomic | value, onChange, minDate, maxDate, isDisabled, dateFormat, placeholder | Bare date-range input with calendar and no label wrapper; use FieldDateRange for the labelled form field. |
@@ -98,7 +98,7 @@ Maintenance: add a row here in the same change that adds, renames or removes a c
 | Component | Category | Key props | What it is / when to use |
 |---|---|---|---|
 | `ActionBar` | disposition | children, className | Row of buttons with a gap and top margin whose buttons default to size sm; pick it for a page-level action row, not a dialog or card. |
-| `Card` | disposition | children, header, footer, padding, shadow, border, onClick | Bordered surface with optional header, footer and padding, clickable when onClick is set; pick it over Section for a visually boxed group. |
+| `Card` | disposition | children, header, footer, padding, shadow, border, onClick | Bordered surface with optional header, footer and padding, clickable when onClick is set; pick it over Section for a visually boxed group. A padded body puts a space between its children (`padding: none` stays edge to edge). |
 | `CardActions` | disposition | children, className | Right-aligned row of small buttons; pick it for the action buttons inside a Card footer. |
 | `Collapsible` | disposition | title, children, defaultOpen | Titled toggle row with a chevron that shows or hides its children; pick it for optional content inside a page or form. |
 | `DialogFooter` | disposition | children, className | Right-aligned button row with a top border whose buttons default to size md; pick it for the bottom of dialog content. |
@@ -133,7 +133,7 @@ Maintenance: add a row here in the same change that adds, renames or removes a c
 
 | Component | Category | Key props | What it is / when to use |
 |---|---|---|---|
-| `ConfirmDialog` | composite | open, onOpenChange, title, message, onConfirm, confirmLabel, confirmVariant | Small Dialog with a message, a Cancel button and a confirm button (danger by default); pick it over Dialog for a yes/no confirmation. |
+| `ConfirmDialog` | composite | open, onOpenChange, title, message, onConfirm, confirmLabel, confirmVariant | Small Dialog with a message, a Cancel button and a confirm button (danger by default); pick it over Dialog for a yes/no confirmation. An action's `confirm` question uses it when the host mounts `useConfirmDialog` (React API, with `ConfirmProvider` of dsl-renderer); otherwise the browser's native confirm. |
 | `ContextMenu` | disposition | trigger, items, side, align, open, onOpenChange | Popover menu of clickable items (icon, danger, separator) opened by a trigger element; pick it for a kebab or row action menu. |
 | `Dialog` | disposition | title, children, open, onOpenChange, trigger, actions, size | Modal dialog with title, focus trap, optional trigger and actions footer, in four sizes (initial focus: an element marked `data-autofocus`, else a field that took it itself, else the first control); pick it for custom content, ConfirmDialog or DialogForm for ready-made ones. |
 | `DialogButton` | atomic | label, variant, action, params, body, closesDialog, disabled, disabledReason | Button for the `actions` of a `Dialog`: without `action` it closes the dialog (a Cancel); with one it runs that `$actions` entry (as an `ActionButton` does) and closes the dialog when it succeeded, leaving it open and the button busy otherwise. Pick it over `ActionButton` inside a dialog. |

@@ -53,9 +53,12 @@ items:
         label: Version
       - type: actions
         items:
+          # Icon-only row actions: the label stays the accessible name and the tooltip.
           - label: Edit
+            icon: pencil
             action: openEdit
           - label: Delete
+            icon: trash
             action: deleteAsset
             variant: danger
   - $type: DialogForm

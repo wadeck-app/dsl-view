@@ -64,7 +64,7 @@ items:
         label: "layout"
     items:
       - $type: "Markdown"
-        text: "Bordered surface with optional header, footer and padding, clickable when onClick is set; pick it over Section for a visually boxed group."
+        text: "Bordered surface with optional header, footer and padding, clickable when onClick is set; pick it over Section for a visually boxed group. A padded body puts a space between its children (`padding: none` stays edge to edge)."
       - $type: "HorizontalStack"
         wrap: true
         items:

@@ -51,6 +51,12 @@ export interface ActionButtonProps {
 	 * @ctxDefault $actionPending
 	 */
 	actionPending?: Record<string, boolean>;
+	/**
+	 * How the wait is shown while the action runs: spinner (default), sweep, dots, bar, pulse, orbit. Every style but `spinner` keeps the
+	 * button the size it has at rest (and keeps its icon).
+	 * @default 'spinner'
+	 */
+	loadingStyle?: 'spinner' | 'sweep' | 'dots' | 'bar' | 'pulse' | 'orbit';
 }
 
 /**
@@ -73,6 +79,7 @@ export function ActionButton({
 	disabledReason,
 	onAction,
 	actionPending,
+	loadingStyle,
 }: ActionButtonProps) {
 	const [pending, setPending] = React.useState(false);
 
@@ -107,7 +114,8 @@ export function ActionButton({
 
 	const busy = pending || actionPending?.[action] === true;
 	const showOnlyIcon = iconOnly && Boolean(icon);
-	const iconElement = icon && !busy ? iconByName(icon, 'ActionButton.icon') : null;
+	// The spinner takes the icon's place; the other styles keep the icon, so the button keeps its size.
+	const iconElement = icon && !(busy && (loadingStyle ?? 'spinner') === 'spinner') ? iconByName(icon, 'ActionButton.icon') : null;
 	const resolvedSize = showOnlyIcon ? (size === 'xs' ? 'icon-xs' : size === 'sm' ? 'icon-sm' : 'icon') : size;
 
 	return (
@@ -118,6 +126,7 @@ export function ActionButton({
 			disabled={disabled || unwired}
 			disabledReason={unwired ? 'Not rendered inside a page: there is no action to run' : disabledReason}
 			loading={busy}
+			loadingStyle={loadingStyle}
 			aria-busy={busy || undefined}
 			aria-label={showOnlyIcon ? label : ariaLabel}
 			title={showOnlyIcon ? label : undefined}

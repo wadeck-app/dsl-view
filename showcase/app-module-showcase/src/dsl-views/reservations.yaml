@@ -75,5 +75,6 @@ items:
       - type: actions
         items:
           - label: Cancel
+            icon: x
             action: cancelReservation
             variant: danger

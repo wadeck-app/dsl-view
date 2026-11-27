@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -129,11 +129,12 @@ describe('ActionButton (component)', () => {
 		expect(error).toHaveBeenCalledWith(expect.stringContaining('[ActionButton] "Needs an icon": iconOnly needs an icon name'));
 	});
 
-	it('replaces the icon by a spinner while busy', () => {
+	it('replaces the icon by a spinner while busy', async () => {
 		render(<ActionButton action="a" label="Push" icon="rocket" onAction={vi.fn()} actionPending={{ a: true }} />);
 		const button = screen.getByRole('button', { name: 'Push' });
+		// The arc shows after a short delay (an instant request must not flash it).
+		await waitFor(() => expect(button.querySelector('svg')).toHaveClass('animate-spin'));
 		expect(button.querySelectorAll('svg')).toHaveLength(1);
-		expect(button.querySelector('svg')).toHaveClass('animate-spin');
 	});
 
 	it('is disabled with an explanation and logs an error when rendered outside a page (no onAction)', () => {

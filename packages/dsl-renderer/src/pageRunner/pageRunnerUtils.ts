@@ -18,7 +18,7 @@ export interface ActionSpec {
 	 * server accepted": `disabled: $vars.payload != $validated.payload`.
 	 */
 	requestKey?: string;
-	/** If set, shows a window.confirm dialog with this message before executing the action. */
+	/** If set, asks this question before executing the action: through the host's ConfirmProvider (a styled dialog), else window.confirm. */
 	confirm?: string;
 	/** Shown on success when the server response carries no `message` string. Default: "Done". */
 	successMessage?: string;

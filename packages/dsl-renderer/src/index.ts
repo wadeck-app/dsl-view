@@ -9,6 +9,8 @@ export { LazyBoundary } from './engine/LazyBoundary.js';
 export { createRegistry } from './ComponentRegistry.js';
 export type { ComponentRegistry, ComponentRegistryEntry, RegistryRenderProps } from './ComponentRegistry.js';
 export { GenericPageRunner } from './GenericPageRunner.js';
+export { ConfirmProvider, useConfirm } from './confirm.js';
+export type { Confirm, ConfirmProviderProps } from './confirm.js';
 export { NotifierProvider, useNotifier } from './notifier.js';
 export type { Notification, Notify, NotifierProviderProps } from './notifier.js';
 export type { GenericPageRunnerProps } from './GenericPageRunner.js';

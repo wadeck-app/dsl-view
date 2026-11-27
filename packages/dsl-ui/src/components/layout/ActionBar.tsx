@@ -13,7 +13,7 @@ export interface ActionBarProps {
  * @registryTags action-bar
  */
 export function ActionBar({ children, className = '' }: ActionBarProps) {
-	const ctx = useProvideButtonContext({ size: 'sm' });
+	const ctx = useProvideButtonContext({ size: 'sm', lockSize: true, owner: 'ActionBar' });
 	return (
 		<ButtonContext.Provider value={ctx}>
 			<div className={['flex items-center gap-4 mt-8', className].filter(Boolean).join(' ')}>

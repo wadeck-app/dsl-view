@@ -88,9 +88,9 @@ describe('Card sections', () => {
 		};
 
 		expect(padded('none')).toBe('');
-		expect(padded('sm')).toBe('p-3');
-		expect(padded('md')).toBe('p-4');
-		expect(padded('lg')).toBe('p-6');
+		expect(padded('sm')).toBe('p-3 space-y-4');
+		expect(padded('md')).toBe('p-4 space-y-4');
+		expect(padded('lg')).toBe('p-6 space-y-4');
 	});
 
 	it('border and shadow can each be turned off', () => {

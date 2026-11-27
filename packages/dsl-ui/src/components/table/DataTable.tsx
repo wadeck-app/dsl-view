@@ -1300,6 +1300,8 @@ export function DataTable<T extends Record<string, unknown>>({
 															// The actions sit at the end of the row, in a column only as wide as its icons unless a width is given.
 															className={col.width ? 'px-3 py-1.5' : 'w-px whitespace-nowrap px-3 py-1.5'}
 															style={col.width ? { width: `${col.width * 4}px` } : undefined}
+															// A click on a row action belongs to the action: without this, Delete also opened the row (navigateTo / onRowClick).
+															onClick={e => e.stopPropagation()}
 														>
 															<div className="flex items-center justify-end gap-1">
 																{col.actions.map((item, ii) => {

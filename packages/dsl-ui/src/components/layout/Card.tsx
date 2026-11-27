@@ -86,7 +86,8 @@ export function Card({
                     {header}
                 </div>
             )}
-            <div className={joinClasses(classFor('Card', 'padding', padding, PADDING_CLASSES, 'md'), fill && 'flex min-h-0 flex-1 flex-col')}>{children}</div>
+            {/* A padded body puts a space between its children: fields or paragraphs listed straight in a Card used to touch each other. `padding: none` stays edge to edge. */}
+            <div className={joinClasses(classFor('Card', 'padding', padding, PADDING_CLASSES, 'md'), padding !== 'none' && 'space-y-4', fill && 'flex min-h-0 flex-1 flex-col')}>{children}</div>
             {footer && (
                 <div className={joinClasses('border-t border-border', classFor('Card', 'padding', padding, PADDING_CLASSES, 'md'), fill && 'shrink-0')}>
                     {footer}

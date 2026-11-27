@@ -67,6 +67,29 @@ const preset = {
 			spacing: {
 				'shell-bar': 'var(--app-shell-bar-height, 0px)',
 			},
+			// The wait animations of a loading Button (`loadingStyle`): `animate-dsl-sweep`, `-dot`, `-bar`, `-pulse`, `-breathe`, `-orbit`.
+			keyframes: {
+				'dsl-sweep': { '0%': { transform: 'translateX(0)' }, '100%': { transform: 'translateX(200%)' } },
+				'dsl-dot': {
+					'0%, 80%, 100%': { transform: 'translateY(0)', opacity: '0.45' },
+					'40%': { transform: 'translateY(-3px)', opacity: '1' },
+				},
+				'dsl-bar': { '0%': { transform: 'translateX(-100%)' }, '100%': { transform: 'translateX(250%)' } },
+				'dsl-pulse': {
+					'0%': { boxShadow: '0 0 0 0 color-mix(in srgb, var(--color-primary-solid) 55%, transparent)' },
+					'70%, 100%': { boxShadow: '0 0 0 7px transparent' },
+				},
+				'dsl-breathe': { '0%, 100%': { opacity: '1' }, '50%': { opacity: '0.6' } },
+				'dsl-orbit': { to: { transform: 'rotate(360deg)' } },
+			},
+			animation: {
+				'dsl-sweep': 'dsl-sweep 1.3s ease-in-out infinite',
+				'dsl-dot': 'dsl-dot 1s ease-in-out infinite',
+				'dsl-bar': 'dsl-bar 1.1s ease-in-out infinite',
+				'dsl-pulse': 'dsl-pulse 1.4s ease-out infinite',
+				'dsl-breathe': 'dsl-breathe 1.4s ease-in-out infinite',
+				'dsl-orbit': 'dsl-orbit 1.2s linear infinite',
+			},
 			colors: {
 				primary: 'var(--color-primary)',
 				'primary-solid': 'var(--color-primary-solid)',
