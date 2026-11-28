@@ -168,6 +168,10 @@ export function FieldAutocomplete({
 							align="start"
 							sideOffset={4}
 							onOpenAutoFocus={e => e.preventDefault()}
+							// The input is the anchor, not a trigger: Radix would count a click on it as outside and close the list it just opened.
+							onInteractOutside={e => {
+								if (e.target instanceof Element && e.target.id === control.id) e.preventDefault();
+							}}
 							className={CONTENT_CLASS}
 						>
 							{filteredOptions.map((opt, index) => (

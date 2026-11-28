@@ -63,3 +63,13 @@ describe('every field passes helpText through', () => {
 		expect(screen.getByText('help')).toBeInTheDocument();
 	});
 });
+
+describe('FieldMultiSelect describes its control', () => {
+	it('lists the help text and the error in aria-describedby and marks it invalid', async () => {
+		const { FieldMultiSelect } = await import('./FieldMultiSelect.js');
+		render(<FieldMultiSelect label="L" value={[]} onChange={vi.fn()} options={[{ value: 'a', label: 'a' }]} helpText="Pick some" error="Pick one" />);
+		const control = screen.getByRole('combobox');
+		expect(control).toHaveAttribute('aria-invalid', 'true');
+		expect(control.getAttribute('aria-describedby')).toBe(`${screen.getByText('Pick some').id} ${screen.getByText('Pick one').id}`);
+	});
+});

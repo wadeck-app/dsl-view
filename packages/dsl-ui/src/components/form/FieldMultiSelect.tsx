@@ -151,6 +151,8 @@ export function FieldMultiSelect({
 						aria-haspopup="listbox"
 						aria-expanded={open}
 						aria-required={required}
+						aria-invalid={error ? true : undefined}
+						aria-describedby={[helpText ? `${id}-help` : null, error ? `${id}-error` : null].filter(Boolean).join(' ') || undefined}
 						onClick={handleContainerClick}
 						onKeyDown={handleContainerKeyDown}
 						className={`${CONTAINER_BASE} ${borderClass} ${disabledClass}`}
@@ -244,7 +246,7 @@ export function FieldMultiSelect({
 
 			{helpText && <p id={`${id}-help`} className="mt-1 text-xs text-muted">{helpText}</p>}
 			{error && (
-				<p className="mt-1 text-xs text-danger" role="alert">
+				<p id={`${id}-error`} className="mt-1 text-xs text-danger" role="alert">
 					{error}
 				</p>
 			)}

@@ -396,6 +396,10 @@ export function FieldAsyncSelect({
 						align="start"
 						sideOffset={4}
 						onOpenAutoFocus={e => e.preventDefault()}
+						// The input row (input, clear button) is the anchor, not a trigger: Radix would count a click on it as outside and close the list.
+						onInteractOutside={e => {
+							if (e.target instanceof Node && inputRef.current?.parentElement?.contains(e.target)) e.preventDefault();
+						}}
 						className={CONTENT_CLASS}
 					>
 						<ul role="listbox" id={listboxId} aria-label={label}>
