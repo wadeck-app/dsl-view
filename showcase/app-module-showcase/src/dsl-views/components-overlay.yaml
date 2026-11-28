@@ -90,7 +90,7 @@ items:
         label: "overlay"
     items:
       - $type: "Markdown"
-        text: "Modal dialog with title, focus trap, optional trigger and actions footer, in four sizes (initial focus: an element marked `data-autofocus`, else a field that took it itself, else the first control); pick it for custom content, ConfirmDialog or DialogForm for ready-made ones."
+        text: "Modal dialog with title (`titleContent` for a richer heading), focus trap, a body that scrolls inside the viewport, optional trigger and actions footer, in four sizes (initial focus: an element marked `data-autofocus`, else a field that took it itself, else the first control; `ButtonAction autoFocus` marks a footer button); pick it for custom content, ConfirmDialog or DialogForm for ready-made ones."
       - $type: "HorizontalStack"
         wrap: true
         items:
@@ -117,7 +117,7 @@ items:
         open: "$vars.Dialog__open"
         size: "$vars.Dialog__size"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `title` | string | yes |\n| `trigger` | array | no |\n| `open` | boolean | no |\n| `items` | array | no |\n| `actions` | array | no |\n| `size` | sm / md / lg / xl | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `title` | string | yes |\n| `titleContent` | array | no |\n| `trigger` | array | no |\n| `open` | boolean | no |\n| `items` | array | no |\n| `actions` | array | no |\n| `size` | sm / md / lg / xl | no |"
   - $type: "Card"
     header:
       - $type: "Tag"

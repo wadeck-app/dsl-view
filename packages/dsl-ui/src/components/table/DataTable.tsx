@@ -1232,6 +1232,8 @@ export function DataTable<T extends Record<string, unknown>>({
 									return (
 									<React.Fragment key={ri}>
 										<tr
+											// A stable handle for tests and automation: the row's own key, not its position.
+											data-row-key={row[rowKey] === undefined || row[rowKey] === null ? undefined : String(row[rowKey])}
 											className={[
 												'border-b border-border group',
 												'hover:bg-bg-secondary',

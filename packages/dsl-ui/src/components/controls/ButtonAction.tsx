@@ -39,13 +39,15 @@ export interface ButtonActionProps {
 	ariaControls?: string;
 	/** Only with `variant: link`: `always` underlines the text at rest (it underlines on hover only by default). */
 	underline?: 'hover' | 'always';
+	/** In a Dialog or Drawer: this button takes the focus when it opens (the safe choice of a confirmation), instead of the first control. */
+	autoFocus?: boolean;
 }
 
 /**
  * @registryCategory atomic
  * @registryTags button action
  */
-export function ButtonAction({ label, variant = 'primary', icon, size, onClick, disabled, disabledReason, loading, type = 'button', form, ariaLabel, ariaExpanded, ariaControls, underline }: ButtonActionProps) {
+export function ButtonAction({ label, variant = 'primary', icon, size, onClick, disabled, disabledReason, loading, type = 'button', form, ariaLabel, ariaExpanded, ariaControls, underline, autoFocus }: ButtonActionProps) {
 	if (form !== undefined && type !== 'submit') {
 		reportAuthoringMistake(`[ButtonAction] "${label}" has form="${form}" but type="${type}": only a submit button submits a form. Set type="submit".`);
 	}
@@ -63,6 +65,8 @@ export function ButtonAction({ label, variant = 'primary', icon, size, onClick, 
 			aria-expanded={ariaExpanded}
 			aria-controls={ariaControls}
 			underline={underline}
+			// Read by the focus handling of Dialog and Drawer (focusInitialIn), not React autoFocus: the dialog mounts before it can move focus.
+			data-autofocus={autoFocus ? '' : undefined}
 		>
 			{icon && !loading && icon}
 			{label}

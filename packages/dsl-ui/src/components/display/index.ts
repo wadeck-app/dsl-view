@@ -14,6 +14,7 @@ export * from './Skeleton.js';
 export * from './SparklineView.js';
 export * from './Spinner.js';
 export * from './Tag.js';
+export * from './Text.js';
 export * from './DateText.js';
 export * from './TimeSeriesChart.js';
 export * from './TimeBrush.js';

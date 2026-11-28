@@ -144,6 +144,7 @@
 			"ariaControls",
 			"ariaExpanded",
 			"ariaLabel",
+			"autoFocus",
 			"disabled",
 			"disabledReason",
 			"form",
@@ -614,9 +615,14 @@
 			"open",
 			"size",
 			"title",
+			"titleContent",
 			"trigger"
 		],
 		"allowedChildren": {
+			"titleContent": [
+				"atomic",
+				"composite"
+			],
 			"trigger": [
 				"button"
 			],
@@ -1676,6 +1682,22 @@
 			"tag",
 			"chip",
 			"label"
+		]
+	},
+	"Text": {
+		"knownKeys": [
+			"mono",
+			"size",
+			"text",
+			"tone"
+		],
+		"category": "atomic",
+		"tags": [
+			"text",
+			"muted",
+			"mono",
+			"code",
+			"inline"
 		]
 	},
 	"ThemePicker": {

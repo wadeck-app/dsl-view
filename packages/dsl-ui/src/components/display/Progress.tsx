@@ -67,6 +67,8 @@ export function Progress({
         <RadixProgress.Root
             value={value}
             max={max}
+            // Radix gives a percentage; a precise label (99.94% available) is what a screen reader should hear.
+            aria-valuetext={valueLabel}
             className={`${classFor('Progress', 'layout', layout, TRACK_WIDTH, 'stacked')} overflow-hidden rounded-full bg-muted-bg ${classFor('Progress', 'size', size, TRACK_HEIGHT, 'md')}`}
         >
             <RadixProgress.Indicator

@@ -49,6 +49,7 @@ export const ButtonActionNodeSchema = baseNode.extend({
 	ariaExpanded: dsl(z.boolean()).optional(),
 	ariaControls: z.string().optional(),
 	underline: dsl(z.enum(['hover', 'always'])).optional(),
+	autoFocus: dsl(z.boolean()).optional(),
 });
 
 const CheckboxOptionSchema = z.object({
@@ -332,6 +333,13 @@ export const SpinnerNodeSchema = baseNode.extend({
 export const TagNodeSchema = baseNode.extend({
 	label: z.string(),
 	color: dsl(z.enum(['default', 'blue', 'green', 'red', 'yellow', 'purple'])).optional(),
+});
+
+export const TextNodeSchema = baseNode.extend({
+	text: z.string(),
+	tone: dsl(z.enum(['default', 'muted', 'danger', 'success'])).optional(),
+	size: dsl(z.enum(['inherit', 'xs', 'sm'])).optional(),
+	mono: dsl(z.boolean()).optional(),
 });
 
 export const TimeBrushNodeSchema = baseNode.extend({
@@ -938,6 +946,7 @@ export const ContextMenuNodeSchema = baseNode.extend({
 
 export const DialogNodeSchema = baseNode.extend({
 	title: z.string(),
+	titleContent: dsl(z.array(z.unknown())).optional(),
 	trigger: dsl(z.array(z.unknown())).optional(),
 	open: dsl(z.boolean()).optional(),
 	items: dsl(z.array(z.unknown())).optional(),

@@ -13,7 +13,10 @@ export function useDialogClose(): (() => void) | null {
 }
 
 export interface DialogProps {
+	/** The accessible name of the dialog, and its heading unless `titleContent` is given. */
 	title: string;
+	/** Replaces the heading text with richer content (a name in monospace, a status next to it). `title` stays the accessible name. @slot tag:atomic, tag:composite */
+	titleContent?: React.ReactNode;
 	/** @slot tag:button */
 	trigger?: React.ReactNode;
 	open?: boolean;
@@ -43,6 +46,7 @@ const SIZE_CLASSES: Record<NonNullable<DialogProps['size']>, string> = {
  */
 export function Dialog({
 	title,
+	titleContent,
 	trigger,
 	open: controlledOpen,
 	onOpenChange,
@@ -143,7 +147,7 @@ export function Dialog({
 						// Programmatic focus target when the dialog has nothing focusable: Tab then stays on it.
 						tabIndex={-1}
 						aria-labelledby={titleId}
-						className={['relative w-full rounded-lg bg-surface shadow-xl focus:outline-none', sizeClass].join(
+						className={['relative flex max-h-full w-full flex-col rounded-lg bg-surface shadow-xl focus:outline-none', sizeClass].join(
 							' '
 						)}
 						onClick={e => e.stopPropagation()}
@@ -151,7 +155,7 @@ export function Dialog({
 						{/* Header */}
 						<div className={headerBarClass}>
 							<h2 id={titleId} className="text-base font-semibold text-content">
-								{title}
+								{titleContent ?? title}
 							</h2>
 							<Button
 								type="button"
@@ -167,7 +171,7 @@ export function Dialog({
 						{/* Body and footer share the close context so action buttons can call handleClose */}
 						<DialogCloseContext.Provider value={handleClose}>
 							{/* Body */}
-							<div className="px-6 py-4">{children}</div>
+							<div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">{children}</div>
 
 							{/* Footer */}
 							{actions && (
