@@ -270,7 +270,7 @@ items:
         aria-pressed: "$vars.ChipButton__aria-pressed"
         disabled: "$vars.ChipButton__disabled"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `active` | boolean | yes |\n| `color` | unknown | no |\n| `items` | array | no |\n| `shape` | pill / square | no |\n| `emphasis` | subtle / strong | no |\n| `aria-pressed` | boolean | no |\n| `aria-label` | string | no |\n| `title` | string | no |\n| `disabled` | boolean | no |\n| `disabledReason` | string | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `active` | boolean | no |\n| `color` | unknown | no |\n| `items` | array | no |\n| `shape` | pill / square | no |\n| `emphasis` | subtle / strong | no |\n| `aria-pressed` | boolean | no |\n| `aria-label` | string | no |\n| `title` | string | no |\n| `disabled` | boolean | no |\n| `disabledReason` | string | no |"
   - $type: "Card"
     header:
       - $type: "Tag"

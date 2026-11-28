@@ -4,7 +4,8 @@ import { type ChipColor, CHIP_COLOR_CLASSES, DEFAULT_CHIP_COLORS } from '@dsl-ui
 import { Button } from './_Button.js';
 
 export interface ChipButtonProps {
-	active: boolean;
+	/** Whether the chip is on. Leave it out for a chip that is not a toggle (a label that acts): it then has no pressed state and the resting look. */
+	active?: boolean;
 	color?: ChipColor;
 	onClick: () => void;
 	/** @slot tag:atomic */
@@ -57,7 +58,7 @@ export function ChipButton({
 	// An explicit `color` still wins when strong is asked for: a caller that named a palette meant
 	// that palette. Strong only replaces the default tint.
 	const strongActive = emphasis === 'strong' && !color;
-	const stateClasses = active
+	const stateClasses = active === true
 		? (strongActive ? STRONG_ACTIVE : colors.active)
 		: colors.inactive;
 	return (

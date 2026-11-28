@@ -578,7 +578,7 @@ items:
         readOnly: "$vars.FieldText__readOnly"
         required: "$vars.FieldText__required"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `label` | string | yes |\n| `hideLabel` | boolean | no |\n| `size` | md / sm | no |\n| `description` | string | no |\n| `readOnly` | boolean | no |\n| `required` | boolean | no |\n| `error` | string | no |\n| `icon` | array | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `label` | string | yes |\n| `hideLabel` | boolean | no |\n| `size` | md / sm | no |\n| `description` | string | no |\n| `readOnly` | boolean | no |\n| `required` | boolean | no |\n| `error` | string | no |\n| `icon` | array | no |\n| `ref` | unknown | no |"
   - $type: "Card"
     header:
       - $type: "Tag"

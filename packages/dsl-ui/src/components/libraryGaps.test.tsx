@@ -93,3 +93,20 @@ describe('ButtonAction disclosure state', () => {
 		expect(screen.getByRole('button')).not.toHaveAttribute('aria-expanded');
 	});
 });
+
+describe('FieldText ref and data attributes', () => {
+	it('hands the input to a ref and passes data-* attributes through', () => {
+		const ref = { current: null as HTMLInputElement | null };
+		render(<FieldText label="Name" value="" onChange={vi.fn()} ref={ref} data-agent-search="x" />);
+		expect(ref.current).toBe(screen.getByLabelText('Name'));
+		expect(screen.getByLabelText('Name')).toHaveAttribute('data-agent-search', 'x');
+	});
+});
+
+describe('ChipButton without active', () => {
+	it('is a plain button with no pressed state', async () => {
+		const { ChipButton } = await import('./controls/ChipButton.js');
+		render(<ChipButton onClick={vi.fn()}>label</ChipButton>);
+		expect(screen.getByRole('button', { name: 'label' })).not.toHaveAttribute('aria-pressed');
+	});
+});

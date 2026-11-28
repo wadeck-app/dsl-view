@@ -64,7 +64,7 @@ export const CheckboxGroupNodeSchema = baseNode.extend({
 });
 
 export const ChipButtonNodeSchema = baseNode.extend({
-	active: dsl(z.boolean()),
+	active: dsl(z.boolean()).optional(),
 	color: z.unknown().optional(),
 	items: dsl(z.array(z.unknown())).optional(),
 	shape: dsl(z.enum(['pill', 'square'])).optional(),
@@ -619,6 +619,7 @@ export const FieldTextNodeSchema = baseNode.extend({
 	required: dsl(z.boolean()).optional(),
 	error: z.string().optional(),
 	icon: dsl(z.array(z.unknown())).optional(),
+	ref: z.unknown().optional(),
 });
 
 export const FieldTextareaNodeSchema = baseNode.extend({

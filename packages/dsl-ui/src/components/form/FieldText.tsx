@@ -24,6 +24,8 @@ export interface FieldTextProps
 	error?: string;
 	/** A leading icon inside the field (a search glass, a unit). Decoration: the label stays the accessible name. */
 	icon?: React.ReactNode;
+	/** The input element, for a page that focuses it or measures it. React only. */
+	ref?: React.Ref<HTMLInputElement>;
 }
 
 /**
