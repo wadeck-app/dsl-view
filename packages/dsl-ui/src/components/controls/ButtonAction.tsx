@@ -37,13 +37,15 @@ export interface ButtonActionProps {
 	ariaExpanded?: boolean;
 	/** Id of what the button opens or closes (aria-controls). */
 	ariaControls?: string;
+	/** Only with `variant: link`: `always` underlines the text at rest (it underlines on hover only by default). */
+	underline?: 'hover' | 'always';
 }
 
 /**
  * @registryCategory atomic
  * @registryTags button action
  */
-export function ButtonAction({ label, variant = 'primary', icon, size, onClick, disabled, disabledReason, loading, type = 'button', form, ariaLabel, ariaExpanded, ariaControls }: ButtonActionProps) {
+export function ButtonAction({ label, variant = 'primary', icon, size, onClick, disabled, disabledReason, loading, type = 'button', form, ariaLabel, ariaExpanded, ariaControls, underline }: ButtonActionProps) {
 	if (form !== undefined && type !== 'submit') {
 		reportAuthoringMistake(`[ButtonAction] "${label}" has form="${form}" but type="${type}": only a submit button submits a form. Set type="submit".`);
 	}
@@ -60,6 +62,7 @@ export function ButtonAction({ label, variant = 'primary', icon, size, onClick, 
 			aria-label={ariaLabel}
 			aria-expanded={ariaExpanded}
 			aria-controls={ariaControls}
+			underline={underline}
 		>
 			{icon && !loading && icon}
 			{label}

@@ -48,6 +48,7 @@ export const ButtonActionNodeSchema = baseNode.extend({
 	form: z.string().optional(),
 	ariaExpanded: dsl(z.boolean()).optional(),
 	ariaControls: z.string().optional(),
+	underline: dsl(z.enum(['hover', 'always'])).optional(),
 });
 
 const CheckboxOptionSchema = z.object({
@@ -709,8 +710,10 @@ export const CardActionsNodeSchema = baseNode.extend({
 });
 
 export const CollapsibleNodeSchema = baseNode.extend({
-	title: z.string(),
+	title: z.string().optional(),
+	header: dsl(z.array(z.unknown())).optional(),
 	defaultOpen: dsl(z.boolean()).optional(),
+	open: dsl(z.boolean()).optional(),
 	items: dsl(z.array(z.unknown())).optional(),
 });
 

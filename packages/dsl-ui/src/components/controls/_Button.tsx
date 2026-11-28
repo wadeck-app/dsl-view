@@ -30,6 +30,8 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 	 * @default 'spinner'
 	 */
 	loadingStyle?: LoadingStyle;
+	/** Only for the `link` variant: `hover` (default) underlines on hover, `always` underlines at rest too. */
+	underline?: 'hover' | 'always';
 }
 
 // @formatter:off
@@ -127,6 +129,7 @@ export function Button({
 	disabledReason,
 	loading = false,
 	loadingStyle = 'spinner',
+	underline = 'hover',
 	children,
 	...props
 }: ButtonProps) {
@@ -148,7 +151,11 @@ export function Button({
 	const visualLoading = useVisualLoading(loading);
 	// A button that only waits keeps its look: the faded / muted fill is for a button that is off. An explicit `disabled` keeps it.
 	const waitingOnly = loading && !disabled;
-	const variantClasses = classFor('Button', 'variant', resolvedVariant, VARIANT_CLASSES, 'primary');
+	const baseVariantClasses = classFor('Button', 'variant', resolvedVariant, VARIANT_CLASSES, 'primary');
+	const variantClasses = resolvedVariant === 'link' && underline === 'always' ? baseVariantClasses.replace('hover:underline', 'underline') : baseVariantClasses;
+	// A link is text, not a box: it takes the size's font and gap but never its padding.
+	const sizeClasses = classFor('Button', 'size', resolvedSize, SIZE_CLASSES, 'md');
+	const sizeForVariant = resolvedVariant === 'link' ? sizeClasses.split(' ').filter(token => !/^p[xy]-/.test(token)).join(' ') : sizeClasses;
 	const layered = visualLoading && loadingStyle !== 'spinner' && !isStack;
 	const layerStyle = loadingStyle as Exclude<LoadingStyle, 'spinner'>;
 	const btn = (
@@ -161,7 +168,7 @@ export function Button({
 			disabled={isDisabled}
 			aria-busy={props['aria-busy'] ?? (loading || undefined)}
 			data-loading={visualLoading ? loadingStyle : undefined}
-			className={[BASE, !isStack && NOWRAP, !isStack && (waitingOnly ? withoutDisabledLook(variantClasses) : variantClasses), !isStack && classFor('Button', 'size', resolvedSize, SIZE_CLASSES, 'md'), classFor('Button', 'shape', shape, SHAPE_CLASSES, 'default'), layered && LOADING_BUTTON_CLASSES[layerStyle], className]
+			className={[BASE, !isStack && NOWRAP, !isStack && (waitingOnly ? withoutDisabledLook(variantClasses) : variantClasses), !isStack && sizeForVariant, classFor('Button', 'shape', shape, SHAPE_CLASSES, 'default'), layered && LOADING_BUTTON_CLASSES[layerStyle], className]
 				.filter(Boolean)
 				.join(' ')}
 		>

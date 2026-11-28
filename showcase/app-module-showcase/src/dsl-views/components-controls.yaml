@@ -14,6 +14,7 @@ $vars:
   ButtonAction__loading: false
   ButtonAction__type: "button"
   ButtonAction__ariaExpanded: false
+  ButtonAction__underline: "hover"
   CheckboxGroup__orientation: "vertical"
   ChipButton__active: false
   ChipButton__shape: "pill"
@@ -186,6 +187,14 @@ items:
           - $type: "Switch"
             label: "ariaExpanded"
             bind: "ButtonAction__ariaExpanded"
+          - $type: "FieldSelect"
+            label: "underline"
+            bind: "ButtonAction__underline"
+            options:
+              - value: "hover"
+                label: "hover"
+              - value: "always"
+                label: "always"
       - $type: "ButtonAction"
         label: "$vars.ButtonAction__label"
         variant: "$vars.ButtonAction__variant"
@@ -194,8 +203,9 @@ items:
         loading: "$vars.ButtonAction__loading"
         type: "$vars.ButtonAction__type"
         ariaExpanded: "$vars.ButtonAction__ariaExpanded"
+        underline: "$vars.ButtonAction__underline"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `label` | string | yes |\n| `variant` | primary / secondary / neutral / danger / danger-outline / success / ghost / link | no |\n| `icon` | array | no |\n| `size` | xs / sm / md | no |\n| `ariaLabel` | string | no |\n| `disabled` | boolean | no |\n| `disabledReason` | string | no |\n| `loading` | boolean | no |\n| `type` | button / submit | no |\n| `form` | string | no |\n| `ariaExpanded` | boolean | no |\n| `ariaControls` | string | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `label` | string | yes |\n| `variant` | primary / secondary / neutral / danger / danger-outline / success / ghost / link | no |\n| `icon` | array | no |\n| `size` | xs / sm / md | no |\n| `ariaLabel` | string | no |\n| `disabled` | boolean | no |\n| `disabledReason` | string | no |\n| `loading` | boolean | no |\n| `type` | button / submit | no |\n| `form` | string | no |\n| `ariaExpanded` | boolean | no |\n| `ariaControls` | string | no |\n| `underline` | hover / always | no |"
   - $type: "Card"
     header:
       - $type: "Tag"

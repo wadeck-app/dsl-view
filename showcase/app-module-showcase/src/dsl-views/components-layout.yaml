@@ -4,8 +4,8 @@ $vars:
   Card__shadow: false
   Card__border: false
   Card__fill: false
-  Collapsible__title: "Collapsible"
   Collapsible__defaultOpen: false
+  Collapsible__open: false
   Divider__orientation: "horizontal"
   HorizontalStack__gap: "gap-0"
   HorizontalStack__align: "items-start"
@@ -120,21 +120,21 @@ items:
         label: "layout"
     items:
       - $type: "Markdown"
-        text: "Titled toggle row with a chevron that shows or hides its children; pick it for optional content inside a page or form."
+        text: "Titled toggle row with a chevron that shows or hides its children; pick it for optional content inside a page or form. `header` (instead of `title`) puts icon, name and chips in the toggle row; `open` + `onOpenChange` control it from the page."
       - $type: "HorizontalStack"
         wrap: true
         items:
-          - $type: "FieldText"
-            label: "title"
-            bind: "Collapsible__title"
           - $type: "Switch"
             label: "defaultOpen"
             bind: "Collapsible__defaultOpen"
+          - $type: "Switch"
+            label: "open"
+            bind: "Collapsible__open"
       - $type: "Collapsible"
-        title: "$vars.Collapsible__title"
         defaultOpen: "$vars.Collapsible__defaultOpen"
+        open: "$vars.Collapsible__open"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `title` | string | yes |\n| `defaultOpen` | boolean | no |\n| `items` | array | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `title` | string | no |\n| `header` | array | no |\n| `defaultOpen` | boolean | no |\n| `open` | boolean | no |\n| `items` | array | no |"
   - $type: "Card"
     header:
       - $type: "Tag"

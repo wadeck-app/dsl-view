@@ -110,3 +110,39 @@ describe('ChipButton without active', () => {
 		expect(screen.getByRole('button', { name: 'label' })).not.toHaveAttribute('aria-pressed');
 	});
 });
+
+describe('Collapsible header and controlled open', () => {
+	it('shows a header made of several elements in the toggle row, and is controlled by open', async () => {
+		const { Collapsible } = await import('./layout/Collapsible.js');
+		const onOpenChange = vi.fn();
+		const { rerender } = render(
+			<Collapsible header={<><svg data-testid="ic" /><b>name</b><i>chip</i></>} open={false} onOpenChange={onOpenChange}>
+				content
+			</Collapsible>
+		);
+		const toggle = screen.getByRole('button', { name: /name/ });
+		expect(toggle).toHaveAttribute('aria-expanded', 'false');
+		expect(toggle).toContainElement(screen.getByTestId('ic'));
+		toggle.click();
+		expect(onOpenChange).toHaveBeenCalledWith(true);
+		rerender(
+			<Collapsible header={<b>name</b>} open onOpenChange={onOpenChange}>
+				content
+			</Collapsible>
+		);
+		expect(screen.getByRole('button', { name: /name/ })).toHaveAttribute('aria-expanded', 'true');
+		expect(screen.getByText('content')).toBeInTheDocument();
+	});
+});
+
+describe('link variant underline', () => {
+	it('underlines at rest with always, on hover otherwise, and never takes padding', () => {
+		const { rerender } = render(<ButtonAction label="More" variant="link" size="xs" underline="always" />);
+		const button = screen.getByRole('button', { name: 'More' });
+		expect(button).toHaveClass('underline', 'text-xs');
+		expect(button.className).not.toMatch(/hover:underline/);
+		expect(button.className).not.toMatch(/(^| )p[xy]-[1-9]/);
+		rerender(<ButtonAction label="More" variant="link" size="xs" />);
+		expect(screen.getByRole('button', { name: 'More' }).className).toMatch(/hover:underline/);
+	});
+});

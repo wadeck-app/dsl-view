@@ -1,10 +1,22 @@
 import React from 'react';
+
+import { reportAuthoringMistake } from '@dsl-ui/utils/devDiagnostics.js';
 import * as RadixCollapsible from '@radix-ui/react-collapsible';
 import { ChevronDown } from 'lucide-react';
 
 export interface CollapsibleProps {
-    title: string;
+    /** The row's text. Give `title` or `header`. */
+    title?: string;
+    /**
+     * The row's content when it is more than a text: an icon, a name and chips side by side. It fills the whole toggle row
+     * (the chevron stays at the end) and replaces `title`.
+     * @slot tag:atomic, tag:composite
+     */
+    header?: React.ReactNode;
     defaultOpen?: boolean;
+    /** Controls the open state from the page (with `onOpenChange`). Without it the row keeps its own state, starting at `defaultOpen`. */
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
     /**
      * @slot tag:atomic, tag:composite, tag:disposition
      */
@@ -21,11 +33,14 @@ const CHEVRON_CLASS =
  * @registryCategory disposition
  * @registryTags collapsible accordion expandable
  */
-export function Collapsible({ title, defaultOpen = false, children }: CollapsibleProps) {
+export function Collapsible({ title, header, defaultOpen = false, open, onOpenChange, children }: CollapsibleProps) {
+    if (title === undefined && header === undefined) {
+        reportAuthoringMistake('[Collapsible] needs a `title` or a `header`: the toggle row would be empty.');
+    }
     return (
-        <RadixCollapsible.Root defaultOpen={defaultOpen} className="group w-full">
+        <RadixCollapsible.Root defaultOpen={defaultOpen} open={open} onOpenChange={onOpenChange} className="group w-full">
             <RadixCollapsible.Trigger className={TRIGGER_CLASS}>
-                <span>{title}</span>
+                {header !== undefined ? <span className="flex min-w-0 flex-1 items-center gap-2 text-left">{header}</span> : <span>{title}</span>}
                 <ChevronDown className={CHEVRON_CLASS} aria-hidden="true" />
             </RadixCollapsible.Trigger>
             <RadixCollapsible.Content className="overflow-hidden data-[state=open]:animate-none">

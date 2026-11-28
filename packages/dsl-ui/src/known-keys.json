@@ -153,6 +153,7 @@
 			"onClick",
 			"size",
 			"type",
+			"underline",
 			"variant"
 		],
 		"category": "atomic",
@@ -327,10 +328,17 @@
 	"Collapsible": {
 		"knownKeys": [
 			"defaultOpen",
+			"header",
 			"items",
+			"onOpenChange",
+			"open",
 			"title"
 		],
 		"allowedChildren": {
+			"header": [
+				"atomic",
+				"composite"
+			],
 			"items": [
 				"atomic",
 				"composite",
