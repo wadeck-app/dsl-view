@@ -14,6 +14,7 @@ $vars:
   Pagination__size: 1
   SearchBar__focusExpand: false
   SearchBar__size: "sm"
+  SearchBar__width: "sm"
   SortableColumn__label: "SortableColumn"
   SortableColumn__sortKey: "sample"
 
@@ -137,12 +138,25 @@ items:
                 label: "sm"
               - value: "md"
                 label: "md"
+          - $type: "FieldSelect"
+            label: "width"
+            bind: "SearchBar__width"
+            options:
+              - value: "sm"
+                label: "sm"
+              - value: "md"
+                label: "md"
+              - value: "lg"
+                label: "lg"
+              - value: "full"
+                label: "full"
       - $type: "SearchBar"
         urlParam: "q"
         focusExpand: "$vars.SearchBar__focusExpand"
         size: "$vars.SearchBar__size"
+        width: "$vars.SearchBar__width"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `urlParam` | string | no |\n| `resetUrlParams` | array | no |\n| `value` | string | no |\n| `placeholder` | string | no |\n| `debounceMs` | number | no |\n| `focusExpand` | boolean | no |\n| `size` | sm / md | no |\n| `inputRef` | unknown | no |\n| `onKeyDown` | unknown | no |\n| `ariaControls` | string | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `urlParam` | string | no |\n| `resetUrlParams` | array | no |\n| `value` | string | no |\n| `placeholder` | string | no |\n| `debounceMs` | number | no |\n| `focusExpand` | boolean | no |\n| `size` | sm / md | no |\n| `inputRef` | unknown | no |\n| `onKeyDown` | unknown | no |\n| `ariaControls` | string | no |\n| `width` | sm / md / lg / full | no |\n| `ariaLabel` | string | no |\n| `ariaDescribedBy` | string | no |"
   - $type: "Card"
     header:
       - $type: "Tag"

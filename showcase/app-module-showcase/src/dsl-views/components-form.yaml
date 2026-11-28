@@ -547,7 +547,7 @@ items:
         label: "form"
     items:
       - $type: "Markdown"
-        text: "Labelled single-line text input accepting standard HTML input attributes; the default text field."
+        text: "Labelled single-line text input accepting standard HTML input attributes (a caller `id` and `aria-*` are kept); the default text field."
       - $type: "HorizontalStack"
         wrap: true
         items:
@@ -578,7 +578,7 @@ items:
         readOnly: "$vars.FieldText__readOnly"
         required: "$vars.FieldText__required"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `label` | string | yes |\n| `hideLabel` | boolean | no |\n| `size` | md / sm | no |\n| `description` | string | no |\n| `readOnly` | boolean | no |\n| `required` | boolean | no |\n| `error` | string | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `label` | string | yes |\n| `hideLabel` | boolean | no |\n| `size` | md / sm | no |\n| `description` | string | no |\n| `readOnly` | boolean | no |\n| `required` | boolean | no |\n| `error` | string | no |\n| `icon` | array | no |"
   - $type: "Card"
     header:
       - $type: "Tag"
