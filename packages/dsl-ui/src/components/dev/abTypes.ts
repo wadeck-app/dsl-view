@@ -7,6 +7,15 @@ export interface AbOption {
 	title: string;
 }
 
+// A button at the end of a row that does something instead of choosing an option (reset a scenario, reload fixtures).
+export interface AbAction {
+	id: string;
+	label: string;
+	// Tooltip: what the button does.
+	title: string;
+	onClick: () => void;
+}
+
 export interface AbTest {
 	id: string;
 	// Name of the test, shown on the left of its row.
@@ -16,6 +25,8 @@ export interface AbTest {
 	options: readonly AbOption[];
 	value: string;
 	onSelect: (id: string) => void;
+	// Buttons after the options. They never change the choice.
+	actions?: readonly AbAction[];
 	// Id of the test whose chosen variant declares this one (an AbTest inside a variant). The dock shows it ABOVE its parent.
 	parentId?: string;
 }

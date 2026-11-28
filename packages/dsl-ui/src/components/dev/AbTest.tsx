@@ -93,7 +93,7 @@ export function AbTest({ id, label, initial, variants, renderNode }: AbTestProps
 	const host = useAbExperiments();
 	// Set when this node sits inside the chosen variant of another AbTest: the dock then shows its row above that one.
 	const parentId = useContext(AbParentContext);
-	const enabled = host ? host.enabled : isDev();
+	const enabled = host ? host.enabled && host.viewTests : isDev();
 	const error = configError({ id, label, initial, variants });
 	const ids = useMemo(() => (error ? [] : Object.keys(variants)), [error, variants]);
 	const key = `ab.${id}`;

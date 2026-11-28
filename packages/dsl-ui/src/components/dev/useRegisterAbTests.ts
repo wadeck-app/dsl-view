@@ -7,7 +7,7 @@ import { reportOnce } from './reportOnce.js';
 
 // What the dock shows of a test, without the callback: when it changes the row must be refreshed.
 function shownKey(test: AbDockTest): string {
-	return JSON.stringify([test.id, test.label, test.summary, test.value, test.options]);
+	return JSON.stringify([test.id, test.label, test.summary, test.value, test.options, (test.actions ?? []).map((a) => [a.id, a.label, a.title])]);
 }
 
 // What makes two declarations "the same test" for the duplicate-id check (see abStore).
@@ -62,6 +62,7 @@ export function useRegisterAbTests(tests: readonly AbDockTest[]): void {
 				const forward: AbDockTest = {
 					...test,
 					onSelect: (id) => latest.current.find((t) => t.id === test.id)?.onSelect(id),
+					...(test.actions ? { actions: test.actions.map((action) => ({ ...action, onClick: () => latest.current.find((t) => t.id === test.id)?.actions?.find((a) => a.id === action.id)?.onClick() })) } : {}),
 				};
 				host.store.set(owner, forward, signatureOf(test));
 			}

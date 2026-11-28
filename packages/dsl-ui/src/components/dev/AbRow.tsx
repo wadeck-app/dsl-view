@@ -135,6 +135,20 @@ export function AbRow({
 						</React.Fragment>
 					);
 				})}
+				{test.actions?.map((action) => (
+					// violations-suppress: react/no-raw-button AbDock IS the atomic wrapper for the A/B option picker; its row buttons own their geometry
+					<button
+						key={action.id}
+						type="button"
+						onClick={action.onClick}
+						onMouseEnter={() => onHint?.(action.title)}
+						onMouseLeave={() => onHint?.(null)}
+						title={action.title}
+						className="ml-1 shrink-0 rounded-full border border-border px-3 py-1 text-xs font-medium text-muted hover:bg-muted-bg hover:text-content"
+					>
+						{action.label}
+					</button>
+				))}
 			</div>
 		</div>
 	);

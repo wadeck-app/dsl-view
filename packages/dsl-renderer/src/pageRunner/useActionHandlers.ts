@@ -17,6 +17,8 @@ export function useActionHandlers(params: {
 	notify: Notify;
 	/** How an action's `confirm` question is asked: the host's dialog, or the native one. */
 	confirm: Confirm;
+	/** Values present as action results from the start (a host opening the page in a chosen state). */
+	initialExtras?: Record<string, unknown>;
 	/** Called when a row or batch action fails (HTTP error, missing URL placeholder...). */
 	onActionError?: (error: Error, info: ActionErrorInfo) => void;
 	$actions: PageSpec['$actions'];
@@ -64,7 +66,7 @@ export function useActionHandlers(params: {
 		searchParamsRef.current = searchParams;
 	}, [searchParams]);
 
-	const [extras, setExtras] = useState<Record<string, unknown>>({});
+	const [extras, setExtras] = useState<Record<string, unknown>>(() => params.initialExtras ?? {});
 	// Lenient-mode (no strictParams) empty placeholders warn once per action+key, not on every click.
 	const lenientWarnedRef = useRef(new Set<string>());
 

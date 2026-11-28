@@ -10,6 +10,8 @@ import { isDev } from './isDev.js';
 export interface AbExperimentsContextValue {
 	// Whether experiments run. Off: every `<AbTest>` renders its `initial` variant and never reads the storage or the URL.
 	enabled: boolean;
+	// Whether `<AbTest>` nodes of the views take part. False: they render their `initial` variant and add no row (tests declared in code still do).
+	viewTests: boolean;
 	store: AbStore;
 }
 
@@ -20,6 +22,11 @@ export interface AbExperimentsProps {
 	enabled?: boolean;
 	/** Tests the host declared in code with `useAbTest`, shown in the same dock before the ones declared in views. */
 	tests?: readonly AbDockTest[];
+	/**
+	 * Whether `<AbTest>` nodes written in views take part. Turn it off for a host that runs experiments for another purpose (a scenario
+	 * picker registered with `useRegisterAbTests`) and does not want the A/B variants of views. @default true
+	 */
+	viewTests?: boolean;
 	/** Side of the strip the dock sits on, so it can leave a bottom action row of the page free. @default 'center' */
 	align?: AbDockAlign;
 	children: React.ReactNode;
@@ -36,14 +43,14 @@ export interface AbExperimentsProps {
  *
  * Not a DSL node: it is a React API for the host app's code, so it carries no `@registryCategory`.
  */
-export function AbExperiments({ enabled = isDev(), tests = [], align, children }: AbExperimentsProps): React.ReactElement {
+export function AbExperiments({ enabled = isDev(), viewTests = true, tests = [], align, children }: AbExperimentsProps): React.ReactElement {
 	const outer = useContext(AbExperimentsContext);
 	const storeRef = useRef<AbStore | null>(null);
 	if (storeRef.current === null) {
 		storeRef.current = createAbStore();
 	}
 	const store = storeRef.current;
-	const value = useMemo<AbExperimentsContextValue>(() => ({ enabled, store }), [enabled, store]);
+	const value = useMemo<AbExperimentsContextValue>(() => ({ enabled, viewTests, store }), [enabled, viewTests, store]);
 	useEffect(() => {
 		if (outer) {
 			console.error('[ab] AbExperiments is mounted inside another AbExperiments: only the outer one shows the dock. Mount it once, near the root.');

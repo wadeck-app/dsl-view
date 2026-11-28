@@ -65,6 +65,12 @@ export interface GenericPageRunnerProps {
 	 * without a console warning.
 	 */
 	suspenseFallback?: React.ReactNode;
+	/**
+	 * Opens the page in a chosen state, for a host that shows scenarios (a dialog already open, a step of a flow): a name that is a
+	 * `$vars` key replaces that variable's initial value; any other name is seeded as an action result, what `visible: $dialog` reads.
+	 * Applied once, when the page mounts. The page is otherwise the real one. Development tooling: a production host does not pass it.
+	 */
+	scenarioState?: Record<string, unknown>;
 }
 
 // Renders only while nothing was passed for `suspenseFallback` - warns once per mount so a
@@ -114,6 +120,7 @@ function PageRunner({
 	onActionError,
 	shouldNotifyLoadFailure,
 	suspenseFallback,
+	scenarioState,
 }: GenericPageRunnerProps) {
 	const doc = useMemo(() => {
 		if (!compiled && !yamlText) {
@@ -161,7 +168,11 @@ function PageRunner({
 	const banner = useBannerNotifier();
 	const notify = hostNotify ?? banner.notify;
 
-	const { vars, setVar, seedFrom } = useVars(varsDecl as Record<string, unknown> | undefined);
+	// A scenario name that is a declared $var starts that variable; every other name starts as an action result.
+	const declaredVars = varsDecl as Record<string, unknown> | undefined;
+	const scenarioVars = useMemo(() => Object.fromEntries(Object.entries(scenarioState ?? {}).filter(([name]) => declaredVars !== undefined && name in declaredVars)), [scenarioState, declaredVars]);
+	const scenarioExtras = useMemo(() => Object.fromEntries(Object.entries(scenarioState ?? {}).filter(([name]) => declaredVars === undefined || !(name in declaredVars))), [scenarioState, declaredVars]);
+	const { vars, setVar, seedFrom } = useVars(declaredVars === undefined ? undefined : { ...declaredVars, ...scenarioVars });
 	const { outputs, publishOutput } = useOutputs();
 
 	// Sources already named in the development message about a failure the host chose not to announce.
@@ -181,6 +192,7 @@ function PageRunner({
 	const confirm = useConfirm();
 	const { namedHandlers, onAction, onBatchAction, extras, actionPending, actionPendingRows } = useActionHandlers({
 		confirm,
+		initialExtras: scenarioExtras,
 		notify,
 		$actions,
 		invalidateSourceCache,

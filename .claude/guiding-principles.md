@@ -70,3 +70,7 @@
 - Call `ToolSearch("select:<toolName>")` before invoking any deferred tool (find-project, write-doc, goldfish, etc.) — calling without the schema fetch produces a silent "NOT YET KNOWN" failure, not an error message (session 5610612a).
 - Consumer reference documentation belongs in `.claude/docs/<name>-reference.md`; do not create AGENT.md or root-level README sections for package-scoped guides — the correct location was discovered through iteration and should be decided upfront.
 - Do not write files outside the project root — the `cross-home-write` guardrail will block it; when creating any doc or plan file, verify the path is under the project directory before writing.
+
+## State a host must be able to set
+
+A component that keeps state a user can reach (open, selected step, expanded row, current tab) takes it as a prop, controlled (`open` + `onOpenChange`) and, when it has a sensible start, `defaultOpen`-style. A host that shows scenarios (a page opened with a dialog already open) and a screenshot test then set it without clicking. A component with state that only its own clicks can reach cannot be shown in a scenario: treat it as a defect. In a YAML page the state is a `$vars` key or an action `resultKey`; `GenericPageRunner` `scenarioState` seeds both.
