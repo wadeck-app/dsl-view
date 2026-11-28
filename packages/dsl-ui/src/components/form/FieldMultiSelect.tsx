@@ -21,6 +21,8 @@ export interface FieldMultiSelectProps {
 	name?: string;
 	label: string;
 	description?: string;
+	/** Small muted text under the field (a format, a hint). It describes the control (aria-describedby). `description` sits above the field. */
+	helpText?: string;
 	required?: boolean;
 	error?: string;
 	disabled?: boolean;
@@ -40,6 +42,7 @@ export function FieldMultiSelect({
 	name,
 	label,
 	description,
+	helpText,
 	required,
 	error,
 	disabled,
@@ -239,6 +242,7 @@ export function FieldMultiSelect({
 				</Popover.Portal>
 			</Popover.Root>
 
+			{helpText && <p id={`${id}-help`} className="mt-1 text-xs text-muted">{helpText}</p>}
 			{error && (
 				<p className="mt-1 text-xs text-danger" role="alert">
 					{error}

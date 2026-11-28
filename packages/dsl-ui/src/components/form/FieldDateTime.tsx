@@ -7,6 +7,8 @@ import { FieldWrapper } from './FieldWrapper.js';
 export interface FieldDateTimeProps {
 	label: string;
 	description?: string;
+	/** Small muted text under the field (a format, a hint). It describes the control (aria-describedby). `description` sits above the field. */
+	helpText?: string;
 	/** The moment, or null when it is not set. Both halves are derived from it. */
 	value: Date | null;
 	onChange: (value: Date | null) => void;
@@ -86,6 +88,7 @@ function combine(day: Date, time: string | null): Date {
 export function FieldDateTime({
 	label,
 	description,
+	helpText,
 	value: rawValue,
 	onChange,
 	isDateDisabled,
@@ -138,7 +141,7 @@ export function FieldDateTime({
 	}
 
 	return (
-		<FieldWrapper label={label} description={description} required={required} error={error}>
+		<FieldWrapper label={label} description={description} helpText={helpText} required={required} error={error}>
 			{control => (
 				<div className="flex items-start gap-2 mt-1">
 					<div className="flex-1">

@@ -6,6 +6,8 @@ import { FieldWrapper } from './FieldWrapper.js';
 export interface FieldDateRangeProps {
 	label: string;
 	description?: string;
+	/** Small muted text under the field (a format, a hint). It describes the control (aria-describedby). `description` sits above the field. */
+	helpText?: string;
 	value: DateRange;
 	onChange: (range: DateRange) => void;
 	/** Function to determine if a date is disabled. Return true to disable. */
@@ -29,6 +31,7 @@ export interface FieldDateRangeProps {
 export function FieldDateRange({
 	label,
 	description,
+	helpText,
 	value,
 	onChange,
 	isDisabled,
@@ -41,7 +44,7 @@ export function FieldDateRange({
 	error,
 }: FieldDateRangeProps) {
 	return (
-		<FieldWrapper label={label} description={description} required={required} error={error}>
+		<FieldWrapper label={label} description={description} helpText={helpText} required={required} error={error}>
 			<DateRangePicker
 				value={value}
 				onChange={onChange}

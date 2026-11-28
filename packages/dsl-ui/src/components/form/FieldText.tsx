@@ -15,6 +15,8 @@ export interface FieldTextProps
 	/** `md` (default, 38px) or `sm` (26px, as ButtonAction sm). */
 	size?: 'md' | 'sm';
 	description?: string;
+	/** Small muted text under the field (a format, a hint). It describes the control (aria-describedby). `description` sits above the field. */
+	helpText?: string;
 	value: string;
 	onChange: (v: string) => void;
 	readOnly?: boolean;
@@ -33,12 +35,12 @@ export interface FieldTextProps
  * @registryTags field
  * @registryBind formData onChange
  */
-export function FieldText({ label, description, value, onChange, readOnly, required, error, className, hideLabel, size = 'md', icon, ...rest }: FieldTextProps) {
+export function FieldText({ label, description, helpText, value, onChange, readOnly, required, error, className, hideLabel, size = 'md', icon, ...rest }: FieldTextProps) {
 	const inputClass = `${hideLabel ? '' : 'mt-1 '}${inputBase} ${SIZE_CLASS[size] ?? SIZE_CLASS.md}${icon ? ' pl-9' : ''}`;
 	const classes = `${inputClass}${className ? ` ${className}` : ''}`;
 	// An id the caller gave is the control's id (the label points at it); the wrapper adds ARIA state without erasing the caller's.
 	return (
-		<FieldWrapper label={label} description={description} required={required} error={error} hideLabel={hideLabel} id={rest.id}>
+		<FieldWrapper label={label} description={description} helpText={helpText} required={required} error={error} hideLabel={hideLabel} id={rest.id}>
 			{control => {
 				const given = Object.fromEntries(Object.entries(control).filter(([, value]) => value !== undefined));
 				const aria = { ...rest, ...given, 'aria-describedby': [rest['aria-describedby'], control['aria-describedby']].filter(Boolean).join(' ') || undefined };

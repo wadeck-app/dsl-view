@@ -8,6 +8,8 @@ const narrowInputClass =
 export interface FieldNumberProps {
 	label: string;
 	description?: string;
+	/** Small muted text under the field (a format, a hint). It describes the control (aria-describedby). `description` sits above the field. */
+	helpText?: string;
 	value: string | number;
 	onChange: (v: string | number) => void;
 	min?: number;
@@ -32,6 +34,7 @@ export interface FieldNumberProps {
 export function FieldNumber({
 	label,
 	description,
+	helpText,
 	value,
 	onChange,
 	min,
@@ -48,7 +51,7 @@ export function FieldNumber({
 		// Function form, not a plain child: the first child here is the flex row, so letting
 		// FieldWrapper clone it would put the label id and ARIA state on a div and leave the
 		// input with no accessible name.
-		<FieldWrapper label={label} description={description} required={required} error={error}>
+		<FieldWrapper label={label} description={description} helpText={helpText} required={required} error={error}>
 			{control => (
 			<div className="flex items-center gap-3 mt-1">
 				<input

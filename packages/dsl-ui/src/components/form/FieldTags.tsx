@@ -13,6 +13,8 @@ export interface FieldTagsProps {
 	name?: string;
 	label: string;
 	description?: string;
+	/** Small muted text under the field (a format, a hint). It describes the control (aria-describedby). `description` sits above the field. */
+	helpText?: string;
 	required?: boolean;
 	error?: string;
 	disabled?: boolean;
@@ -33,6 +35,7 @@ export function FieldTags({
 	name,
 	label,
 	description,
+	helpText,
 	required,
 	error,
 	disabled,
@@ -132,7 +135,7 @@ export function FieldTags({
 		addTags(text.split(','));
 	}
 
-	const describedBy = [error ? errorId : null, feedback ? feedbackId : null].filter(Boolean).join(' ') || undefined;
+	const describedBy = [helpText ? `${id}-help` : null, error ? errorId : null, feedback ? feedbackId : null].filter(Boolean).join(' ') || undefined;
 
 	const borderClass = error ? 'border-danger' : 'border-border focus-within:border-primary';
 
@@ -193,6 +196,7 @@ export function FieldTags({
 			{/* Always rendered: a live region must exist before its text changes to be announced. */}
 			<p id={feedbackId} role="status" className={feedback ? 'mt-1 text-xs text-muted' : 'sr-only'}>{feedback}</p>
 
+			{helpText && <p id={`${id}-help`} className="mt-1 text-xs text-muted">{helpText}</p>}
 			{error && (
 				<p id={errorId} className="mt-1 text-xs text-danger" role="alert">
 					{error}

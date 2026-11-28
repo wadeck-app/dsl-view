@@ -21,6 +21,8 @@ export interface FieldSelectOption {
 export interface FieldSelectProps {
 	label: string;
 	description?: string;
+	/** Small muted text under the field (a format, a hint). It describes the control (aria-describedby). `description` sits above the field. */
+	helpText?: string;
 	value: string;
 	onChange: (v: string) => void;
 	options: FieldSelectOption[];
@@ -44,7 +46,7 @@ const reportedBadOptions = new Set<string>();
  * @registryTags field select
  * @registryBind formData onChange
  */
-export function FieldSelect({ label, description, value, onChange, options: optionsProp, placeholder, disabled, required, error, hideLabel, size = 'md' }: FieldSelectProps) {
+export function FieldSelect({ label, description, helpText, value, onChange, options: optionsProp, placeholder, disabled, required, error, hideLabel, size = 'md' }: FieldSelectProps) {
 	// `options: $sources.authors` is undefined until the source has loaded: show an empty list meanwhile instead of
 	// crashing the page on `.map`. Anything else that is not a list is an authoring mistake and is reported once.
 	const received: unknown = optionsProp;
@@ -56,7 +58,7 @@ export function FieldSelect({ label, description, value, onChange, options: opti
 	return (
 		// Function form: the control is nested inside the positioning wrapper the chevron
 		// needs, so FieldWrapper cannot reach it by cloning its first child.
-		<FieldWrapper label={label} description={description} required={required} error={error} hideLabel={hideLabel}>
+		<FieldWrapper label={label} description={description} helpText={helpText} required={required} error={error} hideLabel={hideLabel}>
 			{control => (
 				<div className="relative">
 					<select

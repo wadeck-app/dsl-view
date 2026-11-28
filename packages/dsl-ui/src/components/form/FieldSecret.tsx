@@ -17,6 +17,8 @@ export interface FieldSecretHandle {
 export interface FieldSecretProps {
 	label: string;
 	description?: string;
+	/** Small muted text under the field (a format, a hint). It describes the control (aria-describedby). `description` sits above the field. */
+	helpText?: string;
 	/** Marks the field required. Handled by FieldWrapper. */
 	required?: boolean;
 	/** Validation message. Handled by FieldWrapper. */
@@ -46,7 +48,7 @@ export interface FieldSecretProps {
  * The field wipes itself when it unmounts. It is for React code: a DSL page cannot hold a ref.
  */
 export const FieldSecret = React.forwardRef<FieldSecretHandle, FieldSecretProps>(function FieldSecret(
-	{ label, description, required, error, disabled, placeholder, onEnter, name, id, autoComplete = 'off', showLabel = 'Show', hideLabel = 'Hide' },
+	{ label, description, helpText, required, error, disabled, placeholder, onEnter, name, id, autoComplete = 'off', showLabel = 'Show', hideLabel = 'Hide' },
 	ref
 ) {
 	const inputRef = useRef<HTMLInputElement>(null);
@@ -78,7 +80,7 @@ export const FieldSecret = React.forwardRef<FieldSecretHandle, FieldSecretProps>
 	}, []);
 
 	return (
-		<FieldWrapper id={id} label={label} description={description} required={required} error={error}>
+		<FieldWrapper id={id} label={label} description={description} helpText={helpText} required={required} error={error}>
 			{control => (
 				<div className="relative mt-1">
 					{/* violations-suppress: react/no-raw-input FieldSecret IS the atomic wrapper for an uncontrolled secret input */}

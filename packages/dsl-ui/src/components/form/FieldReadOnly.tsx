@@ -11,6 +11,8 @@ const readOnlyValueClass = 'flex-1 rounded border border-border bg-bg-secondary 
 export interface FieldReadOnlyProps {
 	label: string;
 	description?: string;
+	/** Small muted text under the field (a format, a hint). It describes the control (aria-describedby). `description` sits above the field. */
+	helpText?: string;
 	value: string;
 	mono?: boolean;
 	copyable?: boolean;
@@ -20,7 +22,7 @@ export interface FieldReadOnlyProps {
  * @registryCategory atomic
  * @registryTags field readonly
  */
-export function FieldReadOnly({ label, description, value, mono = false, copyable = false }: FieldReadOnlyProps) {
+export function FieldReadOnly({ label, description, helpText, value, mono = false, copyable = false }: FieldReadOnlyProps) {
 	const toast = useToast();
 
 	function handleCopy() {
@@ -37,7 +39,7 @@ export function FieldReadOnly({ label, description, value, mono = false, copyabl
 	}
 
 	return (
-		<FieldWrapper label={label} description={description}>
+		<FieldWrapper label={label} description={description} helpText={helpText}>
 			<div className="mt-1 flex gap-2">
 				<code className={`${readOnlyValueClass} ${mono ? 'font-mono' : ''}`}>
 					{value}

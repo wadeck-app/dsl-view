@@ -24,6 +24,8 @@ export interface FieldAutocompleteOption {
 export interface FieldAutocompleteProps {
 	label: string;
 	description?: string;
+	/** Small muted text under the field (a format, a hint). It describes the control (aria-describedby). `description` sits above the field. */
+	helpText?: string;
 	options: FieldAutocompleteOption[];
 	value: string;
 	onChange: (value: string) => void;
@@ -42,6 +44,7 @@ export interface FieldAutocompleteProps {
 export function FieldAutocomplete({
 	label,
 	description,
+	helpText,
 	options: optionsProp,
 	value,
 	onChange,
@@ -135,7 +138,7 @@ export function FieldAutocomplete({
 	}
 
 	return (
-		<FieldWrapper label={label} description={description}>
+		<FieldWrapper label={label} description={description} helpText={helpText}>
 			{control => (
 				<Popover.Root open={open} onOpenChange={setOpen}>
 					<Popover.Anchor asChild>

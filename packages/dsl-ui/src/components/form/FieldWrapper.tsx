@@ -13,6 +13,8 @@ export interface FieldControlProps {
 export interface FieldWrapperProps {
 	label: string;
 	description?: string;
+	/** Small muted text under the field (a format, a hint). It describes the control (aria-describedby). `description` sits above the field. */
+	helpText?: string;
 	/** Marks the field as required: an asterisk on the label, aria-required on the control. */
 	required?: boolean;
 	/** Validation message shown under the field. Also marks the control invalid. */
@@ -59,10 +61,11 @@ function mergeControl(child: React.ReactElement<Record<string, unknown>>, contro
  * @registryCategory disposition
  * @registryTags field wrapper
  */
-export function FieldWrapper({ label, description, required, error, id: idProp, hideLabel, children }: FieldWrapperProps) {
+export function FieldWrapper({ label, description, helpText, required, error, id: idProp, hideLabel, children }: FieldWrapperProps) {
 	const generatedId = useId();
 	const id = idProp ?? generatedId;
 	const errorId = `${id}-error`;
+	const helpId = `${id}-help`;
 	// An error on a field blocks the form it sits in, without the page wiring it.
 	const report = useFormContext()?.reportFieldMessage;
 	useEffect(() => {
@@ -75,7 +78,7 @@ export function FieldWrapper({ label, description, required, error, id: idProp, 
 	const control: FieldControlProps = {
 		id,
 		'aria-invalid': error ? true : undefined,
-		'aria-describedby': error ? errorId : undefined,
+		'aria-describedby': [helpText ? helpId : null, error ? errorId : null].filter(Boolean).join(' ') || undefined,
 		'aria-required': required ? true : undefined,
 	};
 
@@ -98,6 +101,7 @@ export function FieldWrapper({ label, description, required, error, id: idProp, 
 			</label>
 			{description && <p className="mb-1 text-xs text-muted">{description}</p>}
 			{body}
+			{helpText && <p id={helpId} className="mt-1 text-xs text-muted">{helpText}</p>}
 			{/* role=alert so a message appearing after a failed submit is announced. */}
 			{error && <p id={errorId} role="alert" className="mt-1 text-xs text-danger">{error}</p>}
 		</div>

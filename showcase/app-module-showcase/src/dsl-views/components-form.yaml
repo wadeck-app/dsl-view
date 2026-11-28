@@ -297,7 +297,7 @@ items:
         required: "$vars.FieldAsyncSelect__required"
         disabled: "$vars.FieldAsyncSelect__disabled"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `name` | string | no |\n| `label` | string | yes |\n| `description` | string | no |\n| `required` | boolean | no |\n| `error` | string | no |\n| `disabled` | boolean | no |\n| `placeholder` | string | no |\n| `debounceMs` | number | no |\n| `noOptionsMessage` | string | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `name` | string | no |\n| `label` | string | yes |\n| `description` | string | no |\n| `helpText` | string | no |\n| `required` | boolean | no |\n| `error` | string | no |\n| `disabled` | boolean | no |\n| `placeholder` | string | no |\n| `debounceMs` | number | no |\n| `noOptionsMessage` | string | no |"
   - $type: "Card"
     header:
       - $type: "Tag"
@@ -312,7 +312,7 @@ items:
       - $type: "Markdown"
         text: "_Not playable yet (required props without a sample: options)._"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `label` | string | yes |\n| `description` | string | no |\n| `options` | array | yes |\n| `placeholder` | string | no |\n| `disabled` | boolean | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `label` | string | yes |\n| `description` | string | no |\n| `helpText` | string | no |\n| `options` | array | yes |\n| `placeholder` | string | no |\n| `disabled` | boolean | no |"
   - $type: "Card"
     header:
       - $type: "Tag"
@@ -341,7 +341,7 @@ items:
         disabled: "$vars.FieldDate__disabled"
         required: "$vars.FieldDate__required"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `label` | string | yes |\n| `description` | string | no |\n| `minDate` | unknown | no |\n| `maxDate` | unknown | no |\n| `placeholder` | string | no |\n| `disabled` | boolean | no |\n| `dateFormat` | string | no |\n| `required` | boolean | no |\n| `error` | string | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `label` | string | yes |\n| `description` | string | no |\n| `helpText` | string | no |\n| `minDate` | unknown | no |\n| `maxDate` | unknown | no |\n| `placeholder` | string | no |\n| `disabled` | boolean | no |\n| `dateFormat` | string | no |\n| `required` | boolean | no |\n| `error` | string | no |"
   - $type: "Card"
     header:
       - $type: "Tag"
@@ -370,7 +370,7 @@ items:
         disabled: "$vars.FieldDateRange__disabled"
         required: "$vars.FieldDateRange__required"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `label` | string | yes |\n| `description` | string | no |\n| `minDate` | unknown | no |\n| `maxDate` | unknown | no |\n| `placeholder` | string | no |\n| `disabled` | boolean | no |\n| `dateFormat` | string | no |\n| `required` | boolean | no |\n| `error` | string | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `label` | string | yes |\n| `description` | string | no |\n| `helpText` | string | no |\n| `minDate` | unknown | no |\n| `maxDate` | unknown | no |\n| `placeholder` | string | no |\n| `disabled` | boolean | no |\n| `dateFormat` | string | no |\n| `required` | boolean | no |\n| `error` | string | no |"
   - $type: "Card"
     header:
       - $type: "Tag"
@@ -407,7 +407,7 @@ items:
         required: "$vars.FieldDateTime__required"
         open: "$vars.FieldDateTime__open"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `label` | string | yes |\n| `description` | string | no |\n| `minDate` | unknown | no |\n| `maxDate` | unknown | no |\n| `datePlaceholder` | string | no |\n| `timePlaceholder` | string | no |\n| `disabled` | boolean | no |\n| `dateFormat` | string | no |\n| `is12Hour` | boolean | no |\n| `minuteStep` | number | no |\n| `required` | boolean | no |\n| `error` | string | no |\n| `open` | boolean | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `label` | string | yes |\n| `description` | string | no |\n| `helpText` | string | no |\n| `minDate` | unknown | no |\n| `maxDate` | unknown | no |\n| `datePlaceholder` | string | no |\n| `timePlaceholder` | string | no |\n| `disabled` | boolean | no |\n| `dateFormat` | string | no |\n| `is12Hour` | boolean | no |\n| `minuteStep` | number | no |\n| `required` | boolean | no |\n| `error` | string | no |\n| `open` | boolean | no |"
   - $type: "Card"
     header:
       - $type: "Tag"
@@ -422,7 +422,7 @@ items:
       - $type: "Markdown"
         text: "_Not playable yet (required props without a sample: options)._"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `name` | string | no |\n| `label` | string | yes |\n| `description` | string | no |\n| `required` | boolean | no |\n| `error` | string | no |\n| `disabled` | boolean | no |\n| `options` | array | yes |\n| `placeholder` | string | no |\n| `maxSelected` | number | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `name` | string | no |\n| `label` | string | yes |\n| `description` | string | no |\n| `helpText` | string | no |\n| `required` | boolean | no |\n| `error` | string | no |\n| `disabled` | boolean | no |\n| `options` | array | yes |\n| `placeholder` | string | no |\n| `maxSelected` | number | no |"
   - $type: "Card"
     header:
       - $type: "Tag"
@@ -455,7 +455,7 @@ items:
         required: "$vars.FieldNumber__required"
         unlimitedValue: "$vars.FieldNumber__unlimitedValue"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `label` | string | yes |\n| `description` | string | no |\n| `min` | number | no |\n| `max` | number | no |\n| `suffix` | string | no |\n| `disabled` | boolean | no |\n| `required` | boolean | no |\n| `error` | string | no |\n| `unlimited` | string | no |\n| `unlimitedValue` | boolean | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `label` | string | yes |\n| `description` | string | no |\n| `helpText` | string | no |\n| `min` | number | no |\n| `max` | number | no |\n| `suffix` | string | no |\n| `disabled` | boolean | no |\n| `required` | boolean | no |\n| `error` | string | no |\n| `unlimited` | string | no |\n| `unlimitedValue` | boolean | no |"
   - $type: "Card"
     header:
       - $type: "Tag"
@@ -488,7 +488,7 @@ items:
         mono: "$vars.FieldReadOnly__mono"
         copyable: "$vars.FieldReadOnly__copyable"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `label` | string | yes |\n| `description` | string | no |\n| `value` | string | yes |\n| `mono` | boolean | no |\n| `copyable` | boolean | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `label` | string | yes |\n| `description` | string | no |\n| `helpText` | string | no |\n| `value` | string | yes |\n| `mono` | boolean | no |\n| `copyable` | boolean | no |"
   - $type: "Card"
     header:
       - $type: "Tag"
@@ -503,7 +503,7 @@ items:
       - $type: "Markdown"
         text: "_Not playable yet (required props without a sample: options)._"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `label` | string | yes |\n| `description` | string | no |\n| `options` | array | yes |\n| `placeholder` | string | no |\n| `disabled` | boolean | no |\n| `required` | boolean | no |\n| `error` | string | no |\n| `hideLabel` | boolean | no |\n| `size` | md / sm | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `label` | string | yes |\n| `description` | string | no |\n| `helpText` | string | no |\n| `options` | array | yes |\n| `placeholder` | string | no |\n| `disabled` | boolean | no |\n| `required` | boolean | no |\n| `error` | string | no |\n| `hideLabel` | boolean | no |\n| `size` | md / sm | no |"
   - $type: "Card"
     header:
       - $type: "Tag"
@@ -536,7 +536,7 @@ items:
         disabled: "$vars.FieldTags__disabled"
         allowDuplicates: "$vars.FieldTags__allowDuplicates"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `name` | string | no |\n| `label` | string | yes |\n| `description` | string | no |\n| `required` | boolean | no |\n| `error` | string | no |\n| `disabled` | boolean | no |\n| `placeholder` | string | no |\n| `maxTags` | number | no |\n| `allowDuplicates` | boolean | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `name` | string | no |\n| `label` | string | yes |\n| `description` | string | no |\n| `helpText` | string | no |\n| `required` | boolean | no |\n| `error` | string | no |\n| `disabled` | boolean | no |\n| `placeholder` | string | no |\n| `maxTags` | number | no |\n| `allowDuplicates` | boolean | no |"
   - $type: "Card"
     header:
       - $type: "Tag"
@@ -578,7 +578,7 @@ items:
         readOnly: "$vars.FieldText__readOnly"
         required: "$vars.FieldText__required"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `label` | string | yes |\n| `hideLabel` | boolean | no |\n| `size` | md / sm | no |\n| `description` | string | no |\n| `readOnly` | boolean | no |\n| `required` | boolean | no |\n| `error` | string | no |\n| `icon` | array | no |\n| `ref` | unknown | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `label` | string | yes |\n| `hideLabel` | boolean | no |\n| `size` | md / sm | no |\n| `description` | string | no |\n| `helpText` | string | no |\n| `readOnly` | boolean | no |\n| `required` | boolean | no |\n| `error` | string | no |\n| `icon` | array | no |\n| `ref` | unknown | no |"
   - $type: "Card"
     header:
       - $type: "Tag"
@@ -628,7 +628,7 @@ items:
         disabled: "$vars.FieldTextarea__disabled"
         required: "$vars.FieldTextarea__required"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `label` | string | yes |\n| `description` | string | no |\n| `rows` | number | no |\n| `mono` | boolean | no |\n| `placeholder` | string | no |\n| `readOnly` | boolean | no |\n| `disabled` | boolean | no |\n| `required` | boolean | no |\n| `error` | string | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `label` | string | yes |\n| `description` | string | no |\n| `helpText` | string | no |\n| `rows` | number | no |\n| `mono` | boolean | no |\n| `placeholder` | string | no |\n| `readOnly` | boolean | no |\n| `disabled` | boolean | no |\n| `required` | boolean | no |\n| `error` | string | no |"
   - $type: "Card"
     header:
       - $type: "Tag"
@@ -661,7 +661,7 @@ items:
         disabled: "$vars.FieldTime__disabled"
         required: "$vars.FieldTime__required"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `label` | string | yes |\n| `description` | string | no |\n| `is12Hour` | boolean | no |\n| `minuteStep` | number | no |\n| `placeholder` | string | no |\n| `disabled` | boolean | no |\n| `required` | boolean | no |\n| `error` | string | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `bind` | string | no |\n| `label` | string | yes |\n| `description` | string | no |\n| `helpText` | string | no |\n| `is12Hour` | boolean | no |\n| `minuteStep` | number | no |\n| `placeholder` | string | no |\n| `disabled` | boolean | no |\n| `required` | boolean | no |\n| `error` | string | no |"
   - $type: "Card"
     header:
       - $type: "Tag"
@@ -672,7 +672,7 @@ items:
         label: "form"
     items:
       - $type: "Markdown"
-        text: "Renders label, description, required marker and validation message around one control; the Field components use it internally."
+        text: "Renders label, description (above the control), required marker, help text (small muted text under the control, listed in aria-describedby) and validation message around one control; the Field components use it internally and every Field* takes `helpText`."
       - $type: "HorizontalStack"
         wrap: true
         items:
@@ -690,7 +690,7 @@ items:
         required: "$vars.FieldWrapper__required"
         hideLabel: "$vars.FieldWrapper__hideLabel"
       - $type: "Markdown"
-        text: "| Prop | Type | Required |\n|---|---|---|\n| `label` | string | yes |\n| `description` | string | no |\n| `required` | boolean | no |\n| `error` | string | no |\n| `id` | string | no |\n| `hideLabel` | boolean | no |\n| `items` | array | no |"
+        text: "| Prop | Type | Required |\n|---|---|---|\n| `label` | string | yes |\n| `description` | string | no |\n| `helpText` | string | no |\n| `required` | boolean | no |\n| `error` | string | no |\n| `id` | string | no |\n| `hideLabel` | boolean | no |\n| `items` | array | no |"
   - $type: "Card"
     header:
       - $type: "Tag"

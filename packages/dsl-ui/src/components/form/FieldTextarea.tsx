@@ -8,6 +8,8 @@ const textareaClass =
 export interface FieldTextareaProps {
 	label: string;
 	description?: string;
+	/** Small muted text under the field (a format, a hint). It describes the control (aria-describedby). `description` sits above the field. */
+	helpText?: string;
 	value: string;
 	onChange: (v: string) => void;
 	rows?: number;
@@ -31,6 +33,7 @@ export interface FieldTextareaProps {
 export function FieldTextarea({
 	label,
 	description,
+	helpText,
 	value,
 	onChange,
 	rows = 4,
@@ -42,7 +45,7 @@ export function FieldTextarea({
 	error,
 }: FieldTextareaProps) {
 	return (
-		<FieldWrapper label={label} description={description} required={required} error={error}>
+		<FieldWrapper label={label} description={description} helpText={helpText} required={required} error={error}>
 			<textarea
 				rows={rows}
 				value={value}

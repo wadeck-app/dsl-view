@@ -22,6 +22,8 @@ export interface FieldAsyncSelectProps {
 	name?: string;
 	label: string;
 	description?: string;
+	/** Small muted text under the field (a format, a hint). It describes the control (aria-describedby). `description` sits above the field. */
+	helpText?: string;
 	required?: boolean;
 	error?: string;
 	disabled?: boolean;
@@ -50,6 +52,7 @@ export function FieldAsyncSelect({
 	name,
 	label,
 	description,
+	helpText,
 	required,
 	error,
 	disabled,
@@ -343,7 +346,7 @@ export function FieldAsyncSelect({
 							aria-activedescendant={activeDescendant}
 							aria-required={required}
 							aria-invalid={error ? true : undefined}
-							aria-describedby={error ? errorId : undefined}
+							aria-describedby={[helpText ? `${id}-help` : null, error ? errorId : null].filter(Boolean).join(' ') || undefined}
 							value={inputValue}
 							onChange={handleInputChange}
 							onFocus={handleFocus}
@@ -440,6 +443,7 @@ export function FieldAsyncSelect({
 				</Popover.Portal>
 			</Popover.Root>
 
+			{helpText && <p id={`${id}-help`} className="mt-1 text-xs text-muted">{helpText}</p>}
 			{error && <p id={errorId} className="mt-1 text-xs text-red-500" role="alert">{error}</p>}
 		</div>
 	);

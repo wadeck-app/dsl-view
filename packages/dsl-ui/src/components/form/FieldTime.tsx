@@ -6,6 +6,8 @@ import { FieldWrapper } from './FieldWrapper.js';
 export interface FieldTimeProps {
 	label: string;
 	description?: string;
+	/** Small muted text under the field (a format, a hint). It describes the control (aria-describedby). `description` sits above the field. */
+	helpText?: string;
 	value: string | null;
 	onChange: (value: string | null) => void;
 	is12Hour?: boolean;
@@ -27,6 +29,7 @@ export interface FieldTimeProps {
 export function FieldTime({
 	label,
 	description,
+	helpText,
 	value,
 	onChange,
 	is12Hour,
@@ -37,7 +40,7 @@ export function FieldTime({
 	error,
 }: FieldTimeProps) {
 	return (
-		<FieldWrapper label={label} description={description} required={required} error={error}>
+		<FieldWrapper label={label} description={description} helpText={helpText} required={required} error={error}>
 			<TimePicker
 				value={value}
 				onChange={onChange}
